@@ -1299,7 +1299,7 @@ function closeIntro(){
   setTimeout(()=>{el.hidden=true},600);
 }
 function showIntro(){
-  const el=$("intro");el.hidden=false;
+  const el=$("intro");el.classList.remove("out","cine","cap-on");el.hidden=false;
   const n=nextDeparture();
   $("introNx").innerHTML=n?`<span>الرحلة القادمة</span><b>الجوف ← ${n.f.dest} · <span class="num" style="color:var(--amber);font-size:17px">${n.f.t}</span></b>`:"<span>ما فيه رحلات قريبة</span>";
   flipTo("AJF");
@@ -1359,8 +1359,8 @@ function wxHaz(h){
   else if(kmh>=46)out.push({lv:2,k:"wind",ic:"💨",ref:"GOM 6.3.6.1",t:"رياح قوية",v:W,a:[["أحذية إضافية لعجلات الطائرة حسب مخطط High Winds","الكل"],["إزالة الأقماع (لا توضع في الرياح العالية) وإزالة FOD","الكل"],["تأمين ULD والعربات وخراطيم التكييف (PCA)","المعدات"],["فرامل كل المعدات، وتثبيت غير الآلية بوسيلة إضافية","المعدات"],["حذر شديد عند فتح وإغلاق أبواب العنابر","التحميل"]]});
   else if(kmh>=30)out.push({lv:1,k:"wind",ic:"🍃",ref:"GOM 6.3.6.1",t:"رياح نشطة",v:W,a:[["جولة FOD حول الطائرة","الكل"],["فرامل المعدات المتوقفة، وتجهيز الأحذية الإضافية","المعدات"],["متابعة الطقس: عند 46كم/س تبدأ إجراءات الرياح العالية","المشرف"]]});
   if(isTS(h.code))out.push({lv:3,k:"ts",ic:"⛈️",ref:"GOM 6.3.6.3",t:"عواصف رعدية / برق",a:[["طريقة العدّ: أقل من 15 ثانية بين البرق والرعد = أقل من 5كم → إيقاف كل أنشطة الساحة والاحتماء (أحمر)","الكل"],["15–25 ثانية = 5–8كم → تنبيه (كهرماني) والاستعداد للإيقاف","المشرف"],["ممنوع لبس سماعة موصلة بالطائرة — خطر صعق قاتل؛ الاتفاق مع الكابتن على إشارات اليد للتشغيل والدفع","الدفع"],["التزود بالوقود: الاتفاق مع الكابتن، وإذا مو على الطائرة وفيه شك يُوقف فوراً","الوقود"],["الاستئناف فقط بعد ابتعاد البرق أكثر من 5كم (All Clear)","المشرف"]]});
-  const r=h.rain||0;
-  if(!isTS(h.code)&&(r>=7.6||h.code===65||h.code===82))out.push({lv:2,k:"rain",ic:"🌧️",ref:"GOM 6.3.6.6",t:"مطر غزير",v:r.toFixed(1)+" mm/h",a:[["تأمين المعدات وULD","المعدات"],["تغطية الأمتعة والشحن وحفظها في مكان جاف","التحميل"],["القيادة: الأضواء والفلاشر، سرعة منخفضة، بدون تجاوز ومسافة كافية","المعدات"],["الابتعاد عن خطوط الكهرباء، وإيقاف العمل الخارجي والاحتماء إذا اشتد","الكل"],["لا تعبر ماء فوق الركبة","الكل"]]});
+  const r=+h.rain||0;
+  if(!isTS(h.code)&&(r>=7.6||h.code===65||h.code===82))out.push({lv:2,k:"rain",ic:"🌧️",ref:"GOM 6.3.6.6",t:"مطر غزير",v:(+r||0).toFixed(1)+" mm/h",a:[["تأمين المعدات وULD","المعدات"],["تغطية الأمتعة والشحن وحفظها في مكان جاف","التحميل"],["القيادة: الأضواء والفلاشر، سرعة منخفضة، بدون تجاوز ومسافة كافية","المعدات"],["الابتعاد عن خطوط الكهرباء، وإيقاف العمل الخارجي والاحتماء إذا اشتد","الكل"],["لا تعبر ماء فوق الركبة","الكل"]]});
   else if(!isTS(h.code)&&(r>=1||h.code===63||h.code===81))out.push({lv:1,k:"rain",ic:"🌦️",ref:"GOM 6.3.6.2",t:"مطر · ساحة زلقة",v:r.toFixed(1)+" mm/h",a:[["وقت إضافي لكل أنشطة الساحة وحذر بالمشي","الكل"],["مسافة توقف أطول للمعدات عند الاقتراب من الطائرة","المعدات"],["إغلاق الأبواب والعنابر بأسرع وقت لمنع دخول المطر","التحميل"],["تغطية عربات الأمتعة","التحميل"]]});
   const v=h.vis,d=h.dust||0,vs=v!=null?(v>=1000?(v/1000).toFixed(1)+"كم":Math.round(v)+"م"):"";
   if((v!=null&&v<1000)||d>=500)out.push({lv:3,k:"dust",ic:"🌫️",ref:"GOM 6.3.6.7",t:"عاصفة رملية",v:vs?"رؤية "+vs:"",a:[["العاملين بالخارج يحتمون عند وصول العاصفة","الكل"],["تجنب القيادة بالساحة، وإذا لازم كل الأضواء مشغلة","المعدات"],["نظارات وكمامات وملابس مغطية (PPE)","الكل"],["لا قيادة على الطرق الخارجية أو عبور مناطق المناورة بدون إذن المطار","المعدات"],["الاستئناف بعد إشارة All Clear من العمليات","المشرف"]]});
@@ -1387,9 +1387,9 @@ function wxAt(dayIso,mins){return WX.hours.find(x=>x.day===dayIso&&x.hr===Math.f
 /* شارة الطقس على بطاقة الرحلة: وقت الإقلاع */
 function wxTag(f,date){
   if(!WX.ok||f.off)return"";const h=wxAt(iso(date),toMin(f.t));if(!h)return"";
-  const z=wxHaz(h);if(!z.length)return"";const x=z[0],c=["","#e8c547","var(--amber)","var(--warn)"][x.lv];
+  let z;try{z=wxHaz(h)}catch(e){return""}if(!z.length)return"";const x=z[0],c=["","#e8c547","var(--amber)","var(--warn)"][x.lv];
   const g=Math.round(Math.max(h.wg,h.ws));
-  return`<small class="wxc" style="color:${c}">${x.ic} ${x.k==="wind"?"G"+g+"kt":x.k==="heat"?Math.round(h.feel)+"°":x.k==="rain"?h.rain.toFixed(1)+"mm":x.k==="dust"?"DUST":"TS"}</small>`;
+  return`<small class="wxc" style="color:${c}">${x.ic} ${x.k==="wind"?"G"+g+"kt":x.k==="heat"?Math.round(h.feel)+"°":x.k==="rain"?(+h.rain||0).toFixed(1)+"mm":x.k==="dust"?"DUST":"TS"}</small>`;
 }
 const cardinal=d=>["ش","ش.ق","ق","ج.ق","ج","ج.غ","غ","ش.غ"][Math.round(d/45)%8];
 function wxDial(c){
@@ -1478,13 +1478,18 @@ function wxScene(c,lv){
   el._frame=frame;
 }
 document.addEventListener("visibilitychange",()=>{const el=$("wx");if(!document.hidden&&el&&el._frame&&!reduce){cancelAnimationFrame(wxRAF);wxRAF=requestAnimationFrame(el._frame)}});
-async function wxTick(){try{await loadWx()}catch(e){}renderWx();try{if(!open)render()}catch(e){}}
+async function wxTick(){try{await loadWx()}catch(e){}try{renderWx()}catch(e){console.error(e)}try{if(!open)render()}catch(e){}}
 try{const s=JSON.parse(localStorage.getItem("ajf_wx")||"null");if(s&&Date.now()-s.at<6*3600e3){WX.hours=s.h;WX.cur=s.c;WX.at=s.at;WX.ok=true}}catch(e){}
 
 /* ---------- init ---------- */
-renderClock();renderNext();render();
-renderWx();wxTick();setInterval(()=>{if(!document.hidden)wxTick()},10*60e3);
-if(!seen)showIntro();
+/* كل جزء مستقل: خطأ في جزء ما يوقف الترحيب أو اللوحة */
+for(const fn of[renderClock,renderNext,render])try{fn()}catch(e){console.error(e)}
+try{if(!seen)showIntro()}catch(e){console.error(e)}
+try{renderWx()}catch(e){console.error(e)}
+wxTick();setInterval(()=>{if(!document.hidden)wxTick()},10*60e3);
+/* التطبيق على الآيفون يرجع من الخلفية بدون إعادة تحميل، فنعرض الترحيب إذا غاب أكثر من 10 دقائق */
+let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden){hiddenAt=Date.now();return}
+  if(!DEMO&&hiddenAt&&Date.now()-hiddenAt>10*60e3&&$("intro").hidden){try{if(introStop)introStop()}catch(e){}try{showIntro()}catch(e){console.error(e)}}});
 requestAnimationFrame(()=>setY(innerHeight));
 addEventListener("resize",()=>{if(!open)setY(innerHeight)});
 if(DEMO){const k=iso(TODAY);applyLive({date:k,updated:fmt(NOW.mins),flights:{SM321:{s:"landed",t:"~08:28"},SM322:{s:"departed",t:"09:27"},SV8382:{s:"landed",t:"08:55"},SV8383:{s:"departed",t:"09:38"},G9221:{s:"landed",t:"16:02"},G9222:{s:"departed",t:"17:01"},SV8034:{s:"landed",t:"17:44"},SV1382:{s:"departed",t:"~18:27"},NP109:{s:"delayed",t:"~21:25"},XY149:{s:"departed",t:"~18:20"}}});
