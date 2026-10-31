@@ -936,15 +936,15 @@ setInterval(watchInbound,45000);setTimeout(watchInbound,4000);
 const CS_KEY=DEMO?"ajf_cs_demo":"ajf_cs";
 let CSDB={};try{CSDB=JSON.parse(localStorage.getItem(CS_KEY)||"{}")}catch(e){}
 const csSave=()=>{try{localStorage.setItem(CS_KEY,JSON.stringify(CSDB))}catch(e){}};
-const CS_ACTS=[["open","Open Door",1],["deplane","Passengers Deplane"],["clean","Cabin Cleaning"],["sec","Security at TRMNL"],["board","Boarding Pax"],["bus1","1st Bus"],["busL","Last Bus"],["unload","Bulk Unloading"],["load","Bulk Loading"],["fuel","Refuelling"],["close","Close Door",1],["med","Medical Lift"],["push","Pushback/Block-out",1]];
-const CS_CHK=[["gse","GSE Dispatched"],["gate","Gate Free"],["insp","Inspection CGO/Mail"],["bag","Baggage Assembly"],["info","Info On/Bound CGO/Mail/Bags"],["spx","Special Pax Srvc (WCH/OP)"],["gpu","GPU/ACU"]];
+/* الأنشطة المطلوبة فقط (من المشرف) — كلها أوقات نقطية */
+const CS_ACTS=[["open","Open Door"],["dpF","Deplaning · First Pax"],["dpL","Deplaning · Last Pax"],["clIn","Cleaning In"],["clOut","Cleaning Out"],["paxReq","Pax Request"],["bdF","Boarding · First Pax"],["bdL","Boarding · Last Pax"],["close","Close Door"]];
 let csCur=null;
 const hm=v=>/^\d{2}:\d{2}$/.test(v||"");
 function csPlan(f,d){
   const ata=hm(d.ata)?toMin(d.ata):f.ia?toMin(f.ia):null;if(ata==null)return{};
   const door=ata+gtRule(f);
-  const r={open:[ata],deplane:[ata,ata+8],clean:[ata+8,ata+15],board:[ata+15,ata+29],unload:[ata+1,ata+7],load:[ata+10,ata+20],close:[door],push:[door+2]};
-  Object.keys(r).forEach(k=>r[k]=r[k].map(fmt));return r;
+  const r={open:ata,dpF:ata+1,dpL:ata+8,clIn:ata+8,clOut:ata+15,paxReq:ata+15,bdF:ata+16,bdL:ata+29,close:door};
+  Object.keys(r).forEach(k=>r[k]=fmt(r[k]));return r;
 }
 function csData(f,date){
   const k=iso(date)+"_"+f.n;
@@ -963,34 +963,21 @@ function csDerived(f,d){
   return{atd,dly,gt};
 }
 function renderCS(){
-  const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d),X=csDerived(f,d);
+  const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d);
   const inp=(id,v,ph="",type="text",extra="")=>`<input data-k="${id}" value="${v||""}" placeholder="${ph}" type="${type}" ${extra}>`;
   const fld=(lbl,html)=>`<label class="cs-f"><span>${lbl}</span>${html}</label>`;
-  const pax=(lbl,o,key)=>`<div class="cs-pax"><b>${lbl}</b>${["F","J","Y"].map(c=>`<input data-k="${key}.${c}" value="${o[c]||""}" placeholder="${c}" inputmode="numeric">`).join("")}</div>`;
   const now=fmt(NOW.mins);
-  const acts=CS_ACTS.map(([k,n,pt])=>{
-    const a=d.act[k]||{},p=P[k],pl=p?(pt?p[0]:p[0]+"–"+p[1]):"—";
-    const st=pt?(hm(a.s)?"done":""):(hm(a.e)?"done":hm(a.s)?"run":"");
-    const cell=(w,lbl)=>`<label><span>${lbl}</span><input type="time" data-k="act.${k}.${w}" value="${a[w]||""}">${a[w]?"":`<button class="cs-now" data-now="act.${k}.${w}">الآن</button>`}</label>`;
-    return`<div class="cs-act ${st}"><div class="h"><b>${n}</b><small>Plan ${pl}</small></div>
-      <div class="cs-tm${pt?" one":""}">${cell("s",pt?"Time":"Start")}${pt?"":cell("e","Finish")}</div>
-      ${a.r||st?`<input class="cs-rm" data-k="act.${k}.r" value="${(a.r||"").replace(/"/g,"&quot;")}" placeholder="Remarks">`:""}</div>`}).join("");
+  const acts=CS_ACTS.map(([k,n])=>{
+    const a=d.act[k]||{},st=hm(a.s)?"done":"";
+    return`<div class="cs-act ${st}"><div class="h"><b>${n}</b><small>Plan ${P[k]||"—"}</small></div>
+      <div class="cs-tm one"><label><span>Time</span><input type="time" data-k="act.${k}.s" value="${a.s||""}">${a.s?"":`<button class="cs-now" data-now="act.${k}.s">الآن</button>`}</label></div></div>`}).join("");
   $("csBody").innerHTML=`
   <div class="cs-card"><h5>FLIGHT</h5>
-    <div class="cs-g">${fld("DATE",`<input value="${iso(date)}" readonly>`)}${fld("REG",inp("reg",d.reg,"HZ-","text",'autocapitalize="characters"'))}${fld("GATE",inp("gate",d.gate,"00","text",'inputmode="numeric"'))}</div>
+    <div class="cs-g two">${fld("DATE",`<input value="${iso(date)}" readonly>`)}${fld("A/C REG",inp("reg",d.reg,"HZ-","text",'autocapitalize="characters" dir="ltr"'))}</div>
     <div class="cs-g two">${fld("ARRIVAL · FROM",`<input value="${f.ino||"—"} · ${f.iata}" readonly>`)}${fld("DEPARTURE · TO",`<input value="${f.n} · ${f.iata}" readonly>`)}</div>
-    ${pax("Pax Arr",d.pa,"pa")}${pax("Pax Dep",d.pd,"pd")}
-    <div class="cs-g">${fld("LD3",inp("ld3",d.ld3,"NIL"))}${fld("PLT",inp("plt",d.plt,"NIL"))}${fld("PCS",inp("pcs",d.pcs,"00","text",'inputmode="numeric"'))}</div>
+    <div class="cs-g">${fld("STA",`<input value="${f.ia||"—"}" readonly>`)}${fld("ATA",inp("ata",d.ata,"","time"))}${fld("STD",`<input value="${f.t}" readonly>`)}</div>
   </div>
-  <div class="cs-card"><h5>TIMES</h5>
-    <div class="cs-g two">${fld("STA",`<input value="${f.ia||"—"}" readonly>`)}${fld("ATA",inp("ata",d.ata,"","time"))}${fld("STD",`<input value="${f.t}" readonly>`)}${fld("ATD",inp("atd",d.atd||X.atd,"","time"))}</div>
-    <div class="cs-sum"><div><span>MGT</span><b>${gtRule(f)}M</b></div><div><span>GROUND</span><b>${X.gt!=null?X.gt+"M":"—"}</b></div><div><span>DLY</span><b class="${X.dly?"late":X.dly===0?"ok":""}">${X.dly!=null?X.dly+"M":"—"}</b></div></div>
-    ${X.dly?fld("DLY CODE",inp("dlyc",d.dlyc,"00","text",'inputmode="numeric"')):""}
-  </div>
-  <div class="cs-card"><h5>PRE-ARRIVAL CHECK</h5><div class="cs-chk">${CS_CHK.map(([k,n])=>`<button data-chk="${k}" class="${d.chk[k]?"on":""}">${n}</button>`).join("")}</div></div>
-  <div class="cs-card"><h5>ACTIVITIES <span style="font-family:var(--mono)">${now}</span></h5>${acts}</div>
-  <div class="cs-card"><h5>REMARKS</h5><input class="cs-rm" data-k="rem" value="${(d.rem||"").replace(/"/g,"&quot;")}" placeholder="General remarks">
-    ${fld("PREPARED BY",`<input data-by value="${(localStorage.getItem("ajf_by")||"").replace(/"/g,"&quot;")}" placeholder="الاسم" style="font-family:var(--body)">`)}</div>`;
+  <div class="cs-card"><h5>ACTIVITIES <span style="font-family:var(--mono)">${now}</span></h5>${acts}</div>`;
 }
 function csSet(path,v){
   const{f,date}=csCur,d=csData(f,date),p=path.split(".");let o=d;
@@ -1008,29 +995,23 @@ $("csBack").onclick=()=>{$("cs").hidden=true;if(open&&curTurn)renderTurn(curTurn
 let csClr=0;
 $("csClear").onclick=()=>{const b=$("csClear");if(Date.now()-csClr<3000){const{f,date}=csCur;delete CSDB[iso(date)+"_"+f.n];csSave();renderCS();b.textContent="مسح";csClr=0}else{csClr=Date.now();b.textContent="اضغط مرة ثانية";setTimeout(()=>{b.textContent="مسح"},3000)}};
 function csPrintHTML(){
-  const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d),X=csDerived(f,d),by=localStorage.getItem("ajf_by")||"";
-  const c=(v)=>v||"";const ck=k=>d.chk[k]?"☑":"☐";
-  const rows=CS_ACTS.map(([k,n,pt])=>{const a=d.act[k]||{},p=P[k]||[];return`<tr><td>${n}</td><td class="c">${c(p[0])}</td><td class="c">${pt?"":c(p[1])}</td><td class="c">${c(a.s)}</td><td class="c">${pt?"":c(a.e)}</td><td>${c(a.r)}</td></tr>`}).join("");
+  const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d);
+  const c=(v)=>v||"";
+  const rows=CS_ACTS.map(([k,n])=>{const a=d.act[k]||{};return`<tr><td>${n}</td><td class="c">${c(P[k])}</td><td class="c">${c(a.s)}</td></tr>`}).join("");
   const dt=date.getUTCDate()+["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][date.getUTCMonth()]+String(date.getUTCFullYear()).slice(2);
   return`<div class="lg">SGS</div><h1>COORDINATION SHEET</h1>
-  <table><tr><td>DATE: <b>${dt}</b></td><td>REG: <b>${c(d.reg)}</b></td><td colspan="4" style="background:#eee"></td></tr>
-  <tr><td>Flight Arrival: <b>${c(f.ino)}</b></td><td>Fm: <b>${f.iata}</b></td><td>Pax Load</td><td>(F) ${c(d.pa.F)||"00"}</td><td>(J) ${c(d.pa.J)||"00"}</td><td>(Y) ${c(d.pa.Y)||"000"}</td></tr>
-  <tr><td>Flight Departure: <b>${f.n}</b></td><td>To: <b>${f.iata}</b></td><td>Pax Load</td><td>(F) ${c(d.pd.F)||"00"}</td><td>(J) ${c(d.pd.J)||"00"}</td><td>(Y) ${c(d.pd.Y)||"000"}</td></tr>
-  <tr><td>Gate: ${c(d.gate)||"00"}</td><td>Dep Dead Load</td><td>LD3: ${c(d.ld3)||"NIL"}</td><td>PLT: ${c(d.plt)||"NIL"}</td><td colspan="2">PCS: ${c(d.pcs)||"00"}</td></tr>
-  <tr><td>STA: ${c(f.ia)}</td><td>ATA: ${c(d.ata)}</td><td>STD: ${f.t}</td><td>ATD: ${c(X.atd)}</td><td colspan="2"></td></tr>
-  <tr><td>MGT: ${gtRule(f)}M</td><td>DLY Amount: ${X.dly!=null?X.dly+"M":""}</td><td colspan="2">DLY Code: ${c(d.dlyc)}</td><td colspan="2">Ground time: ${X.gt!=null?X.gt+"M":""}</td></tr></table>
-  <table><tr><th colspan="3">PRE-ARRIVAL CHECK</th></tr>
-  <tr><td>${ck("gse")} GSE Dispatched<br>${ck("gate")} Gate Free</td><td>${ck("insp")} Inspection CGO/Mail<br>${ck("bag")} Baggage Assembly</td><td>${ck("info")} Info On/Bound CGO/Mail/Bags<br>${ck("spx")} Special Pax Srvc (WCH/OP/...)</td></tr>
-  <tr><td colspan="3">${ck("gpu")} GPU/ACU</td></tr></table>
-  <table><tr><th rowspan="2">Activities</th><th colspan="2">Planned Time</th><th colspan="2">Actual Time</th><th rowspan="2">Remarks</th></tr><tr><th>Start</th><th>Finish</th><th>Start</th><th>Finish</th></tr>${rows}</table>
-  ${d.rem?`<p><b>Remarks:</b> ${c(d.rem)}</p>`:""}
-  <div class="ft"><span>GS-OL-029</span><span>PREPARED BY: <b>${by}</b></span></div>`;
+  <table><tr><td>DATE: <b>${dt}</b></td><td colspan="2">A/C REG: <b>${c(d.reg)}</b></td></tr>
+  <tr><td>Flight Arrival: <b>${c(f.ino)}</b></td><td colspan="2">From: <b>${f.iata}</b></td></tr>
+  <tr><td>Flight Departure: <b>${f.n}</b></td><td colspan="2">To: <b>${f.iata}</b></td></tr>
+  <tr><td>STA: <b>${c(f.ia)}</b></td><td>ATA: <b>${c(d.ata)}</b></td><td>STD: <b>${f.t}</b></td></tr></table>
+  <table><tr><th>Activities</th><th>Planned Time</th><th>Actual Time</th></tr>${rows}</table>
+  <div class="ft"><span>GS-OL-029</span></div>`;
 }
 $("csPdf").onclick=()=>{$("csPrint").innerHTML=csPrintHTML();setTimeout(()=>window.print(),50)};
 $("csShare").onclick=async()=>{
-  const{f,date}=csCur,d=csData(f,date),X=csDerived(f,d);
-  const t=[`COORDINATION SHEET · ${f.ino||""}/${f.n} · ${iso(date)}`,`REG ${d.reg||"-"} · GATE ${d.gate||"-"}`,`STA ${f.ia||"-"} ATA ${d.ata||"-"} · STD ${f.t} ATD ${X.atd||"-"}`,`DLY ${X.dly!=null?X.dly+"M":"-"}${d.dlyc?" CODE "+d.dlyc:""} · GROUND ${X.gt!=null?X.gt+"M":"-"}`,`PAX ARR ${d.pa.Y||0} · DEP ${d.pd.Y||0}`,
-    ...CS_ACTS.filter(([k])=>d.act[k]&&(d.act[k].s||d.act[k].e)).map(([k,n])=>`${n}: ${d.act[k].s||""}${d.act[k].e?"–"+d.act[k].e:""}${d.act[k].r?" ("+d.act[k].r+")":""}`),d.rem?"Remarks: "+d.rem:"",`Prepared by: ${localStorage.getItem("ajf_by")||""}`].filter(Boolean).join("\n");
+  const{f,date}=csCur,d=csData(f,date);
+  const t=[`COORDINATION SHEET · ${f.ino||""}/${f.n} · ${iso(date)}`,`A/C REG ${d.reg||"-"}`,`STA ${f.ia||"-"} · ATA ${d.ata||"-"} · STD ${f.t}`,
+    ...CS_ACTS.filter(([k])=>d.act[k]&&d.act[k].s).map(([k,n])=>`${n}: ${d.act[k].s}`)].join("\n");
   try{if(navigator.share){await navigator.share({title:"Coordination Sheet "+f.n,text:t});return}}catch(e){return}
   try{await navigator.clipboard.writeText(t);$("csShare").textContent="✓ نُسخ";setTimeout(()=>$("csShare").textContent="مشاركة",1500)}catch(e){}
 };
