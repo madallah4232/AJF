@@ -832,7 +832,9 @@ function spring(from,to,{velocity=0,damping=1,response=.35,onUpdate,onDone}={}){
    القواعد (من المشرف): الدولي 60 د من الوصول الفعلي · أديل وناس 40 د · السعودية حسب الجدول وأي تأخير يصير الدوران 40 د.
    المراحل: نزول الركاب 8 د → التنظيف 7 د → (تجهيز) → تصعيد الركاب 14 د → إقفال الباب قبل الإقلاع بـ10 د → الإقلاع */
 const INTL=new Set(["CAI","SHJ","HMB"]);
-const gtRule=f=>INTL.has(f.iata)?60:40;
+/* مدة الدوران = وقت بقاء الطائرة على الأرض حسب جدول كل رحلة (الإقلاع المجدول − الوصول المجدول) */
+const gtRule=f=>{const a=f.ia||f.inArr,d=f.t||f.time;if(!a||!d)return 60;return(toMin(d)-toMin(a)+1440)%1440||60};
+const isActual=I=>!!I&&I.kind!=="eta"&&I.kind!=="approx";
 const tm=t=>toMin(String(t).replace(/[~@≈\s]/g,""));
 const nowMin=()=>((Date.now()/1000+10800)%86400)/60;
 const LIVE_ETA={},SEEN_AIR={};let turnTimer;
@@ -851,13 +853,13 @@ function inboundInfo(f,date){
 }
 function turnPlan(f,ata){
   /* Close Door = الأبعد بين STD و ATA + الدوران حسب الناقل */
-  const std=tm(f.t),door=Math.max(std,ata+gtRule(f)),dep=door;
+  const std=tm(f.t),door=ata+gtRule(f),dep=door;
   const ph=[["Pax Deplane",ata,ata+8,"#7cc4ff"],["Cabin Cleaning",ata+8,ata+15,"#b48cff"],["Boarding Pax",ata+15,ata+29,"#ffb340"],["Close Door",ata+29,door,"#38d39f",1]];
   return{std,dep,door,ph,delay:door-std,ground:door-ata};
 }
 const clockFmt=x=>{x=Math.max(0,Math.round(x*60));const h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return(h?h+":"+pad(m):pad(m))+":"+pad(s)};
 function turnChip(f,date){
-  const I=inboundInfo(f,date);if(!I||I.kind==="eta")return"";
+  const I=inboundInfo(f,date);if(!isActual(I))return"";
   const D=LIVE.date===iso(date)&&LIVE.flights[f.n];if(D&&["departed","landed","canceled"].includes(D.s))return"";
   const P=turnPlan(f,I.m),left=Math.ceil(P.dep-NOW.mins);
   if(left<-30)return"";
@@ -884,9 +886,12 @@ $("turn").addEventListener("click",e=>{
 function renderTurn(f,date){
   curTurn={f,date};if(turnEdit)return;
   const el=$("turn"),I=inboundInfo(f,date),edBtn=`<button class="tu-ed" id="tuEd">✎ تعديل الوصول</button>`;
-  if(!I){
-    const ok=f.ino&&f.ia&&!f.off&&iso(date)===iso(TODAY)&&NOW.mins>=toMin(f.ia)-90&&NOW.mins<=toMin(f.t)+60;
-    if(ok){el.innerHTML=`<div class="tu-h"><b>الدوران</b>${edBtn}</div><div class="tu-n">بانتظار بيانات وصول ${f.ino}. إذا عندك وقت الوصول من النظام أدخله من «تعديل الوصول».</div>`;el.hidden=false}
+  if(!isActual(I)){
+    /* العدّ التنازلي لا يبدأ إلا بعد الوصول الفعلي */
+    const D0=LIVE.date===iso(date)&&LIVE.flights[f.n],gone0=D0&&["departed","landed","canceled"].includes(D0.s);
+    const ok=!gone0&&f.ino&&f.ia&&!f.off&&iso(date)===iso(TODAY)&&NOW.mins>=toMin(f.ia)-90&&NOW.mins<=toMin(f.t)+60;
+    const msg=!I?`بانتظار بيانات وصول ${f.ino}.`:I.kind==="eta"?`${f.ino} لم تصل بعد · متوقع ≈<span class="num">${fmt(I.m)}</span>.`:`${f.ino} يُرجّح أنها وصلت ≈<span class="num">${fmt(I.m)}</span> ولم يتأكد وقت الوصول الفعلي بعد.`;
+    if(ok){el.innerHTML=`<div class="tu-h"><b>الدوران · ${gtRule(f)} د</b>${edBtn}</div><div class="tu-n">${msg} العدّ التنازلي يبدأ عند الوصول الفعلي. إذا عندك وقت الوصول من النظام أدخله من «تعديل الوصول».</div>`;el.hidden=false}
     else el.hidden=true;
     return}
   const P=turnPlan(f,I.m),now=nowMin(),D=LIVE.date===iso(date)&&LIVE.flights[f.n];
@@ -937,7 +942,7 @@ let csCur=null;
 const hm=v=>/^\d{2}:\d{2}$/.test(v||"");
 function csPlan(f,d){
   const ata=hm(d.ata)?toMin(d.ata):f.ia?toMin(f.ia):null;if(ata==null)return{};
-  const door=Math.max(toMin(f.t),ata+gtRule(f));
+  const door=ata+gtRule(f);
   const r={open:[ata],deplane:[ata,ata+8],clean:[ata+8,ata+15],board:[ata+15,ata+29],unload:[ata+1,ata+7],load:[ata+10,ata+20],close:[door],push:[door+2]};
   Object.keys(r).forEach(k=>r[k]=r[k].map(fmt));return r;
 }
