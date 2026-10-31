@@ -383,6 +383,59 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .leaflet-control-attribution a{color:#8796b0!important}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:380px){.board span{width:24px;height:36px;font-size:24px}.next h2{font-size:22px}.row{grid-template-columns:56px 1fr auto}.row .t{font-size:18px}}
+/* ---------- طقس الساحة (Ramp Weather) ---------- */
+.wx{position:relative;overflow:hidden;border-radius:20px;border:1px solid var(--line);background:linear-gradient(160deg,#0f1b33,#0a1120 70%);min-height:220px;isolation:isolate}
+.wx[data-lv="1"]{border-color:#c9a227}.wx[data-lv="2"]{border-color:var(--amber)}.wx[data-lv="3"]{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn),0 0 40px -10px var(--warn)}
+.wx canvas{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+.wx .flash{position:absolute;inset:0;background:#dfe8ff;opacity:0;z-index:0;pointer-events:none}
+.wx .flash.on{animation:wxFlash .9s ease-out}
+@keyframes wxFlash{0%{opacity:0}8%{opacity:.55}16%{opacity:.08}24%{opacity:.4}100%{opacity:0}}
+.wx-in{position:relative;z-index:1;padding:16px;display:grid;gap:14px}
+.wx-top{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.wx-now small{display:block;color:var(--muted);font-size:12px;letter-spacing:.04em}
+.wx-now .tmp{font:600 46px/1 var(--mono);direction:ltr;display:inline-block;margin:6px 0 4px}
+.wx-now .tmp sup{font-size:20px;color:var(--muted)}
+.wx-now .dsc{font-size:14px;color:var(--ink)}
+.wx-now .meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:8px;font-size:12px;color:var(--muted)}
+.wx-now .meta b{color:var(--ink);font-family:var(--mono);font-weight:600}
+.wx-dial{width:132px}
+.wx-dial svg{width:132px;height:132px;overflow:visible;display:block}
+.wx-sock{transform-origin:0 0;animation:wxFlut var(--fl,1.6s) ease-in-out infinite alternate}
+@keyframes wxFlut{from{transform:rotate(var(--r)) scaleY(1)}to{transform:rotate(calc(var(--r) + var(--sw,3deg))) scaleY(.92)}}
+.wx-lv{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:rgba(10,17,32,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line)}
+.wx-lv i{flex:none;width:12px;height:12px;border-radius:50%;background:var(--go);box-shadow:0 0 0 4px color-mix(in oklab,var(--go) 25%,transparent)}
+.wx-lv[data-lv="1"] i{background:#e8c547;box-shadow:0 0 0 4px #e8c54740}
+.wx-lv[data-lv="2"] i{background:var(--amber);box-shadow:0 0 0 4px #ffb34040;animation:wxPulse 1.6s infinite}
+.wx-lv[data-lv="3"] i{background:var(--warn);box-shadow:0 0 0 4px #ff7a6640;animation:wxPulse 1s infinite}
+@keyframes wxPulse{50%{box-shadow:0 0 0 9px transparent}}
+.wx-lv b{font-size:14px}.wx-lv span{font-size:12px;color:var(--muted);display:block;margin-top:2px}
+.wx-strip{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.wx-strip::-webkit-scrollbar{display:none}
+.wx-h{flex:1 0 34px;display:grid;justify-items:center;gap:4px;font-size:10px;color:var(--muted);position:relative}
+.wx-h .bar{width:14px;height:56px;border-radius:7px;background:rgba(255,255,255,.06);display:flex;align-items:flex-end;overflow:hidden}
+.wx-h .bar i{display:block;width:100%;border-radius:7px;background:var(--go)}
+.wx-h[data-lv="1"] .bar i{background:#e8c547}.wx-h[data-lv="2"] .bar i{background:var(--amber)}.wx-h[data-lv="3"] .bar i{background:var(--warn)}
+.wx-h b{font:600 11px var(--mono);color:var(--ink)}
+.wx-h .ic{height:14px;font-size:12px;line-height:14px}
+.wx-h.now .hh{color:var(--amber);font-weight:700}
+.wx-h .fl{position:absolute;top:-2px;inset-inline-start:50%;transform:translateX(50%);font:600 8.5px var(--mono);color:#1a1205;background:var(--amber);border-radius:6px;padding:1px 3px;white-space:nowrap;z-index:1}
+.wx-h .fl.in{background:#7cc4ff}
+.wx-al{display:grid;gap:8px}
+.wx-a{border-radius:14px;border:1px solid var(--line);background:rgba(10,17,32,.6);padding:10px 12px;text-align:right;width:100%}
+.wx-a[data-lv="1"]{border-color:#e8c54766}.wx-a[data-lv="2"]{border-color:#ffb34088}.wx-a[data-lv="3"]{border-color:#ff7a66aa;background:rgba(60,14,14,.45)}
+.wx-a summary{list-style:none;display:flex;justify-content:space-between;gap:8px;align-items:center;cursor:pointer}
+.wx-a summary::-webkit-details-marker{display:none}
+.wx-a summary b{font-size:14px}.wx-a summary small{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.wx-a ul{margin:8px 0 0;padding:0 18px 0 0;display:grid;gap:5px;font-size:13px;color:#cfd8e8}
+.wx-a ul li::marker{color:var(--amber)}
+.wx-a .who{display:inline-block;font-size:10px;padding:1px 6px;border-radius:6px;background:var(--raise);color:var(--muted);margin-inline-start:4px}
+.wx-ft{display:flex;justify-content:space-between;gap:8px;font-size:10.5px;color:var(--muted)}
+.wx-ft button{color:var(--amber);font-size:11px}
+.row .side small.wxc{font-weight:600;font-family:var(--mono);direction:ltr}
+.wx-ban{position:fixed;z-index:60;inset:calc(10px + env(safe-area-inset-top)) 12px auto;padding:12px 14px;border-radius:16px;background:#3a1010;border:1px solid var(--warn);color:#fff;display:flex;gap:10px;align-items:center;box-shadow:0 20px 50px rgba(0,0,0,.5);transform:translateY(-140%);transition:transform .5s var(--ease)}
+.wx-ban.on{transform:none}.wx-ban.a2{background:#3a2a08;border-color:var(--amber)}
+.wx-ban b{display:block;font-size:14px}.wx-ban span{font-size:12px;opacity:.85}
+.wx-ban button{margin-inline-start:auto;color:#fff;opacity:.7;font-size:18px}
 </style>
 </head>
 <body>
@@ -412,6 +465,8 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   </div>
 
   <section class="next" id="next" aria-live="polite"></section>
+
+  <section class="wx" id="wx" aria-label="طقس الساحة"><canvas aria-hidden="true"></canvas><div class="wx-in"></div></section>
 
   <section style="display:grid;gap:10px">
     <div class="sec">
@@ -704,7 +759,7 @@ function render(){
     b.style.setProperty("--c",f.c);b.style.animationDelay=Math.min(i*40,240)+"ms";
     b.innerHTML=`<div class="t">${hl(f.t)}<small>${inboundTxt(f,date)}</small></div>
       <div class="d"><b>${hl(f.dest)}</b><span class="code">${f.iata}</span><div><span class="al">${f.n.slice(0,2)}</span>${hl(f.airline)} · <span class="num">${hl(f.n)}</span></div></div>
-${flyBar(f,date)}      <div class="side"><span class="chip ${cls}">${txt}</span>${turnChip(f,date)||gtTag(f,date)+dlyTag(f,date)}</div>`;
+${flyBar(f,date)}      <div class="side"><span class="chip ${cls}">${txt}</span>${turnChip(f,date)||gtTag(f,date)+dlyTag(f,date)}${wxTag(f,date)}</div>`;
     b.onclick=()=>openSheet(f,date);
     list.appendChild(b);
   });
@@ -1264,8 +1319,145 @@ if("speechSynthesis" in window)speechSynthesis.getVoices();
 /* شاشة الترحيب تظهر في كل فتح */
 let seen=DEMO;
 if(/[?&]intro/.test(location.search))seen=false;
+/* ---------- طقس الساحة: Open-Meteo (بدون مفتاح) + تنبيهات تشغيلية للمعدات والعمال ---------- */
+const WX={hours:[],cur:null,at:0,ok:false};
+const WX_LL="latitude=29.7851&longitude=40.1&timezone=Asia%2FRiyadh&forecast_days=2";
+const RWY=100; /* المدرج 10/28 (اتجاه حقيقي ≈100°/280°) */
+const WMO={0:"صحو",1:"صحو غالباً",2:"غائم جزئياً",3:"غائم",45:"ضباب",48:"ضباب",51:"رذاذ خفيف",53:"رذاذ",55:"رذاذ كثيف",61:"مطر خفيف",63:"مطر",65:"مطر غزير",66:"مطر متجمد",67:"مطر متجمد",71:"ثلج",73:"ثلج",75:"ثلج كثيف",80:"زخات",81:"زخات مطر",82:"زخات غزيرة",95:"عاصفة رعدية",96:"عاصفة رعدية وبَرَد",99:"عاصفة رعدية وبَرَد"};
+const isTS=c=>c>=95,isRain=c=>(c>=51&&c<=67)||(c>=80&&c<=82);
+/* حدود استرشادية لعمليات الساحة — الأولوية دائماً لتعليمات المطار والشركة ودليل الطائرة */
+function wxHaz(h){
+  const out=[],g=Math.max(h.wg||0,h.ws||0);
+  if(g>=50)out.push({lv:3,k:"wind",ic:"🌪️",t:`رياح عاصفة ${Math.round(g)}kt`,a:[["إيقاف جميع عمليات الساحة وإبعاد المعدات عن الطائرة","الكل"],["أحذية (Chocks) إضافية وتثبيت الطائرة حسب تعليمات الصيانة","الصيانة"],["إدخال أو ربط الحاويات (ULD) والعربات الفارغة","التحميل"],["لا أحد على السلالم أو المنصات المرتفعة","الكل"]]});
+  else if(g>=40)out.push({lv:3,k:"wind",ic:"💨",t:`رياح قوية جداً ${Math.round(g)}kt`,a:[["لا يُفتح ولا يُغلق باب الركاب أو باب الشحن (حد أغلب الطائرات ≈40kt)","التحميل"],["إيقاف الهاي لودر وشاحنة التموين المرفوعة","المعدات"],["إيقاف الصعود عبر السلالم المكشوفة والتنسيق مع الكابتن","الركاب"],["المعدات غير المستخدمة: فرامل + أحذية وبعيداً عن الطائرة","المعدات"]]});
+  else if(g>=30)out.push({lv:2,k:"wind",ic:"💨",t:`رياح قوية ${Math.round(g)}kt`,a:[["فتح أبواب الشحن بحذر وإمساك الباب حتى يثبت","التحميل"],["السلم المتحرك: فرامل مشدودة ولا يُترك ملاصقاً بدون مشغّل","المعدات"],["ركاب على السلم: موظف عند أعلى وأسفل السلم، والصعود بدفعات","الركاب"],["تأمين الأقماع والأغطية والحاويات الخفيفة","التحميل"]]});
+  else if(g>=20)out.push({lv:1,k:"wind",ic:"🍃",t:`رياح نشطة ${Math.round(g)}kt`,a:[["جولة FOD حول الطائرة قبل الوصول وبعده","الكل"],["تثبيت الأقماع والأكياس وأغطية الأمتعة","التحميل"],["فرامل كل المعدات المتوقفة","المعدات"]]});
+  if(isTS(h.code))out.push({lv:3,k:"ts",ic:"⛈️",t:"عواصف رعدية / برق",a:[["إيقاف التزود بالوقود فوراً عند البرق القريب","الوقود"],["لا اتصال سماعة (Headset) مع قمرة القيادة أثناء البرق","الدفع"],["إخلاء العمال من الساحة إلى مكان مغطى حتى زوال البرق","الكل"],["إيقاف التحميل وإغلاق أبواب العنابر","التحميل"]]});
+  const r=h.rain||0;
+  if(!isTS(h.code)&&(r>=7.6||h.code===65||h.code===82))out.push({lv:2,k:"rain",ic:"🌧️",t:`مطر غزير ${r.toFixed(1)}mm/س`,a:[["أرضية زلقة: سرعة المعدات للحد الأدنى ومسافات توقف أطول","المعدات"],["تغطية الأمتعة والشحن بالأغطية، والبريد والإلكترونيات أولاً","التحميل"],["حماية أجهزة المسح والطابعات والتابلت","الكل"],["ملابس مطر عاكسة، وتجنب تجمعات المياه حول الكهرباء الأرضية (GPU)","الكل"]]});
+  else if(!isTS(h.code)&&(r>=1||h.code===63||h.code===81))out.push({lv:1,k:"rain",ic:"🌦️",t:`مطر ${r.toFixed(1)}mm/س`,a:[["تغطية عربات الأمتعة","التحميل"],["تخفيف السرعة على الساحة المبللة","المعدات"],["تأمين الأجهزة الإلكترونية من البلل","الكل"]]});
+  const v=h.vis,d=h.dust||0;
+  if((v!=null&&v<1000)||d>=500)out.push({lv:3,k:"dust",ic:"🌫️",t:`غبار كثيف · رؤية ${v!=null?(v>=1000?(v/1000).toFixed(1)+"كم":Math.round(v)+"م"):"منخفضة"}`,a:[["كمامات ونظارات واقية لكل العاملين","الكل"],["أضواء المعدات مشغّلة وسرعة منخفضة جداً","المعدات"],["مرشد أجنحة (Wing Walker) إلزامي للدفع والسحب","الدفع"],["إغلاق أبواب العنابر إذا ما فيه تحميل، وتغطية الأجهزة","التحميل"]]});
+  else if((v!=null&&v<3000)||d>=200)out.push({lv:2,k:"dust",ic:"🌫️",t:"غبار · رؤية متدنية",a:[["كمامات ونظارات للعاملين بالساحة","الكل"],["أضواء المعدات وتخفيف السرعة","المعدات"],["تغطية الأمتعة والأجهزة","التحميل"]]});
+  const fe=h.feel!=null?h.feel:h.temp;
+  if(fe>=46)out.push({lv:2,k:"heat",ic:"🔥",t:`حرارة شديدة · المحسوسة ${Math.round(fe)}°`,a:[["تدوير العمال كل 20 دقيقة مع راحة بالظل","المشرف"],["ماء بارد عند كل طائرة وعلى المعدات","المشرف"],["قفازات: أسطح المعدات والسلالم ساخنة","الكل"],["مراقبة أعراض الإجهاد الحراري (دوخة، صداع، توقف التعرق)","المشرف"]]});
+  else if(fe>=40)out.push({lv:1,k:"heat",ic:"☀️",t:`حرارة مرتفعة · المحسوسة ${Math.round(fe)}°`,a:[["ماء للعمال وفترات راحة بالظل","المشرف"],["تجنب ترك الأمتعة الحساسة تحت الشمس","التحميل"]]});
+  if(h.temp!=null&&h.temp<=2)out.push({lv:1,k:"cold",ic:"❄️",t:`برودة ${Math.round(h.temp)}° · صقيع محتمل`,a:[["احتمال جليد على السلالم والمنصات: حذر بالصعود","الكل"],["ملابس شتوية عاكسة للعاملين","المشرف"]]});
+  return out.sort((a,b)=>b.lv-a.lv);
+}
+const wxLv=h=>wxHaz(h).reduce((m,x)=>Math.max(m,x.lv),0);
+const WX_LVT=["الساحة آمنة","انتباه","حذر","خطر — إجراءات إلزامية"];
+async function loadWx(){
+  const F="https://api.open-meteo.com/v1/forecast?"+WX_LL+"&wind_speed_unit=kn&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day&hourly=temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility";
+  const A="https://air-quality-api.open-meteo.com/v1/air-quality?"+WX_LL+"&hourly=dust";
+  const [w,a]=await Promise.all([fetch(F).then(r=>r.json()),fetch(A).then(r=>r.json()).catch(()=>null)]);
+  const H=w.hourly,dust={};if(a&&a.hourly)a.hourly.time.forEach((t,i)=>dust[t]=a.hourly.dust[i]);
+  WX.hours=H.time.map((t,i)=>({t,day:t.slice(0,10),hr:+t.slice(11,13),temp:H.temperature_2m[i],feel:H.apparent_temperature[i],rain:H.precipitation[i],prob:H.precipitation_probability[i],code:H.weather_code[i],ws:H.wind_speed_10m[i],wd:H.wind_direction_10m[i],wg:H.wind_gusts_10m[i],vis:H.visibility[i],dust:dust[t]}));
+  const c=w.current,hh=WX.hours.find(x=>x.t===c.time.slice(0,13)+":00")||{};
+  WX.cur={t:c.time,temp:c.temperature_2m,feel:c.apparent_temperature,rh:c.relative_humidity_2m,rain:c.precipitation,code:c.weather_code,ws:c.wind_speed_10m,wd:c.wind_direction_10m,wg:c.wind_gusts_10m,day:c.is_day,vis:hh.vis,dust:hh.dust};
+  WX.at=Date.now();WX.ok=true;try{localStorage.setItem("ajf_wx",JSON.stringify({h:WX.hours,c:WX.cur,at:WX.at}))}catch(e){}
+}
+function wxAt(dayIso,mins){return WX.hours.find(x=>x.day===dayIso&&x.hr===Math.floor(mins/60)%24)}
+/* شارة الطقس على بطاقة الرحلة: وقت الإقلاع */
+function wxTag(f,date){
+  if(!WX.ok||f.off)return"";const h=wxAt(iso(date),toMin(f.t));if(!h)return"";
+  const z=wxHaz(h);if(!z.length)return"";const x=z[0],c=["","#e8c547","var(--amber)","var(--warn)"][x.lv];
+  const g=Math.round(Math.max(h.wg,h.ws));
+  return`<small class="wxc" style="color:${c}">${x.ic} ${x.k==="wind"?"G"+g+"kt":x.k==="heat"?Math.round(h.feel)+"°":x.k==="rain"?h.rain.toFixed(1)+"mm":x.k==="dust"?"DUST":"TS"}</small>`;
+}
+const cardinal=d=>["ش","ش.ق","ق","ج.ق","ج","ج.غ","غ","ش.غ"][Math.round(d/45)%8];
+function wxDial(c){
+  const ws=c.ws||0,wd=c.wd||0,len=10+Math.min(1,ws/15)*40,droop=Math.max(0,1-ws/15);
+  /* المدرج المستخدم = اللي فيه رياح أمامية */
+  const hw=ws*Math.cos((wd-RWY)*Math.PI/180),rw=hw>=0?"10":"28",xw=Math.abs(ws*Math.sin((wd-RWY)*Math.PI/180));
+  const ticks=[...Array(36)].map((_,i)=>{const a=i*10*Math.PI/180,r1=i%9===0?52:i%3===0?55:57;return`<line x1="${Math.sin(a)*r1}" y1="${-Math.cos(a)*r1}" x2="${Math.sin(a)*60}" y2="${-Math.cos(a)*60}" stroke="#41527a" stroke-width="${i%9===0?2:1}"/>`}).join("");
+  const lbl=[["ش",0],["ق",90],["ج",180],["غ",270]].map(([t,d])=>{const a=d*Math.PI/180;return`<text x="${Math.sin(a)*44}" y="${-Math.cos(a)*44+4}" fill="#8796b0" font-size="10" text-anchor="middle">${t}</text>`}).join("");
+  const stripes=[...Array(5)].map((_,i)=>{const y0=i*len/5,y1=(i+1)*len/5,w0=7-i*1.1,w1=7-(i+1)*1.1;return`<path d="M${-w0} ${y0}L${w0} ${y0}L${w1} ${y1}L${-w1} ${y1}Z" fill="${i%2?"#f4f4f4":"#ff6a2b"}"/>`}).join("");
+  const fl=Math.max(.25,1.8-ws/20),sw=2+Math.min(10,(c.wg-ws||0)/2);
+  return`<svg viewBox="-64 -64 128 128" role="img" aria-label="اتجاه الرياح ${Math.round(wd)}° بسرعة ${Math.round(ws)} عقدة">
+  <circle r="60" fill="rgba(10,17,32,.55)" stroke="#223050"/>${ticks}${lbl}
+  <g transform="rotate(${RWY})"><rect x="-4" y="-40" width="8" height="80" rx="1.5" fill="#2a3550"/><line y1="-34" y2="34" stroke="#cfd8e8" stroke-width=".8" stroke-dasharray="4 4"/>
+  <text y="-30" fill="#e9eef7" font-size="7" text-anchor="middle" transform="rotate(180 0 -30)">28</text><text y="34" fill="#e9eef7" font-size="7" text-anchor="middle">10</text></g>
+  <g transform="rotate(${wd})"><path d="M0 -62 L-5 -50 L5 -50Z" fill="var(--amber)"/></g>
+  <g class="wx-sock" style="--r:${wd}deg;--fl:${fl}s;--sw:${sw}deg"><g transform="scale(1,${1-droop*.35})">${stripes}</g></g>
+  <circle r="2.6" fill="#e9eef7"/>
+  </svg><div style="text-align:center;font:600 11px var(--mono);direction:ltr;margin-top:2px">${String(Math.round(wd)%360).padStart(3,"0")}/${pad(Math.round(ws))}${c.wg>ws+5?"G"+Math.round(c.wg):""}KT</div><div style="text-align:center;font-size:10.5px;color:var(--muted)">RWY ${rw} · عرضية ${Math.round(xw)}kt</div>`;
+}
+let wxShown=-1;
+function renderWx(){
+  const el=$("wx");if(!el)return;
+  if(!WX.ok){el.querySelector(".wx-in").innerHTML='<div class="wx-now"><small>طقس الساحة · AJF</small><div class="dsc" style="margin-top:8px">جاري جلب الطقس…</div></div>';return}
+  const c=WX.cur,hz=wxHaz(c),lv=hz.reduce((m,x)=>Math.max(m,x.lv),0);
+  el.dataset.lv=lv;
+  /* 12 ساعة قادمة + الرحلات عليها */
+  const today=iso(TODAY),tom=iso(addDays(TODAY,1)),i0=WX.hours.findIndex(x=>x.day===today&&x.hr===Math.floor(NOW.mins/60));
+  const win=WX.hours.slice(Math.max(0,i0),Math.max(0,i0)+12);
+  const fl={};[[TODAY,today],[addDays(TODAY,1),tom]].forEach(([d,k])=>{try{flightsOn(d).forEach(f=>{if(f.off)return;const a=k+"_"+Math.floor(toMin(f.t)/60);(fl[a]=fl[a]||[]).push({n:f.n,in:false});if(f.ia){const b=k+"_"+Math.floor(toMin(f.ia)/60);(fl[b]=fl[b]||[]).push({n:f.ino||f.n,in:true})}})}catch(e){}});
+  const strip=win.map((h,i)=>{const l=wxLv(h),g=Math.max(h.wg,h.ws),z=wxHaz(h)[0],F=fl[h.day+"_"+h.hr];
+    return`<div class="wx-h${i===0?" now":""}" data-lv="${l}">${F?`<span class="fl${F[0].in&&F.length===1?" in":""}">${F.length>1?F.length+"✈":F[0].n.replace(/^[A-Z0-9]{2}/,"")}</span>`:""}<span class="ic">${z?z.ic:isRain(h.code)?"💧":""}</span><div class="bar"><i style="height:${Math.max(6,Math.min(100,g/50*100))}%"></i></div><b>${Math.round(g)}</b><span class="hh">${i===0?"الآن":pad(h.hr)}</span></div>`}).join("");
+  /* أول خطر قادم مرتبط برحلة */
+  let ahead="";for(const h of win.slice(1)){const l=wxLv(h);if(l>=2&&l>lv){const F=fl[h.day+"_"+h.hr];ahead=`متوقع ${WX_LVT[l]} الساعة ${pad(h.hr)}:00 — ${wxHaz(h)[0].t}${F?" · وقت رحلة "+F.map(x=>x.n).join("، "):""}`;break}}
+  const al=hz.length?hz.map((x,i)=>`<details class="wx-a" data-lv="${x.lv}"${i===0&&x.lv>=2?" open":""}><summary><b>${x.ic} ${x.t}</b><small>${WX_LVT[x.lv]}</small></summary><ul>${x.a.map(([t,w])=>`<li>${t}<span class="who">${w}</span></li>`).join("")}</ul></details>`).join(""):"";
+  const vis=c.vis!=null?(c.vis>=10000?"+10كم":c.vis>=1000?(c.vis/1000).toFixed(1)+"كم":Math.round(c.vis)+"م"):"—";
+  el.querySelector(".wx-in").innerHTML=`<div class="wx-top"><div class="wx-now"><small>طقس الساحة · AJF</small><span class="tmp">${Math.round(c.temp)}<sup>°C</sup></span><div class="dsc">${WMO[c.code]||"—"}${c.dust>=200?" · غبار":""}</div>
+    <div class="meta"><span>المحسوسة <b>${Math.round(c.feel)}°</b></span><span>الرطوبة <b>${c.rh}%</b></span><span>الرؤية <b>${vis}</b></span><span>الهبّات <b>${Math.round(c.wg)}kt</b></span></div></div>
+    <div class="wx-dial">${wxDial(c)}</div></div>
+    <div class="wx-lv" data-lv="${lv}"><i></i><div><b>${WX_LVT[lv]}${hz[0]?" · "+hz[0].t:""}</b><span>${ahead||(lv?"اتبع الإجراءات أدناه":"لا قيود طقس على المعدات والعمال الآن")}</span></div></div>
+    <div class="wx-strip" aria-label="الرياح خلال 12 ساعة">${strip}</div>${al?`<div class="wx-al">${al}</div>`:""}
+    <div class="wx-ft"><span>Open-Meteo · تحدّث ${new Date(WX.at).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"})} · حدود استرشادية، الأولوية لتعليمات المطار والشركة</span></div>`;
+  wxScene(c,lv);
+  /* تنبيه منبثق عند ارتفاع مستوى الخطر */
+  const key=today+"_"+lv;let last="";try{last=localStorage.getItem("ajf_wxa")||""}catch(e){}
+  if(lv>=2&&key!==last&&wxShown!==lv){wxShown=lv;try{localStorage.setItem("ajf_wxa",key)}catch(e){}wxBanner(hz[0],lv)}
+}
+function wxBanner(x,lv){
+  const ii=$("intro");if(ii&&!ii.hidden){setTimeout(()=>wxBanner(x,lv),1000);return}
+  let b=$("wxBan");if(!b){b=document.createElement("div");b.id="wxBan";b.className="wx-ban";b.setAttribute("role","alert");document.body.appendChild(b)}
+  b.classList.toggle("a2",lv===2);
+  b.innerHTML=`<div style="font-size:26px">${x.ic}</div><div><b>${WX_LVT[lv]}: ${x.t}</b><span>${x.a[0][0]}</span></div><button aria-label="إغلاق">✕</button>`;
+  b.querySelector("button").onclick=e=>{e.stopPropagation();b.classList.remove("on")};
+  b.onclick=()=>{b.classList.remove("on");$("wx").scrollIntoView({behavior:"smooth",block:"start"})};
+  requestAnimationFrame(()=>b.classList.add("on"));try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
+  setTimeout(()=>b.classList.remove("on"),12000);
+}
+/* المشهد الحي: ذرات رياح بالاتجاه والسرعة الفعلية، مطر مائل مع الريح، برق، غبار */
+let wxRAF=0,wxVis=true;
+function wxScene(c,lv){
+  const el=$("wx"),cv=el.querySelector("canvas"),ctx=cv.getContext("2d");
+  const dpr=Math.min(2,devicePixelRatio||1),W=()=>cv.clientWidth,H=()=>cv.clientHeight;
+  const fit=()=>{cv.width=W()*dpr;cv.height=H()*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)};fit();
+  const ws=c.ws||0,to=((c.wd||0)+180)*Math.PI/180,vx=Math.sin(to),vy=-Math.cos(to),sp=.5+ws*.16;
+  const rain=isRain(c.code)||isTS(c.code)||(c.rain||0)>0,ts=isTS(c.code),dust=(c.dust||0)>=150||(c.vis!=null&&c.vis<5000);
+  const N=Math.min(170,25+ws*5),P=[...Array(N)].map(()=>({x:Math.random()*W(),y:Math.random()*H(),l:6+Math.random()*18,a:.08+Math.random()*.22}));
+  const R=rain?[...Array(Math.min(220,60+Math.round((c.rain||1)*30)))].map(()=>({x:Math.random()*W(),y:Math.random()*H(),s:6+Math.random()*6})):[];
+  const day=c.day,bg=lv>=3?["#2a0f14","#0a1120"]:dust?["#3a2a14","#14110d"]:day?["#16325c","#0d1a30"]:["#0f1b33","#0a1120"];
+  el.style.background=`linear-gradient(165deg,${bg[0]},${bg[1]} 75%)`;
+  let fl=el.querySelector(".flash");if(!fl){fl=document.createElement("div");fl.className="flash";el.prepend(fl)}
+  let nextF=performance.now()+2000+Math.random()*4000;
+  cancelAnimationFrame(wxRAF);
+  const frame=t=>{
+    const w=W(),h=H();ctx.clearRect(0,0,w,h);
+    if(dust){ctx.fillStyle="rgba(196,150,90,.10)";ctx.fillRect(0,0,w,h)}
+    ctx.lineCap="round";
+    P.forEach(p=>{p.x+=vx*sp*(1+p.a);p.y+=vy*sp*(1+p.a)+Math.sin((t/700)+p.l)*.15;
+      if(p.x<-30)p.x=w+20;if(p.x>w+30)p.x=-20;if(p.y<-30)p.y=h+20;if(p.y>h+30)p.y=-20;
+      ctx.strokeStyle=dust?`rgba(230,190,130,${p.a+.05})`:`rgba(200,220,255,${p.a})`;ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-vx*p.l*(.4+ws/25),p.y-vy*p.l*(.4+ws/25));ctx.stroke()});
+    if(R.length){ctx.strokeStyle="rgba(160,200,255,.45)";ctx.lineWidth=1;const dx=vx*ws*.06;R.forEach(d=>{d.y+=d.s;d.x+=dx*d.s/6;if(d.y>h){d.y=-10;d.x=Math.random()*w}if(d.x<0)d.x=w;if(d.x>w)d.x=0;ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x-dx*2,d.y-d.s*1.6);ctx.stroke()})}
+    if(ts&&t>nextF){fl.classList.remove("on");void fl.offsetWidth;fl.classList.add("on");nextF=t+3000+Math.random()*6000}
+    if(!reduce&&wxVis&&!document.hidden)wxRAF=requestAnimationFrame(frame);
+  };
+  frame(performance.now());
+  if(!el._io){el._io=new IntersectionObserver(e=>{wxVis=e[0].isIntersecting;if(wxVis&&!reduce&&el._frame){cancelAnimationFrame(wxRAF);wxRAF=requestAnimationFrame(el._frame)}});el._io.observe(el);addEventListener("resize",()=>{cv.width=cv.clientWidth*dpr;cv.height=cv.clientHeight*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)})}
+  el._frame=frame;
+}
+document.addEventListener("visibilitychange",()=>{const el=$("wx");if(!document.hidden&&el&&el._frame&&!reduce){cancelAnimationFrame(wxRAF);wxRAF=requestAnimationFrame(el._frame)}});
+async function wxTick(){try{await loadWx()}catch(e){}renderWx();try{if(!open)render()}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem("ajf_wx")||"null");if(s&&Date.now()-s.at<6*3600e3){WX.hours=s.h;WX.cur=s.c;WX.at=s.at;WX.ok=true}}catch(e){}
+
 /* ---------- init ---------- */
 renderClock();renderNext();render();
+renderWx();wxTick();setInterval(()=>{if(!document.hidden)wxTick()},10*60e3);
 if(!seen)showIntro();
 requestAnimationFrame(()=>setY(innerHeight));
 addEventListener("resize",()=>{if(!open)setY(innerHeight)});
