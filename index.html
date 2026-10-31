@@ -422,7 +422,7 @@ function flightsOn(date,{all=false}={}){
    s: sched | delayed | departed | landed | canceled | diverted · t: local time HH:MM */
 const LIVE={"date":"","updated":"","flights":{}};
 const REVIEWED="2026-10-31"; /* آخر مراجعة لجدول الرحلات — تحدّثه المهمة اليومية */
-const LIVE_TXT={departed:["air","أقلعت"],landed:["done","وصلت"],canceled:["cxl","ملغاة"],diverted:["cxl","تحويل"],delayed:["soon","متأخرة"],sched:["sched","في الموعد"]};
+const LIVE_TXT={departed:["done","أقلعت"],landed:["done","أقلعت"],canceled:["cxl","ملغاة"],diverted:["cxl","تحويل"],delayed:["soon","متأخرة"],sched:["sched","في الموعد"]};
 const state={week:0,sel:0,q:""};
 try{const s=JSON.parse(localStorage.getItem("ajf2")||"{}");if(s.week>=0&&s.week<8){state.week=s.week;state.sel=s.sel||0}}catch(e){}
 const save=()=>{try{localStorage.setItem("ajf2",JSON.stringify({week:state.week,sel:state.sel}))}catch(e){}};
@@ -459,7 +459,7 @@ function groundTrack(f,dayOffset){
   const a=toMin(f.ia),dep=toMin(f.t),now=NOW.mins;
   const L=LIVE.date===iso(TODAY)&&f.ino&&LIVE.flights[f.ino];
   let st,cls="st",pct;
-  if(L&&L.s==="landed"){st="هبطت "+(L.t||"");cls+=" ok"}
+  if(L&&L.s==="landed"){st="وصلت الجوف "+(L.t||"").replace("~","≈");cls+=" ok"}
   else if(L&&L.s==="canceled"){st="الوصول ملغى"}
   else if(now<a){const m=a-now;st=m>90?"الطائرة لم تصل بعد":"تصل بعد "+m+" د"}
   else{st="على الأرض";cls+=" ok"}
@@ -513,7 +513,7 @@ function inboundTxt(f,date){
   if(!f.ia)return"";
   const L=LIVE.date===iso(date)&&f.ino&&LIVE.flights[f.ino];
   if(L){
-    if(L.s==="landed")return`<span style="color:var(--go)">هبطت <span class="num">${(L.t||"").replace("~","≈")}</span></span>`;
+    if(L.s==="landed")return`<span style="color:var(--go)">وصلت <span class="num">${(L.t||"").replace("~","≈")}</span></span>`;
     if(L.s==="departed")return`<span style="color:#7cc4ff">في الجو</span>`;
     if(L.s==="delayed")return`<span style="color:var(--amber)">تصل <span class="num">${L.t||""}</span></span>`;
     if(L.s==="canceled")return`<span style="color:var(--warn)">الوصول ملغى</span>`;
