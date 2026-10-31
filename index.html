@@ -513,7 +513,7 @@ function inboundTxt(f,date){
   if(!f.ia)return"";
   const L=LIVE.date===iso(date)&&f.ino&&LIVE.flights[f.ino];
   if(L){
-    if(L.s==="landed")return`<span style="color:var(--go)">هبطت <span class="num">${L.t||""}</span></span>`;
+    if(L.s==="landed")return`<span style="color:var(--go)">هبطت <span class="num">${(L.t||"").replace("~","≈")}</span></span>`;
     if(L.s==="departed")return`<span style="color:#7cc4ff">في الجو</span>`;
     if(L.s==="delayed")return`<span style="color:var(--amber)">تصل <span class="num">${L.t||""}</span></span>`;
     if(L.s==="canceled")return`<span style="color:var(--warn)">الوصول ملغى</span>`;
@@ -538,9 +538,9 @@ function status(f,date){
   if(f.off)return["off","تبدأ "+dLabel(new Date(f.start+"T00:00:00Z"))];
   if(iso(date)!==iso(TODAY))return f.est?["sched","وقت تقديري"]:["sched","مجدولة"];
   const L=LIVE.date===iso(date)&&LIVE.flights[f.n];
-  if(L&&LIVE_TXT[L.s]){const[c,w]=LIVE_TXT[L.s];return[c+" live",w+(L.t?" "+L.t:"")]}
+  if(L&&LIVE_TXT[L.s]){const[c,w]=LIVE_TXT[L.s];return[c+" live",w+(L.t?" "+L.t.replace("~","≈"):"")]}
   const m=toMin(f.t);
-  if(m<NOW.mins)return["done","أقلعت"];
+  if(m<NOW.mins)return["sched","بانتظار التحديث"];
   if(m-NOW.mins<=120)return["soon","بعد "+(m-NOW.mins)+"د"];
   return["sched","مجدولة"];
 }
@@ -739,12 +739,18 @@ function endDrag(){if(!drag)return;const a=drag.h[0],b=drag.h[drag.h.length-1],v
 sheet.addEventListener("pointerup",endDrag);sheet.addEventListener("pointercancel",endDrag);
 
 /* ---------- live data (live.json, updated by the hourly task) ---------- */
+const LIVE_SHEET="https://docs.google.com/spreadsheets/d/15lfKxUHljob3uZ2xaSbvXE3L813g4apDTVQHhQshPn8/gviz/tq?tqx=out:csv&gid=1369330995";
+function parseCSV(t){return t.trim().split(/\r?\n/).map(l=>{const o=[];let c="",q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else if(ch==='"')q=true;else if(ch===","){o.push(c);c=""}else c+=ch}o.push(c);return o})}
+function applyLive(j){if(j&&j.flights){Object.assign(LIVE,j);renderNext();if(!open)render();renderSync()}}
 async function loadLive(){
+  /* primary: shared Google Sheet written by the tracking task; fallback: live.json in the repo */
   try{
-    const r=await fetch("live.json?t="+Date.now(),{cache:"no-store"});
-    if(!r.ok)return;const j=await r.json();
-    if(j&&j.flights){Object.assign(LIVE,j);if(j.reviewed)window.REV=j.reviewed;renderNext();if(!open)render();renderSync()}
+    const r=await fetch(LIVE_SHEET+"&t="+Date.now(),{cache:"no-store"});
+    if(r.ok){const rows=parseCSV(await r.text());const j={date:"",updated:"",flights:{}};
+      rows.slice(1).forEach(([k,s,t,n])=>{if(!k)return;if(k==="_date")j.date=s;else if(k==="_updated")j.updated=s;else if(s)j.flights[k]={s,t:t||"",note:n||""}});
+      if(j.date){applyLive(j);return}}
   }catch(e){}
+  try{const r=await fetch("live.json?t="+Date.now(),{cache:"no-store"});if(r.ok)applyLive(await r.json())}catch(e){}
 }
 
 /* ---------- welcome + voice announcement ---------- */
