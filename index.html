@@ -447,6 +447,9 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .msl div small{color:var(--muted);font-family:var(--mono);font-size:11px;text-align:left;direction:ltr}.msl div.past{opacity:.45}
 .wv{display:block;font-style:normal;font:500 11.5px var(--mono);color:var(--muted);margin-top:2px;unicode-bidi:plaintext;text-align:right}
 .wx-a summary small{text-align:left;flex:none}
+.wx-now .src{font-size:11px;color:var(--amber);margin-top:3px}.wx-now .src.ok{color:var(--go)}
+.wx-sl{font-size:11px;color:var(--muted);margin-bottom:-8px}
+.wx-raw{font-size:11px;color:var(--muted)}.wx-raw summary{cursor:pointer}.wx-raw code{display:block;direction:ltr;text-align:left;font:500 11px/1.5 var(--mono);color:var(--ink);background:rgba(10,17,32,.6);border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
 </style>
 </head>
 <body>
@@ -1362,9 +1365,10 @@ function wxHaz(h){
   const r=+h.rain||0;
   if(!isTS(h.code)&&(r>=7.6||h.code===65||h.code===82))out.push({lv:2,k:"rain",ic:"🌧️",ref:"GOM 6.3.6.6",t:"مطر غزير",v:(+r||0).toFixed(1)+" mm/h",a:[["تأمين المعدات وULD","المعدات"],["تغطية الأمتعة والشحن وحفظها في مكان جاف","التحميل"],["القيادة: الأضواء والفلاشر، سرعة منخفضة، بدون تجاوز ومسافة كافية","المعدات"],["الابتعاد عن خطوط الكهرباء، وإيقاف العمل الخارجي والاحتماء إذا اشتد","الكل"],["لا تعبر ماء فوق الركبة","الكل"]]});
   else if(!isTS(h.code)&&(r>=1||h.code===63||h.code===81))out.push({lv:1,k:"rain",ic:"🌦️",ref:"GOM 6.3.6.2",t:"مطر · ساحة زلقة",v:r.toFixed(1)+" mm/h",a:[["وقت إضافي لكل أنشطة الساحة وحذر بالمشي","الكل"],["مسافة توقف أطول للمعدات عند الاقتراب من الطائرة","المعدات"],["إغلاق الأبواب والعنابر بأسرع وقت لمنع دخول المطر","التحميل"],["تغطية عربات الأمتعة","التحميل"]]});
-  const v=h.vis,d=h.dust||0,vs=v!=null?(v>=1000?(v/1000).toFixed(1)+"كم":Math.round(v)+"م"):"";
-  if((v!=null&&v<1000)||d>=500)out.push({lv:3,k:"dust",ic:"🌫️",ref:"GOM 6.3.6.7",t:"عاصفة رملية",v:vs?"رؤية "+vs:"",a:[["العاملين بالخارج يحتمون عند وصول العاصفة","الكل"],["تجنب القيادة بالساحة، وإذا لازم كل الأضواء مشغلة","المعدات"],["نظارات وكمامات وملابس مغطية (PPE)","الكل"],["لا قيادة على الطرق الخارجية أو عبور مناطق المناورة بدون إذن المطار","المعدات"],["الاستئناف بعد إشارة All Clear من العمليات","المشرف"]]});
-  else if((v!=null&&v<3000)||d>=200)out.push({lv:2,k:"dust",ic:"🌫️",ref:"GOM 6.3.6.4",t:"رؤية منخفضة / غبار",v:vs?"رؤية "+vs:"",a:[["أقل عدد ممكن من المعدات بالساحة","المعدات"],["تخفيض السرعة بشكل كبير وتشغيل كل الأضواء","المعدات"],["حذر عند التقاطعات وعبور ممرات الطائرات، ونظافة الزجاج","المعدات"],["نظارات وكمامات للعاملين","الكل"]]});
+  /* الغبار والرؤية من الرصد الرسمي (METAR) فقط — نماذج التنبؤ غير دقيقة فيهما */
+  const v=h.obs?h.vis:null,du=h.obs&&h.dustObs,vs=v!=null?(v>=1000?(v/1000).toFixed(1)+"كم":Math.round(v)+"م"):"";
+  if((v!=null&&v<1000)||(h.obs&&h.storm))out.push({lv:3,k:"dust",ic:"🌫️",ref:"GOM 6.3.6.7",t:"عاصفة رملية",v:vs?"رؤية "+vs:"",a:[["العاملين بالخارج يحتمون عند وصول العاصفة","الكل"],["تجنب القيادة بالساحة، وإذا لازم كل الأضواء مشغلة","المعدات"],["نظارات وكمامات وملابس مغطية (PPE)","الكل"],["لا قيادة على الطرق الخارجية أو عبور مناطق المناورة بدون إذن المطار","المعدات"],["الاستئناف بعد إشارة All Clear من العمليات","المشرف"]]});
+  else if((v!=null&&v<3000)||(du&&v!=null&&v<5000))out.push({lv:2,k:"dust",ic:"🌫️",ref:"GOM 6.3.6.4",t:du?"غبار · رؤية منخفضة":"رؤية منخفضة",v:vs?"رؤية "+vs:"",a:[["أقل عدد ممكن من المعدات بالساحة","المعدات"],["تخفيض السرعة بشكل كبير وتشغيل كل الأضواء","المعدات"],["حذر عند التقاطعات وعبور ممرات الطائرات، ونظافة الزجاج","المعدات"],["نظارات وكمامات للعاملين","الكل"]]});
   const fe=h.feel!=null?h.feel:h.temp;
   if(fe>=46)out.push({lv:2,k:"heat",ic:"🔥",ref:"GOM 6.3.6.5",t:"إجهاد حراري",v:"المحسوسة "+Math.round(fe)+"°",a:[["شرب الماء قبل الدوام وطوال الوردية","الكل"],["تدوير العمل ومراقبة العاملين","المشرف"],["استراحات كافية وتهوية وظل بين المهام","المشرف"],["ملابس فضفاضة ومناسبة","الكل"]]});
   else if(fe>=40)out.push({lv:1,k:"heat",ic:"☀️",ref:"GOM 6.3.6.5",t:"حرارة مرتفعة",v:"المحسوسة "+Math.round(fe)+"°",a:[["ماء للعاملين طوال الوردية","المشرف"],["استراحات في الظل بين المهام","المشرف"]]});
@@ -1374,14 +1378,35 @@ function wxHaz(h){
 const wxLv=h=>wxHaz(h).reduce((m,x)=>Math.max(m,x.lv),0);
 const WX_LVT=["الساحة آمنة","انتباه","حذر","خطر — إجراءات إلزامية"];
 async function loadWx(){
-  const F="https://api.open-meteo.com/v1/forecast?"+WX_LL+"&wind_speed_unit=kn&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day&hourly=temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility";
-  const A="https://air-quality-api.open-meteo.com/v1/air-quality?"+WX_LL+"&hourly=dust";
-  const [w,a]=await Promise.all([fetch(F).then(r=>r.json()),fetch(A).then(r=>r.json()).catch(()=>null)]);
-  const H=w.hourly,dust={};if(a&&a.hourly)a.hourly.time.forEach((t,i)=>dust[t]=a.hourly.dust[i]);
-  WX.hours=H.time.map((t,i)=>({t,day:t.slice(0,10),hr:+t.slice(11,13),temp:H.temperature_2m[i],feel:H.apparent_temperature[i],rain:H.precipitation[i],prob:H.precipitation_probability[i],code:H.weather_code[i],ws:H.wind_speed_10m[i],wd:H.wind_direction_10m[i],wg:H.wind_gusts_10m[i],vis:H.visibility[i],dust:dust[t]}));
-  const c=w.current,hh=WX.hours.find(x=>x.t===c.time.slice(0,13)+":00")||{};
-  WX.cur={t:c.time,temp:c.temperature_2m,feel:c.apparent_temperature,rh:c.relative_humidity_2m,rain:c.precipitation,code:c.weather_code,ws:c.wind_speed_10m,wd:c.wind_direction_10m,wg:c.wind_gusts_10m,day:c.is_day,vis:hh.vis,dust:hh.dust};
-  WX.at=Date.now();WX.ok=true;try{localStorage.setItem("ajf_wx",JSON.stringify({h:WX.hours,c:WX.cur,at:WX.at}))}catch(e){}
+  /* 1) التنبؤ بالساعات القادمة: نموذج Open-Meteo (رياح/مطر/حرارة فقط) */
+  const F="https://api.open-meteo.com/v1/forecast?"+WX_LL+"&wind_speed_unit=kn&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day&hourly=temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m";
+  const [w,m,t]=await Promise.all([fetch(F).then(r=>r.json()).catch(()=>null),
+    fetch("https://aviationweather.gov/api/data/metar?ids=OESK&format=json&hours=3").then(r=>r.json()).catch(()=>null),
+    fetch("https://aviationweather.gov/api/data/taf?ids=OESK&format=json").then(r=>r.json()).catch(()=>null)]);
+  if(w&&w.hourly){const H=w.hourly;
+    WX.hours=H.time.map((t,i)=>({t,day:t.slice(0,10),hr:+t.slice(11,13),temp:H.temperature_2m[i],feel:H.apparent_temperature[i],rain:H.precipitation[i],prob:H.precipitation_probability[i],code:H.weather_code[i],ws:H.wind_speed_10m[i],wd:H.wind_direction_10m[i],wg:H.wind_gusts_10m[i]}));
+    const c=w.current;WX.model={temp:c.temperature_2m,feel:c.apparent_temperature,rh:c.relative_humidity_2m,rain:c.precipitation,code:c.weather_code,ws:c.wind_speed_10m,wd:c.wind_direction_10m,wg:c.wind_gusts_10m,day:c.is_day};}
+  /* 2) الحالة الحالية: METAR مطار الجوف OESK — الرصد الرسمي */
+  const M=Array.isArray(m)&&m.length?m.sort((a,b)=>(b.obsTime||0)-(a.obsTime||0))[0]:null;
+  WX.metar=M?parseMetar(M):null;WX.taf=Array.isArray(t)&&t[0]&&t[0].rawTAF||"";
+  const base=WX.model||{};
+  WX.cur=WX.metar?{...base,...WX.metar,feel:base.feel!=null?Math.max(base.feel,WX.metar.temp):WX.metar.temp,day:base.day}:(WX.model?{...base,src:"model"}:null);
+  if(!WX.cur)throw new Error("no wx");
+  WX.at=Date.now();WX.ok=true;try{localStorage.setItem("ajf_wx2",JSON.stringify({h:WX.hours,c:WX.cur,mo:WX.model,me:WX.metar,taf:WX.taf,at:WX.at}))}catch(e){}
+}
+function metarDesc(c){const r=c.raw;const p=[];
+  if(/\bTS/.test(r))p.push("عاصفة رعدية");if(/\+RA|\+SHRA|\+TSRA/.test(r))p.push("مطر غزير");else if(/RA\b/.test(r))p.push("مطر");
+  if(/\bDS\b|\bSS\b/.test(r))p.push("عاصفة رملية");else if(/BLSA|BLDU|\bDU\b|\bSA\b/.test(r))p.push("غبار");if(/\bHZ\b/.test(r))p.push("غبار عالق (HZ)");if(/\bFG\b|\bBR\b/.test(r))p.push("ضباب");
+  if(!p.length)p.push(/CAVOK|NSC|SKC|CLR|NCD/.test(r)?"صحو":/OVC|BKN/.test(r)?"غائم":/SCT|FEW/.test(r)?"غائم جزئياً":"صحو");return p.join(" · ")}
+function parseMetar(M){
+  const raw=M.rawOb||"",wx=(M.wxString||"")+" "+raw;
+  let vis=null;if(/CAVOK/.test(raw))vis=10000;else if(M.visib!=null){const v=String(M.visib).replace("+","");vis=parseFloat(v)*1609;if(String(M.visib).includes("+"))vis=Math.max(vis,10000)}
+  const mv=raw.match(/\s(\d{4})(?:NDV)?\s/);if(!/CAVOK/.test(raw)&&mv)vis=+mv[1]===9999?10000:+mv[1];/* الرؤية بالمتر من نص METAR */
+  const ts=/\bTS|VCTS/.test(wx),heavy=/\+(SH|TS)?RA/.test(wx),rain=/(^|\s|-|\+)(SH|TS)?RA\b|DZ/.test(wx);
+  const dustObs=/\b(BL)?(DU|SA)\b|\bDS\b|\bSS\b|BLDU|BLSA|\bPO\b/.test(wx),storm=/\bDS\b|\bSS\b/.test(wx);
+  const code=ts?95:heavy?65:rain?(/-/.test(wx)?61:63):null;
+  return{src:"metar",obs:true,raw,time:M.reportTime||"",temp:M.temp,dewp:M.dewp,ws:+M.wspd||0,wd:typeof M.wdir==="number"?M.wdir:null,wg:+M.wgst||+M.wspd||0,vis,dustObs,storm,haze:/\bHZ\b/.test(wx),code:code!=null?code:undefined,rain:heavy?8:rain?1:0,
+    rh:M.temp!=null&&M.dewp!=null?Math.round(100*Math.exp(17.625*M.dewp/(243.04+M.dewp))/Math.exp(17.625*M.temp/(243.04+M.temp))):undefined};
 }
 function wxAt(dayIso,mins){return WX.hours.find(x=>x.day===dayIso&&x.hr===Math.floor(mins/60)%24)}
 /* شارة الطقس على بطاقة الرحلة: وقت الإقلاع */
@@ -1422,19 +1447,20 @@ function renderWx(){
   const strip=win.map((h,i)=>{const l=wxLv(h),g=Math.max(h.wg,h.ws),z=wxHaz(h)[0],F=fl[h.day+"_"+h.hr];
     return`<div class="wx-h${i===0?" now":""}" data-lv="${l}">${F?`<span class="fl${F[0].in&&F.length===1?" in":""}">${F.length>1?F.length+"✈":F[0].n.replace(/^[A-Z0-9]{2}/,"")}</span>`:""}<span class="ic">${z?z.ic:isRain(h.code)?"💧":""}</span><div class="bar"><i style="height:${Math.max(6,Math.min(100,g/50*100))}%"></i></div><b>${Math.round(g)}</b><span class="hh">${i===0?"الآن":pad(h.hr)}</span></div>`}).join("");
   /* أول خطر قادم مرتبط برحلة */
-  let ahead="";for(const h of win.slice(1)){const l=wxLv(h);if(l>=2&&l>lv){const F=fl[h.day+"_"+h.hr];ahead=`متوقع ${WX_LVT[l]} الساعة ${pad(h.hr)}:00 — ${wxHaz(h)[0].t}${wxHaz(h)[0].v?" ("+wxHaz(h)[0].v+")":""}${F?" · وقت رحلة "+F.map(x=>x.n).join("، "):""}`;break}}
+  let ahead="";for(const h of win.slice(1)){const l=wxLv(h);if(l>=2&&l>lv){const F=fl[h.day+"_"+h.hr];ahead=`تقديري: ${WX_LVT[l]} الساعة ${pad(h.hr)}:00 — ${wxHaz(h)[0].t}${wxHaz(h)[0].v?" ("+wxHaz(h)[0].v+")":""}${F?" · وقت رحلة "+F.map(x=>x.n).join("، "):""}`;break}}
   const al=hz.length?hz.map((x,i)=>`<details class="wx-a" data-lv="${x.lv}"${i===0&&x.lv>=2?" open":""}><summary><span><b>${x.ic} ${x.t}</b>${x.v?`<em class="wv">${x.v}</em>`:""}</span><small>${WX_LVT[x.lv]}<br>${x.ref||""}</small></summary><ul>${x.a.map(([t,w])=>`<li>${t}<span class="who">${w}</span></li>`).join("")}</ul></details>`).join(""):"";
-  const vis=c.vis!=null?(c.vis>=10000?"+10كم":c.vis>=1000?(c.vis/1000).toFixed(1)+"كم":Math.round(c.vis)+"م"):"—";
-  el.querySelector(".wx-in").innerHTML=`<div class="wx-top"><div class="wx-now"><small>طقس الساحة · AJF</small><span class="tmp">${Math.round(c.temp)}<sup>°C</sup></span><div class="dsc">${WMO[c.code]||"—"}${c.dust>=200?" · غبار":""}</div>
-    <div class="meta"><span>المحسوسة <b>${Math.round(c.feel)}°</b></span><span>الرطوبة <b>${c.rh}%</b></span><span>الرؤية <b>${vis}</b></span><span>الهبّات <b>${Math.round(c.wg)}kt</b></span></div></div>
+  const vis=c.obs&&c.vis!=null?(c.vis>=10000?"+10كم":c.vis>=1000?(c.vis/1000).toFixed(1)+"كم":Math.round(c.vis)+"م"):"—";
+  el.querySelector(".wx-in").innerHTML=`<div class="wx-top"><div class="wx-now"><small>طقس الساحة · AJF</small><span class="tmp">${Math.round(c.temp)}<sup>°C</sup></span><div class="dsc">${c.obs?metarDesc(c):(WMO[c.code]||"—")}</div><div class="src ${c.obs?"ok":""}">${c.obs?`رصد رسمي · METAR OESK ${c.time?new Date(c.time.replace(" ","T")+(c.time.endsWith("Z")?"":"Z")).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"}):""}`:"تقديري من نموذج — الرصد الرسمي غير متاح الآن"}</div>
+    <div class="meta"><span>المحسوسة <b>${c.feel!=null?Math.round(c.feel)+"°":"—"}</b></span><span>الرطوبة <b>${c.rh!=null?c.rh+"%":"—"}</b></span><span>الرؤية <b>${vis}</b></span><span>الهبّات <b>${Math.round(c.wg)}kt</b></span></div></div>
     <div class="wx-dial">${wxDial(c)}</div></div>
     <div class="wx-lv" data-lv="${lv}"><i></i><div><b>${WX_LVT[lv]}${hz[0]?" · "+hz[0].t:""}</b>${hz[0]&&hz[0].v?`<em class="wv">${hz[0].v}</em>`:""}<span>${ahead||(lv?"اتبع الإجراءات أدناه":"لا قيود طقس على المعدات والعمال الآن")}</span></div></div>
-    <div class="wx-strip" aria-label="الرياح خلال 12 ساعة">${strip}</div>${al?`<div class="wx-al">${al}</div>`:""}
-    <div class="wx-ft"><span>Open-Meteo · تحدّث ${new Date(WX.at).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"})} · العتبات حسب دليل SGS GOM 6.3.6 · القرار النهائي لمدير المناوبة وعمليات المطار</span></div>`;
+    <div class="wx-sl">الرياح المتوقعة (عقدة) · 12 ساعة · تقديري</div><div class="wx-strip" aria-label="الرياح المتوقعة خلال 12 ساعة">${strip}</div>${al?`<div class="wx-al">${al}</div>`:""}
+    ${c.obs||WX.taf?`<details class="wx-raw"><summary>النص الرسمي METAR / TAF</summary>${c.obs?`<code>${c.raw}</code>`:""}${WX.taf?`<code>${WX.taf}</code>`:""}</details>`:""}
+    <div class="wx-ft"><span>${c.obs?"الحالة الآن: METAR OESK":"الحالة الآن: تقديري"} · الساعات القادمة: نموذج Open-Meteo (تقديري) · تحدّث ${new Date(WX.at).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"})} · العتبات حسب دليل SGS GOM 6.3.6 · القرار النهائي لمدير المناوبة وعمليات المطار</span></div>`;
   wxScene(c,lv);
   /* تنبيه منبثق عند ارتفاع مستوى الخطر */
   const key=today+"_"+lv;let last="";try{last=localStorage.getItem("ajf_wxa")||""}catch(e){}
-  if(lv>=2&&key!==last&&wxShown!==lv){wxShown=lv;try{localStorage.setItem("ajf_wxa",key)}catch(e){}wxBanner(hz[0],lv)}
+  if(c.obs&&lv>=2&&key!==last&&wxShown!==lv){wxShown=lv;try{localStorage.setItem("ajf_wxa",key)}catch(e){}wxBanner(hz[0],lv)}
 }
 function wxBanner(x,lv){
   const ii=$("intro");if(ii&&!ii.hidden){setTimeout(()=>wxBanner(x,lv),1000);return}
@@ -1453,7 +1479,7 @@ function wxScene(c,lv){
   const dpr=Math.min(2,devicePixelRatio||1),W=()=>cv.clientWidth,H=()=>cv.clientHeight;
   const fit=()=>{cv.width=W()*dpr;cv.height=H()*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)};fit();
   const ws=c.ws||0,to=((c.wd||0)+180)*Math.PI/180,vx=Math.sin(to),vy=-Math.cos(to),sp=.5+ws*.16;
-  const rain=isRain(c.code)||isTS(c.code)||(c.rain||0)>0,ts=isTS(c.code),dust=(c.dust||0)>=150||(c.vis!=null&&c.vis<5000);
+  const rain=isRain(c.code)||isTS(c.code)||(c.rain||0)>0,ts=isTS(c.code),dust=!!(c.obs&&(c.dustObs||(c.vis!=null&&c.vis<5000&&c.haze)));
   const N=Math.min(170,25+ws*5),P=[...Array(N)].map(()=>({x:Math.random()*W(),y:Math.random()*H(),l:6+Math.random()*18,a:.08+Math.random()*.22}));
   const R=rain?[...Array(Math.min(220,60+Math.round((c.rain||1)*30)))].map(()=>({x:Math.random()*W(),y:Math.random()*H(),s:6+Math.random()*6})):[];
   const day=c.day,bg=lv>=3?["#2a0f14","#0a1120"]:dust?["#3a2a14","#14110d"]:day?["#16325c","#0d1a30"]:["#0f1b33","#0a1120"];
@@ -1479,7 +1505,7 @@ function wxScene(c,lv){
 }
 document.addEventListener("visibilitychange",()=>{const el=$("wx");if(!document.hidden&&el&&el._frame&&!reduce){cancelAnimationFrame(wxRAF);wxRAF=requestAnimationFrame(el._frame)}});
 async function wxTick(){try{await loadWx()}catch(e){}try{renderWx()}catch(e){console.error(e)}try{if(!open)render()}catch(e){}}
-try{const s=JSON.parse(localStorage.getItem("ajf_wx")||"null");if(s&&Date.now()-s.at<6*3600e3){WX.hours=s.h;WX.cur=s.c;WX.at=s.at;WX.ok=true}}catch(e){}
+try{localStorage.removeItem("ajf_wx");const s=JSON.parse(localStorage.getItem("ajf_wx2")||"null");if(s&&Date.now()-s.at<3*3600e3){WX.hours=s.h||[];WX.cur=s.c;WX.model=s.mo;WX.metar=s.me;WX.taf=s.taf||"";WX.at=s.at;WX.ok=!!s.c}}catch(e){}
 
 /* ---------- init ---------- */
 /* كل جزء مستقل: خطأ في جزء ما يوقف الترحيب أو اللوحة */
