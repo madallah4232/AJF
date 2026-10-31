@@ -1,0 +1,177 @@
+{
+  "fetched": "2026-10-31T23:05:53Z",
+  "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-10-31T23:00:20.229Z",
+      "obsTime": 1793487600,
+      "reportTime": "2026-10-31T23:00:00.000Z",
+      "temp": 21,
+      "dewp": 15,
+      "wdir": 310,
+      "wspd": 6,
+      "visib": "6+",
+      "altim": 1020,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 312300Z 31006KT CAVOK 21/15 Q1020 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-10-31T22:00:23.633Z",
+      "obsTime": 1793484000,
+      "reportTime": "2026-10-31T22:00:00.000Z",
+      "temp": 22,
+      "dewp": 15,
+      "wdir": 310,
+      "wspd": 4,
+      "visib": "6+",
+      "altim": 1020,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 312200Z 31004KT 9999 FEW040 22/15 Q1020 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "FEW",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 4000
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-10-31T21:00:22.858Z",
+      "obsTime": 1793480400,
+      "reportTime": "2026-10-31T21:00:00.000Z",
+      "temp": 23,
+      "dewp": 15,
+      "wdir": 310,
+      "wspd": 5,
+      "visib": "6+",
+      "altim": 1021,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 312100Z 31005KT CAVOK 23/15 Q1021 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    }
+  ],
+  "taf": [
+    {
+      "icaoId": "OESK",
+      "dbPopTime": "2026-10-31T11:16:50.609Z",
+      "bulletinTime": "2026-10-31T11:00:00.000Z",
+      "issueTime": "2026-10-31T11:00:00.000Z",
+      "validTimeFrom": 1793448000,
+      "validTimeTo": 1793556000,
+      "rawTAF": "TAF OESK 311100Z 3112/0118 20006KT 9999 FEW040 BECMG 3118/3120 35006KT 7000 BECMG 0110/0112 25010KT CAVOK",
+      "mostRecent": 1,
+      "remarks": "",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "prior": 1,
+      "name": "Al-Jouf Arpt",
+      "fcsts": [
+        {
+          "timeFrom": 1793448000,
+          "timeTo": 1793469600,
+          "timeBec": null,
+          "fcstChange": null,
+          "probability": null,
+          "wdir": 200,
+          "wspd": 6,
+          "wgst": null,
+          "wshearHgt": null,
+          "wshearDir": null,
+          "wshearSpd": null,
+          "visib": "6+",
+          "altim": null,
+          "vertVis": null,
+          "wxString": null,
+          "notDecoded": null,
+          "clouds": [
+            {
+              "cover": "FEW",
+              "base": 4000,
+              "type": null
+            }
+          ],
+          "icgTurb": [],
+          "temp": []
+        },
+        {
+          "timeFrom": 1793469600,
+          "timeTo": 1793527200,
+          "timeBec": 1793476800,
+          "fcstChange": "BECMG",
+          "probability": null,
+          "wdir": 350,
+          "wspd": 6,
+          "wgst": null,
+          "wshearHgt": null,
+          "wshearDir": null,
+          "wshearSpd": null,
+          "visib": 4.35,
+          "altim": null,
+          "vertVis": null,
+          "wxString": null,
+          "notDecoded": null,
+          "clouds": [
+            {
+              "cover": "FEW",
+              "base": 4000,
+              "type": null
+            }
+          ],
+          "icgTurb": [],
+          "temp": []
+        },
+        {
+          "timeFrom": 1793527200,
+          "timeTo": 1793556000,
+          "timeBec": 1793534400,
+          "fcstChange": "BECMG",
+          "probability": null,
+          "wdir": 250,
+          "wspd": 10,
+          "wgst": null,
+          "wshearHgt": null,
+          "wshearDir": null,
+          "wshearSpd": null,
+          "visib": "6+",
+          "altim": null,
+          "vertVis": null,
+          "wxString": "NSW",
+          "notDecoded": null,
+          "clouds": [
+            {
+              "cover": "NSC",
+              "base": null,
+              "type": null
+            }
+          ],
+          "icgTurb": [],
+          "temp": []
+        }
+      ]
+    }
+  ]
+}
