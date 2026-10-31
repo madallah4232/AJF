@@ -151,6 +151,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .chip.live::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-inline-end:5px;vertical-align:1px}
 .row.cxl .t{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--warn)}
 .track-btn{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font-weight:600;text-decoration:none;transition:transform .16s var(--ease)}
+.track-btn[hidden]{display:none}
 .track-btn:active{transform:scale(.97)}
 .sync{justify-self:center;display:flex;align-items:center;gap:12px;padding:10px 18px 10px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);margin-top:6px}
 .sync b{display:block;font-size:13px;font-weight:600;color:var(--go)}
@@ -284,6 +285,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   <div class="kv" id="shKV"></div>
   <div class="dots" id="shD"></div>
   <div class="note" id="shN"></div>
+  <button class="track-btn" id="listen" hidden><span class="eq"><i></i><i></i><i></i><i></i></span>استمع لإعلان الرحلة</button>
   <a class="track-btn" id="track" target="_blank" rel="noopener">تتبّع المسار على الخريطة ↗</a>
   <button class="done-btn" id="done">تم</button>
 </div>
@@ -499,6 +501,9 @@ function openSheet(f,date){
   $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
   $("shN").textContent=f.note+(f.est?" (* وقت تقديري)":"");
   $("track").href="https://www.flightradar24.com/data/flights/"+f.n.toLowerCase();
+  const ck=clipKey(f),has=CLIPS.includes(ck);
+  $("listen").hidden=!has;$("listen").onclick=()=>playClip(ck,$("listen"));
+  if(has)playClip(ck,$("listen"));
   const L=LIVE.date===iso(date)&&LIVE.flights[f.n];
   if(L&&L.note)$("shN").textContent+=" · "+L.note;
   scrim.classList.add("on");open=true;sAnim&&sAnim.stop();
@@ -507,6 +512,7 @@ function openSheet(f,date){
   setTimeout(()=>$("done").focus({preventScroll:true}),50);
 }
 function closeSheet(velocity=0){
+  try{curAudio&&curAudio.pause()}catch(e){}
   open=false;scrim.classList.remove("on");sAnim&&sAnim.stop();
   sAnim=spring(y,sheet.offsetHeight+20,{velocity,response:.32,onUpdate:setY});
   lastFocus&&lastFocus.focus&&lastFocus.focus({preventScroll:true});
@@ -548,10 +554,21 @@ function announcement(){
   const n=nextDeparture();
   if(!n)return{text:"أهلاً بكم في مطار الجوف."};
   const {f}=n;
-  return{key:f.iata+"-"+f.t.replace(":",""),text:`أهلاً بكم في مطار الجوف. الرحلة القادمة: الجوف، ${f.dest}، عند الساعة ${spokenTime(f.t)}.`};
+  return{key:clipKey(f),text:`أهلاً بكم في مطار الجوف. الرحلة القادمة: الجوف، ${f.dest}، عند الساعة ${spokenTime(f.t)}.`};
 }
 /* recorded announcer clips available in audio/ (e.g. "CAI-0900"); others use the device voice */
-const CLIPS=[];
+const CLIPS=[]; /* filled when announcer MP3s are uploaded, e.g. "SM322-0900" */
+const clipKey=f=>f.no.split(" ")[0]+"-"+(f.t||f.time).replace(":","");
+let curAudio=null;
+function playClip(key,el,onEnd){
+  if(!CLIPS.includes(key))return false;
+  try{curAudio&&curAudio.pause()}catch(e){}
+  const au=new Audio("audio/"+key+".mp3");curAudio=au;
+  el&&el.classList.add("speaking");
+  au.onended=au.onerror=()=>{el&&el.classList.remove("speaking");onEnd&&onEnd()};
+  au.play().catch(()=>{el&&el.classList.remove("speaking")});
+  return true;
+}
 function speak(text,onEnd){
   if(!("speechSynthesis" in window)){onEnd&&onEnd();return}
   const u=new SpeechSynthesisUtterance(text);u.lang="ar-SA";u.rate=.9;u.pitch=.95;
@@ -566,8 +583,8 @@ function playAnnouncement(el){
   const a=announcement();
   const off=()=>el&&el.classList.remove("speaking");el&&el.classList.add("speaking");
   if(a.key&&CLIPS.includes(a.key)){
-    const au=new Audio("audio/"+a.key+".mp3");au.onended=au.onerror=off;
-    return au.play().catch(e=>{off();throw e});
+    if(CLIPS.includes("welcome")){playClip("welcome",el,()=>playClip(a.key,el));return Promise.resolve()}
+    playClip(a.key,el);return Promise.resolve();
   }
   /* no recorded clip yet: airport chime only (device voices sound robotic) */
   const w=chime();setTimeout(off,w);
