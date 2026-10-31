@@ -501,9 +501,9 @@ function openSheet(f,date){
   $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
   $("shN").textContent=f.note+(f.est?" (* وقت تقديري)":"");
   $("track").href="https://www.flightradar24.com/data/flights/"+f.n.toLowerCase();
-  const ck=clipKey(f),has=CLIPS.includes(ck);
-  $("listen").hidden=!has;$("listen").onclick=()=>playClip(ck,$("listen"));
-  if(has)playClip(ck,$("listen"));
+  const ff={...f,t:f.t||f.time},has=hasClip(ff);
+  $("listen").hidden=!has;$("listen").onclick=()=>playFlight(ff,$("listen"));
+  if(has)playFlight(ff,$("listen"));
   const L=LIVE.date===iso(date)&&LIVE.flights[f.n];
   if(L&&L.note)$("shN").textContent+=" · "+L.note;
   scrim.classList.add("on");open=true;sAnim&&sAnim.stop();
@@ -512,7 +512,7 @@ function openSheet(f,date){
   setTimeout(()=>$("done").focus({preventScroll:true}),50);
 }
 function closeSheet(velocity=0){
-  try{curAudio&&curAudio.pause()}catch(e){}
+  stopClips();
   open=false;scrim.classList.remove("on");sAnim&&sAnim.stop();
   sAnim=spring(y,sheet.offsetHeight+20,{velocity,response:.32,onUpdate:setY});
   lastFocus&&lastFocus.focus&&lastFocus.focus({preventScroll:true});
@@ -557,17 +557,29 @@ function announcement(){
   return{key:clipKey(f),text:`أهلاً بكم في مطار الجوف. الرحلة القادمة: الجوف، ${f.dest}، عند الساعة ${spokenTime(f.t)}.`};
 }
 /* recorded announcer clips available in audio/ (e.g. "CAI-0900"); others use the device voice */
-const CLIPS=["welcome","SM322-0900"]; /* filled when announcer MP3s are uploaded, e.g. "SM322-0900" */
-const clipKey=f=>f.no.split(" ")[0]+"-"+(f.t||f.time).replace(":","");
-let curAudio=null;
-function playClip(key,el,onEnd){
-  if(!CLIPS.includes(key))return false;
-  try{curAudio&&curAudio.pause()}catch(e){}
-  const au=new Audio("audio/"+key+".mp3");curAudio=au;
-  el&&el.classList.add("speaking");
-  au.onended=au.onerror=()=>{el&&el.classList.remove("speaking");onEnd&&onEnd()};
-  au.play().catch(()=>{el&&el.classList.remove("speaking")});
-  return true;
+const CLIPS=["welcome","CAI-SM","t0900"]; /* filled when announcer MP3s are uploaded, e.g. "SM322-0900" */
+/* a flight's announcement = route clip (destination + airline) + time clip, so any day's time reuses the same voice */
+const routeKey=f=>f.iata+"-"+f.no.slice(0,2);
+const timeKey=f=>"t"+(f.t||f.time).replace(":","");
+const clipKey=f=>routeKey(f);
+const hasClip=f=>CLIPS.includes(routeKey(f))&&CLIPS.includes(timeKey(f));
+let curAudio=null,seqId=0;
+function stopClips(){seqId++;try{curAudio&&curAudio.pause()}catch(e){}}
+function playSeq(keys,el,onEnd){
+  keys=keys.filter(k=>CLIPS.includes(k));if(!keys.length)return false;
+  stopClips();const id=seqId;el&&el.classList.add("speaking");
+  const next=i=>{
+    if(id!==seqId)return;
+    if(i>=keys.length){el&&el.classList.remove("speaking");onEnd&&onEnd();return}
+    const au=new Audio("audio/"+keys[i]+".mp3");curAudio=au;
+    au.onended=()=>setTimeout(()=>next(i+1),120);au.onerror=()=>next(i+1);
+    au.play().catch(()=>{el&&el.classList.remove("speaking")});
+  };
+  next(0);return true;
+}
+function playFlight(f,el,withWelcome){
+  if(!hasClip(f))return false;
+  return playSeq([...(withWelcome?["welcome"]:[]),routeKey(f),timeKey(f)],el);
 }
 function speak(text,onEnd){
   if(!("speechSynthesis" in window)){onEnd&&onEnd();return}
@@ -582,10 +594,8 @@ function speak(text,onEnd){
 function playAnnouncement(el){
   const a=announcement();
   const off=()=>el&&el.classList.remove("speaking");el&&el.classList.add("speaking");
-  if(a.key&&CLIPS.includes(a.key)){
-    if(CLIPS.includes("welcome")){playClip("welcome",el,()=>playClip(a.key,el));return Promise.resolve()}
-    playClip(a.key,el);return Promise.resolve();
-  }
+  const nx=nextDeparture();
+  if(nx&&hasClip(nx.f)){playFlight(nx.f,el,true);return Promise.resolve()}
   /* no recorded clip yet: airport chime only (device voices sound robotic) */
   const w=chime();setTimeout(off,w);
   const nx=$("next");nx.classList.remove("flash");void nx.offsetWidth;nx.classList.add("flash");
@@ -615,7 +625,7 @@ function showIntro(){
   $("introSkip").onclick=e=>{e.stopPropagation();enter(false)};
   /* a recorded clip may autoplay where the browser allows it; otherwise the first tap starts it */
   const a=announcement();
-  if(a.key&&CLIPS.includes(a.key))setTimeout(()=>{if(done)return;playAnnouncement($("say")).then(()=>{done=true;setTimeout(closeIntro,1200)}).catch(()=>{})},800);
+  if(nextDeparture()&&hasClip(nextDeparture().f))setTimeout(()=>{if(done)return;playAnnouncement($("say")).then(()=>{done=true;setTimeout(closeIntro,1200)}).catch(()=>{})},800);
 }
 $("say").onclick=()=>playAnnouncement($("say"));
 if("speechSynthesis" in window)speechSynthesis.getVoices();
