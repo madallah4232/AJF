@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>رحلات مطار الجوف</title>
+<meta name="description" content="لوحة مغادرة مطار الجوف AJF: الرحلة القادمة، حالة الرحلات المباشرة، والضغط اليومي — تتحدث تلقائياً.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="لوحة رحلات مطار الجوف · AJF">
+<meta property="og:description" content="الرحلة القادمة، الحالة المباشرة، والضغط اليومي — تتحدث تلقائياً.">
+<meta property="og:image" content="https://madallah4232.github.io/AJF/og.png">
+<meta property="og:image:width" content="2400"><meta property="og:image:height" content="1260">
+<meta property="og:url" content="https://madallah4232.github.io/AJF/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0a1120">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230a1120'/%3E%3Cpath fill='%23ffb340' d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a night-shift departures board — live "next departure" up top, a week strip that reads as a pressure chart, a day timeline, then the board itself. */
+:root{
+  --night:#0a1120;      /* page */
+  --panel:#111a2c;      /* cards */
+  --raise:#17223a;      /* pressed / inputs */
+  --line:#223050;       /* hairlines */
+  --ink:#e9eef7;        /* text */
+  --muted:#8796b0;      /* secondary text */
+  --amber:#ffb340;      /* board digits, the one accent */
+  --go:#38d39f;         /* departed / ok */
+  --warn:#ff7a66;       /* suspended / attention */
+  --display:"Readex Pro","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --body:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --ease:cubic-bezier(.23,1,.32,1);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--night);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+body{min-height:100%;padding-bottom:env(safe-area-inset-bottom)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:8px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px 40px;display:grid;gap:18px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:5;margin:0 -16px;padding:calc(env(safe-area-inset-top) + 14px) 16px 12px;
+  background:color-mix(in oklab,var(--night) 82%,transparent);backdrop-filter:saturate(160%) blur(18px);-webkit-backdrop-filter:saturate(160%) blur(18px);
+  border-bottom:1px solid transparent;transition:border-color .2s}
+.top.scrolled{border-color:var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;flex-direction:column}
+.brand small{color:var(--muted);font-size:12px;letter-spacing:.04em}
+.brand h1{margin:0;font-family:var(--display);font-weight:700;font-size:24px;line-height:1.2;text-wrap:balance}
+.clock{text-align:left;display:flex;flex-direction:column;align-items:flex-end}
+.clock b{font-family:var(--mono);font-size:22px;color:var(--amber);font-weight:600;font-variant-numeric:tabular-nums}
+.clock span{font-size:11px;color:var(--muted)}
+.search{margin-top:12px;display:flex;align-items:center;gap:8px;background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:42px}
+.search svg{width:16px;height:16px;color:var(--muted);flex:none}
+.search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font:inherit;font-size:15px}
+.search input::placeholder{color:var(--muted)}
+.search input::-webkit-search-cancel-button{display:none}
+.clear{width:22px;height:22px;border-radius:50%;background:var(--line);color:var(--muted);font-size:11px;display:none;place-items:center}
+.clear.show{display:grid}
+
+/* next departure */
+.next{position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;display:grid;gap:14px}
+.next::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--amber)}
+.next .lbl{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}
+.pulse{display:inline-flex;align-items:center;gap:6px;color:var(--amber);font-weight:600}
+.pulse i{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:pulse 1.6s var(--ease) infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--amber) 60%,transparent)}100%{box-shadow:0 0 0 9px transparent}}
+.next .main{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.board{display:flex;gap:3px;direction:ltr}
+.board span{font-family:var(--mono);font-weight:600;font-size:30px;width:30px;height:42px;display:grid;place-items:center;border-radius:6px;
+  background:linear-gradient(#0b1323 50%,#0e1729 50%);color:var(--amber);box-shadow:inset 0 0 0 1px var(--line)}
+.next h2{margin:0;font-family:var(--display);font-size:26px;line-height:1.15;font-weight:700}
+.next .sub{color:var(--muted);font-size:13px}
+.next .foot{display:flex;justify-content:space-between;align-items:baseline;border-top:1px dashed var(--line);padding-top:12px}
+.next .count{font-family:var(--mono);font-size:18px;color:var(--ink)}
+.next .count small{font-family:var(--body);color:var(--muted);font-size:12px;margin-inline-start:6px}
+
+/* week strip */
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sec h3{margin:0;font-family:var(--display);font-size:17px;font-weight:600}
+.sec small{color:var(--muted);font-size:12px}
+.weeknav{display:flex;gap:6px}
+.weeknav button{width:32px;height:32px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--ink);display:grid;place-items:center;transition:transform .16s var(--ease),opacity .2s}
+.weeknav button:active{transform:scale(.94)}
+.weeknav button:disabled{opacity:.35;cursor:default}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 4px 6px;display:grid;justify-items:center;gap:4px;
+  transition:transform .16s var(--ease),background .2s,border-color .2s}
+.day:active{transform:scale(.96)}
+.day .dn{font-size:11px;color:var(--muted)}
+.day .dd{font-family:var(--mono);font-size:15px;font-weight:600}
+.day .meter{width:100%;height:34px;display:flex;align-items:flex-end;justify-content:center}
+.day .meter i{width:14px;border-radius:4px 4px 2px 2px;background:color-mix(in oklab,var(--muted) 45%,transparent);transition:height .4s var(--ease)}
+.day .dc{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.day.peak .meter i{background:var(--warn)}
+.day[aria-pressed="true"]{background:var(--raise);border-color:var(--amber)}
+.day[aria-pressed="true"] .meter i{background:var(--amber)}
+.day.today .dn{color:var(--amber);font-weight:600}
+.legend{display:flex;gap:14px;color:var(--muted);font-size:11px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* timeline */
+.tl{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 14px 10px;display:grid;gap:8px}
+.tl .track{position:relative;height:50px}
+.tl .axis{position:absolute;inset:auto 0 20px 0;height:1px;background:var(--line)}
+.tl .tick{position:absolute;bottom:0;transform:translateX(50%);font-family:var(--mono);font-size:10px;color:var(--muted)}
+.tl .tick::before{content:"";position:absolute;bottom:16px;right:50%;width:1px;height:5px;background:var(--line)}
+.tl .dot{position:absolute;bottom:15px;width:10px;height:10px;margin-right:-5px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px var(--panel)}
+.tl .dot.done{background:var(--muted)}
+.tl .dot.est{background:transparent;box-shadow:inset 0 0 0 2px var(--amber),0 0 0 3px var(--panel)}
+.tl .now{position:absolute;top:0;bottom:20px;width:2px;margin-right:-1px;background:var(--go);border-radius:2px}
+.tl .now::after{content:"الآن";position:absolute;top:-2px;right:6px;font-size:10px;color:var(--go);white-space:nowrap}
+.tl .rush{position:absolute;bottom:20px;height:26px;background:color-mix(in oklab,var(--warn) 16%,transparent);border-radius:6px 6px 0 0}
+.tl p{margin:0;color:var(--muted);font-size:12px}
+.tl p b{color:var(--ink);font-weight:600}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.stat b{display:block;font-family:var(--mono);font-size:20px;font-weight:600}
+.stat span{font-size:11px;color:var(--muted)}
+
+/* board list */
+.list{display:grid;gap:8px}
+.row{position:relative;display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;text-align:right;width:100%;
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px 12px 12px;overflow:hidden;
+  transition:transform .16s var(--ease),background .2s;animation:in .42s var(--ease) both}
+.row:active{transform:scale(.98);background:var(--raise)}
+.row::before{content:"";position:absolute;inset:10px 0 10px auto;width:3px;border-radius:3px 0 0 3px;background:var(--c,var(--muted))}
+@keyframes in{from{opacity:.001;transform:translateY(6px)}}
+.row .t{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums}
+.row .t small{display:block;font-family:var(--body);font-size:10px;color:var(--muted);font-weight:500}
+.row .d{min-width:0}
+.row .d b{font-family:var(--display);font-size:17px;font-weight:600}
+.row .d .code{font-family:var(--mono);font-size:12px;color:var(--muted);margin-inline-start:6px}
+.row .d div{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.al{display:inline-grid;place-items:center;min-width:30px;height:20px;padding:0 6px;margin-inline-end:6px;border-radius:6px;vertical-align:1px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em;color:#0a1120;background:var(--c,var(--muted))}
+.al.lg{min-width:40px;height:26px;font-size:13px;border-radius:8px}
+.chip{font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;white-space:nowrap;border:1px solid currentColor}
+.chip.sched{color:var(--muted)}
+.chip.soon{color:var(--amber)}
+.chip.done{color:var(--go)}
+.chip.off,.chip.cxl{color:var(--warn)}
+.chip.air{color:#7cc4ff}
+.chip.live::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-inline-end:5px;vertical-align:1px}
+.row.cxl .t{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--warn)}
+.track-btn{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font-weight:600;text-decoration:none;transition:transform .16s var(--ease)}
+.track-btn:active{transform:scale(.97)}
+.sync{justify-self:center;display:flex;align-items:center;gap:12px;padding:10px 18px 10px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);margin-top:6px}
+.sync b{display:block;font-size:13px;font-weight:600;color:var(--go)}
+.sync span{font-size:12px;color:var(--muted)}
+.sync.stale b{color:var(--amber)}
+.beacon{position:relative;width:12px;height:12px;flex:none}
+.beacon i,.beacon::before,.beacon::after{position:absolute;inset:0;border-radius:50%;background:var(--go)}
+.beacon::before,.beacon::after{content:"";opacity:.6;animation:ping 2.4s cubic-bezier(.2,.6,.3,1) infinite}
+.beacon::after{animation-delay:1.2s}
+.sync.stale .beacon i,.sync.stale .beacon::before,.sync.stale .beacon::after{background:var(--amber)}
+@keyframes ping{0%{transform:scale(1);opacity:.6}100%{transform:scale(3.2);opacity:0}}
+.row.past{opacity:.55}
+.row.past .t{color:var(--muted)}
+.row.off .t{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--warn)}
+mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;border-radius:3px}
+.empty{color:var(--muted);text-align:center;padding:28px 12px;border:1px dashed var(--line);border-radius:16px}
+.alert{display:flex;gap:10px;align-items:flex-start;background:color-mix(in oklab,var(--warn) 10%,var(--panel));border:1px solid color-mix(in oklab,var(--warn) 35%,var(--line));border-radius:14px;padding:12px 14px;font-size:13px}
+.alert b{color:var(--warn)}
+.foot{color:var(--muted);font-size:12px;line-height:1.8}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;z-index:9}
+.scrim.on{pointer-events:auto}
+.sheet{position:fixed;inset:auto 0 0 0;z-index:10;max-width:560px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;
+  padding:8px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(calc(100% + 60px));touch-action:none;display:grid;gap:12px}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 6px}
+.sheet h4{margin:0;font-family:var(--display);font-size:22px}
+.sheet .s{color:var(--muted);font-size:13px;margin-top:-8px}
+.kv{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.kv div{background:var(--raise);border-radius:12px;padding:10px 12px}
+.kv span{display:block;font-size:11px;color:var(--muted)}
+.kv b{font-family:var(--mono);font-size:17px;font-weight:600}
+.dots{display:flex;gap:6px;justify-content:space-between}
+.dots i{flex:1;text-align:center;font-style:normal;font-size:12px;padding:7px 0;border-radius:9px;background:var(--raise);color:var(--muted)}
+.dots i.on{background:color-mix(in oklab,var(--amber) 22%,var(--raise));color:var(--amber);font-weight:600}
+.sheet .note{font-size:13px;color:var(--muted);line-height:1.7}
+.done-btn{height:46px;border-radius:14px;background:var(--amber);color:#1a1205;font-weight:700;transition:transform .16s var(--ease)}
+.done-btn:active{transform:scale(.97)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:380px){.board span{width:24px;height:36px;font-size:24px}.next h2{font-size:22px}.row{grid-template-columns:56px 1fr auto}.row .t{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top" id="top">
+    <div class="bar">
+      <div class="brand"><small>مغادرة · مطار الجوف · AJF</small><h1>لوحة الرحلات</h1></div>
+      <div class="clock"><b id="clock">--:--</b><span id="today">توقيت الرياض</span></div>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="ابحث: وجهة، شركة، رقم رحلة" autocomplete="off" aria-label="بحث في الرحلات">
+      <button class="clear" id="clear" aria-label="مسح البحث">✕</button>
+    </div>
+  </div>
+
+  <section class="next" id="next" aria-live="polite"></section>
+
+  <section style="display:grid;gap:10px">
+    <div class="sec">
+      <div><h3 id="weekTitle">هذا الأسبوع</h3><small id="weekRange"></small></div>
+      <div class="weeknav">
+        <button id="prev" aria-label="الأسبوع السابق">›</button>
+        <button id="nextw" aria-label="الأسبوع التالي">‹</button>
+      </div>
+    </div>
+    <div class="week" id="week" role="group" aria-label="اختيار اليوم"></div>
+    <div class="legend"><span><i style="background:var(--amber)"></i>اليوم المختار</span><span><i style="background:var(--warn)"></i>أعلى ضغط بالأسبوع</span><span><i style="box-shadow:inset 0 0 0 2px var(--amber)"></i>وقت تقديري</span></div>
+  </section>
+
+  <section class="tl" id="tl"></section>
+
+  <section class="stats">
+    <div class="stat"><b id="sN">0</b><span>رحلات اليوم</span></div>
+    <div class="stat"><b id="sF">—</b><span>أول إقلاع</span></div>
+    <div class="stat"><b id="sL">—</b><span>آخر إقلاع</span></div>
+  </section>
+
+  <section style="display:grid;gap:10px">
+    <div class="sec"><h3 id="dayTitle"></h3><small id="dayNote"></small></div>
+    <div class="list" id="list"></div>
+  </section>
+
+
+  <div class="sync" id="sync" role="status" aria-live="polite">
+    <span class="beacon" aria-hidden="true"><i></i></span>
+    <div><b id="syncMain">مباشر</b><span id="syncSub"></span></div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+  <div class="grab"></div>
+  <h4 id="shT"></h4>
+  <div class="s" id="shS"></div>
+  <div class="kv" id="shKV"></div>
+  <div class="dots" id="shD"></div>
+  <div class="note" id="shN"></div>
+  <a class="track-btn" id="track" target="_blank" rel="noopener">تتبّع المسار على الخريطة ↗</a>
+  <button class="done-btn" id="done">تم</button>
+</div>
+
+<script>
+const DAYS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+const SHORT=["أحد","اثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"];
+const MONTHS=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const C={sv:"#2fbf8f",f3:"#ff5c8a",xy:"#2bc4d8",np:"#5b8cff",sm:"#c9a227",g9:"#ff6b4a"};
+/* days: 0=Sun..6=Sat · start/until: ISO dates · est: time not confirmed */
+const FLIGHTS=[
+ {airline:"إير كايرو",no:"SM322",dest:"القاهرة",iata:"CAI",time:"09:00",dur:105,days:[2,4,6],c:C.sm,alt:{2:"10:15"},note:"الثلاثاء الإقلاع 10:15، الخميس والسبت 09:00. رحلات 27 و29 أكتوبر طارت فعلياً."},
+ {airline:"السعودية",no:"SV8383",dest:"جدة",iata:"JED",time:"09:45",dur:110,days:[4,6],c:C.sv,note:"رحلة صباحية، طارت فعلياً 24 و29 أكتوبر."},
+ {airline:"العربية للطيران",no:"G9222",dest:"الشارقة",iata:"SHJ",time:"16:55",dur:135,days:[1,3,5],c:C.g9,note:"طارت 26 و28 و30 أكتوبر."},
+ {airline:"فلاي أديل",no:"F3254",dest:"الرياض",iata:"RUH",time:"18:00",dur:100,days:[1,2,4,6],start:"2026-11-16",est:true,c:C.f3,note:"متوقفة حالياً (أُلغيت 26 و27 أكتوبر). موقع أديل يفتح الحجز من 16 نوفمبر: الاثنين والثلاثاء والخميس والسبت. الوقت حسب جدولها السابق، أكّده من التطبيق."},
+ {airline:"السعودية",no:"SV8035",dest:"القصيم",iata:"ELQ",time:"18:40",dur:75,days:[0,1,2,3,4,5,6],until:"2026-11-30",c:C.sv,note:"يومية، طارت كل أيام الأسبوع الماضي. الخط ينتهي حسب الجدول في 30 نوفمبر."},
+ {airline:"السعودية",no:"SV1383",dest:"جدة",iata:"JED",time:"19:15",dur:110,days:[0,1,2,3,4,5,6],c:C.sv,note:"يومية ومؤكدة، الوصول 21:05."},
+ {airline:"طيران ناس",no:"XY150",dest:"الرياض",iata:"RUH",time:"20:45",dur:95,days:[0,1,2,3,4,5,6],start:"2026-11-11",c:C.xy,note:"متوقفة منذ 25 أكتوبر وتعود 11 نوفمبر. الوقت 20:45 مؤكد من نظام الحجز (الوصول 22:20)."},
+ {airline:"طيران النيل",no:"NP110",dest:"القاهرة",iata:"CAI",time:"22:00",dur:115,days:[1,3,4,6],c:C.np,altNo:{4:"NP120"},note:"الخميس برقم NP120 وباقي الأيام NP110. طارت 26 و28 و29 أكتوبر."},
+ {airline:"إير كايرو",no:"SM324",dest:"سوهاج",iata:"HMB",time:"22:30",dur:120,days:[5],c:C.sm,note:"أسبوعية كل جمعة، وجهتها سوهاج."}
+];
+
+const $=id=>document.getElementById(id);
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const pad=n=>String(n).padStart(2,"0");
+const toMin=t=>{const[h,m]=t.split(":").map(Number);return h*60+m};
+const fmt=m=>pad(Math.floor(m/60)%24)+":"+pad(m%60);
+const norm=s=>s.toLowerCase().replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/\s+/g," ").trim();
+const iso=d=>d.toISOString().slice(0,10);
+const addDays=(d,n)=>new Date(d.getTime()+n*864e5);
+const dLabel=d=>d.getUTCDate()+" "+MONTHS[d.getUTCMonth()];
+
+function riyadhNow(){
+  const p=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Riyadh",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+  return{date:new Date(Date.UTC(+p.year,+p.month-1,+p.day)),mins:+p.hour*60+ +p.minute};
+}
+let NOW=riyadhNow();
+const TODAY=NOW.date;
+
+/* what flies on a given date */
+function flightsOn(date,{all=false}={}){
+  const dow=date.getUTCDay(),k=iso(date);
+  return FLIGHTS.filter(f=>f.days.includes(dow)&&(!f.until||k<=f.until)&&(all||!f.start||k>=f.start))
+    .map(f=>({...f,t:f.alt&&f.alt[dow]||f.time,n:f.altNo&&f.altNo[dow]||f.no,off:!!(f.start&&k<f.start)}))
+    .sort((a,b)=>a.t.localeCompare(b.t));
+}
+
+/* LIVE: actual status, refreshed hourly by a scheduled task from Flightradar24.
+   s: sched | delayed | departed | landed | canceled | diverted · t: local time HH:MM */
+const LIVE={"date":"","updated":"","flights":{}};
+const REVIEWED="2026-10-31"; /* آخر مراجعة لجدول الرحلات — تحدّثه المهمة اليومية */
+const LIVE_TXT={departed:["air","أقلعت"],landed:["done","وصلت"],canceled:["cxl","ملغاة"],diverted:["cxl","تحويل"],delayed:["soon","متأخرة"],sched:["sched","في الموعد"]};
+const state={week:0,sel:0,q:""};
+try{const s=JSON.parse(localStorage.getItem("ajf2")||"{}");if(s.week>=0&&s.week<8){state.week=s.week;state.sel=s.sel||0}}catch(e){}
+const save=()=>{try{localStorage.setItem("ajf2",JSON.stringify({week:state.week,sel:state.sel}))}catch(e){}};
+const selDate=()=>addDays(TODAY,state.week*7+state.sel);
+
+/* ---------- clock + next departure ---------- */
+function renderClock(){
+  NOW=riyadhNow();
+  $("clock").textContent=fmt(NOW.mins);
+  $("today").textContent=DAYS[NOW.date.getUTCDay()]+" "+dLabel(NOW.date);
+}
+function nextDeparture(){
+  for(let i=0;i<21;i++){
+    const d=addDays(TODAY,i);
+    const f=flightsOn(d).find(f=>i>0||toMin(f.t)>NOW.mins);
+    if(f)return{f,d,i,left:i*1440+toMin(f.t)-NOW.mins};
+  }
+}
+function renderNext(){
+  const n=nextDeparture(),el=$("next");
+  if(!n){el.innerHTML='<div class="lbl">ما فيه رحلات مجدولة قريباً</div>';return}
+  const {f,d,i,left}=n,h=Math.floor(left/60),m=left%60;
+  const when=i===0?"اليوم":i===1?"بكرة":DAYS[d.getUTCDay()];
+  el.innerHTML=`<div class="lbl"><span class="pulse"><i></i>الرحلة القادمة</span><span>${when} · ${dLabel(d)}</span></div>
+   <div class="main"><div class="board" aria-label="الإقلاع ${f.t}">${[...f.t].map(ch=>ch===":"?'<span style="width:12px;background:none;box-shadow:none">:</span>':`<span>${ch}</span>`).join("")}</div>
+   <div><h2>${f.dest} <span class="num" style="font-size:15px;color:var(--muted)">${f.iata}</span></h2><div class="sub"><span class="al" style="--c:${f.c}">${f.n.slice(0,2)}</span>${f.airline} · <span class="num">${f.n}</span>${f.est?" · وقت تقديري":""}</div></div></div>
+   <div class="foot"><span class="count">${h?h+"س ":""}${m}د<small>على الإقلاع</small></span><span class="sub">الوصول التقريبي <span class="num">${fmt(toMin(f.t)+f.dur)}</span></span></div>`;
+}
+
+/* ---------- week strip ---------- */
+function renderWeek(){
+  const start=addDays(TODAY,state.week*7),wk=$("week");
+  const counts=[...Array(7)].map((_,i)=>flightsOn(addDays(start,i)).length),max=Math.max(...counts,1);
+  wk.innerHTML="";
+  counts.forEach((c,i)=>{
+    const d=addDays(start,i),b=document.createElement("button");
+    b.className="day"+(c===max&&c>0?" peak":"")+(iso(d)===iso(TODAY)?" today":"");
+    b.setAttribute("aria-pressed",i===state.sel);
+    b.setAttribute("aria-label",`${DAYS[d.getUTCDay()]} ${dLabel(d)}، ${c} رحلات`);
+    b.innerHTML=`<span class="dn">${iso(d)===iso(TODAY)?"اليوم":SHORT[d.getUTCDay()]}</span><span class="dd">${d.getUTCDate()}</span>
+      <span class="meter"><i style="height:${Math.max(4,c/max*34)}px"></i></span><span class="dc">${c}</span>`;
+    b.onclick=()=>{state.sel=i;save();render()};
+    wk.appendChild(b);
+  });
+  const end=addDays(start,6);
+  $("weekTitle").textContent=state.week===0?"الأيام السبعة القادمة":state.week===1?"الأسبوع اللي بعده":`بعد ${state.week} أسابيع`;
+  $("weekRange").textContent=`${dLabel(start)} – ${dLabel(end)} · ${counts.reduce((a,b)=>a+b,0)} رحلة`;
+  $("prev").disabled=state.week===0;$("nextw").disabled=state.week>=7;
+}
+
+/* ---------- day timeline ---------- */
+function renderTimeline(rows){
+  const S=6*60,E=24*60,pos=m=>((Math.min(Math.max(m,S),E)-S)/(E-S)*100).toFixed(2)+"%";
+  let html='<div class="track"><div class="axis"></div>';
+  // busiest 2-hour window
+  let best={n:0};
+  rows.forEach(a=>{const s=toMin(a.t),w=rows.filter(b=>toMin(b.t)>=s&&toMin(b.t)<s+120);if(w.length>best.n)best={n:w.length,s,e:toMin(w[w.length-1].t)}});
+  if(best.n>=3)html+=`<div class="rush" style="right:${pos(best.s-6)};width:calc(${pos(best.e+6)} - ${pos(best.s-6)})"></div>`;
+  [6,9,12,15,18,21,24].forEach(h=>html+=`<span class="tick" style="right:${pos(h*60)}">${pad(h%24)}</span>`);
+  const isToday=iso(selDate())===iso(TODAY);
+  rows.forEach(f=>{const m=toMin(f.t);html+=`<span class="dot${isToday&&m<NOW.mins?" done":""}${f.est?" est":""}" style="right:${pos(m)}" title="${f.t} ${f.dest}"></span>`});
+  if(isToday&&NOW.mins>=S)html+=`<span class="now" style="right:${pos(NOW.mins)}"></span>`;
+  html+="</div>";
+  html+=best.n>=3?`<p>أعلى ضغط: <b>${best.n} رحلات</b> بين <b class="num">${fmt(best.s)}</b> و<b class="num">${fmt(best.e)}</b></p>`
+    :`<p>${rows.length?"الرحلات موزعة، ما فيه تكدس خلال ساعتين":"ما فيه رحلات هذا اليوم"}</p>`;
+  $("tl").innerHTML=html;
+}
+
+/* ---------- board ---------- */
+function hl(text){
+  const t=state.q.trim();if(!t)return text;
+  const i=norm(text).indexOf(norm(t));
+  return i<0?text:text.slice(0,i)+"<mark>"+text.slice(i,i+t.length)+"</mark>"+text.slice(i+t.length);
+}
+function status(f,date){
+  if(f.off)return["off","تبدأ "+dLabel(new Date(f.start+"T00:00:00Z"))];
+  if(iso(date)!==iso(TODAY))return f.est?["sched","وقت تقديري"]:["sched","مجدولة"];
+  const L=LIVE.date===iso(date)&&LIVE.flights[f.n];
+  if(L&&LIVE_TXT[L.s]){const[c,w]=LIVE_TXT[L.s];return[c+" live",w+(L.t?" "+L.t:"")]}
+  const m=toMin(f.t);
+  if(m<NOW.mins)return["done","أقلعت"];
+  if(m-NOW.mins<=120)return["soon","بعد "+(m-NOW.mins)+"د"];
+  return["sched","مجدولة"];
+}
+function render(){
+  const date=selDate();
+  renderWeek();
+  const active=flightsOn(date);
+  const k=norm(state.q);
+  let rows=k?flightsOn(date,{all:true}).filter(f=>norm([f.airline,f.n,f.dest,f.iata,f.t].join(" ")).includes(k)):flightsOn(date,{all:true});
+  renderTimeline(active);
+  $("dayTitle").textContent=DAYS[date.getUTCDay()]+" "+dLabel(date);
+  const off=rows.filter(f=>f.off).length;
+  $("dayNote").textContent=off===1?"رحلة متوقفة تظهر للعلم":off===2?"رحلتين متوقفتين تظهر للعلم":off?`${off} رحلات متوقفة تظهر للعلم`:"";
+  $("sN").textContent=active.length;
+  $("sF").textContent=active[0]?active[0].t:"—";
+  $("sL").textContent=active.length?active[active.length-1].t:"—";
+  const list=$("list");list.innerHTML="";
+  if(!rows.length)list.innerHTML='<div class="empty">ما فيه رحلات تطابق البحث</div>';
+  rows.forEach((f,i)=>{
+    const [cls,txt]=status(f,date),b=document.createElement("button");
+    b.className="row"+(cls.startsWith("done")?" past":"")+(cls==="off"?" off":"")+(cls.startsWith("cxl")?" cxl":"");
+    b.style.setProperty("--c",f.c);b.style.animationDelay=Math.min(i*40,240)+"ms";
+    b.innerHTML=`<div class="t">${hl(f.t)}<small>${toMin(f.t)<720?"صباحاً":"مساءً"}</small></div>
+      <div class="d"><b>${hl(f.dest)}</b><span class="code">${f.iata}</span><div><span class="al">${f.n.slice(0,2)}</span>${hl(f.airline)} · <span class="num">${hl(f.n)}</span></div></div>
+      <span class="chip ${cls}">${txt}</span>`;
+    b.onclick=()=>openSheet(f,date);
+    list.appendChild(b);
+  });
+  renderSync();
+}
+$("prev").onclick=()=>{if(state.week>0){state.week--;save();render()}};
+$("nextw").onclick=()=>{if(state.week<7){state.week++;save();render()}};
+const q=$("q"),clr=$("clear");
+q.addEventListener("input",()=>{state.q=q.value;clr.classList.toggle("show",!!q.value);render()});
+clr.onclick=()=>{q.value="";state.q="";clr.classList.remove("show");q.focus();render()};
+addEventListener("scroll",()=>$("top").classList.toggle("scrolled",scrollY>4),{passive:true});
+
+/* ---------- sync indicator ---------- */
+function ago(min){if(min<1)return"الآن";if(min<60)return"قبل "+min+" د";const h=Math.floor(min/60);return h<24?"قبل "+h+" س":"قبل "+Math.floor(h/24)+" يوم"}
+function renderSync(){
+  const el=$("sync");let mins=null,label;
+  if(LIVE.updated&&LIVE.date){
+    const d=new Date(LIVE.date+"T00:00:00Z"),dd=Math.round((TODAY-d)/864e5);
+    mins=dd*1440+NOW.mins-toMin(LIVE.updated);
+    label=(dd===0?"اليوم ":dd===1?"أمس ":dLabel(d)+" ")+LIVE.updated;
+  }
+  const fresh=mins!==null&&mins<=90;
+  el.classList.toggle("stale",!fresh);
+  $("syncMain").textContent=fresh?"مباشر · "+ago(mins):mins!==null?"آخر تحديث "+ago(mins):"بانتظار أول تحديث مباشر (6 ص)";
+  $("syncSub").textContent=(label?"حالة الرحلات "+label+" · ":"")+"الجدول مراجَع "+dLabel(new Date((window.REV||REVIEWED)+"T00:00:00Z"));
+}
+
+/* ---------- springs ---------- */
+function spring(from,to,{velocity=0,damping=1,response=.35,onUpdate,onDone}={}){
+  if(reduce){onUpdate(to);onDone&&onDone();return{stop(){}}}
+  const k=Math.pow(2*Math.PI/response,2),c=4*Math.PI*damping/response;
+  let x=from,v=velocity,last=performance.now(),raf,alive=true;
+  function step(now){
+    if(!alive)return;const dt=Math.min((now-last)/1000,1/30);last=now;
+    for(let i=0;i<4;i++){const a=-k*(x-to)-c*v;v+=a*dt/4;x+=v*dt/4}
+    onUpdate(x);
+    if(Math.abs(x-to)<.3&&Math.abs(v)<3){onUpdate(to);onDone&&onDone();return}
+    raf=requestAnimationFrame(step);
+  }
+  raf=requestAnimationFrame(step);
+  return{stop(){alive=false;cancelAnimationFrame(raf)},get velocity(){return v}};
+}
+
+/* ---------- bottom sheet ---------- */
+const sheet=$("sheet"),scrim=$("scrim");
+let y=innerHeight,sAnim,open=false,lastFocus;
+const setY=v=>{y=v;sheet.style.transform=`translateY(${v}px)`;scrim.style.opacity=Math.max(0,Math.min(1,1-v/sheet.offsetHeight))};
+function openSheet(f,date){
+  lastFocus=document.activeElement;
+  $("shT").textContent=`${f.dest} · ${f.iata}`;
+  $("shS").innerHTML=`<span class="al lg" style="--c:${f.c}">${f.n.slice(0,2)}</span>${f.airline} · <span class="num">${f.n}</span> · ${DAYS[date.getUTCDay()]} ${dLabel(date)}`;
+  const arr=fmt(toMin(f.t)+f.dur);
+  $("shKV").innerHTML=[["الإقلاع",f.t+(f.est?" *":"")],["الوصول التقريبي",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
+    .map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("");
+  $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
+  $("shN").textContent=f.note+(f.est?" (* وقت تقديري)":"");
+  $("track").href="https://www.flightradar24.com/data/flights/"+f.n.toLowerCase();
+  const L=LIVE.date===iso(date)&&LIVE.flights[f.n];
+  if(L&&L.note)$("shN").textContent+=" · "+L.note;
+  scrim.classList.add("on");open=true;sAnim&&sAnim.stop();
+  if(y>=innerHeight)setY(sheet.offsetHeight+20);
+  sAnim=spring(y,0,{response:.38,onUpdate:setY});
+  setTimeout(()=>$("done").focus({preventScroll:true}),50);
+}
+function closeSheet(velocity=0){
+  open=false;scrim.classList.remove("on");sAnim&&sAnim.stop();
+  sAnim=spring(y,sheet.offsetHeight+20,{velocity,response:.32,onUpdate:setY});
+  lastFocus&&lastFocus.focus&&lastFocus.focus({preventScroll:true});
+}
+$("done").onclick=()=>closeSheet();scrim.onclick=()=>closeSheet();
+addEventListener("keydown",e=>{if(e.key==="Escape"&&open)closeSheet()});
+let drag=null;
+sheet.addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;sAnim&&sAnim.stop();sheet.setPointerCapture(e.pointerId);drag={sy:e.clientY,sv:y,h:[{t:performance.now(),y:e.clientY}]}});
+sheet.addEventListener("pointermove",e=>{if(!drag)return;let d=drag.sv+(e.clientY-drag.sy);if(d<0){const dim=sheet.offsetHeight,c=.55;d=-(-d*dim*c)/(dim+c*-d)}setY(d);drag.h.push({t:performance.now(),y:e.clientY});if(drag.h.length>6)drag.h.shift()});
+function endDrag(){if(!drag)return;const a=drag.h[0],b=drag.h[drag.h.length-1],v=b.t>a.t?(b.y-a.y)/((b.t-a.t)/1000):0;drag=null;
+  const landing=y+(v/1000)*.998/(1-.998);
+  if(landing>sheet.offsetHeight*.5||v>900)closeSheet(v);else sAnim=spring(y,0,{velocity:v,damping:.85,response:.32,onUpdate:setY})}
+sheet.addEventListener("pointerup",endDrag);sheet.addEventListener("pointercancel",endDrag);
+
+/* ---------- live data (live.json, updated by the hourly task) ---------- */
+async function loadLive(){
+  try{
+    const r=await fetch("live.json?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok)return;const j=await r.json();
+    if(j&&j.flights){Object.assign(LIVE,j);if(j.reviewed)window.REV=j.reviewed;renderNext();if(!open)render();renderSync()}
+  }catch(e){}
+}
+/* ---------- init ---------- */
+renderClock();renderNext();render();
+requestAnimationFrame(()=>setY(innerHeight));
+addEventListener("resize",()=>{if(!open)setY(innerHeight)});
+loadLive();setInterval(loadLive,300000);
+setInterval(()=>{const before=NOW.mins;renderClock();if(NOW.mins!==before){renderNext();if(!open)render()}},15000);
+</script>
+</body>
+</html>
