@@ -1167,7 +1167,6 @@ function flipTo(word){
 }
 function closeIntro(){
   const el=$("intro");el.classList.add("out");
-  try{localStorage.setItem("ajf_intro","1")}catch(e){}
   setTimeout(()=>{el.hidden=true},600);
 }
 function showIntro(){
@@ -1207,7 +1206,8 @@ function showIntro(){
 }
 $("say").onclick=()=>playAnnouncement($("say"));
 if("speechSynthesis" in window)speechSynthesis.getVoices();
-let seen=DEMO;try{seen=seen||localStorage.getItem("ajf_intro")==="1"}catch(e){}
+/* شاشة الترحيب تظهر في كل فتح */
+let seen=DEMO;
 if(/[?&]intro/.test(location.search))seen=false;
 /* ---------- init ---------- */
 renderClock();renderNext();render();
