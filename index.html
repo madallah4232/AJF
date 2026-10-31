@@ -192,7 +192,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 
 
 /* welcome / announcement */
-.intro{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 80% at 50% 0%,#14203a 0%,var(--night) 60%);display:grid;place-items:center;padding:24px;transition:opacity .5s var(--ease),transform .6s var(--ease)}
+.intro{cursor:pointer;position:fixed;inset:0;z-index:50;background:radial-gradient(120% 80% at 50% 0%,#14203a 0%,var(--night) 60%);display:grid;place-items:center;padding:24px;transition:opacity .5s var(--ease),transform .6s var(--ease)}
 .intro.out{opacity:0;transform:scale(1.04);pointer-events:none}
 .intro-in{width:100%;max-width:420px;display:grid;gap:22px;justify-items:center;text-align:center}
 .intro .flap{display:flex;gap:6px;direction:ltr}
@@ -222,7 +222,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
     <div class="flap" id="flap" aria-hidden="true"><span>A</span><span>J</span><span>F</span></div>
     <div><small>مطار الجوف · المغادرة</small><h2 id="introT">أهلاً بك في لوحة رحلات مطار الجوف</h2></div>
     <div class="nx" id="introNx"></div>
-    <button class="go" id="introGo"><span class="eq"><i></i><i></i><i></i><i></i></span><span id="introGoT">ابدأ مع الإعلان الصوتي</span></button>
+    <button class="go" id="introGo"><span class="eq"><i></i><i></i><i></i><i></i></span><span id="introGoT">اضغط في أي مكان للدخول</span></button>
     <button class="skip" id="introSkip">دخول بدون صوت</button>
   </div>
 </div>
@@ -540,25 +540,30 @@ function chime(){
     return 1500;
   }catch(e){return 0}
 }
-function spokenTime(t){let[h,m]=t.split(":").map(Number);const p=h<12?"صباحاً":"مساءً";h=h%12||12;return h+(m?" و"+m+" دقيقة":"")+" "+p}
+function spokenTime(t){let[h,m]=t.split(":").map(Number);const p=h<12?"صباحاً":"مساءً";h=h%12||12;return h+(m===15?" والربع":m===30?" والنصف":m?" و"+m+" دقيقة":"")+" "+p}
 function announcement(){
   const n=nextDeparture();
-  if(!n)return"مرحباً بكم في لوحة رحلات مطار الجوف.";
-  const {f,i}=n,when=i===0?"اليوم":i===1?"غداً":"يوم "+DAYS[n.d.getUTCDay()];
-  return `مرحباً بكم في لوحة رحلات مطار الجوف. الرحلة القادمة: ${f.airline}، المتجهة إلى ${f.dest}، ${when} الساعة ${spokenTime(f.t)}.`;
+  if(!n)return{text:"أهلاً بكم في مطار الجوف."};
+  const {f}=n;
+  return{key:f.iata+"-"+f.t.replace(":",""),text:`أهلاً بكم في مطار الجوف. الرحلة القادمة: الجوف، ${f.dest}، عند الساعة ${spokenTime(f.t)}.`};
 }
 function speak(text,onEnd){
   if(!("speechSynthesis" in window)){onEnd&&onEnd();return}
   speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);u.lang="ar-SA";u.rate=.92;u.pitch=1;
-  const v=speechSynthesis.getVoices().find(v=>/^ar/i.test(v.lang));if(v)u.voice=v;
+  const u=new SpeechSynthesisUtterance(text);u.lang="ar-SA";u.rate=.9;u.pitch=.95;
+  const vs=speechSynthesis.getVoices().filter(v=>/^ar/i.test(v.lang));
+  const v=vs.find(v=>/enhanced|premium|neural|maged|majed/i.test(v.name))||vs[0];if(v)u.voice=v;
   u.onend=u.onerror=()=>onEnd&&onEnd();
   speechSynthesis.speak(u);
 }
+/* recorded announcer clips: audio/<IATA>-<HHMM>.mp3 (e.g. audio/CAI-0900.mp3); falls back to device voice */
 function playAnnouncement(el){
-  el&&el.classList.add("speaking");
-  const wait=chime();
-  setTimeout(()=>speak(announcement(),()=>el&&el.classList.remove("speaking")),wait);
+  const a=announcement();el&&el.classList.add("speaking");
+  const done=()=>el&&el.classList.remove("speaking");
+  const fallback=()=>{const w=chime();setTimeout(()=>speak(a.text,done),w)};
+  if(!a.key){fallback();return Promise.resolve()}
+  const au=new Audio("audio/"+a.key+".mp3");au.onended=done;
+  return au.play().catch(err=>{if(err&&err.name==="NotAllowedError"){done();throw err}fallback()});
 }
 function flipTo(word){
   const spans=[...$("flap").children],chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -575,11 +580,14 @@ function closeIntro(){
 function showIntro(){
   const el=$("intro");el.hidden=false;
   const n=nextDeparture();
-  $("introNx").innerHTML=n?`<span>الرحلة القادمة</span><b>${n.f.dest} · ${n.f.airline} · <span class="num" style="color:var(--amber);font-size:17px">${n.f.t}</span></b>`:"<span>ما فيه رحلات قريبة</span>";
+  $("introNx").innerHTML=n?`<span>الرحلة القادمة</span><b>الجوف ← ${n.f.dest} · <span class="num" style="color:var(--amber);font-size:17px">${n.f.t}</span></b>`:"<span>ما فيه رحلات قريبة</span>";
   flipTo("AJF");
-  $("introGo").onclick=()=>{playAnnouncement($("introGo"));$("introGoT").textContent="جاري الإعلان…";setTimeout(closeIntro,2600)};
-  $("introSkip").onclick=closeIntro;
-  setTimeout(()=>$("introGo").focus({preventScroll:true}),100);
+  let started=false;
+  const start=()=>{if(started)return;started=true;$("introGoT").textContent="جاري الإعلان…";playAnnouncement($("introGo")).catch(()=>{});setTimeout(closeIntro,4200)};
+  /* try to start on open; browsers that block sound wait for the first tap anywhere */
+  setTimeout(()=>{playAnnouncement($("introGo")).then(()=>{started=true;$("introGoT").textContent="جاري الإعلان…";setTimeout(closeIntro,4200)}).catch(()=>{})},900);
+  el.onclick=start;
+  $("introSkip").onclick=e=>{e.stopPropagation();started=true;if("speechSynthesis" in window)speechSynthesis.cancel();closeIntro()};
 }
 $("say").onclick=()=>playAnnouncement($("say"));
 if("speechSynthesis" in window)speechSynthesis.getVoices();
