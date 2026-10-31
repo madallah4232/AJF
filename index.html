@@ -1252,7 +1252,7 @@ function showIntro(){
     v.onended=()=>{el.classList.add("cap-on");setTimeout(fin,900)};
     setTimeout(fin,12000);
     /* أثناء الترحيب: زر تخطي أو لمسة في أي مكان توقف الترحيب وتدخل اللوحة */
-    skip=()=>{if(introStop)introStop();closed=true;v.pause();closeIntro()};
+    const t0=Date.now();skip=()=>{if(Date.now()-t0<700)return;if(introStop)introStop();closed=true;v.pause();closeIntro()};
   };
   let skip=null;
   el.onclick=()=>{if(skip)skip();else enter(true)};
