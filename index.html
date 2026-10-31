@@ -222,6 +222,67 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .tu-ph li.now em{color:var(--amber)}.tu-ph li.done em{color:var(--go)}
 .tu-n{font-size:12px;color:var(--muted);line-height:1.6}
 .tu-n b{color:var(--warn)}
+/* coordination sheet */
+.cs{position:fixed;inset:0;z-index:31;background:var(--night);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+.cs[hidden]{display:none}
+.cs .trk-top{position:sticky;top:0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.cs-body{max-width:560px;margin:0 auto;padding:14px 14px calc(110px + env(safe-area-inset-bottom));display:grid;gap:14px}
+.cs-card{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:10px}
+.cs-card h5{margin:0;font:600 13px var(--display);color:var(--muted);letter-spacing:.3px;display:flex;justify-content:space-between;align-items:center}
+.cs-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cs-g.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cs-f{display:grid;gap:3px}
+.cs-f span{font-size:10.5px;color:var(--muted);font-family:var(--mono);letter-spacing:.2px;direction:ltr;text-align:right}
+.cs-f input,.cs-f select{height:40px;min-width:0;width:100%;border-radius:10px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:600 15px var(--mono);text-align:center;padding:0 6px;color-scheme:dark}
+.cs-f input[readonly]{background:transparent;border-style:dashed;color:var(--muted)}
+.cs-f input:focus{outline:2px solid var(--amber);outline-offset:-1px}
+.cs-pax{display:grid;grid-template-columns:auto repeat(3,1fr);gap:6px;align-items:center}
+.cs-pax b{font-size:12px;color:var(--muted);font-weight:500;min-width:44px}
+.cs-pax input{height:38px;min-width:0;border-radius:10px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:600 14px var(--mono);text-align:center;color-scheme:dark}
+.cs-chk{display:flex;flex-wrap:wrap;gap:6px}
+.cs-chk button{font-size:12.5px;padding:7px 11px;border-radius:99px;border:1px solid var(--line);background:var(--raise);color:var(--muted);direction:ltr}
+.cs-chk button.on{background:color-mix(in oklab,var(--go) 18%,var(--raise));border-color:color-mix(in oklab,var(--go) 50%,var(--line));color:var(--go)}
+.cs-chk button.on::before{content:"✓ "}
+.cs-act{display:grid;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.cs-act:first-of-type{border-top:0;padding-top:2px}
+.cs-act .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;direction:ltr}
+.cs-act .h b{font-size:14px;font-weight:600}
+.cs-act .h small{font:500 12px var(--mono);color:var(--muted)}
+.cs-act.done .h b::after{content:" ✓";color:var(--go)}
+.cs-act.run .h b{color:var(--amber)}
+.cs-tm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;direction:ltr}
+.cs-tm.one{grid-template-columns:minmax(0,1fr)}
+.cs-tm label{min-width:0;display:flex;align-items:center;gap:6px;background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:0 4px 0 10px;height:42px}
+.cs-tm label span{font-size:10.5px;color:var(--muted)}
+.cs-tm input{flex:1;min-width:0;width:100%;font-size:14px;padding:0;background:transparent;border:0;color:var(--ink);font:600 15px var(--mono);color-scheme:dark;text-align:center}
+.cs-tm input:focus{outline:none}
+.cs-now{height:32px;padding:0 10px;border-radius:9px;background:var(--amber);color:#1a1205;font:700 12px var(--body);white-space:nowrap}
+.cs-now.g{background:var(--panel);color:var(--muted);border:1px solid var(--line)}
+.cs-rm{width:100%;height:36px;border-radius:10px;border:1px dashed var(--line);background:transparent;color:var(--ink);font:13px var(--body);padding:0 10px;direction:ltr}
+.cs-rm:placeholder-shown{color:var(--muted)}
+.cs-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.cs-sum div{background:var(--raise);border-radius:12px;padding:8px 4px}
+.cs-sum span{display:block;font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+.cs-sum b{font:600 16px var(--mono)}
+.cs-sum b.late{color:var(--warn)}.cs-sum b.ok{color:var(--go)}
+.cs-bar{position:fixed;inset:auto 0 0 0;z-index:32;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:color-mix(in oklab,var(--night) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;gap:8px;max-width:560px;margin:0 auto}
+.cs-bar button{flex:1;height:46px;border-radius:14px;font-weight:700;background:var(--raise);color:var(--ink);border:1px solid var(--line)}
+.cs-bar button.p{background:var(--amber);color:#1a1205;border:0;flex:1.4}
+.cs-saved{font-size:11px;color:var(--go);font-family:var(--body)}
+#csPrint{display:none}
+@media print{
+  @page{size:A4;margin:12mm}
+  body>*:not(#csPrint){display:none!important}
+  #csPrint{display:block!important;color:#000;background:#fff;font:11px Arial,Helvetica,sans-serif;direction:ltr}
+  #csPrint h1{font-size:16px;text-align:center;margin:4px 0 10px}
+  #csPrint .lg{font:700 20px Arial;color:#555;margin-bottom:2px}
+  #csPrint table{width:100%;border-collapse:collapse;margin-bottom:8px}
+  #csPrint td,#csPrint th{border:1px solid #000;padding:4px 5px;text-align:left;vertical-align:middle}
+  #csPrint th{background:#eee;font-weight:700;text-align:center}
+  #csPrint td.c{text-align:center}
+  #csPrint .ft{display:flex;justify-content:space-between;margin-top:10px;font-size:10px}
+}
+
 .tu-acts{display:flex;justify-content:flex-end;margin-top:-6px}
 .tu-ed{font-size:12px;color:var(--muted);padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:var(--panel)}
 .tu-form{display:flex;gap:8px}
@@ -379,10 +440,22 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   <div class="dots" id="shD"></div>
   <div class="note" id="shN"></div>
   <button class="track-btn" id="listen" hidden><span class="eq"><i></i><i></i><i></i><i></i></span>استمع لإعلان الرحلة</button>
+  <button class="track-btn" id="csOpen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3z"/><path d="M9 12l2 2 4-4"/></svg>Coordination Sheet</button>
   <button class="track-btn" id="track"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>تتبّع الرحلة على الخريطة</button>
   <button class="done-btn" id="done">تم</button>
 </div>
 
+
+<div class="cs" id="cs" role="dialog" aria-modal="true" aria-labelledby="csT" hidden>
+  <div class="trk-top">
+    <button class="trk-back" id="csBack" aria-label="رجوع"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div><b id="csT">Coordination Sheet</b><span id="csS"></span></div>
+    <span class="cs-saved" id="csSaved"></span>
+  </div>
+  <div class="cs-body" id="csBody"></div>
+  <div class="cs-bar"><button class="p" id="csPdf">PDF / طباعة</button><button id="csShare">مشاركة</button><button id="csClear">مسح</button></div>
+</div>
+<div id="csPrint"></div>
 
 <div class="trk" id="trk" role="dialog" aria-modal="true" aria-labelledby="trkT" hidden>
   <div class="trk-top">
@@ -842,6 +915,110 @@ async function watchInbound(){
 }
 setInterval(watchInbound,45000);setTimeout(watchInbound,4000);
 
+/* ---------- Coordination Sheet (GS-OL-029) ----------
+   نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن». يُحفظ على الجهاز. */
+const CS_KEY=DEMO?"ajf_cs_demo":"ajf_cs";
+let CSDB={};try{CSDB=JSON.parse(localStorage.getItem(CS_KEY)||"{}")}catch(e){}
+const csSave=()=>{try{localStorage.setItem(CS_KEY,JSON.stringify(CSDB))}catch(e){}};
+const CS_ACTS=[["open","Open Door",1],["deplane","Passengers Deplane"],["clean","Cabin Cleaning"],["sec","Security at TRMNL"],["board","Boarding Pax"],["bus1","1st Bus"],["busL","Last Bus"],["unload","Bulk Unloading"],["load","Bulk Loading"],["fuel","Refuelling"],["close","Close Door",1],["med","Medical Lift"],["push","Pushback/Block-out",1]];
+const CS_CHK=[["gse","GSE Dispatched"],["gate","Gate Free"],["insp","Inspection CGO/Mail"],["bag","Baggage Assembly"],["info","Info On/Bound CGO/Mail/Bags"],["spx","Special Pax Srvc (WCH/OP)"],["gpu","GPU/ACU"]];
+let csCur=null;
+const hm=v=>/^\d{2}:\d{2}$/.test(v||"");
+function csPlan(f,d){
+  const ata=hm(d.ata)?toMin(d.ata):f.ia?toMin(f.ia):null;if(ata==null)return{};
+  const door=Math.max(toMin(f.t),ata+gtRule(f));
+  const r={open:[ata],deplane:[ata,ata+8],clean:[ata+8,ata+15],board:[ata+15,ata+29],unload:[ata+1,ata+7],load:[ata+10,ata+20],close:[door],push:[door+2]};
+  Object.keys(r).forEach(k=>r[k]=r[k].map(fmt));return r;
+}
+function csData(f,date){
+  const k=iso(date)+"_"+f.n;
+  if(!CSDB[k]){const I=inboundInfo(f,date);CSDB[k]={reg:"",gate:"",pa:{F:"",J:"",Y:""},pd:{F:"",J:"",Y:""},ld3:"",plt:"",pcs:"",ata:I&&I.kind!=="eta"?fmt(I.m):"",atd:"",dlyc:"",chk:{},act:{},rem:""}}
+  return CSDB[k];
+}
+function openCS(f,date){
+  csCur={f,date};$("cs").hidden=false;$("csT").textContent="Coordination Sheet";
+  $("csS").textContent=(f.ino?f.ino+" "+f.iata+"→AJF · ":"")+f.n+" AJF→"+f.iata+" · "+dLabel(date);
+  renderCS();$("cs").scrollTop=0;
+}
+function csDerived(f,d){
+  const atd=hm(d.atd)?d.atd:d.act.push&&hm(d.act.push.s)?d.act.push.s:"";
+  const dly=atd?Math.max(0,toMin(atd)-toMin(f.t)):null;
+  const gt=hm(d.ata)&&atd?toMin(atd)-toMin(d.ata):null;
+  return{atd,dly,gt};
+}
+function renderCS(){
+  const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d),X=csDerived(f,d);
+  const inp=(id,v,ph="",type="text",extra="")=>`<input data-k="${id}" value="${v||""}" placeholder="${ph}" type="${type}" ${extra}>`;
+  const fld=(lbl,html)=>`<label class="cs-f"><span>${lbl}</span>${html}</label>`;
+  const pax=(lbl,o,key)=>`<div class="cs-pax"><b>${lbl}</b>${["F","J","Y"].map(c=>`<input data-k="${key}.${c}" value="${o[c]||""}" placeholder="${c}" inputmode="numeric">`).join("")}</div>`;
+  const now=fmt(NOW.mins);
+  const acts=CS_ACTS.map(([k,n,pt])=>{
+    const a=d.act[k]||{},p=P[k],pl=p?(pt?p[0]:p[0]+"–"+p[1]):"—";
+    const st=pt?(hm(a.s)?"done":""):(hm(a.e)?"done":hm(a.s)?"run":"");
+    const cell=(w,lbl)=>`<label><span>${lbl}</span><input type="time" data-k="act.${k}.${w}" value="${a[w]||""}">${a[w]?"":`<button class="cs-now" data-now="act.${k}.${w}">الآن</button>`}</label>`;
+    return`<div class="cs-act ${st}"><div class="h"><b>${n}</b><small>Plan ${pl}</small></div>
+      <div class="cs-tm${pt?" one":""}">${cell("s",pt?"Time":"Start")}${pt?"":cell("e","Finish")}</div>
+      ${a.r||st?`<input class="cs-rm" data-k="act.${k}.r" value="${(a.r||"").replace(/"/g,"&quot;")}" placeholder="Remarks">`:""}</div>`}).join("");
+  $("csBody").innerHTML=`
+  <div class="cs-card"><h5>FLIGHT</h5>
+    <div class="cs-g">${fld("DATE",`<input value="${iso(date)}" readonly>`)}${fld("REG",inp("reg",d.reg,"HZ-","text",'autocapitalize="characters"'))}${fld("GATE",inp("gate",d.gate,"00","text",'inputmode="numeric"'))}</div>
+    <div class="cs-g two">${fld("ARRIVAL · FROM",`<input value="${f.ino||"—"} · ${f.iata}" readonly>`)}${fld("DEPARTURE · TO",`<input value="${f.n} · ${f.iata}" readonly>`)}</div>
+    ${pax("Pax Arr",d.pa,"pa")}${pax("Pax Dep",d.pd,"pd")}
+    <div class="cs-g">${fld("LD3",inp("ld3",d.ld3,"NIL"))}${fld("PLT",inp("plt",d.plt,"NIL"))}${fld("PCS",inp("pcs",d.pcs,"00","text",'inputmode="numeric"'))}</div>
+  </div>
+  <div class="cs-card"><h5>TIMES</h5>
+    <div class="cs-g two">${fld("STA",`<input value="${f.ia||"—"}" readonly>`)}${fld("ATA",inp("ata",d.ata,"","time"))}${fld("STD",`<input value="${f.t}" readonly>`)}${fld("ATD",inp("atd",d.atd||X.atd,"","time"))}</div>
+    <div class="cs-sum"><div><span>MGT</span><b>${gtRule(f)}M</b></div><div><span>GROUND</span><b>${X.gt!=null?X.gt+"M":"—"}</b></div><div><span>DLY</span><b class="${X.dly?"late":X.dly===0?"ok":""}">${X.dly!=null?X.dly+"M":"—"}</b></div></div>
+    ${X.dly?fld("DLY CODE",inp("dlyc",d.dlyc,"00","text",'inputmode="numeric"')):""}
+  </div>
+  <div class="cs-card"><h5>PRE-ARRIVAL CHECK</h5><div class="cs-chk">${CS_CHK.map(([k,n])=>`<button data-chk="${k}" class="${d.chk[k]?"on":""}">${n}</button>`).join("")}</div></div>
+  <div class="cs-card"><h5>ACTIVITIES <span style="font-family:var(--mono)">${now}</span></h5>${acts}</div>
+  <div class="cs-card"><h5>REMARKS</h5><input class="cs-rm" data-k="rem" value="${(d.rem||"").replace(/"/g,"&quot;")}" placeholder="General remarks">
+    ${fld("PREPARED BY",`<input data-by value="${(localStorage.getItem("ajf_by")||"").replace(/"/g,"&quot;")}" placeholder="الاسم" style="font-family:var(--body)">`)}</div>`;
+}
+function csSet(path,v){
+  const{f,date}=csCur,d=csData(f,date),p=path.split(".");let o=d;
+  for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]||{};o[p[p.length-1]]=v;
+  if(path==="ata"){const k=ataKey(f,date);if(hm(v))MAN[k]=v;else delete MAN[k];try{localStorage.setItem(DEMO?"ajf_man_demo":"ajf_man",JSON.stringify(MAN))}catch(e){}}
+  csSave();$("csSaved").textContent="✓ محفوظ";clearTimeout(csSet.t);csSet.t=setTimeout(()=>$("csSaved").textContent="",1500);
+}
+$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$/.test(k))renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
+$("csBody").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.chk){const{f,date}=csCur,d=csData(f,date);d.chk[b.dataset.chk]=!d.chk[b.dataset.chk];csSave();b.classList.toggle("on");return}
+  if(b.dataset.now){const inp=b.previousElementSibling;if(!inp.value){csSet(b.dataset.now,fmt(Math.floor(nowMin())));renderCS()}else{inp.focus();inp.showPicker&&inp.showPicker()}}
+});
+$("csBack").onclick=()=>{$("cs").hidden=true;if(open&&curTurn)renderTurn(curTurn.f,curTurn.date)};
+let csClr=0;
+$("csClear").onclick=()=>{const b=$("csClear");if(Date.now()-csClr<3000){const{f,date}=csCur;delete CSDB[iso(date)+"_"+f.n];csSave();renderCS();b.textContent="مسح";csClr=0}else{csClr=Date.now();b.textContent="اضغط مرة ثانية";setTimeout(()=>{b.textContent="مسح"},3000)}};
+function csPrintHTML(){
+  const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d),X=csDerived(f,d),by=localStorage.getItem("ajf_by")||"";
+  const c=(v)=>v||"";const ck=k=>d.chk[k]?"☑":"☐";
+  const rows=CS_ACTS.map(([k,n,pt])=>{const a=d.act[k]||{},p=P[k]||[];return`<tr><td>${n}</td><td class="c">${c(p[0])}</td><td class="c">${pt?"":c(p[1])}</td><td class="c">${c(a.s)}</td><td class="c">${pt?"":c(a.e)}</td><td>${c(a.r)}</td></tr>`}).join("");
+  const dt=date.getUTCDate()+["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][date.getUTCMonth()]+String(date.getUTCFullYear()).slice(2);
+  return`<div class="lg">SGS</div><h1>COORDINATION SHEET</h1>
+  <table><tr><td>DATE: <b>${dt}</b></td><td>REG: <b>${c(d.reg)}</b></td><td colspan="4" style="background:#eee"></td></tr>
+  <tr><td>Flight Arrival: <b>${c(f.ino)}</b></td><td>Fm: <b>${f.iata}</b></td><td>Pax Load</td><td>(F) ${c(d.pa.F)||"00"}</td><td>(J) ${c(d.pa.J)||"00"}</td><td>(Y) ${c(d.pa.Y)||"000"}</td></tr>
+  <tr><td>Flight Departure: <b>${f.n}</b></td><td>To: <b>${f.iata}</b></td><td>Pax Load</td><td>(F) ${c(d.pd.F)||"00"}</td><td>(J) ${c(d.pd.J)||"00"}</td><td>(Y) ${c(d.pd.Y)||"000"}</td></tr>
+  <tr><td>Gate: ${c(d.gate)||"00"}</td><td>Dep Dead Load</td><td>LD3: ${c(d.ld3)||"NIL"}</td><td>PLT: ${c(d.plt)||"NIL"}</td><td colspan="2">PCS: ${c(d.pcs)||"00"}</td></tr>
+  <tr><td>STA: ${c(f.ia)}</td><td>ATA: ${c(d.ata)}</td><td>STD: ${f.t}</td><td>ATD: ${c(X.atd)}</td><td colspan="2"></td></tr>
+  <tr><td>MGT: ${gtRule(f)}M</td><td>DLY Amount: ${X.dly!=null?X.dly+"M":""}</td><td colspan="2">DLY Code: ${c(d.dlyc)}</td><td colspan="2">Ground time: ${X.gt!=null?X.gt+"M":""}</td></tr></table>
+  <table><tr><th colspan="3">PRE-ARRIVAL CHECK</th></tr>
+  <tr><td>${ck("gse")} GSE Dispatched<br>${ck("gate")} Gate Free</td><td>${ck("insp")} Inspection CGO/Mail<br>${ck("bag")} Baggage Assembly</td><td>${ck("info")} Info On/Bound CGO/Mail/Bags<br>${ck("spx")} Special Pax Srvc (WCH/OP/...)</td></tr>
+  <tr><td colspan="3">${ck("gpu")} GPU/ACU</td></tr></table>
+  <table><tr><th rowspan="2">Activities</th><th colspan="2">Planned Time</th><th colspan="2">Actual Time</th><th rowspan="2">Remarks</th></tr><tr><th>Start</th><th>Finish</th><th>Start</th><th>Finish</th></tr>${rows}</table>
+  ${d.rem?`<p><b>Remarks:</b> ${c(d.rem)}</p>`:""}
+  <div class="ft"><span>GS-OL-029</span><span>PREPARED BY: <b>${by}</b></span></div>`;
+}
+$("csPdf").onclick=()=>{$("csPrint").innerHTML=csPrintHTML();setTimeout(()=>window.print(),50)};
+$("csShare").onclick=async()=>{
+  const{f,date}=csCur,d=csData(f,date),X=csDerived(f,d);
+  const t=[`COORDINATION SHEET · ${f.ino||""}/${f.n} · ${iso(date)}`,`REG ${d.reg||"-"} · GATE ${d.gate||"-"}`,`STA ${f.ia||"-"} ATA ${d.ata||"-"} · STD ${f.t} ATD ${X.atd||"-"}`,`DLY ${X.dly!=null?X.dly+"M":"-"}${d.dlyc?" CODE "+d.dlyc:""} · GROUND ${X.gt!=null?X.gt+"M":"-"}`,`PAX ARR ${d.pa.Y||0} · DEP ${d.pd.Y||0}`,
+    ...CS_ACTS.filter(([k])=>d.act[k]&&(d.act[k].s||d.act[k].e)).map(([k,n])=>`${n}: ${d.act[k].s||""}${d.act[k].e?"–"+d.act[k].e:""}${d.act[k].r?" ("+d.act[k].r+")":""}`),d.rem?"Remarks: "+d.rem:"",`Prepared by: ${localStorage.getItem("ajf_by")||""}`].filter(Boolean).join("\n");
+  try{if(navigator.share){await navigator.share({title:"Coordination Sheet "+f.n,text:t});return}}catch(e){return}
+  try{await navigator.clipboard.writeText(t);$("csShare").textContent="✓ نُسخ";setTimeout(()=>$("csShare").textContent="مشاركة",1500)}catch(e){}
+};
+
 /* ---------- bottom sheet ---------- */
 const sheet=$("sheet"),scrim=$("scrim");
 let y=innerHeight,sAnim,open=false,lastFocus;
@@ -856,6 +1033,7 @@ function openSheet(f,date){
   $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
   $("shN").textContent=f.note+(f.est?" (* وقت تقديري)":"");
   $("track").onclick=()=>openTrack(f,date);
+  $("csOpen").onclick=()=>openCS(f,date);
   clearInterval(turnTimer);turnEdit=false;renderTurn(f,date);turnTimer=setInterval(()=>renderTurn(f,date),1000);
   const ff={...f,t:f.t||f.time},has=hasClip(ff);
   $("listen").hidden=!has;$("listen").onclick=()=>playFlight(ff,$("listen"));
