@@ -142,6 +142,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .row .d div{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .al{display:inline-grid;place-items:center;min-width:30px;height:20px;padding:0 6px;margin-inline-end:6px;border-radius:6px;vertical-align:1px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em;color:#0a1120;background:var(--c,var(--muted))}
 .al.lg{min-width:40px;height:26px;font-size:13px;border-radius:8px}
+.side{display:grid;justify-items:center;gap:5px}
+.side small{font-size:11px;color:var(--muted)}
 .chip{font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;white-space:nowrap;border:1px solid currentColor}
 .chip.sched{color:var(--muted)}
 .chip.soon{color:var(--amber)}
@@ -183,7 +185,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .kv{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .kv div{background:var(--raise);border-radius:12px;padding:10px 12px}
 .kv span{display:block;font-size:11px;color:var(--muted)}
-.kv b{font-family:var(--mono);font-size:17px;font-weight:600}
+.kv b{font-family:var(--body);font-variant-numeric:tabular-nums;font-size:17px;font-weight:600}
 .dots{display:flex;gap:6px;justify-content:space-between}
 .dots i{flex:1;text-align:center;font-style:normal;font-size:12px;padding:7px 0;border-radius:9px;background:var(--raise);color:var(--muted)}
 .dots i.on{background:color-mix(in oklab,var(--amber) 22%,var(--raise));color:var(--amber);font-weight:600}
@@ -297,19 +299,20 @@ const MONTHS=["يناير","فبراير","مارس","أبريل","مايو","ي
 const C={sv:"#2fbf8f",f3:"#ff5c8a",xy:"#2bc4d8",np:"#5b8cff",sm:"#c9a227",g9:"#ff6b4a"};
 /* days: 0=Sun..6=Sat · start/until: ISO dates · est: time not confirmed */
 const FLIGHTS=[
- {airline:"إير كايرو",no:"SM322",dest:"القاهرة",iata:"CAI",time:"09:00",dur:105,days:[2,4,6],c:C.sm,alt:{2:"10:15"},note:"الثلاثاء الإقلاع 10:15، الخميس والسبت 09:00. رحلات 27 و29 أكتوبر طارت فعلياً."},
- {airline:"السعودية",no:"SV8383",dest:"جدة",iata:"JED",time:"09:45",dur:110,days:[4,6],c:C.sv,note:"رحلة صباحية، طارت فعلياً 24 و29 أكتوبر."},
- {airline:"العربية للطيران",no:"G9222",dest:"الشارقة",iata:"SHJ",time:"16:55",dur:135,days:[1,3,5],c:C.g9,note:"طارت 26 و28 و30 أكتوبر."},
- {airline:"فلاي أديل",no:"F3254",dest:"الرياض",iata:"RUH",time:"18:00",dur:100,days:[1,2,4,6],start:"2026-11-16",est:true,c:C.f3,note:"متوقفة حالياً (أُلغيت 26 و27 أكتوبر). موقع أديل يفتح الحجز من 16 نوفمبر: الاثنين والثلاثاء والخميس والسبت. الوقت حسب جدولها السابق، أكّده من التطبيق."},
- {airline:"السعودية",no:"SV8035",dest:"القصيم",iata:"ELQ",time:"18:40",dur:75,days:[0,1,2,3,4,5,6],until:"2026-11-30",c:C.sv,note:"يومية، طارت كل أيام الأسبوع الماضي. الخط ينتهي حسب الجدول في 30 نوفمبر."},
- {airline:"السعودية",no:"SV1383",dest:"جدة",iata:"JED",time:"19:15",dur:110,days:[0,1,2,3,4,5,6],c:C.sv,note:"يومية ومؤكدة، الوصول 21:05."},
- {airline:"طيران ناس",no:"XY150",dest:"الرياض",iata:"RUH",time:"20:45",dur:95,days:[0,1,2,3,4,5,6],start:"2026-11-11",c:C.xy,note:"متوقفة منذ 25 أكتوبر وتعود 11 نوفمبر. الوقت 20:45 مؤكد من نظام الحجز (الوصول 22:20)."},
- {airline:"طيران النيل",no:"NP110",dest:"القاهرة",iata:"CAI",time:"22:00",dur:115,days:[1,3,4,6],c:C.np,altNo:{4:"NP120"},note:"الخميس برقم NP120 وباقي الأيام NP110. طارت 26 و28 و29 أكتوبر."},
- {airline:"إير كايرو",no:"SM324",dest:"سوهاج",iata:"HMB",time:"22:30",dur:120,days:[5],c:C.sm,note:"أسبوعية كل جمعة، وجهتها سوهاج."}
+ {airline:"إير كايرو",no:"SM322",inNo:"SM321",inArr:"08:00",inAlt:{2:"09:15"},dest:"القاهرة",iata:"CAI",time:"09:00",dur:105,days:[2,4,6],c:C.sm,alt:{2:"10:15"},note:"الثلاثاء الإقلاع 10:15، الخميس والسبت 09:00. رحلات 27 و29 أكتوبر طارت فعلياً."},
+ {airline:"السعودية",no:"SV8383",inNo:"SV8382",inArr:"09:00",dest:"جدة",iata:"JED",time:"09:45",dur:110,days:[4,6],c:C.sv,note:"رحلة صباحية، طارت فعلياً 24 و29 أكتوبر."},
+ {airline:"العربية للطيران",no:"G9222",inNo:"G9221",inArr:"16:05",dest:"الشارقة",iata:"SHJ",time:"16:55",dur:135,days:[1,3,5],c:C.g9,note:"طارت 26 و28 و30 أكتوبر."},
+ {airline:"فلاي أديل",no:"F3254",inNo:"F3253",inArr:"17:20",dest:"الرياض",iata:"RUH",time:"18:00",dur:100,days:[1,2,4,6],start:"2026-11-16",est:true,c:C.f3,note:"متوقفة حالياً (أُلغيت 26 و27 أكتوبر). موقع أديل يفتح الحجز من 16 نوفمبر: الاثنين والثلاثاء والخميس والسبت. الوقت حسب جدولها السابق، أكّده من التطبيق."},
+ {airline:"السعودية",no:"SV8035",inNo:"SV8034",inArr:"17:40",dest:"القصيم",iata:"ELQ",time:"18:40",dur:75,days:[0,1,2,3,4,5,6],until:"2026-11-30",c:C.sv,note:"يومية، طارت كل أيام الأسبوع الماضي. الخط ينتهي حسب الجدول في 30 نوفمبر."},
+ {airline:"السعودية",no:"SV1383",inNo:"SV1382",inArr:"18:25",dest:"جدة",iata:"JED",time:"19:15",dur:110,days:[0,1,2,3,4,5,6],c:C.sv,note:"يومية ومؤكدة، الوصول 21:05."},
+ {airline:"طيران ناس",no:"XY150",inNo:"XY149",inArr:"20:05",dest:"الرياض",iata:"RUH",time:"20:45",dur:95,days:[0,1,2,3,4,5,6],start:"2026-11-11",c:C.xy,note:"متوقفة منذ 25 أكتوبر وتعود 11 نوفمبر. الوقت 20:45 مؤكد من نظام الحجز (الوصول 22:20)."},
+ {airline:"طيران النيل",no:"NP110",inNo:"NP109",inArr:"21:00",inAltNo:{4:"NP119"},dest:"القاهرة",iata:"CAI",time:"22:00",dur:115,days:[1,3,4,6],c:C.np,altNo:{4:"NP120"},note:"الخميس برقم NP120 وباقي الأيام NP110. طارت 26 و28 و29 أكتوبر."},
+ {airline:"إير كايرو",no:"SM324",inNo:"SM323",inArr:"21:30",dest:"سوهاج",iata:"HMB",time:"22:30",dur:120,days:[5],c:C.sm,note:"أسبوعية كل جمعة، وجهتها سوهاج."}
 ];
 
 const $=id=>document.getElementById(id);
 /* arrival in the destination's local time (Egypt observes summer time) */
+const ORIGIN={CAI:"القاهرة",JED:"جدة",SHJ:"الشارقة",RUH:"الرياض",ELQ:"القصيم",HMB:"سوهاج"};
 const TZ_NAME={CAI:"مصر",HMB:"مصر",SHJ:"الإمارات"};
 function lastDow(y,m,dow){const d=new Date(Date.UTC(y,m+1,0));while(d.getUTCDay()!==dow)d.setUTCDate(d.getUTCDate()-1);return d}
 function destOffset(iata,date){
@@ -342,7 +345,7 @@ const TODAY=NOW.date;
 function flightsOn(date,{all=false}={}){
   const dow=date.getUTCDay(),k=iso(date);
   return FLIGHTS.filter(f=>f.days.includes(dow)&&(!f.until||k<=f.until)&&(all||!f.start||k>=f.start))
-    .map(f=>({...f,t:f.alt&&f.alt[dow]||f.time,n:f.altNo&&f.altNo[dow]||f.no,off:!!(f.start&&k<f.start)}))
+    .map(f=>({...f,t:f.alt&&f.alt[dow]||f.time,n:f.altNo&&f.altNo[dow]||f.no,ia:f.inAlt&&f.inAlt[dow]||f.inArr,ino:f.inAltNo&&f.inAltNo[dow]||f.inNo,off:!!(f.start&&k<f.start)}))
     .sort((a,b)=>a.t.localeCompare(b.t));
 }
 
@@ -454,9 +457,9 @@ function render(){
     const [cls,txt]=status(f,date),b=document.createElement("button");
     b.className="row"+(cls.startsWith("done")?" past":"")+(cls==="off"?" off":"")+(cls.startsWith("cxl")?" cxl":"");
     b.style.setProperty("--c",f.c);b.style.animationDelay=Math.min(i*40,240)+"ms";
-    b.innerHTML=`<div class="t">${hl(f.t)}<small>وصول <span class="num">${arrival(f,date).local}</span>${arrival(f,date).foreign?" "+arrival(f,date).tz:""}</small></div>
+    b.innerHTML=`<div class="t">${hl(f.t)}<small>${f.ia?`يصل <span class="num">${f.ia}</span>`:""}</small></div>
       <div class="d"><b>${hl(f.dest)}</b><span class="code">${f.iata}</span><div><span class="al">${f.n.slice(0,2)}</span>${hl(f.airline)} · <span class="num">${hl(f.n)}</span></div></div>
-      <span class="chip ${cls}">${txt}</span>`;
+      <div class="side"><span class="chip ${cls}">${txt}</span>${f.ia&&!f.off?`<small>دوران <span class="num">${toMin(f.t)-toMin(f.ia)}</span> د</small>`:""}</div>`;
     b.onclick=()=>openSheet(f,date);
     list.appendChild(b);
   });
@@ -509,7 +512,7 @@ function openSheet(f,date){
   $("shT").textContent=`${f.dest} · ${f.iata}`;
   $("shS").innerHTML=`<span class="al lg" style="--c:${f.c}">${f.n.slice(0,2)}</span>${f.airline} · <span class="num">${f.n}</span> · ${DAYS[date.getUTCDay()]} ${dLabel(date)}`;
   const A=arrival(f,date),arr=A.local+(A.foreign?" بتوقيت "+A.tz:"");
-  $("shKV").innerHTML=[["الإقلاع",f.t+(f.est?" *":"")],["الوصول المجدول",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
+  $("shKV").innerHTML=[...(f.ia?[["الوصول للجوف",f.ia]]:[]),["الإقلاع",f.t+(f.est?" *":"")],...(f.ia?[["وقت الدوران",(toMin(f.t)-toMin(f.ia))+" دقيقة"],["رحلة الوصول",(f.ino||"")+" من "+(ORIGIN[f.iata]||f.dest)]]:[]),["الوصول للوجهة",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
     .map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("");
   $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
   $("shN").textContent=f.note+(f.est?" (* وقت تقديري)":"");
