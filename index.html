@@ -184,7 +184,8 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;z-index:9}
 .scrim.on{pointer-events:auto}
 .sheet{position:fixed;inset:auto 0 0 0;z-index:10;max-width:560px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;
-  padding:8px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(calc(100% + 60px));touch-action:none;display:grid;gap:12px}
+  padding:8px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(calc(100% + 60px));touch-action:pan-y;display:grid;gap:12px;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain}
+.grab,#shT,#shS{touch-action:none}
 .grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 6px}
 .sheet h4{margin:0;font-family:var(--display);font-size:22px}
 .sheet .s{color:var(--muted);font-size:13px;margin-top:-8px}
@@ -196,6 +197,33 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .dots i{flex:1;text-align:center;font-style:normal;font-size:12px;padding:7px 0;border-radius:9px;background:var(--raise);color:var(--muted)}
 .dots i.on{background:color-mix(in oklab,var(--amber) 22%,var(--raise));color:var(--amber);font-weight:600}
 .sheet .note{font-size:13px;color:var(--muted);line-height:1.7}
+/* turnaround countdown */
+.turn{background:linear-gradient(180deg,color-mix(in oklab,var(--amber) 9%,var(--raise)),var(--raise));border:1px solid color-mix(in oklab,var(--amber) 28%,var(--line));border-radius:16px;padding:12px 14px;display:grid;gap:10px}
+.turn[hidden]{display:none}
+.tu-h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.tu-h b{font-family:var(--display);font-size:14px;color:var(--ink);font-weight:600}
+.tu-src{font-size:11px;padding:3px 8px;border-radius:99px;background:color-mix(in oklab,var(--go) 16%,transparent);color:var(--go);white-space:nowrap}
+.tu-src.ap{background:color-mix(in oklab,var(--amber) 16%,transparent);color:var(--amber)}
+.tu-big{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.tu-big span{font-size:12px;color:var(--muted)}
+.tu-big b{font-family:var(--mono);font-size:40px;line-height:1;font-weight:600;color:var(--amber);letter-spacing:1px;font-variant-numeric:tabular-nums;direction:ltr}
+.tu-big b.ok{color:var(--go)}.tu-big b.late{color:var(--warn)}
+.tu-bar{display:flex;gap:3px;height:8px;direction:rtl}
+.tu-bar i{position:relative;border-radius:4px;background:color-mix(in oklab,var(--pc) 22%,var(--panel));overflow:hidden}
+.tu-bar i::after{content:"";position:absolute;inset:0 0 0 auto;width:var(--f,0%);background:var(--pc);border-radius:4px}
+.tu-ph{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.tu-ph li{display:grid;grid-template-columns:10px 1fr auto auto;align-items:center;gap:8px;font-size:13px;padding:5px 0;color:var(--muted)}
+.tu-ph li i{width:8px;height:8px;border-radius:50%;background:var(--pc);opacity:.45}
+.tu-ph li.now{color:var(--ink)}.tu-ph li.now i{opacity:1;box-shadow:0 0 0 4px color-mix(in oklab,var(--pc) 25%,transparent);animation:pulse 1.6s infinite}
+.tu-ph li.done{opacity:.6}.tu-ph li.done i{opacity:1}
+.tu-ph li b{font-weight:500}.tu-ph li.now b{font-weight:700}
+.tu-ph .num{font-family:var(--mono);font-size:12px;direction:ltr}
+.tu-ph em{font-style:normal;font-size:12px;min-width:66px;text-align:left;font-family:var(--mono);direction:ltr}
+.tu-ph li.now em{color:var(--amber)}.tu-ph li.done em{color:var(--go)}
+.tu-n{font-size:12px;color:var(--muted);line-height:1.6}
+.tu-n b{color:var(--warn)}
+@keyframes pulse{50%{box-shadow:0 0 0 7px transparent}}
+.row .side small.tw{color:var(--amber);font-weight:600}
 .done-btn{height:46px;border-radius:14px;background:var(--amber);color:#1a1205;font-weight:700;transition:transform .16s var(--ease)}
 .done-btn:active{transform:scale(.97)}
 
@@ -339,6 +367,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   <div class="grab"></div>
   <h4 id="shT"></h4>
   <div class="s" id="shS"></div>
+  <div class="turn" id="turn" hidden aria-live="off"></div>
   <div class="kv" id="shKV"></div>
   <div class="dots" id="shD"></div>
   <div class="note" id="shN"></div>
@@ -566,7 +595,7 @@ function render(){
     b.style.setProperty("--c",f.c);b.style.animationDelay=Math.min(i*40,240)+"ms";
     b.innerHTML=`<div class="t">${hl(f.t)}<small>${inboundTxt(f,date)}</small></div>
       <div class="d"><b>${hl(f.dest)}</b><span class="code">${f.iata}</span><div><span class="al">${f.n.slice(0,2)}</span>${hl(f.airline)} · <span class="num">${hl(f.n)}</span></div></div>
-${flyBar(f,date)}      <div class="side"><span class="chip ${cls}">${txt}</span>${f.ia&&!f.off?`<small>دوران <span class="num">${toMin(f.t)-toMin(f.ia)}</span> د</small>`:""}</div>`;
+${flyBar(f,date)}      <div class="side"><span class="chip ${cls}">${txt}</span>${turnChip(f,date)||(f.ia&&!f.off?`<small>دوران <span class="num">${toMin(f.t)-toMin(f.ia)}</span> د</small>`:"")}</div>`;
     b.onclick=()=>openSheet(f,date);
     list.appendChild(b);
   });
@@ -700,6 +729,82 @@ function spring(from,to,{velocity=0,damping=1,response=.35,onUpdate,onDone}={}){
   return{stop(){alive=false;cancelAnimationFrame(raf)},get velocity(){return v}};
 }
 
+
+/* ---------- turnaround countdown ----------
+   القواعد (من المشرف): الدولي 60 د من الوصول الفعلي · أديل وناس 40 د · السعودية حسب الجدول وأي تأخير يصير الدوران 40 د.
+   المراحل: نزول الركاب 8 د → التنظيف 7 د → (تجهيز) → تصعيد الركاب 14 د → إقفال الباب قبل الإقلاع بـ10 د → الإقلاع */
+const INTL=new Set(["CAI","SHJ","HMB"]);
+const gtRule=f=>INTL.has(f.iata)?60:40;
+const tm=t=>toMin(String(t).replace(/[~@≈\s]/g,""));
+const nowMin=()=>((Date.now()/1000+10800)%86400)/60;
+const LIVE_ETA={},SEEN_AIR={};let turnTimer;
+let ATA={};try{ATA=JSON.parse(localStorage.getItem("ajf_ata")||"{}")}catch(e){}
+const ataKey=(f,date)=>iso(date)+"_"+f.ino;
+function inboundInfo(f,date){
+  if(!f.ino||!f.ia||f.off||iso(date)!==iso(TODAY))return null;
+  const L=LIVE.date===iso(date)&&LIVE.flights[f.ino];
+  if(L&&L.s==="canceled")return null;
+  if(L&&L.s==="landed"&&L.t)return{m:tm(L.t),kind:L.t.includes("~")?"approx":"exact"};
+  const loc=ATA[ataKey(f,date)];if(loc)return{m:tm(loc),kind:"adsb"};
+  const eta=LIVE_ETA[f.ino]!=null?LIVE_ETA[f.ino]:L&&(L.s==="departed"||L.s==="delayed")&&L.t?tm(L.t):null;
+  if(eta!=null)return nowMin()>=eta+3?{m:eta,kind:"approx"}:{m:eta,kind:"eta"};
+  return null;
+}
+function turnPlan(f,ata){
+  const std=tm(f.t),dep=Math.max(std,ata+gtRule(f)),door=dep-10;let bs=door-14;if(bs<ata+18)bs=ata+15;
+  const ph=[["نزول الركاب",ata,ata+8,"#7cc4ff"],["التنظيف",ata+8,ata+15,"#b48cff"]];
+  if(bs>ata+15)ph.push(["تجهيز الطائرة",ata+15,bs,"#8796b0"]);
+  ph.push(["تصعيد الركاب",bs,door,"#ffb340"],["إقفال الباب والدفع",door,dep,"#38d39f"]);
+  return{std,dep,door,ph,delay:dep-std,ground:dep-ata};
+}
+const clockFmt=x=>{x=Math.max(0,Math.round(x*60));const h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return(h?h+":"+pad(m):pad(m))+":"+pad(s)};
+function turnChip(f,date){
+  const I=inboundInfo(f,date);if(!I||I.kind==="eta")return"";
+  const D=LIVE.date===iso(date)&&LIVE.flights[f.n];if(D&&["departed","landed","canceled"].includes(D.s))return"";
+  const P=turnPlan(f,I.m),left=Math.ceil(P.dep-NOW.mins);
+  if(left<-30)return"";
+  return left>0?`<small class="tw">⏱ إقلاع بعد <span class="num">${left}</span> د</small>`:`<small class="tw" style="color:var(--warn)">تجاوزت الموعد</small>`;
+}
+function renderTurn(f,date){
+  const el=$("turn"),I=inboundInfo(f,date);
+  if(!I){el.hidden=true;return}
+  const P=turnPlan(f,I.m),now=nowMin(),D=LIVE.date===iso(date)&&LIVE.flights[f.n];
+  const gone=D&&["departed","landed"].includes(D.s)&&D.t,atd=gone?tm(D.t):null;
+  if(gone&&now>atd+60){el.hidden=true;return}
+  const pre=I.kind==="eta"&&now<I.m;
+  const src=I.kind==="exact"?`<span class="tu-src">وصلت فعلياً ${fmt(I.m)}</span>`:I.kind==="adsb"?`<span class="tu-src">رُصد الهبوط ${fmt(I.m)}</span>`:I.kind==="approx"?`<span class="tu-src ap">وصلت ≈${fmt(I.m)} · تقديري</span>`:`<span class="tu-src ap">تصل ≈${fmt(I.m)}</span>`;
+  let big;
+  if(gone)big=`<span>أقلعت ${fmt(atd)} · دوران فعلي ${atd-I.m} د</span><b class="ok">${fmt(atd)}</b>`;
+  else if(pre)big=`<span>حتى وصول الطائرة للجوف</span><b>${clockFmt(I.m-now)}</b>`;
+  else if(now<P.dep)big=`<span>متبقي للإقلاع ${fmt(P.dep)}</span><b>${clockFmt(P.dep-now)}</b>`;
+  else big=`<span>تجاوزت وقت الإقلاع ${fmt(P.dep)}</span><b class="late">+${clockFmt(now-P.dep)}</b>`;
+  const end=gone?Infinity:now;
+  const bar=P.ph.map(([n,a,b,c])=>`<i style="--pc:${c};flex:${b-a};--f:${(Math.max(0,Math.min(1,(end-a)/(b-a)))*100).toFixed(1)}%"></i>`).join("");
+  const li=P.ph.map(([n,a,b,c])=>{const st=end>=b?"done":end>=a?"now":"up";
+    const r=st==="done"?"✓":st==="now"?clockFmt(b-now):"بعد "+Math.ceil(a-now)+" د";
+    return`<li class="${st}" style="--pc:${c}"><i></i><b>${n}</b><span class="num">${fmt(a)}–${fmt(b)}</span><em>${pre&&st==="up"?"":r}</em></li>`}).join("");
+  const note=gone?"":pre?"الخطة محسوبة على وقت الوصول المتوقع وتتعدّل تلقائياً أول ما تهبط الطائرة":
+    P.delay>0?`<b>تأخير متوقع ${P.delay} د</b> — الدوران الأدنى ${gtRule(f)} د من الوصول الفعلي`:I.kind==="approx"?"وقت الوصول تقديري حتى يتأكد الوصول الفعلي":"";
+  el.innerHTML=`<div class="tu-h"><b>الدوران · ${P.ground} د</b>${src}</div><div class="tu-big">${big}</div><div class="tu-bar">${bar}</div><ul class="tu-ph">${li}</ul>${note?`<div class="tu-n">${note}</div>`:""}`;
+  el.hidden=false;
+}
+/* رصد الهبوط مباشرة من ADS-B أثناء فتح التطبيق */
+async function watchInbound(){
+  if(document.hidden)return;let hit=false;
+  for(const f of flightsOn(TODAY)){
+    if(!f.ino||!f.ia)continue;
+    const L=LIVE.date===iso(TODAY)&&LIVE.flights[f.ino];
+    if(L&&["landed","canceled"].includes(L.s)||ATA[ataKey(f,TODAY)])continue;
+    const sta=toMin(f.ia);if(NOW.mins<sta-75||NOW.mins>sta+150)continue;
+    const a=await adsb(callsign(f.ino));if(!a)continue;
+    const d=distKm([a.lat,a.lon],AP.AJF),alt=a.alt_baro==="ground"?0:(+a.alt_baro||0),gs=a.gs||0;
+    if(d<10&&(alt<700||gs<90)){if(SEEN_AIR[f.ino]){ATA[ataKey(f,TODAY)]=fmt(NOW.mins);try{localStorage.setItem("ajf_ata",JSON.stringify(ATA))}catch(e){}hit=true}}
+    else{SEEN_AIR[f.ino]=true;if(gs>80)LIVE_ETA[f.ino]=Math.round(NOW.mins+d/(gs*1.852)*60+3)}
+  }
+  if(hit&&!open)render();
+}
+setInterval(watchInbound,45000);setTimeout(watchInbound,4000);
+
 /* ---------- bottom sheet ---------- */
 const sheet=$("sheet"),scrim=$("scrim");
 let y=innerHeight,sAnim,open=false,lastFocus;
@@ -714,6 +819,7 @@ function openSheet(f,date){
   $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
   $("shN").textContent=f.note+(f.est?" (* وقت تقديري)":"");
   $("track").onclick=()=>openTrack(f,date);
+  clearInterval(turnTimer);renderTurn(f,date);turnTimer=setInterval(()=>renderTurn(f,date),1000);
   const ff={...f,t:f.t||f.time},has=hasClip(ff);
   $("listen").hidden=!has;$("listen").onclick=()=>playFlight(ff,$("listen"));
   if(has)playFlight(ff,$("listen"));
@@ -725,7 +831,7 @@ function openSheet(f,date){
   setTimeout(()=>$("done").focus({preventScroll:true}),50);
 }
 function closeSheet(velocity=0){
-  stopClips();
+  stopClips();clearInterval(turnTimer);
   open=false;scrim.classList.remove("on");sAnim&&sAnim.stop();
   sAnim=spring(y,sheet.offsetHeight+20,{velocity,response:.32,onUpdate:setY});
   lastFocus&&lastFocus.focus&&lastFocus.focus({preventScroll:true});
@@ -733,7 +839,7 @@ function closeSheet(velocity=0){
 $("done").onclick=()=>closeSheet();scrim.onclick=()=>closeSheet();
 addEventListener("keydown",e=>{if(e.key==="Escape"&&open)closeSheet()});
 let drag=null;
-sheet.addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;sAnim&&sAnim.stop();sheet.setPointerCapture(e.pointerId);drag={sy:e.clientY,sv:y,h:[{t:performance.now(),y:e.clientY}]}});
+sheet.addEventListener("pointerdown",e=>{if(e.target.closest("button")||(!e.target.closest(".grab,#shT,#shS")&&sheet.scrollTop>0)||e.target.closest(".turn,.kv"))return;sAnim&&sAnim.stop();sheet.setPointerCapture(e.pointerId);drag={sy:e.clientY,sv:y,h:[{t:performance.now(),y:e.clientY}]}});
 sheet.addEventListener("pointermove",e=>{if(!drag)return;let d=drag.sv+(e.clientY-drag.sy);if(d<0){const dim=sheet.offsetHeight,c=.55;d=-(-d*dim*c)/(dim+c*-d)}setY(d);drag.h.push({t:performance.now(),y:e.clientY});if(drag.h.length>6)drag.h.shift()});
 function endDrag(){if(!drag)return;const a=drag.h[0],b=drag.h[drag.h.length-1],v=b.t>a.t?(b.y-a.y)/((b.t-a.t)/1000):0;drag=null;
   const landing=y+(v/1000)*.998/(1-.998);
