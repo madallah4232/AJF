@@ -525,6 +525,7 @@ function inboundTxt(f,date){
 function flyBar(f,date){
   const L=iso(date)===iso(TODAY)&&LIVE.date===iso(TODAY)&&LIVE.flights[f.n];
   if(!L||L.s!=="departed"||!L.t)return"";
+  if(NOW.mins-toMin(L.t)>f.dur)return"";
   const p=Math.max(.03,Math.min(.97,(NOW.mins-toMin(L.t))/f.dur));
   return`<div class="fly" aria-hidden="true"><i style="width:${(p*100).toFixed(1)}%"></i><em style="right:${(p*100).toFixed(1)}%">✈</em></div>`;
 }
