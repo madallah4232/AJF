@@ -1004,7 +1004,7 @@ requestAnimationFrame(()=>setY(innerHeight));
 addEventListener("resize",()=>{if(!open)setY(innerHeight)});
 if(DEMO){const k=iso(TODAY);applyLive({date:k,updated:fmt(NOW.mins),flights:{SM321:{s:"landed",t:"~08:28"},SM322:{s:"departed",t:"09:27"},SV8382:{s:"landed",t:"08:55"},SV8383:{s:"departed",t:"09:38"},G9221:{s:"landed",t:"16:02"},G9222:{s:"departed",t:"17:01"},SV8034:{s:"landed",t:"17:44"},SV1382:{s:"departed",t:"~18:27"},NP109:{s:"delayed",t:"~21:25"},XY149:{s:"departed",t:"~18:20"}}});
   const b=document.createElement("div");b.textContent="وضع تجريبي · أوقات وهمية للعرض فقط";b.style.cssText="position:fixed;top:0;inset-inline:0;z-index:50;background:#ffb340;color:#1a1205;font:600 12px/26px system-ui;text-align:center";document.body.appendChild(b);
-}else{loadLive();setInterval(loadLive,300000);}
+}else{loadLive();setInterval(()=>{if(!document.hidden)loadLive()},30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadLive()});}
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 setInterval(()=>{const before=NOW.mins;renderClock();if(NOW.mins!==before){renderNext();if(!open)render()}},15000);
 </script>
