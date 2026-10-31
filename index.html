@@ -193,6 +193,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 
 /* welcome / announcement */
 .intro{cursor:pointer;position:fixed;inset:0;z-index:50;background:radial-gradient(120% 80% at 50% 0%,#14203a 0%,var(--night) 60%);display:grid;place-items:center;padding:24px;transition:opacity .5s var(--ease),transform .6s var(--ease)}
+.intro[hidden]{display:none}
 .intro.out{opacity:0;transform:scale(1.04);pointer-events:none}
 .intro-in{width:100%;max-width:420px;display:grid;gap:22px;justify-items:center;text-align:center}
 .intro .flap{display:flex;gap:6px;direction:ltr}
@@ -547,24 +548,31 @@ function announcement(){
   const {f}=n;
   return{key:f.iata+"-"+f.t.replace(":",""),text:`أهلاً بكم في مطار الجوف. الرحلة القادمة: الجوف، ${f.dest}، عند الساعة ${spokenTime(f.t)}.`};
 }
+/* recorded announcer clips available in audio/ (e.g. "CAI-0900"); others use the device voice */
+const CLIPS=[];
 function speak(text,onEnd){
   if(!("speechSynthesis" in window)){onEnd&&onEnd();return}
-  speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);u.lang="ar-SA";u.rate=.9;u.pitch=.95;
   const vs=speechSynthesis.getVoices().filter(v=>/^ar/i.test(v.lang));
   const v=vs.find(v=>/enhanced|premium|neural|maged|majed/i.test(v.name))||vs[0];if(v)u.voice=v;
-  u.onend=u.onerror=()=>onEnd&&onEnd();
+  let fin=false;const end=()=>{if(!fin){fin=true;onEnd&&onEnd()}};
+  u.onend=u.onerror=end;setTimeout(end,15000);
   speechSynthesis.speak(u);
 }
-/* recorded announcer clips: audio/<IATA>-<HHMM>.mp3 (e.g. audio/CAI-0900.mp3); falls back to device voice */
+/* must be called directly inside a tap: iOS only allows sound that starts from a user gesture */
 function playAnnouncement(el){
-  const a=announcement();el&&el.classList.add("speaking");
-  const done=()=>el&&el.classList.remove("speaking");
-  const fallback=()=>{const w=chime();setTimeout(()=>speak(a.text,done),w)};
-  if(!a.key){fallback();return Promise.resolve()}
-  const au=new Audio("audio/"+a.key+".mp3");au.onended=done;
-  return au.play().catch(err=>{if(err&&err.name==="NotAllowedError"){done();throw err}fallback()});
+  const a=announcement();
+  const off=()=>el&&el.classList.remove("speaking");el&&el.classList.add("speaking");
+  if(a.key&&CLIPS.includes(a.key)){
+    const au=new Audio("audio/"+a.key+".mp3");au.onended=au.onerror=off;
+    return au.play().catch(e=>{off();throw e});
+  }
+  if("speechSynthesis" in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(""))} /* unlock voice within the tap */
+  const w=chime();
+  setTimeout(()=>speak(a.text,off),w);
+  return Promise.resolve();
 }
+addEventListener("pagehide",()=>{try{speechSynthesis.cancel()}catch(e){}});
 function flipTo(word){
   const spans=[...$("flap").children],chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   spans.forEach((sp,i)=>{
@@ -582,12 +590,13 @@ function showIntro(){
   const n=nextDeparture();
   $("introNx").innerHTML=n?`<span>الرحلة القادمة</span><b>الجوف ← ${n.f.dest} · <span class="num" style="color:var(--amber);font-size:17px">${n.f.t}</span></b>`:"<span>ما فيه رحلات قريبة</span>";
   flipTo("AJF");
-  let started=false;
-  const start=()=>{if(started)return;started=true;$("introGoT").textContent="جاري الإعلان…";playAnnouncement($("introGo")).catch(()=>{});setTimeout(closeIntro,4200)};
-  /* try to start on open; browsers that block sound wait for the first tap anywhere */
-  setTimeout(()=>{playAnnouncement($("introGo")).then(()=>{started=true;$("introGoT").textContent="جاري الإعلان…";setTimeout(closeIntro,4200)}).catch(()=>{})},900);
-  el.onclick=start;
-  $("introSkip").onclick=e=>{e.stopPropagation();started=true;if("speechSynthesis" in window)speechSynthesis.cancel();closeIntro()};
+  let done=false;
+  const enter=withSound=>{if(done)return;done=true;if(withSound)playAnnouncement($("say"));closeIntro()};
+  el.onclick=()=>enter(true);
+  $("introSkip").onclick=e=>{e.stopPropagation();enter(false)};
+  /* a recorded clip may autoplay where the browser allows it; otherwise the first tap starts it */
+  const a=announcement();
+  if(a.key&&CLIPS.includes(a.key))setTimeout(()=>{if(done)return;playAnnouncement($("say")).then(()=>{done=true;setTimeout(closeIntro,1200)}).catch(()=>{})},800);
 }
 $("say").onclick=()=>playAnnouncement($("say"));
 if("speechSynthesis" in window)speechSynthesis.getVoices();
