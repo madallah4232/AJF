@@ -1355,7 +1355,7 @@ const WMO={0:"صحو",1:"صحو غالباً",2:"غائم جزئياً",3:"غا�
 const isTS=c=>c>=95,isRain=c=>(c>=51&&c<=67)||(c>=80&&c<=82);
 /* حدود استرشادية لعمليات الساحة — الأولوية دائماً لتعليمات المطار والشركة ودليل الطائرة */
 function wxHaz(h){
-  /* مرجع: SGS Ground Operations Manual 6.3.6 Severe Weather Operations — العتبات بالكم/س كما في الدليل */
+  /* مرجع: SGS Ground Operations Manual 6.3.6 Severe Weather Operations — حدود التنبيه بالكم/س كما في الدليل */
   const out=[],g=Math.max(h.wg||0,h.ws||0),kmh=Math.round(g*1.852),W=`${Math.round(g)} kt · ${kmh} km/h`;
   if(kmh>=111)out.push({lv:3,k:"wind",ic:"🌪️",ref:"GOM 6.3.6.1",t:"رياح عاصفة",v:W,a:[["إيقاف التحميل وحفظ الأمتعة والشحن في مكان آمن","التحميل"],["صفّ المعدات متقاربة وبجانب مبنى إن أمكن","المعدات"],["إغلاق أبواب العنابر والركاب ولوحات الوصول","التحميل"],["لا يُرفع الهاي لودر ولا السلالم","المعدات"],["أحذية إضافية حسب مخطط High Winds، وتأمين ULD والعربات","الكل"]]});
   else if(kmh>=73)out.push({lv:3,k:"wind",ic:"💨",ref:"GOM 6.3.6.1",t:"رياح شديدة",v:W,a:[["إغلاق أبواب العنابر والركاب ولوحات الوصول","التحميل"],["لا يُبدأ رفع الهاي لودر أو المعدات المرتفعة أو السلالم","المعدات"],["إيقاف التحميل وحفظ الأمتعة والشحن في مكان آمن","التحميل"],["أحذية إضافية حسب مخطط High Winds، وإزالة الأقماع","الكل"],["تأمين ULD والعربات وخراطيم التكييف (PCA)","المعدات"]]});
@@ -1458,7 +1458,7 @@ function renderWx(){
     <div class="wx-lv" data-lv="${lv}"><i></i><div><b>${WX_LVT[lv]}${hz[0]?" · "+hz[0].t:""}</b>${hz[0]&&hz[0].v?`<em class="wv">${hz[0].v}</em>`:""}<span>${ahead||(lv?"اتبع الإجراءات أدناه":"لا قيود طقس على المعدات والعمال الآن")}</span></div></div>
     <div class="wx-sl">الرياح المتوقعة (عقدة) · 12 ساعة · تقديري</div><div class="wx-strip" aria-label="الرياح المتوقعة خلال 12 ساعة">${strip}</div>${al?`<div class="wx-al">${al}</div>`:""}
     ${c.obs||WX.taf?`<details class="wx-raw"><summary>النص الرسمي METAR / TAF</summary>${c.obs?`<code>${c.raw}</code>`:""}${WX.taf?`<code>${WX.taf}</code>`:""}</details>`:""}
-    <div class="wx-ft"><span>${c.obs?"الحالة الآن: METAR OESK":"الحالة الآن: تقديري"} · الساعات القادمة: نموذج Open-Meteo (تقديري) · تحدّث ${new Date(WX.at).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"})} · العتبات حسب دليل SGS GOM 6.3.6 · القرار النهائي لمدير المناوبة وعمليات المطار</span></div>`;
+    <div class="wx-ft"><span>${c.obs?"الحالة الآن: METAR OESK":"الحالة الآن: تقديري"} · الساعات القادمة: نموذج Open-Meteo (تقديري) · تحدّث ${new Date(WX.at).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"})} · حدود التنبيه حسب دليل SGS GOM 6.3.6 · القرار النهائي لمدير المناوبة وعمليات المطار</span></div>`;
   wxScene(c,lv);
   /* تنبيه منبثق عند ارتفاع مستوى الخطر */
   const key=today+"_"+lv;let last="";try{last=localStorage.getItem("ajf_wxa")||""}catch(e){}
