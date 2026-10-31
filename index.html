@@ -546,7 +546,7 @@ function flightsOn(date,{all=false}={}){
 
 /* LIVE: actual status, refreshed hourly by a scheduled task from Flightradar24.
    s: sched | delayed | departed | landed | canceled | diverted · t: local time HH:MM */
-const LIVE={"date":"","updated":"","flights":{}};
+const LIVE={"date":"","updated":"","flights":{},"dly":{}};
 const REVIEWED="2026-10-31"; /* آخر مراجعة لجدول الرحلات — تحدّثه المهمة اليومية */
 const LIVE_TXT={departed:["done","أقلعت"],landed:["done","أقلعت"],canceled:["cxl","ملغاة"],diverted:["cxl","تحويل"],delayed:["soon","متأخرة"],sched:["sched","في الموعد"]};
 const state={week:0,sel:0,q:""};
@@ -694,7 +694,7 @@ function render(){
     b.style.setProperty("--c",f.c);b.style.animationDelay=Math.min(i*40,240)+"ms";
     b.innerHTML=`<div class="t">${hl(f.t)}<small>${inboundTxt(f,date)}</small></div>
       <div class="d"><b>${hl(f.dest)}</b><span class="code">${f.iata}</span><div><span class="al">${f.n.slice(0,2)}</span>${hl(f.airline)} · <span class="num">${hl(f.n)}</span></div></div>
-${flyBar(f,date)}      <div class="side"><span class="chip ${cls}">${txt}</span>${turnChip(f,date)||(f.ia&&!f.off?`<small>دوران <span class="num">${toMin(f.t)-toMin(f.ia)}</span> د</small>`:"")}</div>`;
+${flyBar(f,date)}      <div class="side"><span class="chip ${cls}">${txt}</span>${turnChip(f,date)||gtTag(f,date)+dlyTag(f,date)}</div>`;
     b.onclick=()=>openSheet(f,date);
     list.appendChild(b);
   });
@@ -841,6 +841,44 @@ const INTL=new Set(["CAI","SHJ","HMB"]);
 /* مدة الدوران = وقت بقاء الطائرة على الأرض حسب جدول كل رحلة (الإقلاع المجدول − الوصول المجدول) */
 const gtRule=f=>{const a=f.ia||f.inArr,d=f.t||f.time;if(!a||!d)return 60;return(toMin(d)-toMin(a)+1440)%1440||60};
 const isActual=I=>!!I&&I.kind!=="eta"&&I.kind!=="approx";
+/* Ground Time: بعد الإقلاع الفعلي = ATD − ATA (Actual GT)، قبله = المجدول (Sched GT) */
+function actGT(f,date){
+  if(iso(date)!==iso(TODAY)||LIVE.date!==iso(date))return null;
+  const D=LIVE.flights[f.n];if(!D||D.s!=="departed"||!D.t)return null;
+  const I=inboundInfo(f,date);if(!I||I.kind==="eta")return null;
+  const g=tm(D.t)-I.m;return g>0&&g<600?{g,approx:I.kind==="approx"}:null;
+}
+/* Delay: ATD − STD. الجزء الناتج عن تأخر الوصول (93 Late Arrival) = ATA + Sched GT − STD، والباقي سببه آخر يُكتب كملاحظة */
+let DLYR={};try{DLYR=JSON.parse(localStorage.getItem("ajf_dly")||"{}")}catch(e){}
+const dlyKey=(f,date)=>iso(date)+"_"+f.n;
+function dlyReason(f,date){return(LIVE.date===iso(date)&&LIVE.dly&&LIVE.dly[f.n])||DLYR[dlyKey(f,date)]||""}
+function dlyInfo(f,date){
+  if(iso(date)!==iso(TODAY)||LIVE.date!==iso(date))return null;
+  const D=LIVE.flights[f.n];if(!D||D.s!=="departed"||!D.t)return null;
+  const atd=tm(D.t),std=tm(f.t);if(isNaN(atd))return null;
+  const dly=atd-std;if(dly<=0)return{atd,std,dly:0,no:true};
+  const I=f.ia?inboundInfo(f,date):null;let react=null;
+  if(I&&I.kind!=="eta")react=Math.max(0,Math.min(dly,I.m+gtRule(f)-std));
+  return{atd,std,dly,no:false,react,other:react==null?null:dly-react,approx:!!I&&I.kind==="approx",reason:dlyReason(f,date)};
+}
+function dlyText(X){
+  if(!X)return"";if(X.no)return"NO DELAY";
+  const parts=[];
+  if(X.react)parts.push("93 Late Arrival "+X.react+"M"+(X.approx?" ≈":""));
+  if(X.other==null)parts.push(X.reason?X.reason:"Reason: —");
+  else if(X.other>0)parts.push(X.react?"Other "+X.other+"M: "+(X.reason||"—"):(X.reason||"Reason: —"));
+  return"DLY "+X.dly+"M · "+parts.join(" · ");
+}
+function dlyTag(f,date){
+  const X=dlyInfo(f,date);if(!X)return"";
+  if(X.no)return`<small style="color:var(--go)">NO DELAY</small>`;
+  return`<small style="color:var(--warn)">DLY <span class="num">${X.dly}</span>M${X.react&&X.react>=X.dly?" · Late Arr":""}</small>`;
+}
+function gtTag(f,date){
+  if(!f.ia||f.off)return"";
+  const A=actGT(f,date);
+  return A?`<small>Actual GT <span class="num">${A.g}</span>M${A.approx?" ≈":""}</small>`:`<small>Sched GT <span class="num">${gtRule(f)}</span>M</small>`;
+}
 const tm=t=>toMin(String(t).replace(/[~@≈\s]/g,""));
 const nowMin=()=>((Date.now()/1000+10800)%86400)/60;
 const LIVE_ETA={},SEEN_AIR={};let turnTimer;
@@ -897,7 +935,7 @@ function renderTurn(f,date){
     const D0=LIVE.date===iso(date)&&LIVE.flights[f.n],gone0=D0&&["departed","landed","canceled"].includes(D0.s);
     const ok=!gone0&&f.ino&&f.ia&&!f.off&&iso(date)===iso(TODAY)&&NOW.mins>=toMin(f.ia)-90&&NOW.mins<=toMin(f.t)+60;
     const msg=!I?`بانتظار بيانات وصول ${f.ino}.`:I.kind==="eta"?`${f.ino} لم تصل بعد · متوقع ≈<span class="num">${fmt(I.m)}</span>.`:`${f.ino} يُرجّح أنها وصلت ≈<span class="num">${fmt(I.m)}</span> ولم يتأكد وقت الوصول الفعلي بعد.`;
-    if(ok){el.innerHTML=`<div class="tu-h"><b>الدوران · ${gtRule(f)} د</b>${edBtn}</div><div class="tu-n">${msg} العدّ التنازلي يبدأ عند الوصول الفعلي. إذا عندك وقت الوصول من النظام أدخله من «تعديل الوصول».${LIVE.updated?` <br>آخر تحديث للحالة ${LIVE.updated}.`:""} <a href="https://www.flightradar24.com/data/flights/${f.ino.toLowerCase()}" target="_blank" rel="noopener" style="color:var(--amber)">تحقق من الهبوط في Flightradar24 ↗</a></div>`;el.hidden=false}
+    if(ok){el.innerHTML=`<div class="tu-h"><b>Sched GT · ${gtRule(f)}M</b>${edBtn}</div><div class="tu-n">${msg} العدّ التنازلي يبدأ عند الوصول الفعلي. إذا عندك وقت الوصول من النظام أدخله من «تعديل الوصول».${LIVE.updated?` <br>آخر تحديث للحالة ${LIVE.updated}.`:""} <a href="https://www.flightradar24.com/data/flights/${f.ino.toLowerCase()}" target="_blank" rel="noopener" style="color:var(--amber)">تحقق من الهبوط في Flightradar24 ↗</a></div>`;el.hidden=false}
     else el.hidden=true;
     return}
   const P=turnPlan(f,I.m),now=nowMin(),D=LIVE.date===iso(date)&&LIVE.flights[f.n];
@@ -906,7 +944,7 @@ function renderTurn(f,date){
   const pre=I.kind==="eta"&&now<I.m;
   const src=I.kind==="manual"?`<span class="tu-src">معتمد ${fmt(I.m)} ✎</span>`:I.kind==="exact"?`<span class="tu-src">وصلت فعلياً ${fmt(I.m)}</span>`:I.kind==="adsb"?`<span class="tu-src">رُصد الهبوط ${fmt(I.m)}</span>`:I.kind==="approx"?`<span class="tu-src ap">وصلت ≈${fmt(I.m)} · تقديري</span>`:`<span class="tu-src ap">تصل ≈${fmt(I.m)}</span>`;
   let big;
-  if(gone)big=`<span>أقلعت ${fmt(atd)} · دوران فعلي ${atd-I.m} د</span><b class="ok">${fmt(atd)}</b>`;
+  if(gone)big=`<span>ATD ${fmt(atd)} · Actual GT ${atd-I.m}M · ${(()=>{const X=dlyInfo(f,date);return X?(X.no?"NO DELAY":"DLY "+X.dly+"M"):""})()}</span><b class="ok">${fmt(atd)}</b>`;
   else if(pre)big=`<span>حتى وصول الطائرة للجوف</span><b>${clockFmt(I.m-now)}</b>`;
   else if(now<P.dep)big=`<span>متبقي لـ Close Door ${fmt(P.dep)}</span><b>${clockFmt(P.dep-now)}</b>`;
   else big=`<span>تجاوزت Close Door ${fmt(P.dep)}</span><b class="late">+${clockFmt(now-P.dep)}</b>`;
@@ -915,9 +953,9 @@ function renderTurn(f,date){
   const li=P.ph.map(([n,a,b,c,pt])=>{const st=end>=b?"done":end>=a?"now":"up";
     const r=st==="done"?"✓":st==="now"?clockFmt(b-now):"بعد "+Math.ceil((pt?b:a)-now)+" د";
     return`<li class="${st}" style="--pc:${c}"><i></i><b>${n}</b><span class="num">${pt?fmt(b):fmt(a)+"–"+fmt(b)}</span><em>${pre&&st==="up"?"":r}</em></li>`}).join("");
-  const note=gone?"":pre?"الخطة محسوبة على وقت الوصول المتوقع وتتعدّل تلقائياً أول ما تهبط الطائرة":
+  const note=gone?(()=>{const X=dlyInfo(f,date);return X&&!X.no?dlyText(X):""})():pre?"الخطة محسوبة على وقت الوصول المتوقع وتتعدّل تلقائياً أول ما تهبط الطائرة":
     P.delay>0?`<b>تأخير متوقع ${P.delay} د</b> — Close Door بعد ${gtRule(f)} د من الوصول الفعلي`:I.kind==="approx"?"وقت الوصول تقديري حتى يتأكد الوصول الفعلي":"";
-  el.innerHTML=`<div class="tu-h"><b>الدوران · ${P.ground} د</b>${src}</div>${gone?"":`<div class="tu-acts">${edBtn}</div>`}<div class="tu-big">${big}</div><div class="tu-bar">${bar}</div><ul class="tu-ph">${li}</ul>${note?`<div class="tu-n">${note}</div>`:""}`;
+  el.innerHTML=`<div class="tu-h"><b>${gone?`Actual GT · ${atd-I.m}M`:`Sched GT · ${P.ground}M`}</b>${src}</div>${gone?"":`<div class="tu-acts">${edBtn}</div>`}<div class="tu-big">${big}</div><div class="tu-bar">${bar}</div><ul class="tu-ph">${li}</ul>${note?`<div class="tu-n">${note}</div>`:""}`;
   el.hidden=false;
 }
 /* رصد الهبوط مباشرة من ADS-B أثناء فتح التطبيق */
@@ -983,7 +1021,11 @@ function renderCS(){
     <div class="cs-g two">${fld("ARRIVAL · FROM",`<input value="${f.ino||"—"} · ${f.iata}" readonly>`)}${fld("DEPARTURE · TO",`<input value="${f.n} · ${f.iata}" readonly>`)}</div>
     <div class="cs-g">${fld("STA",`<input value="${f.ia||"—"}" readonly>`)}${fld("ATA",inp("ata",d.ata,"","time"))}${fld("STD",`<input value="${f.t}" readonly>`)}</div>
   </div>
-  <div class="cs-card"><h5>ACTIVITIES <span style="font-family:var(--mono)">${now}</span></h5>${acts}</div>`;
+  <div class="cs-card"><h5>ACTIVITIES <span style="font-family:var(--mono)">${now}</span></h5>${acts}</div>
+  ${(()=>{const X=dlyInfo(f,date);if(!X)return"";return`<div class="cs-card"><h5>DELAY</h5>
+    <div class="cs-g">${fld("STD",`<input value="${f.t}" readonly>`)}${fld("ATD",`<input value="${fmt(X.atd)}" readonly>`)}${fld("DLY",`<input value="${X.no?"NO DELAY":X.dly+"M"}" readonly style="color:var(${X.no?"--go":"--warn"})">`)}</div>
+    ${X.no?"":`<div class="tu-n" style="direction:ltr;text-align:left">${dlyText(X)}</div>
+    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`):""}`}</div>`})()}`;
 }
 function csSet(path,v){
   const{f,date}=csCur,d=csData(f,date),p=path.split(".");let o=d;
@@ -991,7 +1033,7 @@ function csSet(path,v){
   if(path==="ata"){const k=ataKey(f,date);if(hm(v))MAN[k]=v;else delete MAN[k];try{localStorage.setItem(DEMO?"ajf_man_demo":"ajf_man",JSON.stringify(MAN))}catch(e){}}
   csSave();$("csSaved").textContent="✓ محفوظ";clearTimeout(csSet.t);csSet.t=setTimeout(()=>$("csSaved").textContent="",1500);
 }
-$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$/.test(k))renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
+$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$/.test(k))renderCS()}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
 $("csBody").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.chk){const{f,date}=csCur,d=csData(f,date);d.chk[b.dataset.chk]=!d.chk[b.dataset.chk];csSave();b.classList.toggle("on");return}
@@ -1011,12 +1053,13 @@ function csPrintHTML(){
   <tr><td>Flight Departure: <b>${f.n}</b></td><td colspan="2">To: <b>${f.iata}</b></td></tr>
   <tr><td>STA: <b>${c(f.ia)}</b></td><td>ATA: <b>${c(d.ata)}</b></td><td>STD: <b>${f.t}</b></td></tr></table>
   <table><tr><th>Activities</th><th>Planned Time</th><th>Actual Time</th></tr>${rows}</table>
+  ${(()=>{const X=dlyInfo(f,date);return X?`<table><tr><td>ATD: <b>${fmt(X.atd)}</b></td><td>${X.no?"<b>NO DELAY</b>":"DLY: <b>"+X.dly+"M</b>"}</td></tr>${X.no?"":`<tr><td colspan="2">${dlyText(X)}</td></tr>`}</table>`:""})()}
   <div class="ft"><span>GS-OL-029</span></div>`;
 }
 $("csPdf").onclick=()=>{$("csPrint").innerHTML=csPrintHTML();setTimeout(()=>window.print(),50)};
 $("csShare").onclick=async()=>{
   const{f,date}=csCur,d=csData(f,date);
-  const t=[`COORDINATION SHEET · ${f.ino||""}/${f.n} · ${iso(date)}`,`A/C REG ${d.reg||"-"}`,`STA ${f.ia||"-"} · ATA ${d.ata||"-"} · STD ${f.t}`,
+  const t=[`COORDINATION SHEET · ${f.ino||""}/${f.n} · ${iso(date)}`,`A/C REG ${d.reg||"-"}`,`STA ${f.ia||"-"} · ATA ${d.ata||"-"} · STD ${f.t}`,...(dlyInfo(f,date)?["ATD "+fmt(dlyInfo(f,date).atd)+" · "+dlyText(dlyInfo(f,date))]:[]),
     ...CS_ACTS.filter(([k])=>d.act[k]&&d.act[k].s).map(([k,n])=>`${n}: ${d.act[k].s}`)].join("\n");
   try{if(navigator.share){await navigator.share({title:"Coordination Sheet "+f.n,text:t});return}}catch(e){return}
   try{await navigator.clipboard.writeText(t);$("csShare").textContent="✓ نُسخ";setTimeout(()=>$("csShare").textContent="مشاركة",1500)}catch(e){}
@@ -1031,10 +1074,10 @@ function openSheet(f,date){
   $("shT").textContent=`${f.dest} · ${f.iata}`;
   $("shS").innerHTML=`<span class="al lg" style="--c:${f.c}">${f.n.slice(0,2)}</span>${f.airline} · <span class="num">${f.n}</span> · ${DAYS[date.getUTCDay()]} ${dLabel(date)}`;
   const A=arrival(f,date),arr=A.local+(A.foreign?" بتوقيت "+A.tz:"");
-  $("shKV").innerHTML=[...(f.ia?[["الوصول للجوف",f.ia]]:[]),["الإقلاع",f.t+(f.est?" *":"")],...(f.ia?[["وقت الدوران",(toMin(f.t)-toMin(f.ia))+" دقيقة"],["رحلة الوصول",(f.ino||"")+" من "+(ORIGIN[f.iata]||f.dest)]]:[]),["الوصول للوجهة",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
+  $("shKV").innerHTML=[...(f.ia?[["الوصول للجوف",f.ia]]:[]),["الإقلاع",f.t+(f.est?" *":"")],...(f.ia?[["Sched GT",gtRule(f)+"M"],...(actGT(f,date)?[["Actual GT",actGT(f,date).g+"M"+(actGT(f,date).approx?" ≈":"")]]:[]),...(dlyInfo(f,date)?[["Delay",dlyInfo(f,date).no?"NO DELAY":dlyInfo(f,date).dly+"M"]]:[]),["رحلة الوصول",(f.ino||"")+" من "+(ORIGIN[f.iata]||f.dest)]]:[]),["الوصول للوجهة",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
     .map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("");
   $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
-  $("shN").textContent=f.note+(f.est?" (* وقت تقديري)":"");
+  {const X=dlyInfo(f,date);$("shN").textContent=(X?dlyText(X)+" — ":"")+f.note+(f.est?" (* وقت تقديري)":"");}
   $("track").onclick=()=>openTrack(f,date);
   $("csOpen").onclick=()=>openCS(f,date);
   clearInterval(turnTimer);turnEdit=false;renderTurn(f,date);turnTimer=setInterval(()=>{try{renderTurn(f,date)}catch(e){}},1000);
@@ -1073,9 +1116,9 @@ async function loadLive(){
   /* primary: shared Google Sheet written by the tracking task; fallback: live.json in the repo */
   try{
     const r=await fetch(LIVE_SHEET+"&t="+Date.now(),{cache:"no-store"});
-    if(r.ok){const rows=parseCSV(await r.text());const j={date:"",updated:"",flights:{}};
+    if(r.ok){const rows=parseCSV(await r.text());const j={date:"",updated:"",flights:{},dly:{}};
       const fix={};
-      rows.slice(1).forEach(r=>{const[k,s,t,n]=r;const F=(r[5]||"").toUpperCase().replace(/\s/g,""),G=r[6]||"";if(F&&/\d{1,2}:\d{2}/.test(G))fix[F]=normT(G);
+      rows.slice(1).forEach(r=>{const[k,s,t,n]=r;const F=(r[5]||"").toUpperCase().replace(/\s/g,""),G=r[6]||"";if(F&&/\d{1,2}:\d{2}/.test(G))fix[F]=normT(G);const DI=(r[8]||"").toUpperCase().replace(/\s/g,""),DJ=(r[9]||"").trim();if(DI&&DJ)j.dly[DI]=DJ;
         if(!k)return;if(k==="_date")j.date=s;else if(k==="_updated")j.updated=s;else if(s)j.flights[k]={s,t:normT(t),note:n||""}});
       /* تصحيح يدوي من الجدول (عمودي F و G) يتقدّم على أي وقت تلقائي */
       Object.entries(fix).forEach(([k,v])=>{j.flights[k]={s:"landed",t:v.replace("~",""),note:"",fix:1}});
