@@ -211,6 +211,8 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .speaking .eq i{animation:eq .9s ease-in-out infinite}
 .speaking .eq i:nth-child(2){animation-delay:.15s}.speaking .eq i:nth-child(3){animation-delay:.3s}.speaking .eq i:nth-child(4){animation-delay:.45s}
 @keyframes eq{0%,100%{height:5px}50%{height:16px}}
+.next.flash{animation:flash 1.6s var(--ease)}
+@keyframes flash{0%,40%{box-shadow:0 0 0 2px var(--amber),0 0 40px color-mix(in oklab,var(--amber) 35%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
 .say{width:36px;height:36px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--amber);display:grid;place-items:center;flex:none}
 .say svg{width:18px;height:18px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -231,7 +233,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   <div class="top" id="top">
     <div class="bar">
       <div class="brand"><small>مغادرة · مطار الجوف · AJF</small><h1>لوحة الرحلات</h1></div>
-      <div style="display:flex;gap:10px;align-items:center"><button class="say" id="say" aria-label="تشغيل إعلان الرحلة القادمة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button><div class="clock"><b id="clock">--:--</b><span id="today">توقيت الرياض</span></div></div>
+      <div style="display:flex;gap:10px;align-items:center"><button class="say" id="say" aria-label="جرس الرحلة القادمة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button><div class="clock"><b id="clock">--:--</b><span id="today">توقيت الرياض</span></div></div>
     </div>
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -567,9 +569,9 @@ function playAnnouncement(el){
     const au=new Audio("audio/"+a.key+".mp3");au.onended=au.onerror=off;
     return au.play().catch(e=>{off();throw e});
   }
-  if("speechSynthesis" in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(""))} /* unlock voice within the tap */
-  const w=chime();
-  setTimeout(()=>speak(a.text,off),w);
+  /* no recorded clip yet: airport chime only (device voices sound robotic) */
+  const w=chime();setTimeout(off,w);
+  const nx=$("next");nx.classList.remove("flash");void nx.offsetWidth;nx.classList.add("flash");
   return Promise.resolve();
 }
 addEventListener("pagehide",()=>{try{speechSynthesis.cancel()}catch(e){}});
