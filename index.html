@@ -309,6 +309,19 @@ const FLIGHTS=[
 ];
 
 const $=id=>document.getElementById(id);
+/* arrival in the destination's local time (Egypt observes summer time) */
+const TZ_NAME={CAI:"مصر",HMB:"مصر",SHJ:"الإمارات"};
+function lastDow(y,m,dow){const d=new Date(Date.UTC(y,m+1,0));while(d.getUTCDay()!==dow)d.setUTCDate(d.getUTCDate()-1);return d}
+function destOffset(iata,date){
+  if(iata==="SHJ"||iata==="DXB")return 4;
+  if(iata==="CAI"||iata==="HMB"){const y=date.getUTCFullYear();return date>=lastDow(y,3,5)&&date<=lastDow(y,9,4)?3:2}
+  return 3;
+}
+function arrival(f,date){
+  const ksa=toMin(f.t||f.time)+f.dur,off=destOffset(f.iata,date||TODAY);
+  return{local:fmt((ksa+(off-3)*60+1440)%1440),ksa:fmt(ksa%1440),foreign:off!==3,tz:TZ_NAME[f.iata]||""};
+}
+
 const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
 const pad=n=>String(n).padStart(2,"0");
 const toMin=t=>{const[h,m]=t.split(":").map(Number);return h*60+m};
@@ -364,7 +377,7 @@ function renderNext(){
   el.innerHTML=`<div class="lbl"><span class="pulse"><i></i>الرحلة القادمة</span><span>${when} · ${dLabel(d)}</span></div>
    <div class="main"><div class="board" aria-label="الإقلاع ${f.t}">${[...f.t].map(ch=>ch===":"?'<span style="width:12px;background:none;box-shadow:none">:</span>':`<span>${ch}</span>`).join("")}</div>
    <div><h2>${f.dest} <span class="num" style="font-size:15px;color:var(--muted)">${f.iata}</span></h2><div class="sub"><span class="al" style="--c:${f.c}">${f.n.slice(0,2)}</span>${f.airline} · <span class="num">${f.n}</span>${f.est?" · وقت تقديري":""}</div></div></div>
-   <div class="foot"><span class="count">${h?h+"س ":""}${m}د<small>على الإقلاع</small></span><span class="sub">الوصول التقريبي <span class="num">${fmt(toMin(f.t)+f.dur)}</span></span></div>`;
+   <div class="foot"><span class="count">${h?h+"س ":""}${m}د<small>على الإقلاع</small></span><span class="sub">الوصول <span class="num">${arrival(f,d).local}</span>${arrival(f,d).foreign?" بتوقيت "+arrival(f,d).tz:""}<span hidden></span></span></div>`;
 }
 
 /* ---------- week strip ---------- */
@@ -441,7 +454,7 @@ function render(){
     const [cls,txt]=status(f,date),b=document.createElement("button");
     b.className="row"+(cls.startsWith("done")?" past":"")+(cls==="off"?" off":"")+(cls.startsWith("cxl")?" cxl":"");
     b.style.setProperty("--c",f.c);b.style.animationDelay=Math.min(i*40,240)+"ms";
-    b.innerHTML=`<div class="t">${hl(f.t)}<small>${toMin(f.t)<720?"صباحاً":"مساءً"}</small></div>
+    b.innerHTML=`<div class="t">${hl(f.t)}<small>وصول <span class="num">${arrival(f,date).local}</span>${arrival(f,date).foreign?" "+arrival(f,date).tz:""}</small></div>
       <div class="d"><b>${hl(f.dest)}</b><span class="code">${f.iata}</span><div><span class="al">${f.n.slice(0,2)}</span>${hl(f.airline)} · <span class="num">${hl(f.n)}</span></div></div>
       <span class="chip ${cls}">${txt}</span>`;
     b.onclick=()=>openSheet(f,date);
@@ -495,8 +508,8 @@ function openSheet(f,date){
   lastFocus=document.activeElement;
   $("shT").textContent=`${f.dest} · ${f.iata}`;
   $("shS").innerHTML=`<span class="al lg" style="--c:${f.c}">${f.n.slice(0,2)}</span>${f.airline} · <span class="num">${f.n}</span> · ${DAYS[date.getUTCDay()]} ${dLabel(date)}`;
-  const arr=fmt(toMin(f.t)+f.dur);
-  $("shKV").innerHTML=[["الإقلاع",f.t+(f.est?" *":"")],["الوصول التقريبي",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
+  const A=arrival(f,date),arr=A.local+(A.foreign?" بتوقيت "+A.tz:"");
+  $("shKV").innerHTML=[["الإقلاع",f.t+(f.est?" *":"")],["الوصول المجدول",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
     .map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("");
   $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
   $("shN").textContent=f.note+(f.est?" (* وقت تقديري)":"");
