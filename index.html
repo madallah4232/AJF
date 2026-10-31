@@ -299,6 +299,15 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 /* welcome / announcement */
 .intro{cursor:pointer;position:fixed;inset:0;z-index:50;background:radial-gradient(120% 80% at 50% 0%,#14203a 0%,var(--night) 60%);display:grid;place-items:center;padding:24px;transition:opacity .5s var(--ease),transform .6s var(--ease)}
 .intro[hidden]{display:none}
+.intro-v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;background:#05070d}
+.intro::after{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(5,7,13,.15) 0%,rgba(5,7,13,0) 35%,rgba(5,7,13,.55) 62%,rgba(5,7,13,.95) 100%);transition:opacity .8s var(--ease)}
+.intro .intro-in{position:relative;z-index:1;align-self:end;padding-bottom:env(safe-area-inset-bottom);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.intro.cine .intro-in{opacity:0;transform:translateY(20px);pointer-events:none}
+.intro.cine::after{opacity:.35}
+.intro .cap{position:absolute;z-index:1;inset:auto 0 calc(40px + env(safe-area-inset-bottom));text-align:center;font:600 22px var(--display);text-shadow:0 2px 18px rgba(0,0,0,.8);opacity:0;transition:opacity 1s var(--ease)}
+.intro .cap small{display:block;font:500 13px var(--mono);letter-spacing:.3em;color:#cdbfff;margin-top:6px}
+.intro.cap-on .cap{opacity:1}
+.intro .nx{background:color-mix(in oklab,var(--panel) 75%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .intro.out{opacity:0;transform:scale(1.04);pointer-events:none}
 .intro-in{width:100%;max-width:420px;display:grid;gap:22px;justify-items:center;text-align:center}
 .intro .flap{display:flex;gap:6px;direction:ltr}
@@ -375,6 +384,8 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 </head>
 <body>
 <div class="intro" id="intro" role="dialog" aria-modal="true" aria-labelledby="introT" hidden>
+  <video class="intro-v" id="introV" playsinline muted preload="auto" poster="media/storm-start.jpg"></video>
+  <div class="cap" id="introCap">مطار الجوف الدولي<small>AL JOUF · AJF</small></div>
   <div class="intro-in">
     <div class="flap" id="flap" aria-hidden="true"><span>A</span><span>J</span><span>F</span></div>
     <div><small>مطار الجوف · المغادرة</small><h2 id="introT">أهلاً بك في لوحة رحلات مطار الجوف</h2></div>
@@ -1140,7 +1151,7 @@ function playAnnouncement(el){
   const a=announcement();
   const off=()=>el&&el.classList.remove("speaking");el&&el.classList.add("speaking");
   const nd=nextDeparture();
-  if(nd&&hasClip(nd.f)){playFlight(nd.f,el,true);return Promise.resolve()}
+  if(nd&&hasClip(nd.f))return new Promise(r=>{if(!playSeq(["welcome",routeKey(nd.f),timeKey(nd.f)],el,r))r()});
   /* no recorded clip yet: airport chime only (device voices sound robotic) */
   const w=chime();setTimeout(off,w);
   const nx=$("next");nx.classList.remove("flash");void nx.offsetWidth;nx.classList.add("flash");
@@ -1164,17 +1175,28 @@ function showIntro(){
   const n=nextDeparture();
   $("introNx").innerHTML=n?`<span>الرحلة القادمة</span><b>الجوف ← ${n.f.dest} · <span class="num" style="color:var(--amber);font-size:17px">${n.f.t}</span></b>`:"<span>ما فيه رحلات قريبة</span>";
   flipTo("AJF");
+  /* فيلم الافتتاح: عاصفة فوق مطار الجوف والبرق يرسم خريطة المملكة، ثم صوت المذيع */
+  const v=$("introV"),still=reduce||(navigator.connection&&navigator.connection.saveData);
+  if(!still){v.src="media/storm.mp4";v.loop=true;v.muted=true;v.play().catch(()=>{})}
   let done=false;
-  const enter=withSound=>{if(done)return;done=true;if(withSound)playAnnouncement($("say"));closeIntro()};
+  const enter=withSound=>{if(done)return;done=true;
+    if(!withSound||still){if(withSound)playAnnouncement($("say"));v.pause();closeIntro();return}
+    /* الصوتان يبدآن مع اللمسة نفسها (شرط iOS)، الرعد خافت تحت صوت المذيع */
+    el.classList.add("cine");v.loop=false;v.currentTime=0;v.muted=false;v.volume=.45;
+    v.play().catch(()=>{v.muted=true;v.play().catch(()=>{})});
+    let vEnd=false,aEnd=false,closed=false;const fin=f=>{if(f||(vEnd&&aEnd)){if(closed)return;closed=true;setTimeout(()=>{v.pause();closeIntro()},900)}};
+    Promise.resolve(playAnnouncement($("say"))).catch(()=>{}).finally(()=>{aEnd=true;fin()});
+    v.ontimeupdate=()=>{if(v.currentTime>=4.2)el.classList.add("cap-on")};
+    v.onended=()=>{el.classList.add("cap-on");vEnd=true;fin()};
+    setTimeout(()=>fin(true),16000);
+  };
   el.onclick=()=>enter(true);
   $("introSkip").onclick=e=>{e.stopPropagation();enter(false)};
-  /* a recorded clip may autoplay where the browser allows it; otherwise the first tap starts it */
-  const a=announcement();
-  if(nextDeparture()&&hasClip(nextDeparture().f))setTimeout(()=>{if(done)return;playAnnouncement($("say")).then(()=>{done=true;setTimeout(closeIntro,1200)}).catch(()=>{})},800);
 }
 $("say").onclick=()=>playAnnouncement($("say"));
 if("speechSynthesis" in window)speechSynthesis.getVoices();
 let seen=DEMO;try{seen=seen||localStorage.getItem("ajf_intro")==="1"}catch(e){}
+if(/[?&]intro/.test(location.search))seen=false;
 /* ---------- init ---------- */
 renderClock();renderNext();render();
 if(!seen)showIntro();
