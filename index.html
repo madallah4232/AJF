@@ -557,7 +557,7 @@ function announcement(){
   return{key:clipKey(f),text:`أهلاً بكم في مطار الجوف. الرحلة القادمة: الجوف، ${f.dest}، عند الساعة ${spokenTime(f.t)}.`};
 }
 /* recorded announcer clips available in audio/ (e.g. "CAI-0900"); others use the device voice */
-const CLIPS=["welcome","CAI-SM","t0900"]; /* filled when announcer MP3s are uploaded, e.g. "SM322-0900" */
+const CLIPS=["welcome","CAI-SM","JED-SV","SHJ-G9","RUH-F3","ELQ-SV","RUH-XY","CAI-NP","HMB-SM","t0900","t0945","t1015","t1655","t1800","t1840","t1915","t2045","t2200","t2230"]; /* filled when announcer MP3s are uploaded, e.g. "SM322-0900" */
 /* a flight's announcement = route clip (destination + airline) + time clip, so any day's time reuses the same voice */
 const routeKey=f=>f.iata+"-"+f.no.slice(0,2);
 const timeKey=f=>"t"+(f.t||f.time).replace(":","");
