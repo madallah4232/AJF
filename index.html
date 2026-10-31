@@ -13,6 +13,12 @@
 <meta property="og:url" content="https://madallah4232.github.io/AJF/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0a1120">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="رحلات الجوف">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230a1120'/%3E%3Cpath fill='%23ffb340' d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -218,6 +224,24 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 @keyframes flash{0%,40%{box-shadow:0 0 0 2px var(--amber),0 0 40px color-mix(in oklab,var(--amber) 35%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
 .say{width:36px;height:36px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--amber);display:grid;place-items:center;flex:none}
 .say svg{width:18px;height:18px}
+
+/* turnaround track in the hero */
+.ground{display:grid;gap:8px}
+.ground .gl{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted)}
+.ground .gl b{font-family:var(--mono);color:var(--ink);font-weight:600}
+.ground .gl .st{color:var(--amber);font-weight:600}
+.ground .gl .st.ok{color:var(--go)}
+.gbar{position:relative;height:6px;border-radius:6px;background:var(--raise);box-shadow:inset 0 0 0 1px var(--line)}
+.gbar i{position:absolute;inset:0 0 0 auto;border-radius:6px;background:linear-gradient(270deg,var(--go),var(--amber));transition:width .8s var(--ease)}
+.gbar em{position:absolute;top:50%;transform:translate(50%,-50%) rotate(-90deg);font-style:normal;font-size:16px;color:var(--ink);transition:right .8s var(--ease);filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+/* split-flap */
+.board span.flip{animation:flip .38s cubic-bezier(.3,.7,.4,1)}
+@keyframes flip{0%{transform:rotateX(90deg);filter:brightness(1.8)}100%{transform:rotateX(0)}}
+.board{perspective:400px}
+/* in-flight progress on cards */
+.row .fly{position:absolute;inset:auto 14px 6px 14px;height:2px;border-radius:2px;background:var(--line)}
+.row .fly i{position:absolute;inset:0 0 0 auto;border-radius:2px;background:#7cc4ff}
+.row .fly em{position:absolute;top:50%;transform:translate(50%,-50%) rotate(-90deg);font-style:normal;font-size:11px;color:#7cc4ff}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:380px){.board span{width:24px;height:36px;font-size:24px}.next h2{font-size:22px}.row{grid-template-columns:56px 1fr auto}.row .t{font-size:18px}}
 </style>
@@ -377,10 +401,26 @@ function renderNext(){
   if(!n){el.innerHTML='<div class="lbl">ما فيه رحلات مجدولة قريباً</div>';return}
   const {f,d,i,left}=n,h=Math.floor(left/60),m=left%60;
   const when=i===0?"اليوم":i===1?"بكرة":DAYS[d.getUTCDay()];
+  const prev=el.dataset.t;el.dataset.t=f.t;
   el.innerHTML=`<div class="lbl"><span class="pulse"><i></i>الرحلة القادمة</span><span>${when} · ${dLabel(d)}</span></div>
    <div class="main"><div class="board" aria-label="الإقلاع ${f.t}">${[...f.t].map(ch=>ch===":"?'<span style="width:12px;background:none;box-shadow:none">:</span>':`<span>${ch}</span>`).join("")}</div>
    <div><h2>${f.dest} <span class="num" style="font-size:15px;color:var(--muted)">${f.iata}</span></h2><div class="sub"><span class="al" style="--c:${f.c}">${f.n.slice(0,2)}</span>${f.airline} · <span class="num">${f.n}</span>${f.est?" · وقت تقديري":""}</div></div></div>
+   ${groundTrack(f,i)}
    <div class="foot"><span class="count">${h?h+"س ":""}${m}د<small>على الإقلاع</small></span><span class="sub">الوصول <span class="num">${arrival(f,d).local}</span>${arrival(f,d).foreign?" بتوقيت "+arrival(f,d).tz:""}<span hidden></span></span></div>`;
+  if(prev!==f.t&&!reduce){el.querySelectorAll(".board span").forEach((sp,k)=>{const ch=sp.textContent;if(ch===":")return;const pool="0123456789";let n=0;const iv=setInterval(()=>{sp.textContent=pool[Math.floor(Math.random()*10)];sp.classList.remove("flip");void sp.offsetWidth;sp.classList.add("flip");if(++n>4+k*2){clearInterval(iv);sp.textContent=ch}},70)})}
+}
+function groundTrack(f,dayOffset){
+  if(!f.ia||dayOffset!==0)return"";
+  const a=toMin(f.ia),dep=toMin(f.t),now=NOW.mins;
+  const L=LIVE.date===iso(TODAY)&&f.ino&&LIVE.flights[f.ino];
+  let st,cls="st",pct;
+  if(L&&L.s==="landed"){st="هبطت "+(L.t||"");cls+=" ok"}
+  else if(L&&L.s==="canceled"){st="الوصول ملغى"}
+  else if(now<a){const m=a-now;st=m>90?"الطائرة لم تصل بعد":"تصل بعد "+m+" د"}
+  else{st="على الأرض";cls+=" ok"}
+  pct=Math.max(0,Math.min(1,(now-a)/Math.max(1,dep-a)));
+  if(now<a)pct=0;
+  return`<div class="ground"><div class="gl"><span>وصول ${f.ino||""} <b>${f.ia}</b></span><span class="${cls}">${st}</span><span>إقلاع <b>${f.t}</b></span></div><div class="gbar"><i style="width:${(pct*100).toFixed(1)}%"></i><em style="right:${(pct*100).toFixed(1)}%">✈</em></div></div>`;
 }
 
 /* ---------- week strip ---------- */
@@ -429,12 +469,19 @@ function inboundTxt(f,date){
   const L=LIVE.date===iso(date)&&f.ino&&LIVE.flights[f.ino];
   if(L){
     if(L.s==="landed")return`<span style="color:var(--go)">هبطت <span class="num">${L.t||""}</span></span>`;
-    if(L.s==="departed")return`في الجو · <span class="num">${f.ia}</span>`;
+    if(L.s==="departed")return`<span style="color:#7cc4ff">في الجو</span>`;
     if(L.s==="delayed")return`<span style="color:var(--amber)">تصل <span class="num">${L.t||""}</span></span>`;
     if(L.s==="canceled")return`<span style="color:var(--warn)">الوصول ملغى</span>`;
     if(L.s==="diverted")return`<span style="color:var(--warn)">تحويل</span>`;
   }
   return`يصل <span class="num">${f.ia}</span>`;
+}
+
+function flyBar(f,date){
+  const L=iso(date)===iso(TODAY)&&LIVE.date===iso(TODAY)&&LIVE.flights[f.n];
+  if(!L||L.s!=="departed"||!L.t)return"";
+  const p=Math.max(.03,Math.min(.97,(NOW.mins-toMin(L.t))/f.dur));
+  return`<div class="fly" aria-hidden="true"><i style="width:${(p*100).toFixed(1)}%"></i><em style="right:${(p*100).toFixed(1)}%">✈</em></div>`;
 }
 /* ---------- board ---------- */
 function hl(text){
@@ -473,7 +520,7 @@ function render(){
     b.style.setProperty("--c",f.c);b.style.animationDelay=Math.min(i*40,240)+"ms";
     b.innerHTML=`<div class="t">${hl(f.t)}<small>${inboundTxt(f,date)}</small></div>
       <div class="d"><b>${hl(f.dest)}</b><span class="code">${f.iata}</span><div><span class="al">${f.n.slice(0,2)}</span>${hl(f.airline)} · <span class="num">${hl(f.n)}</span></div></div>
-      <div class="side"><span class="chip ${cls}">${txt}</span>${f.ia&&!f.off?`<small>دوران <span class="num">${toMin(f.t)-toMin(f.ia)}</span> د</small>`:""}</div>`;
+${flyBar(f,date)}      <div class="side"><span class="chip ${cls}">${txt}</span>${f.ia&&!f.off?`<small>دوران <span class="num">${toMin(f.t)-toMin(f.ia)}</span> د</small>`:""}</div>`;
     b.onclick=()=>openSheet(f,date);
     list.appendChild(b);
   });
@@ -666,6 +713,7 @@ if(!seen)showIntro();
 requestAnimationFrame(()=>setY(innerHeight));
 addEventListener("resize",()=>{if(!open)setY(innerHeight)});
 loadLive();setInterval(loadLive,300000);
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 setInterval(()=>{const before=NOW.mins;renderClock();if(NOW.mins!==before){renderNext();if(!open)render()}},15000);
 </script>
 </body>
