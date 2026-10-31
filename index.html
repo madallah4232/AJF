@@ -641,7 +641,8 @@ function inboundTxt(f,date){
   if(man)return`<span style="color:var(--go)">وصلت <span class="num">${man}</span> ✎</span>`;
   if(L){
     if(L.s==="landed")return`<span style="color:var(--go)">وصلت <span class="num">${(L.t||"").replace("~","≈")}</span></span>`;
-    if(L.s==="departed")return`<span style="color:#7cc4ff">في الجو${L.t?` · تصل <span class="num">${L.t}</span>`:""}</span>`;
+    if(L.s==="departed"){const e=L.t?tm(L.t):NaN;if(!isNaN(e)&&iso(date)===iso(TODAY)&&NOW.mins>e+10)return`<span style="color:var(--amber)">يُرجّح وصلت ≈<span class="num">${fmt(e)}</span> · لم يتأكد</span>`;
+      return`<span style="color:#7cc4ff">في الجو${L.t?` · تصل <span class="num">${L.t.replace("~","≈")}</span>`:""}</span>`}
     if(L.s==="delayed")return`<span style="color:var(--amber)">تصل <span class="num">${L.t||""}</span></span>`;
     if(L.s==="canceled")return`<span style="color:var(--warn)">الوصول ملغى</span>`;
     if(L.s==="diverted")return`<span style="color:var(--warn)">تحويل</span>`;
@@ -754,12 +755,13 @@ async function openTrack(f,date){
   $("trkA").textContent=from;$("trkB").textContent=to;
   $("trkAt").textContent=leg.std;$("trkBt").textContent=leg.sta;
   try{await loadLeaflet()}catch(e){$("trkNote").textContent="تعذّر تحميل الخريطة، تحقق من الاتصال.";}
-  if(window.L&&!map){
+  if(window.L&&!map)try{
     map=L.map("map",{zoomControl:false,attributionControl:true});
     const E="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";L.tileLayer(E+"World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",{maxZoom:10,attribution:"Tiles © Esri"}).addTo(map);L.tileLayer(E+"World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{maxZoom:10}).addTo(map);
-  }
+  }catch(e){map=null}
   const A=AP[from],B=AP[to];
   const draw=(pos,hdg,mode,info)=>{
+    if(pos&&(isNaN(pos[0])||isNaN(pos[1])))pos=null;
     if(window.L&&map){
       if(lyr)lyr.remove();lyr=L.layerGroup().addTo(map);
       const pts=[...Array(41)].map((_,i)=>gc(A,B,i/40));
@@ -772,7 +774,7 @@ async function openTrack(f,date){
     const p=info.pct||0;$("trkBar").style.width=(p*100).toFixed(1)+"%";$("trkPlane").style.right=(p*100).toFixed(1)+"%";
     const lv=$("trkLive");lv.className="trk-live"+(mode==="live"?" on":mode==="est"?" est":"");lv.textContent=mode==="live"?"● مباشر":mode==="est"?"موقع تقديري":"على الأرض";
     $("trkKV").innerHTML=info.kv.map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("");
-    $("trkNote").textContent=info.note||"";
+    $("trkNote").innerHTML=(info.note||"")+(isToday?` <a href="https://www.flightradar24.com/data/flights/${leg.no.toLowerCase()}" target="_blank" rel="noopener" style="color:var(--amber);white-space:nowrap">تحقق في Flightradar24 ↗</a>`:"");
   };
   const total=distKm(A,B);
   const update=async()=>{
@@ -784,17 +786,21 @@ async function openTrack(f,date){
       return;
     }
     const st=leg.live;
-    if(isToday&&st&&st.s==="departed"&&st.t){
-      const el2=NOW.mins-toMin(st.t),pct=Math.max(0,Math.min(1,el2/f.dur)),pos=gc(A,B,pct),eta=fmt((toMin(st.t)+f.dur)%1440);
-      if(el2>=f.dur){draw(B,bearing(A,B),"ground",{pct:1,kv:[["أقلعت",st.t],["وصلت تقريباً",eta],["الحالة","وصلت"],["المسافة",Math.round(total)+" كم"],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["رقم النداء",callsign(leg.no)]],note:"وصلت الطائرة إلى "+(ORIGIN[to]||to)+" (وقت تقديري)"});return}
-      draw(pos,bearing(pos,B),"est",{pct,kv:[["أقلعت",st.t],["منذ",el2+" د"],["المتبقي تقريباً",Math.max(0,f.dur-el2)+" د"],["الوصول المتوقع",eta],["المسافة",Math.round(total)+" كم"],["الحالة","في الجو"]],note:"الموقع محسوب من وقت الإقلاع الفعلي لأن إشارة الطائرة غير متاحة الآن"});
+    if(isToday&&st&&st.s==="departed"&&st.t&&!isNaN(tm(st.t))){
+      /* في رحلة الوصول للجوف الوقت المكتوب = الوصول المتوقع؛ في رحلة المغادرة = وقت الإقلاع الفعلي */
+      const etaM=useIn?tm(st.t):tm(st.t)+f.dur,depM=etaM-f.dur;
+      const el2=NOW.mins-depM,pct=Math.max(0,Math.min(1,el2/f.dur)),pos=gc(A,B,pct),eta=fmt((etaM+1440)%1440),dep=fmt((depM+1440)%1440);
+      if(el2>=f.dur){draw(B,bearing(A,B),"ground",{pct:1,kv:[["الوصول المتوقع",eta],["الحالة","يُرجّح أنها وصلت"],["تأكيد الهبوط","لم يتأكد بعد"],["المسافة",Math.round(total)+" كم"],["رقم النداء",callsign(leg.no)]],note:"مر وقت الوصول المتوقع ولم يتأكد الهبوط بعد —"});return}
+      draw(pos,bearing(pos,B),"est",{pct,kv:[[useIn?"أقلعت تقريباً":"أقلعت",dep],["منذ",el2+" د"],["المتبقي تقريباً",Math.max(0,f.dur-el2)+" د"],["الوصول المتوقع",eta],["المسافة",Math.round(total)+" كم"],["الحالة","في الجو"]],note:"الموقع تقديري لأن إشارة الطائرة غير متاحة الآن"});
       return;
     }
-    if(isToday&&st&&st.s==="landed"){draw(B,bearing(A,B),"ground",{pct:1,kv:[["الحالة","هبطت"],["وقت الهبوط",st.t||"—"],["المسافة",Math.round(total)+" كم"]],note:"وصلت الطائرة إلى "+(ORIGIN[to]||to)});return}
+    if(isToday&&st&&st.s==="landed"){draw(B,bearing(A,B),"ground",{pct:1,kv:[["الحالة","هبطت ✓"],["وقت الهبوط",(st.t||"—").replace("~","≈").replace("@","")],["المسافة",Math.round(total)+" كم"]],note:"وصلت الطائرة إلى "+(ORIGIN[to]||to)});return}
     const mins=toMin(leg.std)-(isToday?NOW.mins:-9999);
     draw(A,bearing(A,B),"ground",{pct:0,kv:[["الإقلاع المجدول",leg.std],["الوصول المجدول",leg.sta],["المسافة",Math.round(total)+" كم"],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["الحالة",st&&st.s==="canceled"?"ملغاة":st&&st.s==="delayed"?"متأخرة "+(st.t||""):"مجدولة"],["رقم النداء",callsign(leg.no)]],note:isToday&&mins>0&&mins<180?"تبدأ المتابعة المباشرة أول ما تقلع الطائرة":""});
   };
-  clearInterval(trkTimer);await update();trkTimer=setInterval(update,15000);
+  /* حماية: أي خطأ في مصدر خارجي ما يوقف الشاشة — يرجع للموقع التقديري ويحاول مرة ثانية بعد 15 ثانية */
+  const safe=async()=>{try{await update()}catch(e){try{draw(null,0,"ground",{pct:0,kv:[["الإقلاع المجدول",leg.std],["الوصول المجدول",leg.sta],["رقم النداء",callsign(leg.no)]],note:"تعذّر تحديث التتبع الآن، يحاول تلقائياً."})}catch(x){$("trkNote").textContent="تعذّر تحديث التتبع الآن، يحاول تلقائياً."}}};
+  clearInterval(trkTimer);await safe();trkTimer=setInterval(safe,15000);
 }
 /* ---------- sync indicator ---------- */
 function ago(min){if(min<1)return"الآن";if(min<60)return"قبل "+min+" د";const h=Math.floor(min/60);return h<24?"قبل "+h+" س":"قبل "+Math.floor(h/24)+" يوم"}
@@ -891,7 +897,7 @@ function renderTurn(f,date){
     const D0=LIVE.date===iso(date)&&LIVE.flights[f.n],gone0=D0&&["departed","landed","canceled"].includes(D0.s);
     const ok=!gone0&&f.ino&&f.ia&&!f.off&&iso(date)===iso(TODAY)&&NOW.mins>=toMin(f.ia)-90&&NOW.mins<=toMin(f.t)+60;
     const msg=!I?`بانتظار بيانات وصول ${f.ino}.`:I.kind==="eta"?`${f.ino} لم تصل بعد · متوقع ≈<span class="num">${fmt(I.m)}</span>.`:`${f.ino} يُرجّح أنها وصلت ≈<span class="num">${fmt(I.m)}</span> ولم يتأكد وقت الوصول الفعلي بعد.`;
-    if(ok){el.innerHTML=`<div class="tu-h"><b>الدوران · ${gtRule(f)} د</b>${edBtn}</div><div class="tu-n">${msg} العدّ التنازلي يبدأ عند الوصول الفعلي. إذا عندك وقت الوصول من النظام أدخله من «تعديل الوصول».</div>`;el.hidden=false}
+    if(ok){el.innerHTML=`<div class="tu-h"><b>الدوران · ${gtRule(f)} د</b>${edBtn}</div><div class="tu-n">${msg} العدّ التنازلي يبدأ عند الوصول الفعلي. إذا عندك وقت الوصول من النظام أدخله من «تعديل الوصول».${LIVE.updated?` <br>آخر تحديث للحالة ${LIVE.updated}.`:""} <a href="https://www.flightradar24.com/data/flights/${f.ino.toLowerCase()}" target="_blank" rel="noopener" style="color:var(--amber)">تحقق من الهبوط في Flightradar24 ↗</a></div>`;el.hidden=false}
     else el.hidden=true;
     return}
   const P=turnPlan(f,I.m),now=nowMin(),D=LIVE.date===iso(date)&&LIVE.flights[f.n];
@@ -929,7 +935,7 @@ async function watchInbound(){
   }
   if(hit&&!open)render();
 }
-setInterval(watchInbound,45000);setTimeout(watchInbound,4000);
+const watchSafe=()=>watchInbound().catch(()=>{});setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
 
 /* ---------- Coordination Sheet (GS-OL-029) ----------
    نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن». يُحفظ على الجهاز. */
@@ -1031,7 +1037,7 @@ function openSheet(f,date){
   $("shN").textContent=f.note+(f.est?" (* وقت تقديري)":"");
   $("track").onclick=()=>openTrack(f,date);
   $("csOpen").onclick=()=>openCS(f,date);
-  clearInterval(turnTimer);turnEdit=false;renderTurn(f,date);turnTimer=setInterval(()=>renderTurn(f,date),1000);
+  clearInterval(turnTimer);turnEdit=false;renderTurn(f,date);turnTimer=setInterval(()=>{try{renderTurn(f,date)}catch(e){}},1000);
   const ff={...f,t:f.t||f.time},has=hasClip(ff);
   $("listen").hidden=!has;$("listen").onclick=()=>playFlight(ff,$("listen"));
   if(has)playFlight(ff,$("listen"));
@@ -1207,7 +1213,7 @@ if(DEMO){const k=iso(TODAY);applyLive({date:k,updated:fmt(NOW.mins),flights:{SM3
   const b=document.createElement("div");b.textContent="وضع تجريبي · أوقات وهمية للعرض فقط";b.style.cssText="position:fixed;top:0;inset-inline:0;z-index:50;background:#ffb340;color:#1a1205;font:600 12px/26px system-ui;text-align:center";document.body.appendChild(b);
 }else{loadLive();setInterval(()=>{if(!document.hidden)loadLive()},30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadLive()});}
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
-setInterval(()=>{const before=NOW.mins;renderClock();if(NOW.mins!==before){renderNext();if(!open)render()}},15000);
+setInterval(()=>{try{const before=NOW.mins;renderClock();if(NOW.mins!==before){renderNext();if(!open)render()}}catch(e){}},15000);
 </script>
 </body>
 </html>
