@@ -61,6 +61,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .clock{text-align:left;display:flex;flex-direction:column;align-items:flex-end}
 .clock b{font-family:var(--mono);font-size:22px;color:var(--amber);font-weight:600;font-variant-numeric:tabular-nums}
 .clock span{font-size:11px;color:var(--muted)}
+.clock .clk{display:flex;align-items:baseline;gap:8px;direction:ltr}
+.clock .clk i{font:600 13px var(--mono);font-style:normal;color:var(--muted);padding:2px 6px;border:1px solid var(--line);border-radius:7px}
 .search{margin-top:12px;display:flex;align-items:center;gap:8px;background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:42px}
 .search svg{width:16px;height:16px;color:var(--muted);flex:none}
 .search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font:inherit;font-size:15px}
@@ -469,7 +471,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   <div class="top" id="top">
     <div class="bar">
       <div class="brand"><small>مغادرة · مطار الجوف · AJF</small><h1>لوحة الرحلات</h1></div>
-      <div style="display:flex;gap:10px;align-items:center"><button class="say" id="say" aria-label="جرس الرحلة القادمة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button><div class="clock"><b id="clock">--:--</b><span id="today">توقيت الرياض</span></div></div>
+      <div style="display:flex;gap:10px;align-items:center"><button class="say" id="say" aria-label="جرس الرحلة القادمة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button><div class="clock"><div class="clk"><i id="zclock" title="توقيت غرينتش UTC">--:--Z</i><b id="clock">--:--</b></div><span id="today">توقيت الرياض</span></div></div>
     </div>
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -632,6 +634,7 @@ const selDate=()=>addDays(TODAY,state.week*7+state.sel);
 function renderClock(){
   NOW=riyadhNow();
   $("clock").textContent=fmt(NOW.mins);
+  {const d=new Date();$("zclock").textContent=pad(d.getUTCHours())+pad(d.getUTCMinutes())+"Z"}
   $("today").textContent=DAYS[NOW.date.getUTCDay()]+" "+dLabel(NOW.date);
 }
 function nextDeparture(){
@@ -1452,7 +1455,7 @@ function renderWx(){
   let ahead="";for(const h of win.slice(1)){const l=wxLv(h);if(l>=2&&l>lv){const F=fl[h.day+"_"+h.hr];ahead=`تقديري: ${WX_LVT[l]} الساعة ${pad(h.hr)}:00 — ${wxHaz(h)[0].t}${wxHaz(h)[0].v?" ("+wxHaz(h)[0].v+")":""}${F?" · وقت رحلة "+F.map(x=>x.n).join("، "):""}`;break}}
   const al=hz.length?hz.map((x,i)=>`<details class="wx-a" data-lv="${x.lv}"${i===0&&x.lv>=2?" open":""}><summary><span><b>${x.ic} ${x.t}</b>${x.v?`<em class="wv">${x.v}</em>`:""}</span><small>${WX_LVT[x.lv]}<br>${x.ref||""}</small></summary><ul>${x.a.map(([t,w])=>`<li>${t}<span class="who">${w}</span></li>`).join("")}</ul></details>`).join(""):"";
   const vis=c.obs&&c.vis!=null?(c.vis>=10000?"+10كم":c.vis>=1000?(c.vis/1000).toFixed(1)+"كم":Math.round(c.vis)+"م"):"—";
-  el.querySelector(".wx-in").innerHTML=`<div class="wx-top"><div class="wx-now"><small>طقس الساحة · AJF</small><span class="tmp">${Math.round(c.temp)}<sup>°C</sup></span><div class="dsc">${c.obs?metarDesc(c):(WMO[c.code]||"—")}</div><div class="src ${c.obs?"ok":""}">${c.obs?`رصد رسمي · METAR OESK ${c.time?new Date(c.time.replace(" ","T")+(c.time.endsWith("Z")?"":"Z")).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"}):""}`:"تقديري من نموذج — الرصد الرسمي غير متاح الآن"}</div>
+  el.querySelector(".wx-in").innerHTML=`<div class="wx-top"><div class="wx-now"><small>طقس الساحة · AJF</small><span class="tmp">${Math.round(c.temp)}<sup>°C</sup></span><div class="dsc">${c.obs?metarDesc(c):(WMO[c.code]||"—")}</div><div class="src ${c.obs?"ok":""}">${c.obs?`رصد رسمي · METAR OESK ${c.time?(d=>d.toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"})+" ("+pad(d.getUTCHours())+pad(d.getUTCMinutes())+"Z)")(new Date(c.time.replace(" ","T")+(c.time.endsWith("Z")?"":"Z"))):""}`:"تقديري من نموذج — الرصد الرسمي غير متاح الآن"}</div>
     <div class="meta"><span>المحسوسة <b>${c.feel!=null?Math.round(c.feel)+"°":"—"}</b></span><span>الرطوبة <b>${c.rh!=null?c.rh+"%":"—"}</b></span><span>الرؤية <b>${vis}</b></span><span>الهبّات <b>${Math.round(c.wg)}kt</b></span></div></div>
     <div class="wx-dial">${wxDial(c)}</div></div>
     <div class="wx-lv" data-lv="${lv}"><i></i><div><b>${WX_LVT[lv]}${hz[0]?" · "+hz[0].t:""}</b>${hz[0]&&hz[0].v?`<em class="wv">${hz[0].v}</em>`:""}<span>${ahead||(lv?"اتبع الإجراءات أدناه":"لا قيود طقس على المعدات والعمال الآن")}</span></div></div>
