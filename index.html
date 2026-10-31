@@ -757,11 +757,10 @@ function inboundInfo(f,date){
   return null;
 }
 function turnPlan(f,ata){
-  const std=tm(f.t),dep=Math.max(std,ata+gtRule(f)),door=dep-10;let bs=door-14;if(bs<ata+18)bs=ata+15;
-  const ph=[["نزول الركاب",ata,ata+8,"#7cc4ff"],["التنظيف",ata+8,ata+15,"#b48cff"]];
-  if(bs>ata+15)ph.push(["تجهيز الطائرة",ata+15,bs,"#8796b0"]);
-  ph.push(["تصعيد الركاب",bs,door,"#ffb340"],["إقفال الباب والدفع",door,dep,"#38d39f"]);
-  return{std,dep,door,ph,delay:dep-std,ground:dep-ata};
+  /* Close Door = الأبعد بين STD و ATA + الدوران حسب الناقل */
+  const std=tm(f.t),door=Math.max(std,ata+gtRule(f)),dep=door;
+  const ph=[["Pax Deplane",ata,ata+8,"#7cc4ff"],["Cabin Cleaning",ata+8,ata+15,"#b48cff"],["Boarding Pax",ata+15,ata+29,"#ffb340"],["Close Door",ata+29,door,"#38d39f",1]];
+  return{std,dep,door,ph,delay:door-std,ground:door-ata};
 }
 const clockFmt=x=>{x=Math.max(0,Math.round(x*60));const h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return(h?h+":"+pad(m):pad(m))+":"+pad(s)};
 function turnChip(f,date){
@@ -769,7 +768,7 @@ function turnChip(f,date){
   const D=LIVE.date===iso(date)&&LIVE.flights[f.n];if(D&&["departed","landed","canceled"].includes(D.s))return"";
   const P=turnPlan(f,I.m),left=Math.ceil(P.dep-NOW.mins);
   if(left<-30)return"";
-  return left>0?`<small class="tw">⏱ إقلاع بعد <span class="num">${left}</span> د</small>`:`<small class="tw" style="color:var(--warn)">تجاوزت الموعد</small>`;
+  return left>0?`<small class="tw">⏱ Close Door <span class="num">${left}</span> د</small>`:`<small class="tw" style="color:var(--warn)">تجاوزت الموعد</small>`;
 }
 function renderTurn(f,date){
   const el=$("turn"),I=inboundInfo(f,date);
@@ -782,15 +781,15 @@ function renderTurn(f,date){
   let big;
   if(gone)big=`<span>أقلعت ${fmt(atd)} · دوران فعلي ${atd-I.m} د</span><b class="ok">${fmt(atd)}</b>`;
   else if(pre)big=`<span>حتى وصول الطائرة للجوف</span><b>${clockFmt(I.m-now)}</b>`;
-  else if(now<P.dep)big=`<span>متبقي للإقلاع ${fmt(P.dep)}</span><b>${clockFmt(P.dep-now)}</b>`;
-  else big=`<span>تجاوزت وقت الإقلاع ${fmt(P.dep)}</span><b class="late">+${clockFmt(now-P.dep)}</b>`;
+  else if(now<P.dep)big=`<span>متبقي لـ Close Door ${fmt(P.dep)}</span><b>${clockFmt(P.dep-now)}</b>`;
+  else big=`<span>تجاوزت Close Door ${fmt(P.dep)}</span><b class="late">+${clockFmt(now-P.dep)}</b>`;
   const end=gone?Infinity:now;
   const bar=P.ph.map(([n,a,b,c])=>`<i style="--pc:${c};flex:${b-a};--f:${(Math.max(0,Math.min(1,(end-a)/(b-a)))*100).toFixed(1)}%"></i>`).join("");
-  const li=P.ph.map(([n,a,b,c])=>{const st=end>=b?"done":end>=a?"now":"up";
-    const r=st==="done"?"✓":st==="now"?clockFmt(b-now):"بعد "+Math.ceil(a-now)+" د";
-    return`<li class="${st}" style="--pc:${c}"><i></i><b>${n}</b><span class="num">${fmt(a)}–${fmt(b)}</span><em>${pre&&st==="up"?"":r}</em></li>`}).join("");
+  const li=P.ph.map(([n,a,b,c,pt])=>{const st=end>=b?"done":end>=a?"now":"up";
+    const r=st==="done"?"✓":st==="now"?clockFmt(b-now):"بعد "+Math.ceil((pt?b:a)-now)+" د";
+    return`<li class="${st}" style="--pc:${c}"><i></i><b>${n}</b><span class="num">${pt?fmt(b):fmt(a)+"–"+fmt(b)}</span><em>${pre&&st==="up"?"":r}</em></li>`}).join("");
   const note=gone?"":pre?"الخطة محسوبة على وقت الوصول المتوقع وتتعدّل تلقائياً أول ما تهبط الطائرة":
-    P.delay>0?`<b>تأخير متوقع ${P.delay} د</b> — الدوران الأدنى ${gtRule(f)} د من الوصول الفعلي`:I.kind==="approx"?"وقت الوصول تقديري حتى يتأكد الوصول الفعلي":"";
+    P.delay>0?`<b>تأخير متوقع ${P.delay} د</b> — Close Door بعد ${gtRule(f)} د من الوصول الفعلي`:I.kind==="approx"?"وقت الوصول تقديري حتى يتأكد الوصول الفعلي":"";
   el.innerHTML=`<div class="tu-h"><b>الدوران · ${P.ground} د</b>${src}</div><div class="tu-big">${big}</div><div class="tu-bar">${bar}</div><ul class="tu-ph">${li}</ul>${note?`<div class="tu-n">${note}</div>`:""}`;
   el.hidden=false;
 }
