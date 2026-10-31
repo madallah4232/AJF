@@ -1381,14 +1381,16 @@ async function loadWx(){
   /* 1) التنبؤ بالساعات القادمة: نموذج Open-Meteo (رياح/مطر/حرارة فقط) */
   const F="https://api.open-meteo.com/v1/forecast?"+WX_LL+"&wind_speed_unit=kn&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day&hourly=temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m";
   const [w,m,t]=await Promise.all([fetch(F).then(r=>r.json()).catch(()=>null),
-    fetch("https://aviationweather.gov/api/data/metar?ids=OESK&format=json&hours=3").then(r=>r.json()).catch(()=>null),
-    fetch("https://aviationweather.gov/api/data/taf?ids=OESK&format=json").then(r=>r.json()).catch(()=>null)]);
+    /* الرصد الرسمي: ملف wx.json يحدّثه GitHub كل 20 دقيقة من aviationweather.gov */
+    fetch("https://raw.githubusercontent.com/madallah4232/AJF/main/wx.json?t="+Math.floor(Date.now()/6e4),{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+      .then(j=>j&&Array.isArray(j.metar)&&j.metar.length?j:fetch("wx.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)),
+    Promise.resolve(null)]).then(([w,j])=>[w,j&&j.metar,j&&j.taf]);
   if(w&&w.hourly){const H=w.hourly;
     WX.hours=H.time.map((t,i)=>({t,day:t.slice(0,10),hr:+t.slice(11,13),temp:H.temperature_2m[i],feel:H.apparent_temperature[i],rain:H.precipitation[i],prob:H.precipitation_probability[i],code:H.weather_code[i],ws:H.wind_speed_10m[i],wd:H.wind_direction_10m[i],wg:H.wind_gusts_10m[i]}));
     const c=w.current;WX.model={temp:c.temperature_2m,feel:c.apparent_temperature,rh:c.relative_humidity_2m,rain:c.precipitation,code:c.weather_code,ws:c.wind_speed_10m,wd:c.wind_direction_10m,wg:c.wind_gusts_10m,day:c.is_day};}
   /* 2) الحالة الحالية: METAR مطار الجوف OESK — الرصد الرسمي */
   const M=Array.isArray(m)&&m.length?m.sort((a,b)=>(b.obsTime||0)-(a.obsTime||0))[0]:null;
-  WX.metar=M?parseMetar(M):null;WX.taf=Array.isArray(t)&&t[0]&&t[0].rawTAF||"";
+  const mAge=M&&M.obsTime?Date.now()/1000-M.obsTime:0;WX.metar=M&&mAge<2*3600?parseMetar(M):null;WX.taf=Array.isArray(t)&&t[0]&&t[0].rawTAF||"";
   const base=WX.model||{};
   WX.cur=WX.metar?{...base,...WX.metar,feel:base.feel!=null?Math.max(base.feel,WX.metar.temp):WX.metar.temp,day:base.day}:(WX.model?{...base,src:"model"}:null);
   if(!WX.cur)throw new Error("no wx");

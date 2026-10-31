@@ -1,0 +1,37 @@
+name: METAR OESK
+# يجيب الرصد الرسمي لمطار الجوف (METAR/TAF) كل 20 دقيقة ويحفظه في wx.json
+# لأن موقع aviationweather.gov ما يسمح للمتصفح يقرأ منه مباشرة (CORS)
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+  push:
+    paths: [".github/workflows/metar.yml"]
+permissions:
+  contents: write
+concurrency: { group: metar, cancel-in-progress: false }
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch METAR + TAF
+        run: |
+          set -e
+          M=$(curl -sf --max-time 30 "https://aviationweather.gov/api/data/metar?ids=OESK&format=json&hours=3" || echo "[]")
+          T=$(curl -sf --max-time 30 "https://aviationweather.gov/api/data/taf?ids=OESK&format=json" || echo "[]")
+          echo "$M" | jq -e 'type=="array"' >/dev/null || M="[]"
+          echo "$T" | jq -e 'type=="array"' >/dev/null || T="[]"
+          if [ "$M" = "[]" ] && [ "$T" = "[]" ]; then echo "no data"; exit 0; fi
+          jq -n --argjson m "$M" --argjson t "$T" --arg at "$(date -u +%FT%TZ)" '{fetched:$at,metar:$m,taf:$t}' > wx.json
+          cat wx.json | head -c 600
+      - name: Commit if changed
+        run: |
+          git config user.name "metar-bot"
+          git config user.email "metar-bot@users.noreply.github.com"
+          git add wx.json
+          if git diff --cached --quiet; then echo "unchanged"; exit 0; fi
+          # نتجاهل تغيّر وقت الجلب فقط
+          if git diff --cached -U0 wx.json | grep -E '^[+-] ' | grep -vq '"fetched"'; then :; else git reset -q wx.json; echo "only timestamp"; exit 0; fi
+          git commit -qm "METAR OESK update [skip ci]"
+          git pull -q --rebase && git push -q
