@@ -635,12 +635,18 @@ function renderTimeline(rows){
 
 
 /* inbound aircraft status at AJF from live.json (keyed by inbound flight number) */
+/* تأخير الوصول = ATA − STA (يظهر بجانب وقت الوصول) */
+function arrDlyTxt(f,t){
+  const a=tm(t),s=toMin(f.ia);if(isNaN(a)||isNaN(s))return"";
+  let d=(a-s+1440)%1440;if(d>720)d-=1440;
+  return d>0?` · <span style="color:var(--warn)">تأخر <span class="num">${d}</span>د</span>`:"";
+}
 function inboundTxt(f,date){
   if(!f.ia)return"";
   const L=LIVE.date===iso(date)&&f.ino&&LIVE.flights[f.ino],man=MAN[ataKey(f,date)];
-  if(man)return`<span style="color:var(--go)">وصلت <span class="num">${man}</span> ✎</span>`;
+  if(man)return`<span style="color:var(--go)">وصلت <span class="num">${man}</span> ✎</span>${arrDlyTxt(f,man)}`;
   if(L){
-    if(L.s==="landed")return`<span style="color:var(--go)">وصلت <span class="num">${(L.t||"").replace("~","≈")}</span></span>`;
+    if(L.s==="landed")return`<span style="color:var(--go)">وصلت <span class="num">${(L.t||"").replace("~","≈")}</span></span>${arrDlyTxt(f,L.t||"")}`;
     if(L.s==="departed"){const e=L.t?tm(L.t):NaN;if(!isNaN(e)&&iso(date)===iso(TODAY)&&NOW.mins>e+10)return`<span style="color:var(--amber)">يُرجّح وصلت ≈<span class="num">${fmt(e)}</span> · لم يتأكد</span>`;
       return`<span style="color:#7cc4ff">في الجو${L.t?` · تصل <span class="num">${L.t.replace("~","≈")}</span>`:""}</span>`}
     if(L.s==="delayed")return`<span style="color:var(--amber)">تصل <span class="num">${L.t||""}</span></span>`;
@@ -872,7 +878,7 @@ function dlyText(X){
 function dlyTag(f,date){
   const X=dlyInfo(f,date);if(!X)return"";
   if(X.no)return`<small style="color:var(--go)">NO DELAY</small>`;
-  return`<small style="color:var(--warn)">DLY <span class="num">${X.dly}</span>M${X.react&&X.react>=X.dly?" · Late Arr":""}</small>`;
+  return`<small style="color:var(--warn)">DLY <span class="num">${X.dly}</span>M${X.react?(X.react>=X.dly?" · Late Arr":` · Late Arr <span class="num">${X.react}</span>M`):""}</small>`;
 }
 function gtTag(f,date){
   if(!f.ia||f.off)return"";
