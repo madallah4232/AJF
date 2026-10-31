@@ -422,6 +422,20 @@ function renderTimeline(rows){
   $("tl").innerHTML=html;
 }
 
+
+/* inbound aircraft status at AJF from live.json (keyed by inbound flight number) */
+function inboundTxt(f,date){
+  if(!f.ia)return"";
+  const L=LIVE.date===iso(date)&&f.ino&&LIVE.flights[f.ino];
+  if(L){
+    if(L.s==="landed")return`<span style="color:var(--go)">هبطت <span class="num">${L.t||""}</span></span>`;
+    if(L.s==="departed")return`في الجو · <span class="num">${f.ia}</span>`;
+    if(L.s==="delayed")return`<span style="color:var(--amber)">تصل <span class="num">${L.t||""}</span></span>`;
+    if(L.s==="canceled")return`<span style="color:var(--warn)">الوصول ملغى</span>`;
+    if(L.s==="diverted")return`<span style="color:var(--warn)">تحويل</span>`;
+  }
+  return`يصل <span class="num">${f.ia}</span>`;
+}
 /* ---------- board ---------- */
 function hl(text){
   const t=state.q.trim();if(!t)return text;
@@ -457,7 +471,7 @@ function render(){
     const [cls,txt]=status(f,date),b=document.createElement("button");
     b.className="row"+(cls.startsWith("done")?" past":"")+(cls==="off"?" off":"")+(cls.startsWith("cxl")?" cxl":"");
     b.style.setProperty("--c",f.c);b.style.animationDelay=Math.min(i*40,240)+"ms";
-    b.innerHTML=`<div class="t">${hl(f.t)}<small>${f.ia?`يصل <span class="num">${f.ia}</span>`:""}</small></div>
+    b.innerHTML=`<div class="t">${hl(f.t)}<small>${inboundTxt(f,date)}</small></div>
       <div class="d"><b>${hl(f.dest)}</b><span class="code">${f.iata}</span><div><span class="al">${f.n.slice(0,2)}</span>${hl(f.airline)} · <span class="num">${hl(f.n)}</span></div></div>
       <div class="side"><span class="chip ${cls}">${txt}</span>${f.ia&&!f.off?`<small>دوران <span class="num">${toMin(f.t)-toMin(f.ia)}</span> د</small>`:""}</div>`;
     b.onclick=()=>openSheet(f,date);
