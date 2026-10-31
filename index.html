@@ -594,8 +594,8 @@ function speak(text,onEnd){
 function playAnnouncement(el){
   const a=announcement();
   const off=()=>el&&el.classList.remove("speaking");el&&el.classList.add("speaking");
-  const nx=nextDeparture();
-  if(nx&&hasClip(nx.f)){playFlight(nx.f,el,true);return Promise.resolve()}
+  const nd=nextDeparture();
+  if(nd&&hasClip(nd.f)){playFlight(nd.f,el,true);return Promise.resolve()}
   /* no recorded clip yet: airport chime only (device voices sound robotic) */
   const w=chime();setTimeout(off,w);
   const nx=$("next");nx.classList.remove("flash");void nx.offsetWidth;nx.classList.add("flash");
