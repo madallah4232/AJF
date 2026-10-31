@@ -1113,7 +1113,7 @@ function announcement(){
   return{key:clipKey(f),text:`أهلاً بكم في مطار الجوف. الرحلة القادمة: الجوف، ${f.dest}، عند الساعة ${spokenTime(f.t)}.`};
 }
 /* recorded announcer clips available in audio/ (e.g. "CAI-0900"); others use the device voice */
-const CLIPS=["welcome","CAI-SM","JED-SV","SHJ-G9","RUH-F3","ELQ-SV","RUH-XY","CAI-NP","HMB-SM","t0900","t0945","t1015","t1655","t1800","t1840","t1915","t2045","t2200","t2230"]; /* filled when announcer MP3s are uploaded, e.g. "SM322-0900" */
+const CLIPS=["welcome","next","CAI-SM","JED-SV","SHJ-G9","RUH-F3","ELQ-SV","RUH-XY","CAI-NP","HMB-SM","t0900","t0945","t1015","t1655","t1800","t1840","t1915","t2045","t2200","t2230"]; /* filled when announcer MP3s are uploaded, e.g. "SM322-0900" */
 /* a flight's announcement = route clip (destination + airline) + time clip, so any day's time reuses the same voice */
 const routeKey=f=>f.iata+"-"+f.no.slice(0,2);
 const timeKey=f=>"t"+(f.t||f.time).replace(":","");
@@ -1128,7 +1128,7 @@ function playSeq(keys,el,onEnd){
     if(id!==seqId)return;
     if(i>=keys.length){el&&el.classList.remove("speaking");onEnd&&onEnd();return}
     const au=new Audio("audio/"+keys[i]+".mp3");curAudio=au;
-    au.onended=()=>setTimeout(()=>next(i+1),120);au.onerror=()=>next(i+1);
+    au.onended=()=>setTimeout(()=>next(i+1),keys[i]==="next"?1000:120);au.onerror=()=>next(i+1);
     au.play().catch(()=>{el&&el.classList.remove("speaking")});
   };
   next(0);return true;
@@ -1151,7 +1151,7 @@ function playAnnouncement(el){
   const a=announcement();
   const off=()=>el&&el.classList.remove("speaking");el&&el.classList.add("speaking");
   const nd=nextDeparture();
-  if(nd&&hasClip(nd.f))return new Promise(r=>{if(!playSeq(["welcome",routeKey(nd.f),timeKey(nd.f)],el,r))r()});
+  if(nd&&hasClip(nd.f))return new Promise(r=>{if(!playSeq(["welcome","next",routeKey(nd.f),timeKey(nd.f)],el,r))r()});
   /* no recorded clip yet: airport chime only (device voices sound robotic) */
   const w=chime();setTimeout(off,w);
   const nx=$("next");nx.classList.remove("flash");void nx.offsetWidth;nx.classList.add("flash");
@@ -1196,7 +1196,7 @@ function showIntro(){
       const s=$("say");
       setTimeout(async()=>{s.classList.add("speaking");const B=await bufs;
         if(B&&ctx){try{await ctx.resume()}catch(e){}let t=ctx.currentTime+.05;B.forEach((bf,i)=>{const src=ctx.createBufferSource();src.buffer=bf;src.connect(ctx.destination);src.start(t);t+=bf.duration+(q[i]==="next"?1:.15)});setTimeout(()=>s.classList.remove("speaking"),(t-ctx.currentTime)*1000)}
-        else{let i=0;const nx=()=>{if(i>=q.length){s.classList.remove("speaking");return}au.src="audio/"+q[i++]+".mp3";au.play().catch(()=>s.classList.remove("speaking"))};au.onended=()=>setTimeout(nx,150);nx()}
+        else{let i=0;const nx=()=>{if(i>=q.length){s.classList.remove("speaking");return}au.src="audio/"+q[i++]+".mp3";au.play().catch(()=>s.classList.remove("speaking"))};au.onended=()=>setTimeout(nx,q[i-1]==="next"?1000:150);nx()}
       },700)};
     v.ontimeupdate=()=>{if(v.currentTime>=4.2)el.classList.add("cap-on")};
     v.onended=()=>{el.classList.add("cap-on");setTimeout(fin,900)};
