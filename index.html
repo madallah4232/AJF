@@ -514,7 +514,7 @@ function inboundTxt(f,date){
   const L=LIVE.date===iso(date)&&f.ino&&LIVE.flights[f.ino];
   if(L){
     if(L.s==="landed")return`<span style="color:var(--go)">وصلت <span class="num">${(L.t||"").replace("~","≈")}</span></span>`;
-    if(L.s==="departed")return`<span style="color:#7cc4ff">في الجو</span>`;
+    if(L.s==="departed")return`<span style="color:#7cc4ff">في الجو${L.t?` · تصل <span class="num">${L.t}</span>`:""}</span>`;
     if(L.s==="delayed")return`<span style="color:var(--amber)">تصل <span class="num">${L.t||""}</span></span>`;
     if(L.s==="canceled")return`<span style="color:var(--warn)">الوصول ملغى</span>`;
     if(L.s==="diverted")return`<span style="color:var(--warn)">تحويل</span>`;
