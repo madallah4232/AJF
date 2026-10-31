@@ -742,13 +742,14 @@ sheet.addEventListener("pointerup",endDrag);sheet.addEventListener("pointercance
 /* ---------- live data (live.json, updated by the hourly task) ---------- */
 const LIVE_SHEET="https://docs.google.com/spreadsheets/d/15lfKxUHljob3uZ2xaSbvXE3L813g4apDTVQHhQshPn8/gviz/tq?tqx=out:csv&gid=1369330995";
 function parseCSV(t){return t.trim().split(/\r?\n/).map(l=>{const o=[];let c="",q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else if(ch==='"')q=true;else if(ch===","){o.push(c);c=""}else c+=ch}o.push(c);return o})}
+function normT(t){if(!t)return"";const m=String(t).match(/(~?)\s*(\d{1,2}):(\d{2})/);return m?m[1]+pad(+m[2])+":"+m[3]:t}
 function applyLive(j){if(j&&j.flights){Object.assign(LIVE,j);renderNext();if(!open)render();renderSync()}}
 async function loadLive(){
   /* primary: shared Google Sheet written by the tracking task; fallback: live.json in the repo */
   try{
     const r=await fetch(LIVE_SHEET+"&t="+Date.now(),{cache:"no-store"});
     if(r.ok){const rows=parseCSV(await r.text());const j={date:"",updated:"",flights:{}};
-      rows.slice(1).forEach(([k,s,t,n])=>{if(!k)return;if(k==="_date")j.date=s;else if(k==="_updated")j.updated=s;else if(s)j.flights[k]={s,t:t||"",note:n||""}});
+      rows.slice(1).forEach(([k,s,t,n])=>{if(!k)return;if(k==="_date")j.date=s;else if(k==="_updated")j.updated=s;else if(s)j.flights[k]={s,t:normT(t),note:n||""}});
       if(j.date){applyLive(j);return}}
   }catch(e){}
   try{const r=await fetch("live.json?t="+Date.now(),{cache:"no-store"});if(r.ok)applyLive(await r.json())}catch(e){}
