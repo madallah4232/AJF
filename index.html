@@ -1184,11 +1184,18 @@ function showIntro(){
     /* الصوتان يبدآن مع اللمسة نفسها (شرط iOS)، الرعد خافت تحت صوت المذيع */
     el.classList.add("cine");v.loop=false;v.currentTime=0;v.muted=false;v.volume=.45;
     v.play().catch(()=>{v.muted=true;v.play().catch(()=>{})});
-    let vEnd=false,aEnd=false,closed=false;const fin=f=>{if(f||(vEnd&&aEnd)){if(closed)return;closed=true;setTimeout(()=>{v.pause();closeIntro()},900)}};
-    Promise.resolve(playAnnouncement($("say"))).catch(()=>{}).finally(()=>{aEnd=true;fin()});
+    /* الافتتاحية: ترحيب فقط. الرحلة القادمة تُقال بعد الدخول للوحة — بنفس عنصر الصوت حتى يسمح بها iOS */
+    const au=new Audio("audio/welcome.mp3");au.play().catch(()=>{});
+    let closed=false;
+    const fin=()=>{if(closed)return;closed=true;v.pause();closeIntro();
+      const nd=nextDeparture();if(!nd||!hasClip(nd.f))return;
+      const q=[routeKey(nd.f),timeKey(nd.f)].filter(k=>CLIPS.includes(k));let i=0;const s=$("say");
+      const nx=()=>{if(i>=q.length){s.classList.remove("speaking");return}au.src="audio/"+q[i++]+".mp3";au.play().catch(()=>s.classList.remove("speaking"))};
+      au.onended=()=>setTimeout(nx,150);
+      setTimeout(()=>{s.classList.add("speaking");if(au.ended||au.paused)nx();else au.onended=()=>setTimeout(nx,150)},700)};
     v.ontimeupdate=()=>{if(v.currentTime>=4.2)el.classList.add("cap-on")};
-    v.onended=()=>{el.classList.add("cap-on");vEnd=true;fin()};
-    setTimeout(()=>fin(true),16000);
+    v.onended=()=>{el.classList.add("cap-on");setTimeout(fin,900)};
+    setTimeout(fin,12000);
   };
   el.onclick=()=>enter(true);
   $("introSkip").onclick=e=>{e.stopPropagation();enter(false)};
