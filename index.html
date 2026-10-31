@@ -557,7 +557,7 @@ function announcement(){
   return{key:clipKey(f),text:`أهلاً بكم في مطار الجوف. الرحلة القادمة: الجوف، ${f.dest}، عند الساعة ${spokenTime(f.t)}.`};
 }
 /* recorded announcer clips available in audio/ (e.g. "CAI-0900"); others use the device voice */
-const CLIPS=[]; /* filled when announcer MP3s are uploaded, e.g. "SM322-0900" */
+const CLIPS=["welcome","SM322-0900"]; /* filled when announcer MP3s are uploaded, e.g. "SM322-0900" */
 const clipKey=f=>f.no.split(" ")[0]+"-"+(f.t||f.time).replace(":","");
 let curAudio=null;
 function playClip(key,el,onEnd){
