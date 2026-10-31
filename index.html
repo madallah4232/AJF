@@ -436,6 +436,17 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .wx-ban.on{transform:none}.wx-ban.a2{background:#3a2a08;border-color:var(--amber)}
 .wx-ban b{display:block;font-size:14px}.wx-ban span{font-size:12px;opacity:.85}
 .wx-ban button{margin-inline-start:auto;color:#fff;opacity:.7;font-size:18px}
+.ms{display:grid;gap:8px;padding:10px 12px;border-radius:14px;background:var(--raise)}
+.ms-bar{position:relative;height:6px;border-radius:3px;background:#0b1323}
+.ms-bar i{position:absolute;inset-block:0;right:0;border-radius:3px;background:linear-gradient(270deg,var(--go),var(--amber))}
+.ms-bar em{position:absolute;top:50%;width:9px;height:9px;margin-right:-4.5px;transform:translateY(-50%);border-radius:50%;background:var(--go);border:2px solid var(--raise)}
+.ms-bar em.on{background:#41527a}.ms-bar em.nx{background:var(--amber);box-shadow:0 0 0 4px #ffb34040;animation:wxPulse 1.6s infinite}
+.ms-t{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted)}.ms-t b{color:var(--ink)}.ms-t>b{color:var(--amber)}
+.msl{display:grid;gap:4px;margin:12px 0}.msl h5{margin:0 0 4px;font-size:13px}.msl h5 small{color:var(--muted);font-weight:400;font-size:11px}
+.msl div{display:grid;grid-template-columns:1fr auto 48px;gap:8px;align-items:center;padding:7px 10px;border-radius:10px;background:var(--raise);font-size:13px}
+.msl div small{color:var(--muted);font-family:var(--mono);font-size:11px;text-align:left;direction:ltr}.msl div.past{opacity:.45}
+.wv{display:block;font-style:normal;font:500 11.5px var(--mono);color:var(--muted);margin-top:2px;unicode-bidi:plaintext;text-align:right}
+.wx-a summary small{text-align:left;flex:none}
 </style>
 </head>
 <body>
@@ -507,6 +518,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   <div class="s" id="shS"></div>
   <div class="turn" id="turn" hidden aria-live="off"></div>
   <div class="kv" id="shKV"></div>
+  <div class="msl" id="shMS"></div>
   <div class="dots" id="shD"></div>
   <div class="note" id="shN"></div>
   <button class="track-btn" id="listen" hidden><span class="eq"><i></i><i></i><i></i><i></i></span>استمع لإعلان الرحلة</button>
@@ -626,6 +638,16 @@ function nextDeparture(){
     if(f)return{f,d,i,left:i*1440+toMin(f.t)-NOW.mins};
   }
 }
+
+/* مواعيد معايير SGS قبل STD — GOM 3.2.2 (الكاونتر والبوابة) و 3.11.1 (الصعود للطائرات الضيقة) */
+function milestones(f){
+  const I=INTL.has(f.iata),std=toMin(f.t);
+  return[["فتح الكاونتر",I?240:120],["إغلاق الكاونتر",I?60:45],["فتح البوابة",I?55:40],["بداية الصعود",I?45:40],["إغلاق البوابة",I?20:15],["إنزال راكب/حقيبة متخلفة",20],["أرقام البوابة لـ Load Control",10],["الإقلاع STD",0]]
+    .map(([l,b])=>({l,b,m:std-b})).sort((x,y)=>x.m-y.m);
+}
+function msNext(f,left){/* left = دقائق على الإقلاع */
+  const L=milestones(f).filter(x=>x.b<=left&&x.b>0);return L.length?L[0]:null;
+}
 function renderNext(){
   const n=nextDeparture(),el=$("next");
   if(!n){el.innerHTML='<div class="lbl">ما فيه رحلات مجدولة قريباً</div>';return}
@@ -636,6 +658,8 @@ function renderNext(){
    <div class="main"><div class="board" aria-label="الإقلاع ${f.t}">${[...f.t].map(ch=>ch===":"?'<span style="width:12px;background:none;box-shadow:none">:</span>':`<span>${ch}</span>`).join("")}</div>
    <div><h2>${f.dest} <span class="num" style="font-size:15px;color:var(--muted)">${f.iata}</span></h2><div class="sub"><span class="al" style="--c:${f.c}">${f.n.slice(0,2)}</span>${f.airline} · <span class="num">${f.n}</span>${f.est?" · وقت تقديري":""}</div></div></div>
    ${groundTrack(f,i)}
+   ${(()=>{if(i!==0)return"";const M=milestones(f),nx=msNext(f,left);if(!nx||left>M[0].b+30)return"";const T=M[0].b,pct=Math.max(0,Math.min(100,(T-left)/T*100));
+     return`<div class="ms"><div class="ms-bar"><i style="width:${pct}%"></i>${M.filter(x=>x.b).map(x=>`<em class="${x.b>left?"on":""}${x===nx?" nx":""}" style="right:${(T-x.b)/T*100}%" title="${x.l}"></em>`).join("")}</div><div class="ms-t"><span>التالي: <b>${nx.l}</b> <span class="num">${fmt((toMin(f.t)-nx.b+1440)%1440)}</span></span><b class="num">بعد ${left-nx.b}د</b></div></div>`})()}
    <div class="foot"><span class="count">${h?h+"س ":""}${m}د<small>على الإقلاع</small></span><span class="sub">الوصول <span class="num">${arrival(f,d).local}</span>${arrival(f,d).foreign?" بتوقيت "+arrival(f,d).tz:""}<span hidden></span></span></div>`;
   if(prev!==f.t&&!reduce){el.querySelectorAll(".board span").forEach((sp,k)=>{const ch=sp.textContent;if(ch===":")return;const pool="0123456789";let n=0;const iv=setInterval(()=>{sp.textContent=pool[Math.floor(Math.random()*10)];sp.classList.remove("flip");void sp.offsetWidth;sp.classList.add("flip");if(++n>4+k*2){clearInterval(iv);sp.textContent=ch}},70)})}
 }
@@ -1144,6 +1168,7 @@ function openSheet(f,date){
   const A=arrival(f,date),arr=A.local+(A.foreign?" بتوقيت "+A.tz:"");
   $("shKV").innerHTML=[...(f.ia?[["الوصول للجوف",f.ia]]:[]),["الإقلاع",f.t+(f.est?" *":"")],...(f.ia?[["Sched GT",gtRule(f)+"M"],...(actGT(f,date)?[["Actual GT",actGT(f,date).g+"M"+(actGT(f,date).approx?" ≈":"")]]:[]),...(dlyInfo(f,date)?[["Delay",dlyInfo(f,date).no?"NO DELAY":dlyInfo(f,date).dly+"M"]]:[]),["رحلة الوصول",(f.ino||"")+" من "+(ORIGIN[f.iata]||f.dest)]]:[]),["الوصول للوجهة",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
     .map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("");
+  {const M=milestones(f),isT=iso(date)===iso(TODAY),nm=NOW.mins;$("shMS").innerHTML=`<h5>مواعيد SGS <small>${INTL.has(f.iata)?"دولية":"داخلية"} · GOM 3.2.2 / 3.11</small></h5>`+M.map(x=>{const t=(x.m+1440)%1440,past=isT&&x.m<=nm&&x.m>=0;return`<div class="${past?"past":""}"><span>${x.l}</span><b class="num">${fmt(t)}</b><small>${x.b?"D−"+x.b:"STD"}</small></div>`}).join("")}
   $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
   {const X=dlyInfo(f,date);$("shN").textContent=(X?dlyText(X)+" — ":"")+f.note+(f.est?" (* وقت تقديري)":"");}
   $("track").onclick=()=>openTrack(f,date);
@@ -1327,22 +1352,23 @@ const WMO={0:"صحو",1:"صحو غالباً",2:"غائم جزئياً",3:"غا�
 const isTS=c=>c>=95,isRain=c=>(c>=51&&c<=67)||(c>=80&&c<=82);
 /* حدود استرشادية لعمليات الساحة — الأولوية دائماً لتعليمات المطار والشركة ودليل الطائرة */
 function wxHaz(h){
-  const out=[],g=Math.max(h.wg||0,h.ws||0);
-  if(g>=50)out.push({lv:3,k:"wind",ic:"🌪️",t:`رياح عاصفة ${Math.round(g)}kt`,a:[["إيقاف جميع عمليات الساحة وإبعاد المعدات عن الطائرة","الكل"],["أحذية (Chocks) إضافية وتثبيت الطائرة حسب تعليمات الصيانة","الصيانة"],["إدخال أو ربط الحاويات (ULD) والعربات الفارغة","التحميل"],["لا أحد على السلالم أو المنصات المرتفعة","الكل"]]});
-  else if(g>=40)out.push({lv:3,k:"wind",ic:"💨",t:`رياح قوية جداً ${Math.round(g)}kt`,a:[["لا يُفتح ولا يُغلق باب الركاب أو باب الشحن (حد أغلب الطائرات ≈40kt)","التحميل"],["إيقاف الهاي لودر وشاحنة التموين المرفوعة","المعدات"],["إيقاف الصعود عبر السلالم المكشوفة والتنسيق مع الكابتن","الركاب"],["المعدات غير المستخدمة: فرامل + أحذية وبعيداً عن الطائرة","المعدات"]]});
-  else if(g>=30)out.push({lv:2,k:"wind",ic:"💨",t:`رياح قوية ${Math.round(g)}kt`,a:[["فتح أبواب الشحن بحذر وإمساك الباب حتى يثبت","التحميل"],["السلم المتحرك: فرامل مشدودة ولا يُترك ملاصقاً بدون مشغّل","المعدات"],["ركاب على السلم: موظف عند أعلى وأسفل السلم، والصعود بدفعات","الركاب"],["تأمين الأقماع والأغطية والحاويات الخفيفة","التحميل"]]});
-  else if(g>=20)out.push({lv:1,k:"wind",ic:"🍃",t:`رياح نشطة ${Math.round(g)}kt`,a:[["جولة FOD حول الطائرة قبل الوصول وبعده","الكل"],["تثبيت الأقماع والأكياس وأغطية الأمتعة","التحميل"],["فرامل كل المعدات المتوقفة","المعدات"]]});
-  if(isTS(h.code))out.push({lv:3,k:"ts",ic:"⛈️",t:"عواصف رعدية / برق",a:[["إيقاف التزود بالوقود فوراً عند البرق القريب","الوقود"],["لا اتصال سماعة (Headset) مع قمرة القيادة أثناء البرق","الدفع"],["إخلاء العمال من الساحة إلى مكان مغطى حتى زوال البرق","الكل"],["إيقاف التحميل وإغلاق أبواب العنابر","التحميل"]]});
+  /* مرجع: SGS Ground Operations Manual 6.3.6 Severe Weather Operations — العتبات بالكم/س كما في الدليل */
+  const out=[],g=Math.max(h.wg||0,h.ws||0),kmh=Math.round(g*1.852),W=`${Math.round(g)} kt · ${kmh} km/h`;
+  if(kmh>=111)out.push({lv:3,k:"wind",ic:"🌪️",ref:"GOM 6.3.6.1",t:"رياح عاصفة",v:W,a:[["إيقاف التحميل وحفظ الأمتعة والشحن في مكان آمن","التحميل"],["صفّ المعدات متقاربة وبجانب مبنى إن أمكن","المعدات"],["إغلاق أبواب العنابر والركاب ولوحات الوصول","التحميل"],["لا يُرفع الهاي لودر ولا السلالم","المعدات"],["أحذية إضافية حسب مخطط High Winds، وتأمين ULD والعربات","الكل"]]});
+  else if(kmh>=73)out.push({lv:3,k:"wind",ic:"💨",ref:"GOM 6.3.6.1",t:"رياح شديدة",v:W,a:[["إغلاق أبواب العنابر والركاب ولوحات الوصول","التحميل"],["لا يُبدأ رفع الهاي لودر أو المعدات المرتفعة أو السلالم","المعدات"],["إيقاف التحميل وحفظ الأمتعة والشحن في مكان آمن","التحميل"],["أحذية إضافية حسب مخطط High Winds، وإزالة الأقماع","الكل"],["تأمين ULD والعربات وخراطيم التكييف (PCA)","المعدات"]]});
+  else if(kmh>=46)out.push({lv:2,k:"wind",ic:"💨",ref:"GOM 6.3.6.1",t:"رياح قوية",v:W,a:[["أحذية إضافية لعجلات الطائرة حسب مخطط High Winds","الكل"],["إزالة الأقماع (لا توضع في الرياح العالية) وإزالة FOD","الكل"],["تأمين ULD والعربات وخراطيم التكييف (PCA)","المعدات"],["فرامل كل المعدات، وتثبيت غير الآلية بوسيلة إضافية","المعدات"],["حذر شديد عند فتح وإغلاق أبواب العنابر","التحميل"]]});
+  else if(kmh>=30)out.push({lv:1,k:"wind",ic:"🍃",ref:"GOM 6.3.6.1",t:"رياح نشطة",v:W,a:[["جولة FOD حول الطائرة","الكل"],["فرامل المعدات المتوقفة، وتجهيز الأحذية الإضافية","المعدات"],["متابعة الطقس: عند 46كم/س تبدأ إجراءات الرياح العالية","المشرف"]]});
+  if(isTS(h.code))out.push({lv:3,k:"ts",ic:"⛈️",ref:"GOM 6.3.6.3",t:"عواصف رعدية / برق",a:[["طريقة العدّ: أقل من 15 ثانية بين البرق والرعد = أقل من 5كم → إيقاف كل أنشطة الساحة والاحتماء (أحمر)","الكل"],["15–25 ثانية = 5–8كم → تنبيه (كهرماني) والاستعداد للإيقاف","المشرف"],["ممنوع لبس سماعة موصلة بالطائرة — خطر صعق قاتل؛ الاتفاق مع الكابتن على إشارات اليد للتشغيل والدفع","الدفع"],["التزود بالوقود: الاتفاق مع الكابتن، وإذا مو على الطائرة وفيه شك يُوقف فوراً","الوقود"],["الاستئناف فقط بعد ابتعاد البرق أكثر من 5كم (All Clear)","المشرف"]]});
   const r=h.rain||0;
-  if(!isTS(h.code)&&(r>=7.6||h.code===65||h.code===82))out.push({lv:2,k:"rain",ic:"🌧️",t:`مطر غزير ${r.toFixed(1)}mm/س`,a:[["أرضية زلقة: سرعة المعدات للحد الأدنى ومسافات توقف أطول","المعدات"],["تغطية الأمتعة والشحن بالأغطية، والبريد والإلكترونيات أولاً","التحميل"],["حماية أجهزة المسح والطابعات والتابلت","الكل"],["ملابس مطر عاكسة، وتجنب تجمعات المياه حول الكهرباء الأرضية (GPU)","الكل"]]});
-  else if(!isTS(h.code)&&(r>=1||h.code===63||h.code===81))out.push({lv:1,k:"rain",ic:"🌦️",t:`مطر ${r.toFixed(1)}mm/س`,a:[["تغطية عربات الأمتعة","التحميل"],["تخفيف السرعة على الساحة المبللة","المعدات"],["تأمين الأجهزة الإلكترونية من البلل","الكل"]]});
-  const v=h.vis,d=h.dust||0;
-  if((v!=null&&v<1000)||d>=500)out.push({lv:3,k:"dust",ic:"🌫️",t:`غبار كثيف · رؤية ${v!=null?(v>=1000?(v/1000).toFixed(1)+"كم":Math.round(v)+"م"):"منخفضة"}`,a:[["كمامات ونظارات واقية لكل العاملين","الكل"],["أضواء المعدات مشغّلة وسرعة منخفضة جداً","المعدات"],["مرشد أجنحة (Wing Walker) إلزامي للدفع والسحب","الدفع"],["إغلاق أبواب العنابر إذا ما فيه تحميل، وتغطية الأجهزة","التحميل"]]});
-  else if((v!=null&&v<3000)||d>=200)out.push({lv:2,k:"dust",ic:"🌫️",t:"غبار · رؤية متدنية",a:[["كمامات ونظارات للعاملين بالساحة","الكل"],["أضواء المعدات وتخفيف السرعة","المعدات"],["تغطية الأمتعة والأجهزة","التحميل"]]});
+  if(!isTS(h.code)&&(r>=7.6||h.code===65||h.code===82))out.push({lv:2,k:"rain",ic:"🌧️",ref:"GOM 6.3.6.6",t:"مطر غزير",v:r.toFixed(1)+" mm/h",a:[["تأمين المعدات وULD","المعدات"],["تغطية الأمتعة والشحن وحفظها في مكان جاف","التحميل"],["القيادة: الأضواء والفلاشر، سرعة منخفضة، بدون تجاوز ومسافة كافية","المعدات"],["الابتعاد عن خطوط الكهرباء، وإيقاف العمل الخارجي والاحتماء إذا اشتد","الكل"],["لا تعبر ماء فوق الركبة","الكل"]]});
+  else if(!isTS(h.code)&&(r>=1||h.code===63||h.code===81))out.push({lv:1,k:"rain",ic:"🌦️",ref:"GOM 6.3.6.2",t:"مطر · ساحة زلقة",v:r.toFixed(1)+" mm/h",a:[["وقت إضافي لكل أنشطة الساحة وحذر بالمشي","الكل"],["مسافة توقف أطول للمعدات عند الاقتراب من الطائرة","المعدات"],["إغلاق الأبواب والعنابر بأسرع وقت لمنع دخول المطر","التحميل"],["تغطية عربات الأمتعة","التحميل"]]});
+  const v=h.vis,d=h.dust||0,vs=v!=null?(v>=1000?(v/1000).toFixed(1)+"كم":Math.round(v)+"م"):"";
+  if((v!=null&&v<1000)||d>=500)out.push({lv:3,k:"dust",ic:"🌫️",ref:"GOM 6.3.6.7",t:"عاصفة رملية",v:vs?"رؤية "+vs:"",a:[["العاملين بالخارج يحتمون عند وصول العاصفة","الكل"],["تجنب القيادة بالساحة، وإذا لازم كل الأضواء مشغلة","المعدات"],["نظارات وكمامات وملابس مغطية (PPE)","الكل"],["لا قيادة على الطرق الخارجية أو عبور مناطق المناورة بدون إذن المطار","المعدات"],["الاستئناف بعد إشارة All Clear من العمليات","المشرف"]]});
+  else if((v!=null&&v<3000)||d>=200)out.push({lv:2,k:"dust",ic:"🌫️",ref:"GOM 6.3.6.4",t:"رؤية منخفضة / غبار",v:vs?"رؤية "+vs:"",a:[["أقل عدد ممكن من المعدات بالساحة","المعدات"],["تخفيض السرعة بشكل كبير وتشغيل كل الأضواء","المعدات"],["حذر عند التقاطعات وعبور ممرات الطائرات، ونظافة الزجاج","المعدات"],["نظارات وكمامات للعاملين","الكل"]]});
   const fe=h.feel!=null?h.feel:h.temp;
-  if(fe>=46)out.push({lv:2,k:"heat",ic:"🔥",t:`حرارة شديدة · المحسوسة ${Math.round(fe)}°`,a:[["تدوير العمال كل 20 دقيقة مع راحة بالظل","المشرف"],["ماء بارد عند كل طائرة وعلى المعدات","المشرف"],["قفازات: أسطح المعدات والسلالم ساخنة","الكل"],["مراقبة أعراض الإجهاد الحراري (دوخة، صداع، توقف التعرق)","المشرف"]]});
-  else if(fe>=40)out.push({lv:1,k:"heat",ic:"☀️",t:`حرارة مرتفعة · المحسوسة ${Math.round(fe)}°`,a:[["ماء للعمال وفترات راحة بالظل","المشرف"],["تجنب ترك الأمتعة الحساسة تحت الشمس","التحميل"]]});
-  if(h.temp!=null&&h.temp<=2)out.push({lv:1,k:"cold",ic:"❄️",t:`برودة ${Math.round(h.temp)}° · صقيع محتمل`,a:[["احتمال جليد على السلالم والمنصات: حذر بالصعود","الكل"],["ملابس شتوية عاكسة للعاملين","المشرف"]]});
+  if(fe>=46)out.push({lv:2,k:"heat",ic:"🔥",ref:"GOM 6.3.6.5",t:"إجهاد حراري",v:"المحسوسة "+Math.round(fe)+"°",a:[["شرب الماء قبل الدوام وطوال الوردية","الكل"],["تدوير العمل ومراقبة العاملين","المشرف"],["استراحات كافية وتهوية وظل بين المهام","المشرف"],["ملابس فضفاضة ومناسبة","الكل"]]});
+  else if(fe>=40)out.push({lv:1,k:"heat",ic:"☀️",ref:"GOM 6.3.6.5",t:"حرارة مرتفعة",v:"المحسوسة "+Math.round(fe)+"°",a:[["ماء للعاملين طوال الوردية","المشرف"],["استراحات في الظل بين المهام","المشرف"]]});
+  if(h.temp!=null&&h.temp<=5)out.push({lv:1,k:"cold",ic:"❄️",ref:"GOM 6.3.6.5",t:"برودة",v:Math.round(h.temp)+"°"+(g>=15?" · الرياح تزيد البرودة":""),a:[["ملابس مناسبة للبرد","الكل"],["تدوير المهام (خصوصاً للمواقع الثابتة)","المشرف"],["مشروبات ساخنة ومكان دافئ بين المهام","المشرف"]]});
   return out.sort((a,b)=>b.lv-a.lv);
 }
 const wxLv=h=>wxHaz(h).reduce((m,x)=>Math.max(m,x.lv),0);
@@ -1396,15 +1422,15 @@ function renderWx(){
   const strip=win.map((h,i)=>{const l=wxLv(h),g=Math.max(h.wg,h.ws),z=wxHaz(h)[0],F=fl[h.day+"_"+h.hr];
     return`<div class="wx-h${i===0?" now":""}" data-lv="${l}">${F?`<span class="fl${F[0].in&&F.length===1?" in":""}">${F.length>1?F.length+"✈":F[0].n.replace(/^[A-Z0-9]{2}/,"")}</span>`:""}<span class="ic">${z?z.ic:isRain(h.code)?"💧":""}</span><div class="bar"><i style="height:${Math.max(6,Math.min(100,g/50*100))}%"></i></div><b>${Math.round(g)}</b><span class="hh">${i===0?"الآن":pad(h.hr)}</span></div>`}).join("");
   /* أول خطر قادم مرتبط برحلة */
-  let ahead="";for(const h of win.slice(1)){const l=wxLv(h);if(l>=2&&l>lv){const F=fl[h.day+"_"+h.hr];ahead=`متوقع ${WX_LVT[l]} الساعة ${pad(h.hr)}:00 — ${wxHaz(h)[0].t}${F?" · وقت رحلة "+F.map(x=>x.n).join("، "):""}`;break}}
-  const al=hz.length?hz.map((x,i)=>`<details class="wx-a" data-lv="${x.lv}"${i===0&&x.lv>=2?" open":""}><summary><b>${x.ic} ${x.t}</b><small>${WX_LVT[x.lv]}</small></summary><ul>${x.a.map(([t,w])=>`<li>${t}<span class="who">${w}</span></li>`).join("")}</ul></details>`).join(""):"";
+  let ahead="";for(const h of win.slice(1)){const l=wxLv(h);if(l>=2&&l>lv){const F=fl[h.day+"_"+h.hr];ahead=`متوقع ${WX_LVT[l]} الساعة ${pad(h.hr)}:00 — ${wxHaz(h)[0].t}${wxHaz(h)[0].v?" ("+wxHaz(h)[0].v+")":""}${F?" · وقت رحلة "+F.map(x=>x.n).join("، "):""}`;break}}
+  const al=hz.length?hz.map((x,i)=>`<details class="wx-a" data-lv="${x.lv}"${i===0&&x.lv>=2?" open":""}><summary><span><b>${x.ic} ${x.t}</b>${x.v?`<em class="wv">${x.v}</em>`:""}</span><small>${WX_LVT[x.lv]}<br>${x.ref||""}</small></summary><ul>${x.a.map(([t,w])=>`<li>${t}<span class="who">${w}</span></li>`).join("")}</ul></details>`).join(""):"";
   const vis=c.vis!=null?(c.vis>=10000?"+10كم":c.vis>=1000?(c.vis/1000).toFixed(1)+"كم":Math.round(c.vis)+"م"):"—";
   el.querySelector(".wx-in").innerHTML=`<div class="wx-top"><div class="wx-now"><small>طقس الساحة · AJF</small><span class="tmp">${Math.round(c.temp)}<sup>°C</sup></span><div class="dsc">${WMO[c.code]||"—"}${c.dust>=200?" · غبار":""}</div>
     <div class="meta"><span>المحسوسة <b>${Math.round(c.feel)}°</b></span><span>الرطوبة <b>${c.rh}%</b></span><span>الرؤية <b>${vis}</b></span><span>الهبّات <b>${Math.round(c.wg)}kt</b></span></div></div>
     <div class="wx-dial">${wxDial(c)}</div></div>
-    <div class="wx-lv" data-lv="${lv}"><i></i><div><b>${WX_LVT[lv]}${hz[0]?" · "+hz[0].t:""}</b><span>${ahead||(lv?"اتبع الإجراءات أدناه":"لا قيود طقس على المعدات والعمال الآن")}</span></div></div>
+    <div class="wx-lv" data-lv="${lv}"><i></i><div><b>${WX_LVT[lv]}${hz[0]?" · "+hz[0].t:""}</b>${hz[0]&&hz[0].v?`<em class="wv">${hz[0].v}</em>`:""}<span>${ahead||(lv?"اتبع الإجراءات أدناه":"لا قيود طقس على المعدات والعمال الآن")}</span></div></div>
     <div class="wx-strip" aria-label="الرياح خلال 12 ساعة">${strip}</div>${al?`<div class="wx-al">${al}</div>`:""}
-    <div class="wx-ft"><span>Open-Meteo · تحدّث ${new Date(WX.at).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"})} · حدود استرشادية، الأولوية لتعليمات المطار والشركة</span></div>`;
+    <div class="wx-ft"><span>Open-Meteo · تحدّث ${new Date(WX.at).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"})} · العتبات حسب دليل SGS GOM 6.3.6 · القرار النهائي لمدير المناوبة وعمليات المطار</span></div>`;
   wxScene(c,lv);
   /* تنبيه منبثق عند ارتفاع مستوى الخطر */
   const key=today+"_"+lv;let last="";try{last=localStorage.getItem("ajf_wxa")||""}catch(e){}
@@ -1414,7 +1440,7 @@ function wxBanner(x,lv){
   const ii=$("intro");if(ii&&!ii.hidden){setTimeout(()=>wxBanner(x,lv),1000);return}
   let b=$("wxBan");if(!b){b=document.createElement("div");b.id="wxBan";b.className="wx-ban";b.setAttribute("role","alert");document.body.appendChild(b)}
   b.classList.toggle("a2",lv===2);
-  b.innerHTML=`<div style="font-size:26px">${x.ic}</div><div><b>${WX_LVT[lv]}: ${x.t}</b><span>${x.a[0][0]}</span></div><button aria-label="إغلاق">✕</button>`;
+  b.innerHTML=`<div style="font-size:26px">${x.ic}</div><div><b>${WX_LVT[lv]}: ${x.t}</b>${x.v?`<em class="wv">${x.v}</em>`:""}<span>${x.a[0][0]}</span></div><button aria-label="إغلاق">✕</button>`;
   b.querySelector("button").onclick=e=>{e.stopPropagation();b.classList.remove("on")};
   b.onclick=()=>{b.classList.remove("on");$("wx").scrollIntoView({behavior:"smooth",block:"start"})};
   requestAnimationFrame(()=>b.classList.add("on"));try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
