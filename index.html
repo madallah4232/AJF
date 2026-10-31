@@ -1124,8 +1124,9 @@ const routeKey=f=>f.iata+"-"+f.no.slice(0,2);
 const timeKey=f=>"t"+(f.t||f.time).replace(":","");
 const clipKey=f=>routeKey(f);
 const hasClip=f=>CLIPS.includes(routeKey(f))&&CLIPS.includes(timeKey(f));
-let curAudio=null,seqId=0;
-function stopClips(){seqId++;try{curAudio&&curAudio.pause()}catch(e){}}
+let curAudio=null,seqId=0,introStop=null;
+/* أي صوت جديد يوقف كل الأصوات الشغالة (بما فيها إعلان الافتتاح) حتى ما تتداخل */
+function stopClips(){seqId++;try{curAudio&&curAudio.pause()}catch(e){}try{introStop&&introStop()}catch(e){}}
 function playSeq(keys,el,onEnd){
   keys=keys.filter(k=>CLIPS.includes(k));if(!keys.length)return false;
   stopClips();const id=seqId;el&&el.classList.add("speaking");
@@ -1191,6 +1192,8 @@ function showIntro(){
     /* الافتتاحية: ترحيب فقط. الرحلة القادمة تُقال بعد الدخول للوحة — بنفس عنصر الصوت حتى يسمح بها iOS */
     /* iOS يمنع أي صوت يبدأ بعد اللمسة بثواني، فنفتح AudioContext مع اللمسة ونحمّل مقاطع الرحلة القادمة مسبقاً ونشغّلها منه بعد الدخول */
     const au=new Audio("audio/welcome.mp3");au.play().catch(()=>{});
+    const srcs=[];let killed=false;
+    introStop=()=>{killed=true;introStop=null;try{au.onended=null;au.pause()}catch(e){}srcs.forEach(x=>{try{x.stop()}catch(e){}});try{v.muted=true}catch(e){}$("say").classList.remove("speaking")};
     let ctx=null;try{if(navigator.audioSession)navigator.audioSession.type="playback"}catch(e){}
     try{ctx=new (window.AudioContext||window.webkitAudioContext)();const b=ctx.createBuffer(1,1,22050),sn=ctx.createBufferSource();sn.buffer=b;sn.connect(ctx.destination);sn.start(0);ctx.resume&&ctx.resume()}catch(e){ctx=null}
     const nd0=nextDeparture(),q=nd0&&hasClip(nd0.f)?["next",routeKey(nd0.f),timeKey(nd0.f)].filter(k=>CLIPS.includes(k)):[];
@@ -1198,9 +1201,9 @@ function showIntro(){
     let closed=false;
     const fin=()=>{if(closed)return;closed=true;v.pause();closeIntro();if(!q.length)return;
       const s=$("say");
-      setTimeout(async()=>{s.classList.add("speaking");const B=await bufs;
-        if(B&&ctx){try{await ctx.resume()}catch(e){}let t=ctx.currentTime+.05;B.forEach((bf,i)=>{const src=ctx.createBufferSource();src.buffer=bf;src.connect(ctx.destination);src.start(t);t+=bf.duration+(q[i]==="next"?1:.15)});setTimeout(()=>s.classList.remove("speaking"),(t-ctx.currentTime)*1000)}
-        else{let i=0;const nx=()=>{if(i>=q.length){s.classList.remove("speaking");return}au.src="audio/"+q[i++]+".mp3";au.play().catch(()=>s.classList.remove("speaking"))};au.onended=()=>setTimeout(nx,q[i-1]==="next"?1000:150);nx()}
+      setTimeout(async()=>{if(killed)return;s.classList.add("speaking");const B=await bufs;if(killed){s.classList.remove("speaking");return}
+        if(B&&ctx){try{await ctx.resume()}catch(e){}let t=ctx.currentTime+.05;B.forEach((bf,i)=>{const src=ctx.createBufferSource();srcs.push(src);src.buffer=bf;src.connect(ctx.destination);src.start(t);t+=bf.duration+(q[i]==="next"?1:.15)});setTimeout(()=>s.classList.remove("speaking"),(t-ctx.currentTime)*1000)}
+        else{let i=0;const nx=()=>{if(killed)return;if(i>=q.length){s.classList.remove("speaking");introStop=null;return}au.src="audio/"+q[i++]+".mp3";au.play().catch(()=>s.classList.remove("speaking"))};au.onended=()=>setTimeout(nx,q[i-1]==="next"?1000:150);nx()}
       },700)};
     v.ontimeupdate=()=>{if(v.currentTime>=4.2)el.classList.add("cap-on")};
     v.onended=()=>{el.classList.add("cap-on");setTimeout(fin,900)};
