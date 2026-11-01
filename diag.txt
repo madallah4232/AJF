@@ -1,34 +1,60 @@
-=== https://api.adsb.lol/v2/callsign/SVA8035
+=== https://api.allorigins.win/raw?url=https%3A%2F%2Fapi.adsb.lol%2Fv2%2Fcallsign%2FSVA1383
+HTTP/2 522 
+content-type: text/plain; charset=UTF-8
+error code: 522
+
+=== https://corsproxy.io/?url=https%3A%2F%2Fapi.adsb.lol%2Fv2%2Fcallsign%2FSVA1383
+HTTP/2 401 
+content-type: application/json
+access-control-allow-origin: *
+x-content-type-options: nosniff
+{"error":"A valid API key is required. Get one at https://console.corsproxy.io/"}
+=== https://api.codetabs.com/v1/proxy/?quest=https://api.adsb.lol/v2/callsign/SVA1383
+HTTP/2 522 
+content-type: text/plain; charset=UTF-8
+error code: 522
+
+=== https://api.adsb.one/v2/callsign/SVA1383
+HTTP/2 403 
+content-type: text/html; charset=UTF-8
+<!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en-US"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en-US"> <!
+=== https://api.adsb.fi/v2/callsign/SVA1383
+HTTP/2 404 
+content-type: text/html
+x-content-type-options: nosniff
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>nginx</center>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$para
+=== https://opendata.adsb.fi/api/v2/callsign/SVA1383
 HTTP/2 200 
 content-type: application/json
+x-content-type-options: nosniff
 {"ac":[
 ]
 ,"msg": "No error"
-,"now": 1793546955501
+,"now": 1793547086004
 ,"total": 0
-,"ctime": 1793546955501
+,"ctime": 1793547086004
 ,"ptime": 0
 }
 
-=== https://api.airplanes.live/v2/callsign/SVA8035
-HTTP/2 403 
-content-type: application/json
-{"error": "Please contact us at contact@airplanes.live. Your email MUST include any links, a description of the project, and any information you deem appropriate."}
-=== https://api.adsb.lol/v2/point/29.785/40.1/150
+=== https://globe.adsbexchange.com/
 HTTP/2 200 
-content-type: application/json
-{"ac":[
-{"hex":"894095","type":"adsb_icao","flight":"GFA044  ","r":"A9C-TB","t":"A20N","alt_baro":37000,"alt_geom":38500,"gs":479.9,"ias":256,"tas":454,"mach":0.792,"wd":266,"ws":87,"oat":-57,"tat":-30,"track":153.65,"track_rate":-0.03,"roll":0.00,"mag_heading":158.91,"true_heading":163.78,"baro_rate":0,"geom_rate":0,"squawk":"2377","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":36992,"nav_heading":0.00,"lat":31.921428,"lon":38.604724,"nic":8,"rc":186,"seen_pos":2.311,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"alert":0,"spi":0,"mlat":[],"tisb":[],"messages":36267,"seen":2.3,"rssi":-19.7,"dst":149.680,"dir":329.4},
-{"hex":"778567","type":"a
-=== https://api.airplanes.live/v2/point/29.785/40.1/150
-HTTP/2 403 
-content-type: application/json
-{"error": "Please contact us at contact@airplanes.live. Your email MUST include any links, a description of the project, and any information you deem appropriate."}
-=== https://opensky-network.org/api/states/all?lamin=27&lomin=36&lamax=32&lomax=44
-HTTP/2 200 
-content-type: application/json
-vary: Access-Control-Request-Method
-vary: Access-Control-Request-Headers
-access-control-allow-origin: https://opensky-network.org
-x-content-type-options: nosniff
-{"time":1793546954,"states":[["742824","JAV272  ","Jordan",1793546681,1793546681,36.0444,31.7376,861.06,false,69.94,260.26,-3.9,null,975.36,"5366",false,0],["4bb159","THY6268 ","Turkey",1793546778,1793546780,36.0775,31.7284,960.12,false,75.1,260.54,-3.9,null,1066.8,"2356",false,0],["896718","ABY775  ","United Arab Emirates",1793546719,1793546728,39.7,31.2327,11803.38,false,272.81,123.54,1.63,null,12275.82,"7360",false,0],["89405f","GFA963  ","Bahrain",1793546953,1793546953,37.5494,31.1672,8374.38,false,261.31,109.43,4.88,null,8785.86,null,false,0],["894095","GFA044  ","Bahrain",1793546954,1793546954,38.6047,31.9214,11277.6,false,246.86,153.65,0,null,11734.8,"1546",false,0],["744824","RJA720 
+content-type: text/html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="ADS-B Exchange - track aircraft live - aircraft flight history">
+
+    <meta charset="utf-8"/>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <meta
