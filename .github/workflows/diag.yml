@@ -1,0 +1,17 @@
+name: diag
+on:
+  push:
+    paths: [".github/workflows/diag.yml"]
+permissions: { contents: write }
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          {
+          for u in "https://api.adsb.lol/v2/callsign/SVA8035" "https://api.airplanes.live/v2/callsign/SVA8035" "https://api.adsb.lol/v2/point/29.785/40.1/150" "https://api.airplanes.live/v2/point/29.785/40.1/150" "https://opensky-network.org/api/states/all?lamin=27&lomin=36&lamax=32&lomax=44"; do
+            echo "=== $u"; curl -s -m 20 -D - -o /tmp/b -H "Origin: https://madallah4232.github.io" "$u" | grep -i -E "^HTTP|access-control|content-type"; head -c 700 /tmp/b; echo; done
+          } > diag.txt 2>&1
+          git config user.name bot; git config user.email bot@users.noreply.github.com
+          git add diag.txt; git commit -qm "diag [skip ci]"; git pull -q --rebase; git push -q
