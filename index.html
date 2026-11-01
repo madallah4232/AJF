@@ -274,6 +274,48 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .cs-bar button{flex:1;height:46px;border-radius:14px;font-weight:700;background:var(--raise);color:var(--ink);border:1px solid var(--line)}
 .cs-bar button.p{background:var(--amber);color:#1a1205;border:0;flex:1.4}
 .cs-saved{font-size:11px;color:var(--go);font-family:var(--body)}
+/* operations assistant */
+.ask-fab{position:fixed;z-index:8;left:16px;bottom:calc(18px + env(safe-area-inset-bottom));height:52px;padding:0 18px 0 14px;border-radius:26px;background:linear-gradient(135deg,#ffc867,var(--amber));color:#1a1205;font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.15) inset;transition:transform .18s var(--ease)}
+.ask-fab:active{transform:scale(.95)}
+.ask-fab svg{width:22px;height:22px}
+.ask{position:fixed;inset:0;z-index:33;background:var(--night);display:grid;grid-template-rows:auto 1fr auto}
+.ask[hidden]{display:none}
+.ask-body{overflow-y:auto;overscroll-behavior:contain;padding:16px 14px 24px;display:flex;flex-direction:column;gap:14px;max-width:640px;width:100%;margin:0 auto}
+.ask-foot{padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:color-mix(in oklab,var(--night) 90%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.ask-foot form{display:flex;gap:8px;max-width:640px;margin:0 auto}
+.ask-foot input{flex:1;min-width:0;height:48px;border-radius:24px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:15px var(--body);padding:0 18px}
+.ask-foot input:focus{outline:2px solid var(--amber);outline-offset:-1px}
+.ask-foot button{width:48px;height:48px;border-radius:50%;background:var(--amber);color:#1a1205;display:grid;place-items:center;flex:none}
+.ask-hello{text-align:center;display:grid;gap:8px;justify-items:center;padding:18px 6px 4px}
+.ask-hello .orb{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:radial-gradient(circle at 30% 25%,#ffd58a,var(--amber) 55%,#c97a00);color:#1a1205;box-shadow:0 12px 40px color-mix(in oklab,var(--amber) 35%,transparent)}
+.ask-hello h3{margin:6px 0 0;font:700 21px var(--display)}
+.ask-hello p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.7;max-width:330px}
+.ask-sug{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.ask-sug button{font-size:13px;padding:8px 13px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.ask-q{align-self:flex-start;max-width:85%;background:color-mix(in oklab,var(--amber) 16%,var(--panel));border:1px solid color-mix(in oklab,var(--amber) 35%,var(--line));padding:10px 14px;border-radius:18px 18px 18px 6px;font-size:15px}
+.ask-a{align-self:stretch;background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 6px 18px;padding:14px;display:grid;gap:10px;animation:askIn .35s var(--ease)}
+@keyframes askIn{from{opacity:0;transform:translateY(8px)}}
+.ask-a .ans{white-space:pre-line;line-height:1.85;font-size:15px}
+.ask-a .src{justify-self:start;font:600 11.5px var(--mono);color:var(--amber);background:color-mix(in oklab,var(--amber) 12%,transparent);padding:4px 10px;border-radius:99px;direction:ltr}
+.ask-a .lbl{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.ask-a .lbl::before{content:"";width:14px;height:1px;background:var(--line)}
+.ask-ref{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--raise);display:grid;gap:6px;direction:ltr;text-align:left}
+.ask-ref b{font:600 12.5px var(--mono);color:var(--ink)}
+.ask-ref b span{color:var(--muted);font-weight:500}
+.ask-ref p{margin:0;font:13px/1.65 var(--body);color:#c6cfdf;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.ask-ref.full p{-webkit-line-clamp:unset}
+.ask-ref mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.ask-ref button{justify-self:start;font-size:12px;color:var(--amber)}
+.ask-note{font-size:11.5px;color:var(--muted);text-align:center}
+.ask-lock{display:grid;gap:14px;justify-items:center;text-align:center;padding:40px 10px}
+.ask-lock .orb{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);color:var(--amber)}
+.ask-lock input{width:100%;max-width:300px;height:52px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 20px var(--mono);text-align:center;letter-spacing:2px;text-transform:uppercase}
+.ask-lock button{width:100%;max-width:300px;height:50px;border-radius:14px;background:var(--amber);color:#1a1205;font-weight:700}
+.ask-lock .err{color:var(--warn);font-size:13px;min-height:18px}
+.ask-lock.shake input{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-4px)}}
+.ask-typing{align-self:stretch;color:var(--muted);font-size:13px;padding:4px 6px}
+
 #csPrint{display:none}
 @media print{
   @page{size:A4;margin:12mm}
@@ -546,6 +588,16 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   <div class="cs-bar"><button class="p" id="csPdf">PDF / طباعة</button><button id="csShare">مشاركة</button><button id="csClear">مسح</button></div>
 </div>
 <div id="csPrint"></div>
+<button class="ask-fab" id="askFab" aria-label="مساعد العمليات"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/><path d="M9 10h.01M12 10h.01M15 10h.01"/></svg>اسأل</button>
+<div class="ask" id="ask" role="dialog" aria-modal="true" aria-labelledby="askT" hidden>
+  <div class="trk-top">
+    <button class="trk-back" id="askBack" aria-label="رجوع"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div><b id="askT">مساعد العمليات</b><span>من دليل العمليات الأرضية · GOM I07</span></div>
+  </div>
+  <div class="ask-body" id="askBody"></div>
+  <div class="ask-foot" id="askFoot" hidden><form id="askForm"><input id="askIn" placeholder="اكتب سؤالك… مثلاً: وش أسوي إذا فيه برق؟" autocomplete="off" enterkeyhint="send"><button aria-label="إرسال"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button></form></div>
+</div>
+
 
 <div class="trk" id="trk" role="dialog" aria-modal="true" aria-labelledby="trkT" hidden>
   <div class="trk-top">
@@ -1200,6 +1252,90 @@ $("csShare").onclick=async()=>{
   try{if(navigator.share){await navigator.share({title:"Coordination Sheet "+f.n,text:t});return}}catch(e){return}
   try{await navigator.clipboard.writeText(t);$("csShare").textContent="✓ نُسخ";setTimeout(()=>$("csShare").textContent="مشاركة",1500)}catch(e){}
 };
+
+/* ---------- Operations assistant: answers from the encrypted GOM knowledge file (data/kb.bin) ----------
+   الملف مشفّر AES-GCM بمفتاح مشتق من رمز الموظفين (PBKDF2)، ولا يُفك إلا على جهاز الموظف. */
+const KB_PW_KEY="ajf_kbpw";let KB=null,KBI=null;
+const arN=s=>String(s).toLowerCase().replace(/[\u064B-\u0652\u0640ء]/g,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/ؤ/g,"و").replace(/ئ/g,"ي");
+const AR_STOP=new Set("وش ايش كيف متى هل اذا لو في من على الى عن ما اللي التي الذي ابي ابغى اسوي نسوي يسوي وقت عند مع او و ان انا احنا هو هي هذا هذه ذلك كم وين ليش لماذا ماذا عشان حق حقت لازم ممكن اقدر نقدر يقدر بعد قبل كل اي شي شيء ايه لا يا the a an of to in on for and or is are what how when do i can".split(" "));
+const stem=w=>{w=w.replace(/^(وال|بال|فال|كال|لل|ال)/,"");if(w.length>4)w=w.replace(/(ات|ين|ون|ها|هم)$/,"");return w};
+const toks=s=>arN(s).replace(/[^\p{L}\p{N}\s]/gu," ").split(/\s+/).filter(w=>w&&!AR_STOP.has(w)).map(stem).filter(w=>w.length>1);
+const SYN={برق:"lightning thunderstorm",رعد:"thunderstorm lightning",عاصفه:"thunderstorm storm",رعديه:"thunderstorm",رياح:"wind gust",هوا:"wind",هبوب:"wind gust",غبار:"sandstorm dust",رمليه:"sandstorm",مطر:"rain",امطار:"rain",سيول:"flood",حر:"heat temperature",حراره:"heat temperature",ضباب:"visibility fog",رويه:"visibility",طقس:"weather severe",
+وقود:"fuel fuelling refueling",تزويد:"fuelling refueling",فيول:"fuel fuelling",انسكاب:"spill spillage",تسرب:"leakage spillage",حريق:"fire",نار:"fire",طفايه:"extinguisher",باب:"door",ابواب:"door doors",درج:"stairs steps",سلم:"stairs steps",جسر:"bridge PBB aerobridge",كوابح:"chocks",كالو:"chocks",شوك:"chocks",اقماع:"cones",كون:"cones",قمع:"cone",سرعه:"speed limit",محرك:"engine",محركات:"engine",مكينه:"engine",سماعه:"headset interphone",هيدسيت:"headset",دفع:"pushback",بوش:"pushback",سحب:"towing tow",
+صعود:"boarding embarkation",بوردنق:"boarding",نزول:"disembarkation deplane",ركاب:"passenger passengers",راكب:"passenger",شنطه:"baggage bag",شنط:"baggage bags",عفش:"baggage",امتعه:"baggage",بضايع:"cargo",كارقو:"cargo",بريد:"mail",حاويه:"ULD container",حاويات:"ULD containers",تحميل:"loading",تنزيل:"unloading offload",تفريغ:"unloading",حموله:"load",كرسي:"wheelchair",متحرك:"wheelchair",اعاقه:"disability PWD PRM",قاصر:"unaccompanied minor UMNR",حامل:"pregnant expectant",خطره:"dangerous goods",حيوانات:"live animals AVI",جثمان:"human remains HUM",متوفي:"human remains",سلاح:"weapons",اسلحه:"weapons",امن:"security",تفتيش:"search security inspection",نظافه:"cleaning cabin",تنظيف:"cleaning",مويه:"potable water",حمامات:"toilet lavatory",معدات:"GSE equipment",معده:"GSE equipment",كهربا:"power GPU",تكييف:"ACU air conditioning",لفت:"lift ambulift",سير:"conveyor belt",فحص:"inspection check",حادث:"accident incident",حادثه:"incident accident",صدمه:"damage collision",ضرر:"damage",اصابه:"injury",تقرير:"report",بلاغ:"report notification",اخلا:"evacuation",مشبوه:"suspicious security unattended",مشبوهه:"suspicious security",قرب:"near",طوارى:"emergency",ارهاق:"fatigue",دوام:"duty hours",راحه:"rest",حذا:"PPE shoes",ستره:"PPE vest",حمايه:"PPE protective",تدخين:"smoking",جوال:"mobile phone portable electronic",فود:"FOD",وزن:"weight",توازن:"balance trim",تاخير:"delay",وثايق:"documents",طاقم:"crew",كابتن:"captain PIC",مهندس:"engineer",مشرف:"supervisor",منسق:"turnaround coordinator TRC",اكسجين:"oxygen",جاف:"dry ice",ثلج:"ice",انوار:"lights beacon",حمرا:"anti-collision beacon",اسعاف:"medical",مريض:"medical MEDA",عربه:"cart dolly",عربات:"carts dollies",مركبه:"vehicle",مركبات:"vehicles",قياده:"driving",رخصه:"permit",تصريح:"permit clearance"};
+const SYNN={};
+function kbIndex(){
+  Object.entries(SYN).forEach(([k,v])=>{const n=stem(arN(k));SYNN[n]=(SYNN[n]?SYNN[n]+" ":"")+v});
+  const docs=KB.c.map(([s,h,p,t])=>{const tk=(h+" "+h+" "+t).toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(w=>w.length>1);const tf=new Map();tk.forEach(w=>tf.set(w,(tf.get(w)||0)+1));return{s,h,p,t,tf,len:tk.length}});
+  const df=new Map();docs.forEach(d=>d.tf.forEach((_,w)=>df.set(w,(df.get(w)||0)+1)));
+  const avg=docs.reduce((a,d)=>a+d.len,0)/docs.length;
+  const qa=KB.qa.map(x=>({...x,tk:new Set(toks(x.q+" "+x.k))}));
+  KBI={docs,df,avg,qa};
+}
+function kbSearch(q){
+  const qt=toks(q),en=new Set();
+  qt.forEach(w=>{if(/^[a-z0-9]+$/.test(w))en.add(w);const sy=SYNN[w];if(sy)sy.toLowerCase().split(" ").forEach(x=>en.add(x))});
+  /* QA match */
+  let best=null,bs=0;
+  KBI.qa.forEach(x=>{let m=0;qt.forEach(w=>{if(x.tk.has(w))m+=1;else if(w.length>=3&&[...x.tk].some(t=>t.length>=3&&(t.startsWith(w)||w.startsWith(t))))m+=.7});const sc=m/Math.max(1,Math.sqrt(qt.length*1.2));if(sc>bs){bs=sc;best=x}});
+  /* BM25 over the manual */
+  const N=KBI.docs.length,k1=1.4,b=.75,terms=[...en];
+  const res=terms.length?KBI.docs.map(d=>{let s=0;terms.forEach(w=>{const f=d.tf.get(w);if(!f)return;const idf=Math.log(1+(N-KBI.df.get(w)+.5)/(KBI.df.get(w)+.5));s+=idf*f*(k1+1)/(f+k1*(1-b+b*d.len/KBI.avg))});return{d,s}}).filter(r=>r.s>0).sort((a,b)=>b.s-a.s):[];
+  const seen=new Set(),refs=[];
+  if(best&&bs>=.55)seen.add(best.s);
+  for(const r of res){const key=r.d.s+"|"+r.d.h;if(seen.has(key))continue;seen.add(key);refs.push(r.d);if(refs.length>=3)break}
+  return{qa:bs>=.55?best:null,refs,terms};
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function snippet(t,terms){
+  const lt=t.toLowerCase();let at=-1;for(const w of terms){const i=lt.indexOf(w.toLowerCase());if(i>=0&&(at<0||i<at))at=i}
+  const st=Math.max(0,at-160),body=(st?"… ":"")+t.slice(st);
+  let h=esc(body);terms.filter(w=>w.length>2).forEach(w=>{h=h.replace(new RegExp("\\b("+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>")});return h;
+}
+function askAnswer(q){
+  const body=$("askBody");$("askHello")&&$("askHello").remove();
+  body.insertAdjacentHTML("beforeend",`<div class="ask-q">${esc(q)}</div>`);const qEl=body.lastElementChild;
+  const r=kbSearch(q);let h="";
+  if(r.qa)h+=`<div class="ans">${esc(r.qa.a)}</div><span class="src">GOM ${r.qa.s}${r.qa.p?" · p."+r.qa.p:""}</span>`;
+  if(r.refs.length){h+=`<div class="lbl">${r.qa?"للاستزادة من الدليل":"أقرب ما وجدته في الدليل"}</div>`+r.refs.map((d,i)=>`<div class="ask-ref"><b>${d.s} ${esc(d.h)} <span>· p.${d.p||"—"}</span></b><p>${snippet(d.t,r.terms)}</p><button data-full>${"عرض الفقرة كاملة"}</button></div>`).join("")}
+  if(!h)h=`<div class="ans">ما لقيت جواب واضح لسؤالك في الدليل. جرّب تكتبه بكلمات ثانية أو بالإنجليزي (مثلاً: fueling, chocks, boarding).</div>`;
+  body.insertAdjacentHTML("beforeend",`<div class="ask-a">${h}</div>`);
+  const last=body.lastElementChild;last.querySelectorAll("[data-full]").forEach(b=>b.onclick=()=>{const c=b.parentElement;c.classList.toggle("full");b.textContent=c.classList.contains("full")?"إخفاء":"عرض الفقرة كاملة"});
+  requestAnimationFrame(()=>qEl.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"}));
+}
+function askHello(){
+  const sug=["وش أسوي إذا فيه برق؟","كم حدود السرعة في الساحة؟","منطقة أمان الوقود","الفرق بين WCHR و WCHS","انسكاب وقود","متى أبدأ صعود الركاب؟","إجراءات الرياح القوية","من يفتح باب الطائرة؟"];
+  $("askBody").innerHTML=`<div class="ask-hello" id="askHello"><div class="orb"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/><path d="M9 7h7M9 11h5"/></svg></div><h3>اسأل عن أي إجراء</h3><p>الأجوبة من دليل العمليات الأرضية المعتمد (GOM Issue 07)، مع رقم البند والصفحة. المرجع النهائي هو الدليل وتعليمات الشركة الناقلة.</p><div class="ask-sug">${sug.map(s=>`<button>${s}</button>`).join("")}</div></div>`;
+  $("askBody").querySelectorAll(".ask-sug button").forEach(b=>b.onclick=()=>askAnswer(b.textContent));
+}
+async function kbUnlock(pw){
+  const buf=new Uint8Array(await (await fetch("data/kb.bin",{cache:"force-cache"})).arrayBuffer());
+  const salt=buf.slice(5,21),iv=buf.slice(21,33),ct=buf.slice(33);
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw.trim().toUpperCase()),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const gz=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,ct);
+  const txt=await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  KB=JSON.parse(txt);kbIndex();
+}
+function askLock(msg=""){
+  $("askFoot").hidden=true;
+  $("askBody").innerHTML=`<div class="ask-lock" id="askLock"><div class="orb"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><h3 style="margin:0;font:700 19px var(--display)">للموظفين فقط</h3><p style="margin:0;color:var(--muted);font-size:13.5px">أدخل رمز الدخول مرة وحدة، ويتذكره جوالك.</p><input id="askPw" placeholder="AJF-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="askGo">دخول</button><div class="err" id="askErr">${msg}</div></div>`;
+  const go=async()=>{const pw=$("askPw").value;if(!pw.trim())return;$("askGo").textContent="جاري الفتح…";
+    try{await kbUnlock(pw);try{localStorage.setItem(KB_PW_KEY,pw.trim().toUpperCase())}catch(e){}askReady()}
+    catch(e){$("askGo").textContent="دخول";$("askErr").textContent="الرمز غير صحيح";const l=$("askLock");l.classList.remove("shake");void l.offsetWidth;l.classList.add("shake")}};
+  $("askGo").onclick=go;$("askPw").onkeydown=e=>{if(e.key==="Enter")go()};setTimeout(()=>$("askPw").focus(),100);
+}
+function askReady(){$("askFoot").hidden=false;askHello()}
+async function openAsk(){
+  $("ask").hidden=false;
+  if(KB){if(!$("askBody").children.length)askHello();$("askFoot").hidden=false;return}
+  let pw=null;try{pw=localStorage.getItem(KB_PW_KEY)}catch(e){}
+  if(pw){$("askBody").innerHTML=`<div class="ask-typing">جاري تحميل الدليل…</div>`;try{await kbUnlock(pw);askReady();return}catch(e){try{localStorage.removeItem(KB_PW_KEY)}catch(x){}}}
+  askLock();
+}
+$("askFab").onclick=openAsk;
+$("askBack").onclick=()=>{$("ask").hidden=true};
+$("askForm").onsubmit=e=>{e.preventDefault();const v=$("askIn").value.trim();if(!v)return;$("askIn").value="";askAnswer(v)};
 
 /* ---------- bottom sheet ---------- */
 const sheet=$("sheet"),scrim=$("scrim");
