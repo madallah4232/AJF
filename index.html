@@ -677,7 +677,7 @@ function groundTrack(f,dayOffset){
   const a=toMin(f.ia),dep=toMin(f.t),now=NOW.mins;
   const L=LIVE.date===iso(TODAY)&&f.ino&&LIVE.flights[f.ino];
   let st,cls="st",pct;
-  if(L&&L.s==="landed"){st="وصلت الجوف "+(L.t||"").replace("~","≈");cls+=" ok"}
+  if(L&&L.s==="landed"){st=isCert(L)?"وصلت الجوف "+dispT(L.t):"هبطت ≈"+dispT(L.t).replace("≈","")+" (تقديري)";cls+=" ok"}
   else if(L&&L.s==="canceled"){st="الوصول ملغى"}
   else if(now<a){const m=a-now;st=m>90?"الطائرة لم تصل بعد":"تصل بعد "+m+" د"}
   else{st="على الأرض";cls+=" ok"}
@@ -728,9 +728,10 @@ function renderTimeline(rows){
 
 /* inbound aircraft status at AJF from live.json (keyed by inbound flight number) */
 /* تأخير الوصول = ATA − STA (يظهر بجانب وقت الوصول) */
-function arrDlyTxt(f,t){
+function arrDlyTxt(f,t,cert=true){
   const a=tm(t),s=toMin(f.ia);if(isNaN(a)||isNaN(s))return"";
   let d=(a-s+1440)%1440;if(d>720)d-=1440;
+  if(!cert)return d>0?` · <span style="color:var(--muted);opacity:.8">≈تأخر <span class="num">${d}</span>د تقديري</span>`:"";
   return d>0?` · <span style="color:var(--warn)">تأخر <span class="num">${d}</span>د</span>`:"";
 }
 function inboundTxt(f,date){
@@ -738,10 +739,10 @@ function inboundTxt(f,date){
   const L=LIVE.date===iso(date)&&f.ino&&LIVE.flights[f.ino],man=MAN[ataKey(f,date)];
   if(man)return`<span style="color:var(--go)">وصلت <span class="num">${man}</span> ✎</span>${arrDlyTxt(f,man)}`;
   if(L){
-    if(L.s==="landed")return`<span style="color:var(--go)">وصلت <span class="num">${(L.t||"").replace("~","≈")}</span></span>${arrDlyTxt(f,L.t||"")}`;
+    if(L.s==="landed")return isCert(L)?`<span style="color:var(--go)">وصلت <span class="num">${dispT(L.t)}</span></span>${arrDlyTxt(f,L.t||"")}`:`<span style="color:var(--muted)">هبطت ≈<span class="num">${dispT(L.t).replace("≈","")}</span> (تقديري)</span>${arrDlyTxt(f,L.t||"",false)}`;
     if(L.s==="departed"){const e=L.t?tm(L.t):NaN;if(!isNaN(e)&&iso(date)===iso(TODAY)&&NOW.mins>e+10)return`<span style="color:var(--amber)">يُرجّح وصلت ≈<span class="num">${fmt(e)}</span> · لم يتأكد</span>`;
-      return`<span style="color:#7cc4ff">في الجو${L.t?` · تصل <span class="num">${L.t.replace("~","≈")}</span>`:""}</span>`}
-    if(L.s==="delayed")return`<span style="color:var(--amber)">تصل <span class="num">${L.t||""}</span></span>`;
+      return`<span style="color:#7cc4ff">في الجو${L.t?` · تصل <span class="num">${dispT(L.t)}</span>`:""}</span>`}
+    if(L.s==="delayed")return`<span style="color:var(--amber)">تصل <span class="num">${dispT(L.t)}</span></span>`;
     if(L.s==="canceled")return`<span style="color:var(--warn)">الوصول ملغى</span>`;
     if(L.s==="diverted")return`<span style="color:var(--warn)">تحويل</span>`;
   }
@@ -751,8 +752,8 @@ function inboundTxt(f,date){
 function flyBar(f,date){
   const L=iso(date)===iso(TODAY)&&LIVE.date===iso(TODAY)&&LIVE.flights[f.n];
   if(!L||L.s!=="departed"||!L.t)return"";
-  if(NOW.mins-toMin(L.t)>f.dur)return"";
-  const p=Math.max(.03,Math.min(.97,(NOW.mins-toMin(L.t))/f.dur));
+  const t0=tkoMin(f,date,L);if(isNaN(t0)||NOW.mins-t0>f.dur)return"";
+  const p=Math.max(.03,Math.min(.97,(NOW.mins-t0)/f.dur));
   return`<div class="fly" aria-hidden="true"><i style="width:${(p*100).toFixed(1)}%"></i><em style="right:${(p*100).toFixed(1)}%"><svg viewBox="0 0 24 24" width="1em" height="1em" style="display:block;transform:rotate(-90deg)"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg></em></div>`;
 }
 /* ---------- board ---------- */
@@ -765,7 +766,8 @@ function status(f,date){
   if(f.off)return["off","تبدأ "+dLabel(new Date(f.start+"T00:00:00Z"))];
   if(iso(date)!==iso(TODAY))return f.est?["sched","وقت تقديري"]:["sched","مجدولة"];
   const L=LIVE.date===iso(date)&&LIVE.flights[f.n];
-  if(L&&LIVE_TXT[L.s]){const[c,w]=LIVE_TXT[L.s];return[c+" live",w+(L.t?" "+L.t.replace("~","≈"):"")]}
+  if(L&&L.s==="departed"&&L.t){const X=depInfo(f,date);if(X)return["done live",X.cert?"غادرت "+fmt(X.m):"غادرت ≈"+fmt(X.m)+(X.tko!=null?" · إقلاع "+fmt(X.tko):"")]}
+  if(L&&LIVE_TXT[L.s]){const[c,w]=LIVE_TXT[L.s];return[c+" live",w+(L.t?" "+dispT(L.t):"")]}
   const m=toMin(f.t);
   if(m<NOW.mins)return["sched","بانتظار التحديث"];
   if(m-NOW.mins<=120)return["soon","بعد "+(m-NOW.mins)+"د"];
@@ -906,7 +908,7 @@ async function openTrack(f,date){
     const st=leg.live;
     if(isToday&&st&&st.s==="departed"&&st.t&&!isNaN(tm(st.t))){
       /* في رحلة الوصول للجوف الوقت المكتوب = الوصول المتوقع؛ في رحلة المغادرة = وقت الإقلاع الفعلي */
-      const etaM=useIn?tm(st.t):tm(st.t)+f.dur,depM=etaM-f.dur;
+      const etaM=useIn?tm(st.t):tkoMin(f,TODAY,st)+f.dur,depM=etaM-f.dur;
       const el2=NOW.mins-depM,pct=Math.max(0,Math.min(1,el2/f.dur)),pos=gc(A,B,pct),eta=fmt((etaM+1440)%1440),dep=fmt((depM+1440)%1440);
       if(el2>=f.dur){draw(B,bearing(A,B),"ground",{pct:1,kv:[["الوصول المتوقع",eta],["الحالة","يُرجّح أنها وصلت"],["تأكيد الهبوط","لم يتأكد بعد"],["المسافة",Math.round(total)+" كم"],["رقم النداء",callsign(leg.no)]],note:"مر وقت الوصول المتوقع ولم يتأكد الهبوط بعد —"});return}
       draw(pos,bearing(pos,B),"est",{pct,kv:[[useIn?"أقلعت تقريباً":"أقلعت",dep],["منذ",el2+" د"],["المتبقي تقريباً",Math.max(0,f.dur-el2)+" د"],["الوصول المتوقع",eta],["المسافة",Math.round(total)+" كم"],["الحالة","في الجو"]],note:"الموقع تقديري لأن إشارة الطائرة غير متاحة الآن"});
@@ -962,9 +964,9 @@ const isActual=I=>!!I&&I.kind!=="eta"&&I.kind!=="approx";
 /* Ground Time: بعد الإقلاع الفعلي = ATD − ATA (Actual GT)، قبله = المجدول (Sched GT) */
 function actGT(f,date){
   if(iso(date)!==iso(TODAY)||LIVE.date!==iso(date))return null;
-  const D=LIVE.flights[f.n];if(!D||D.s!=="departed"||!D.t)return null;
+  const X=depInfo(f,date);if(!X)return null;
   const I=inboundInfo(f,date);if(!I||I.kind==="eta")return null;
-  const g=tm(D.t)-I.m;return g>0&&g<600?{g,approx:I.kind==="approx"}:null;
+  const g=X.m-I.m;return g>0&&g<600?{g,approx:!X.cert||!certI(I)}:null;
 }
 /* Delay: ATD − STD. الجزء الناتج عن تأخر الوصول (93 Late Arrival) = ATA + Sched GT − STD، والباقي سببه آخر يُكتب كملاحظة */
 let DLYR={};try{DLYR=JSON.parse(localStorage.getItem("ajf_dly")||"{}")}catch(e){}
@@ -972,32 +974,47 @@ const dlyKey=(f,date)=>iso(date)+"_"+f.n;
 function dlyReason(f,date){return(LIVE.date===iso(date)&&LIVE.dly&&LIVE.dly[f.n])||DLYR[dlyKey(f,date)]||""}
 function dlyInfo(f,date){
   if(iso(date)!==iso(TODAY)||LIVE.date!==iso(date))return null;
-  const D=LIVE.flights[f.n];if(!D||D.s!=="departed"||!D.t)return null;
-  const atd=tm(D.t),std=tm(f.t);if(isNaN(atd))return null;
-  const dly=atd-std;if(dly<=0)return{atd,std,dly:0,no:true};
+  const Q=depInfo(f,date);if(!Q)return null;
+  const atd=Q.m,std=tm(f.t),est=!Q.cert;
+  let dly=atd-std;if(dly>720)dly-=1440;if(dly<-720)dly+=1440;if(dly<=0)return{atd,std,dly:0,raw:dly,no:true,est,tko:Q.tko};
   const I=f.ia?inboundInfo(f,date):null;let react=null;
   if(I&&I.kind!=="eta")react=Math.max(0,Math.min(dly,I.m+gtRule(f)-std));
-  return{atd,std,dly,no:false,react,other:react==null?null:dly-react,approx:!!I&&I.kind==="approx",reason:dlyReason(f,date)};
+  return{atd,std,dly,raw:dly,no:false,est,tko:Q.tko,react,other:react==null?null:dly-react,approx:est||(!!I&&!certI(I)),reason:dlyReason(f,date)};
 }
 function dlyText(X){
-  if(!X)return"";if(X.no)return"NO DELAY";
+  if(!X)return"";if(X.no)return X.est?"≈NO DELAY (تقديري)":"NO DELAY";
   const parts=[];
   if(X.react)parts.push("93 Late Arrival "+X.react+"M"+(X.approx?" ≈":""));
   if(X.other==null)parts.push(X.reason?X.reason:"Reason: —");
   else if(X.other>0)parts.push(X.react?"Other "+X.other+"M: "+(X.reason||"—"):(X.reason||"Reason: —"));
-  return"DLY "+X.dly+"M · "+parts.join(" · ");
+  return(X.est?"≈DLY "+X.dly+"M (تقديري)":"DLY "+X.dly+"M")+" · "+parts.join(" · ");
 }
 function dlyTag(f,date){
   const X=dlyInfo(f,date);if(!X)return"";
+  if(X.est)return`<small style="color:var(--muted);opacity:.8">≈${X.no?"NO DELAY":`DLY <span class="num">${X.dly}</span>M`}${!X.no&&X.react?(X.react>=X.dly?" · Late Arr":` · Late Arr <span class="num">${X.react}</span>M`):""} · تقديري</small>`;
   if(X.no)return`<small style="color:var(--go)">NO DELAY</small>`;
   return`<small style="color:var(--warn)">DLY <span class="num">${X.dly}</span>M${X.react?(X.react>=X.dly?" · Late Arr":` · Late Arr <span class="num">${X.react}</span>M`):""}</small>`;
 }
 function gtTag(f,date){
   if(!f.ia||f.off)return"";
   const A=actGT(f,date);
-  return A?`<small>Actual GT <span class="num">${A.g}</span>M${A.approx?" ≈":""}</small>`:`<small>Sched GT <span class="num">${gtRule(f)}</span>M</small>`;
+  return A?(A.approx?`<small style="color:var(--muted);opacity:.8">≈Actual GT <span class="num">${A.g}</span>M · تقديري</small>`:`<small>Actual GT <span class="num">${A.g}</span>M</small>`):`<small>Sched GT <span class="num">${gtRule(f)}</span>M</small>`;
 }
 const tm=t=>toMin(String(t).replace(/[~@≈\s]/g,""));
+/* أوقات البلوك: "@HH:MM" = معتمد من نظام المطار (On-block للوصول / Off-block للمغادرة) أو من عمودي F:G · "~HH:MM" = تقديري من FR24 · بدون علامة = قيمة قديمة من FR24 (تقديرية) */
+const DEPNO=new Set(FLIGHTS.flatMap(f=>[f.no,...Object.values(f.altNo||{})]));
+const isCert=L=>!!L&&!!L.t&&(!!L.fix||String(L.t).trim().startsWith("@"));
+const certI=I=>!!I&&(I.kind==="manual"||I.kind==="exact");
+const dispT=t=>String(t||"").replace("@","").replace("~","≈");
+function depInfo(f,date){/* ATD = Off-block · tko = وقت الإقلاع (FR24) إن وُجد */
+  if(iso(date)!==iso(TODAY)||LIVE.date!==iso(date))return null;
+  const D=LIVE.flights[f.n];if(!D||D.s!=="departed"||!D.t)return null;
+  const t=String(D.t).trim(),cert=isCert(D);let m=tm(t),tko=null;if(isNaN(m))return null;
+  const nm=String(D.note||"").match(/إقلاع(?:\s*FR24)?\s*(\d{1,2}:\d{2})/);if(nm)tko=tm(nm[1]);
+  if(!cert&&!t.startsWith("~")){tko=m;m=(m-10+1440)%1440}/* قيمة قديمة = إقلاع FR24 → Off-block تقديري = الإقلاع − 10 */
+  return{m,tko,cert};
+}
+const tkoMin=(f,date,D)=>{const X=depInfo(f,date);if(X)return X.tko!=null?X.tko:X.m+10;return tm(D.t)};
 const nowMin=()=>((Date.now()/1000+10800)%86400)/60;
 const LIVE_ETA={},SEEN_AIR={};let turnTimer;
 let ATA={};try{ATA=JSON.parse(localStorage.getItem("ajf_ata")||"{}")}catch(e){}
@@ -1008,8 +1025,8 @@ function inboundInfo(f,date){
   if(L&&L.s==="canceled")return null;
   const man=MAN[ataKey(f,date)];if(man)return{m:tm(man),kind:"manual"};
   const loc=ATA[ataKey(f,date)];
-  if(loc&&!String(loc).startsWith("~")&&!(L&&L.s==="landed"&&L.t&&!L.t.includes("~")))return{m:tm(loc),kind:"adsb"};/* رصد ADS-B دقيق يتقدم على التقديري */
-  if(L&&L.s==="landed"&&L.t)return{m:tm(L.t),kind:L.fix?"manual":L.t.includes("~")?"approx":"exact"};if(loc)return{m:tm(loc),kind:String(loc).startsWith("~")?"approx":"adsb"};
+  if(loc&&!String(loc).startsWith("~")&&!(L&&L.s==="landed"&&isCert(L)))return{m:tm(loc),kind:"adsb"};/* رصد ADS-B دقيق يتقدم على التقديري */
+  if(L&&L.s==="landed"&&L.t)return{m:tm(L.t),kind:L.fix?"manual":isCert(L)?"exact":"fr24"};if(loc)return{m:tm(loc),kind:String(loc).startsWith("~")?"approx":"adsb"};
   const eta=LIVE_ETA[f.ino]!=null?LIVE_ETA[f.ino]:L&&(L.s==="departed"||L.s==="delayed")&&L.t?tm(L.t):null;
   if(eta!=null)return nowMin()>=eta+3?{m:eta,kind:"approx"}:{m:eta,kind:"eta"};
   return null;
@@ -1058,12 +1075,12 @@ function renderTurn(f,date){
     else el.hidden=true;
     return}
   const P=turnPlan(f,I.m),now=nowMin(),D=LIVE.date===iso(date)&&LIVE.flights[f.n];
-  const gone=D&&["departed","landed"].includes(D.s)&&D.t,atd=gone?tm(D.t):null;
+  const gone=D&&["departed","landed"].includes(D.s)&&D.t,DQ=gone?depInfo(f,date):null,atd=gone?(DQ?DQ.m:tm(D.t)):null,gEst=!DQ||!DQ.cert||!certI(I);
   if(gone&&now>atd+60){el.hidden=true;return}
   const pre=I.kind==="eta"&&now<I.m;
-  const src=I.kind==="manual"?`<span class="tu-src">معتمد ${fmt(I.m)} ✎</span>`:I.kind==="exact"?`<span class="tu-src">وصلت فعلياً ${fmt(I.m)}</span>`:I.kind==="adsb"?`<span class="tu-src">رُصد الهبوط ${fmt(I.m)}</span>`:I.kind==="approx"?`<span class="tu-src ap">وصلت ≈${fmt(I.m)} · تقديري</span>`:`<span class="tu-src ap">تصل ≈${fmt(I.m)}</span>`;
+  const src=I.kind==="manual"?`<span class="tu-src">معتمد ${fmt(I.m)} ✎</span>`:I.kind==="exact"?`<span class="tu-src">On-block معتمد ${fmt(I.m)}</span>`:I.kind==="fr24"?`<span class="tu-src ap">هبطت ≈${fmt(I.m)} · تقديري</span>`:I.kind==="adsb"?`<span class="tu-src">رُصد الهبوط ${fmt(I.m)}</span>`:I.kind==="approx"?`<span class="tu-src ap">وصلت ≈${fmt(I.m)} · تقديري</span>`:`<span class="tu-src ap">تصل ≈${fmt(I.m)}</span>`;
   let big;
-  if(gone)big=`<span>ATD ${fmt(atd)} · Actual GT ${atd-I.m}M · ${(()=>{const X=dlyInfo(f,date);return X?(X.no?"NO DELAY":"DLY "+X.dly+"M"):""})()}</span><b class="ok">${fmt(atd)}</b>`;
+  if(gone)big=`<span>${gEst?"≈":""}ATD ${fmt(atd)} · ${gEst?"≈":""}Actual GT ${atd-I.m}M · ${(()=>{const X=dlyInfo(f,date);return X?(X.est?"≈":"")+(X.no?"NO DELAY":"DLY "+X.dly+"M"):""})()}${gEst?" · تقديري":""}</span><b class="${gEst?"":"ok"}">${gEst?"≈":""}${fmt(atd)}</b>`;
   else if(pre)big=`<span>حتى وصول الطائرة للجوف</span><b>${clockFmt(I.m-now)}</b>`;
   else if(now<P.dep)big=`<span>متبقي لـ Close Door ${fmt(P.dep)}</span><b>${clockFmt(P.dep-now)}</b>`;
   else big=`<span>تجاوزت Close Door ${fmt(P.dep)}</span><b class="late">+${clockFmt(now-P.dep)}</b>`;
@@ -1074,7 +1091,7 @@ function renderTurn(f,date){
     return`<li class="${st}" style="--pc:${c}"><i></i><b>${n}</b><span class="num">${pt?fmt(b):fmt(a)+"–"+fmt(b)}</span><em>${pre&&st==="up"?"":r}</em></li>`}).join("");
   const note=gone?(()=>{const X=dlyInfo(f,date);return X&&!X.no?dlyText(X):""})():pre?"الخطة محسوبة على وقت الوصول المتوقع وتتعدّل تلقائياً أول ما تهبط الطائرة":
     P.delay>0?`<b>تأخير متوقع ${P.delay} د</b> — Close Door بعد ${gtRule(f)} د من الوصول الفعلي`:I.kind==="approx"?"وقت الوصول تقديري حتى يتأكد الوصول الفعلي":"";
-  el.innerHTML=`<div class="tu-h"><b>${gone?`Actual GT · ${atd-I.m}M`:`Sched GT · ${P.ground}M`}</b>${src}</div>${gone?"":`<div class="tu-acts">${edBtn}</div>`}<div class="tu-big">${big}</div><div class="tu-bar">${bar}</div><ul class="tu-ph">${li}</ul>${note?`<div class="tu-n">${note}</div>`:""}`;
+  el.innerHTML=`<div class="tu-h"><b>${gone?`${gEst?"≈":""}Actual GT · ${atd-I.m}M${gEst?" · تقديري":""}`:`Sched GT · ${P.ground}M`}</b>${src}</div>${gone?"":`<div class="tu-acts">${edBtn}</div>`}<div class="tu-big">${big}</div><div class="tu-bar">${bar}</div><ul class="tu-ph">${li}</ul>${note?`<div class="tu-n">${note}</div>`:""}`;
   el.hidden=false;
 }
 /* رصد الهبوط مباشرة من ADS-B أثناء فتح التطبيق */
@@ -1142,7 +1159,7 @@ function renderCS(){
   </div>
   <div class="cs-card"><h5>ACTIVITIES <span style="font-family:var(--mono)">${now}</span></h5>${acts}</div>
   ${(()=>{const X=dlyInfo(f,date);if(!X)return"";return`<div class="cs-card"><h5>DELAY</h5>
-    <div class="cs-g">${fld("STD",`<input value="${f.t}" readonly>`)}${fld("ATD",`<input value="${fmt(X.atd)}" readonly>`)}${fld("DLY",`<input value="${X.no?"NO DELAY":X.dly+"M"}" readonly style="color:var(${X.no?"--go":"--warn"})">`)}</div>
+    <div class="cs-g">${fld("STD",`<input value="${f.t}" readonly>`)}${fld(X.est?"ATD ≈ تقديري":"ATD (Off-block)",`<input value="${X.est?"≈":""}${fmt(X.atd)}" readonly${X.est?' style="color:var(--muted)"':""}>`)}${fld(X.est?"DLY ≈ تقديري":"DLY",`<input value="${X.est?"≈":""}${X.no?"NO DELAY":X.dly+"M"}" readonly style="color:var(${X.est?"--muted":X.no?"--go":"--warn"})">`)}</div>
     ${X.no?"":`<div class="tu-n" style="direction:ltr;text-align:left">${dlyText(X)}</div>
     ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`):""}`}</div>`})()}`;
 }
@@ -1172,7 +1189,7 @@ function csPrintHTML(){
   <tr><td>Flight Departure: <b>${f.n}</b></td><td colspan="2">To: <b>${f.iata}</b></td></tr>
   <tr><td>STA: <b>${c(f.ia)}</b></td><td>ATA: <b>${c(d.ata)}</b></td><td>STD: <b>${f.t}</b></td></tr></table>
   <table><tr><th>Activities</th><th>Planned Time</th><th>Actual Time</th></tr>${rows}</table>
-  ${(()=>{const X=dlyInfo(f,date);return X?`<table><tr><td>ATD: <b>${fmt(X.atd)}</b></td><td>${X.no?"<b>NO DELAY</b>":"DLY: <b>"+X.dly+"M</b>"}</td></tr>${X.no?"":`<tr><td colspan="2">${dlyText(X)}</td></tr>`}</table>`:""})()}
+  ${(()=>{const X=dlyInfo(f,date);return X?`<table><tr><td>ATD: <b>${X.est?"≈":""}${fmt(X.atd)}</b>${X.est?" (تقديري)":""}</td><td>${X.no?"<b>"+(X.est?"≈":"")+"NO DELAY</b>":"DLY: <b>"+(X.est?"≈":"")+X.dly+"M</b>"}</td></tr>${X.no?"":`<tr><td colspan="2">${dlyText(X)}</td></tr>`}</table>`:""})()}
   <div class="ft"><span>GS-OL-029</span></div>`;
 }
 $("csPdf").onclick=()=>{$("csPrint").innerHTML=csPrintHTML();setTimeout(()=>window.print(),50)};
@@ -1193,7 +1210,7 @@ function openSheet(f,date){
   $("shT").textContent=`${f.dest} · ${f.iata}`;
   $("shS").innerHTML=`<span class="al lg" style="--c:${f.c}">${f.n.slice(0,2)}</span>${f.airline} · <span class="num">${f.n}</span> · ${DAYS[date.getUTCDay()]} ${dLabel(date)}`;
   const A=arrival(f,date),arr=A.local+(A.foreign?" بتوقيت "+A.tz:"");
-  $("shKV").innerHTML=[...(f.ia?[["الوصول للجوف",f.ia]]:[]),["الإقلاع",f.t+(f.est?" *":"")],...(f.ia?[["Sched GT",gtRule(f)+"M"],...(actGT(f,date)?[["Actual GT",actGT(f,date).g+"M"+(actGT(f,date).approx?" ≈":"")]]:[]),...(dlyInfo(f,date)?[["Delay",dlyInfo(f,date).no?"NO DELAY":dlyInfo(f,date).dly+"M"]]:[]),["رحلة الوصول",(f.ino||"")+" من "+(ORIGIN[f.iata]||f.dest)]]:[]),["الوصول للوجهة",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
+  $("shKV").innerHTML=[...(f.ia?[["الوصول للجوف",f.ia]]:[]),["الإقلاع",f.t+(f.est?" *":"")],...(f.ia?[["Sched GT",gtRule(f)+"M"],...(actGT(f,date)?[["Actual GT",(actGT(f,date).approx?"≈":"")+actGT(f,date).g+"M"+(actGT(f,date).approx?" تقديري":"")]]:[]),...(dlyInfo(f,date)?[["Delay",(dlyInfo(f,date).est?"≈":"")+(dlyInfo(f,date).no?"NO DELAY":dlyInfo(f,date).dly+"M")+(dlyInfo(f,date).est?" تقديري":"")]]:[]),["رحلة الوصول",(f.ino||"")+" من "+(ORIGIN[f.iata]||f.dest)]]:[]),["الوصول للوجهة",arr],["مدة الرحلة",Math.floor(f.dur/60)+"س "+pad(f.dur%60)+"د"],["التكرار",f.days.length===7?"يومية":f.days.length+" بالأسبوع"]]
     .map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("");
   {const M=milestones(f),isT=iso(date)===iso(TODAY),nm=NOW.mins;$("shMS").innerHTML=`<h5>مواعيد SGS <small>${INTL.has(f.iata)?"دولية":"داخلية"} · GOM 3.2.2 / 3.11</small></h5>`+M.map(x=>{const t=(x.m+1440)%1440,past=isT&&x.m<=nm&&x.m>=0;return`<div class="${past?"past":""}"><span>${x.l}</span><b class="num">${fmt(t)}</b><small>${x.b?"D−"+x.b:"STD"}</small></div>`}).join("")}
   $("shD").innerHTML=SHORT.map((s,d)=>`<i class="${f.days.includes(d)?"on":""}">${s}</i>`).join("");
@@ -1230,7 +1247,7 @@ sheet.addEventListener("pointerup",endDrag);sheet.addEventListener("pointercance
 /* ---------- live data (live.json, updated by the hourly task) ---------- */
 const LIVE_SHEET="https://docs.google.com/spreadsheets/d/15lfKxUHljob3uZ2xaSbvXE3L813g4apDTVQHhQshPn8/gviz/tq?tqx=out:csv&gid=1369330995";
 function parseCSV(t){return t.trim().split(/\r?\n/).map(l=>{const o=[];let c="",q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else if(ch==='"')q=true;else if(ch===","){o.push(c);c=""}else c+=ch}o.push(c);return o})}
-function normT(t){if(!t)return"";const m=String(t).match(/(~?)\s*(\d{1,2}):(\d{2})/);return m?m[1]+pad(+m[2])+":"+m[3]:t}
+function normT(t){if(!t)return"";const m=String(t).match(/([~@]?)\s*(\d{1,2}):(\d{2})/);return m?m[1]+pad(+m[2])+":"+m[3]:t}
 function applyLive(j){if(j&&j.flights){Object.assign(LIVE,j);renderNext();if(!open)render();renderSync()}}
 async function loadLive(){
   /* primary: shared Google Sheet written by the tracking task; fallback: live.json in the repo */
@@ -1241,7 +1258,7 @@ async function loadLive(){
       rows.slice(1).forEach(r=>{const[k,s,t,n]=r;const F=(r[5]||"").toUpperCase().replace(/\s/g,""),G=r[6]||"";if(F&&/\d{1,2}:\d{2}/.test(G))fix[F]=normT(G);const DI=(r[8]||"").toUpperCase().replace(/\s/g,""),DJ=(r[9]||"").trim();if(DI&&DJ)j.dly[DI]=DJ;
         if(!k)return;if(k==="_date")j.date=s;else if(k==="_updated")j.updated=s;else if(s)j.flights[k]={s,t:normT(t),note:n||""}});
       /* تصحيح يدوي من الجدول (عمودي F و G) يتقدّم على أي وقت تلقائي */
-      Object.entries(fix).forEach(([k,v])=>{j.flights[k]={s:"landed",t:v.replace("~",""),note:"",fix:1}});
+      Object.entries(fix).forEach(([k,v])=>{const t="@"+v.replace(/[~@]/g,""),o=j.flights[k]||{};j.flights[k]=DEPNO.has(k)?{s:"departed",t,note:o.note||"",fix:1}:{s:"landed",t,note:o.note||"",fix:1}});
       if(j.date){applyLive(j);return}}
   }catch(e){}
   try{const r=await fetch("live.json?t="+Date.now(),{cache:"no-store"});if(r.ok)applyLive(await r.json())}catch(e){}
