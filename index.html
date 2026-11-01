@@ -827,7 +827,24 @@ function loadLeaflet(){
     const j=document.createElement("script");j.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";j.onload=res;j.onerror=rej;document.head.appendChild(j);
   });return leafletP;
 }
+/* وسيط ADS-B: GitHub يجلب المواقع كل 30 ثانية (adsb.lol يمنع المتصفح مباشرة) */
+let RELAY=null,relayAt=0,relayP=null;
+function loadRelay(){
+  if(Date.now()-relayAt<10000&&RELAY)return Promise.resolve(RELAY);
+  if(relayP)return relayP;
+  relayP=fetch("https://raw.githubusercontent.com/madallah4232/AJF/live/adsb.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+    .then(j=>{relayP=null;if(j&&j.date){RELAY=j;relayAt=Date.now();applyRelayATA()}return RELAY});
+  return relayP;
+}
+function applyRelayATA(){
+  if(!RELAY||RELAY.date!==iso(TODAY))return;let hit=false;
+  for(const f of flightsOn(TODAY)){const v=f.ino&&RELAY.ata&&RELAY.ata[f.ino];if(!v)continue;const k=ataKey(f,TODAY);
+    if(!ATA[k]||(String(ATA[k]).startsWith("~")&&!v.startsWith("~"))){ATA[k]=v;hit=true}}
+  if(hit){try{localStorage.setItem("ajf_ata",JSON.stringify(ATA))}catch(e){}if(!open)render();renderNext()}
+}
 async function adsb(cs){
+  const J=await loadRelay();
+  if(J&&J.ac&&J.ac[cs]&&Date.now()/1000-J.ac[cs].ts<180)return{...J.ac[cs],seen:Math.max(0,Date.now()/1000-J.ac[cs].ts)};
   for(const u of["https://api.adsb.lol/v2/callsign/","https://api.airplanes.live/v2/callsign/"]){
     try{const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),6000);
       const r=await fetch(u+cs,{signal:ctl.signal});clearTimeout(tm);if(!r.ok)continue;
@@ -990,8 +1007,9 @@ function inboundInfo(f,date){
   const L=LIVE.date===iso(date)&&LIVE.flights[f.ino];
   if(L&&L.s==="canceled")return null;
   const man=MAN[ataKey(f,date)];if(man)return{m:tm(man),kind:"manual"};
-  if(L&&L.s==="landed"&&L.t)return{m:tm(L.t),kind:L.fix?"manual":L.t.includes("~")?"approx":"exact"};
-  const loc=ATA[ataKey(f,date)];if(loc)return{m:tm(loc),kind:"adsb"};
+  const loc=ATA[ataKey(f,date)];
+  if(loc&&!String(loc).startsWith("~")&&!(L&&L.s==="landed"&&L.t&&!L.t.includes("~")))return{m:tm(loc),kind:"adsb"};/* رصد ADS-B دقيق يتقدم على التقديري */
+  if(L&&L.s==="landed"&&L.t)return{m:tm(L.t),kind:L.fix?"manual":L.t.includes("~")?"approx":"exact"};if(loc)return{m:tm(loc),kind:String(loc).startsWith("~")?"approx":"adsb"};
   const eta=LIVE_ETA[f.ino]!=null?LIVE_ETA[f.ino]:L&&(L.s==="departed"||L.s==="delayed")&&L.t?tm(L.t):null;
   if(eta!=null)return nowMin()>=eta+3?{m:eta,kind:"approx"}:{m:eta,kind:"eta"};
   return null;
@@ -1074,7 +1092,7 @@ async function watchInbound(){
   }
   if(hit&&!open)render();
 }
-const watchSafe=()=>watchInbound().catch(()=>{});setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
+const watchSafe=()=>watchInbound().catch(()=>{});setInterval(()=>{if(!document.hidden&&!DEMO)loadRelay()},30000);setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
 
 /* ---------- Coordination Sheet (GS-OL-029) ----------
    نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن». يُحفظ على الجهاز. */

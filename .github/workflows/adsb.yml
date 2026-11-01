@@ -1,0 +1,27 @@
+name: ADS-B relay
+# يشغّل وسيط مواقع الطائرات الحية (scripts/adsb-relay.mjs) بشكل متواصل
+on:
+  schedule:
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/adsb.yml", "scripts/adsb-relay.mjs"]
+permissions:
+  contents: write
+concurrency: { group: adsb-relay, cancel-in-progress: true }
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare live branch
+        run: |
+          git config user.name "adsb-bot"; git config user.email "adsb-bot@users.noreply.github.com"
+          git fetch -q origin live || true
+          git checkout -q --orphan relay-work
+          git rm -rq --cached . ; git commit -q --allow-empty -m "adsb live"
+      - name: Relay
+        env: { RUN_MIN: "230" }
+        run: node scripts/adsb-relay.mjs
