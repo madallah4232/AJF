@@ -56,9 +56,9 @@ while (Date.now() - t0 < RUN_MS) {
   }
   // اختفت الإشارة في الاقتراب النهائي أكثر من 4 دقائق = هبطت (تقريبي مبني على آخر رصد)
   for (const [no, L] of Object.entries(state.low)) if (!state.ata[no] && !ac[cs(no)] && riyadh().mins - L.m >= 4) state.ata[no] = "~" + fmt(L.m + Math.max(1, Math.round(L.d / 4)));
-  const body = { date: state.date, ata: state.ata, atd: state.atd, low: state.low, air: state.air, ac };
+  const body = { date: state.date, ata: state.ata, atd: state.atd, low: state.low, air: state.air, want: want.map((w) => cs(w.no)), ac };
   const out = JSON.stringify(body);
-  if (out !== lastOut || Date.now() - (state.pushed || 0) > 5 * 60e3) {
+  if (out !== lastOut || Date.now() - (state.pushed || 0) > 3 * 60e3) {
     writeFileSync("adsb.json", JSON.stringify({ updated: Math.round(Date.now() / 1000), ...body }));
     try {
       sh("git add -f adsb.json && git commit -q --amend -m 'adsb live' --allow-empty && git push -q -f origin HEAD:live");
