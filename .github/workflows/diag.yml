@@ -10,8 +10,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: |
           {
-          for u in "https://api.adsb.lol/v2/callsign/SVA8035" "https://api.airplanes.live/v2/callsign/SVA8035" "https://api.adsb.lol/v2/point/29.785/40.1/150" "https://api.airplanes.live/v2/point/29.785/40.1/150" "https://opensky-network.org/api/states/all?lamin=27&lomin=36&lamax=32&lomax=44"; do
-            echo "=== $u"; curl -s -m 20 -D - -o /tmp/b -H "Origin: https://madallah4232.github.io" "$u" | grep -i -E "^HTTP|access-control|content-type"; head -c 700 /tmp/b; echo; done
+          for u in "https://api.allorigins.win/raw?url=https%3A%2F%2Fapi.adsb.lol%2Fv2%2Fcallsign%2FSVA1383" "https://corsproxy.io/?url=https%3A%2F%2Fapi.adsb.lol%2Fv2%2Fcallsign%2FSVA1383" "https://api.codetabs.com/v1/proxy/?quest=https://api.adsb.lol/v2/callsign/SVA1383" "https://api.adsb.one/v2/callsign/SVA1383" "https://api.adsb.fi/v2/callsign/SVA1383" "https://opendata.adsb.fi/api/v2/callsign/SVA1383" "https://globe.adsbexchange.com/" ; do
+            echo "=== $u"; curl -s -m 25 -D - -o /tmp/b -H "Origin: https://madallah4232.github.io" "$u" | grep -i -E "^HTTP|access-control|content-type"; head -c 300 /tmp/b; echo; done
           } > diag.txt 2>&1
           git config user.name bot; git config user.email bot@users.noreply.github.com
           git add diag.txt; git commit -qm "diag [skip ci]"; git pull -q --rebase; git push -q
