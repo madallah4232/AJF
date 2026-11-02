@@ -1720,5 +1720,47 @@ if(DEMO){const k=iso(TODAY);applyLive({date:k,updated:fmt(NOW.mins),flights:{SM3
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 setInterval(()=>{try{const before=NOW.mins;renderClock();if(NOW.mins!==before){renderNext();if(!open)render()}}catch(e){}},15000);
 </script>
+<!-- مقلب مؤقت: يتوقف تلقائياً 2026-11-02 23:30 بتوقيت الرياض · مرة وحدة لكل جهاز · ?noprank يستثني الجهاز -->
+<script>
+(()=>{try{
+  if(/[?&]noprank/.test(location.search)){localStorage.setItem("ajf_np","1");return}
+  if(Date.now()>Date.parse("2026-11-02T23:30:00+03:00")||localStorage.getItem("ajf_np")||localStorage.getItem("ajf_pk"))return;
+  let armed=false,done=false;setTimeout(()=>armed=true,20000);
+  const go=()=>{if(!armed||done)return;done=true;try{localStorage.setItem("ajf_pk","1")}catch(e){}run()};
+  ["pointerup","touchend"].forEach(e=>document.addEventListener(e,go,{passive:true}));
+  function run(){
+    let ctx;try{ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume()}catch(e){}
+    const noise=(dur,gain,f)=>{if(!ctx)return;const b=ctx.createBuffer(1,ctx.sampleRate*dur,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+      const s=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain();s.buffer=b;fl.type="bandpass";fl.frequency.value=f;fl.Q.value=f>1500?1:6;g.gain.value=gain;s.connect(fl).connect(g).connect(ctx.destination);s.start();return g};
+    const scream=()=>{if(!ctx)return;const t=ctx.currentTime;[620,880,1240,1660].forEach((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i%2?"sawtooth":"square";
+      o.frequency.setValueAtTime(f*.7,t);o.frequency.exponentialRampToValueAtTime(f*1.3,t+.25);o.frequency.exponentialRampToValueAtTime(f*.6,t+1.6);
+      const l=ctx.createOscillator(),lg=ctx.createGain();l.frequency.value=11+i*3;lg.gain.value=f*.08;l.connect(lg).connect(o.frequency);l.start(t);l.stop(t+1.8);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.18,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+1.8);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+1.8)});noise(1.6,.5,2600)};
+    const st=document.createElement("style");st.textContent=`
+      @keyframes pkFl{0%,100%{filter:none;transform:none}10%{filter:invert(1) hue-rotate(90deg);transform:translate(4px,-3px) skewX(6deg)}20%{filter:brightness(3)}35%{filter:grayscale(1) contrast(4);transform:translate(-6px,2px)}50%{opacity:.2}65%{filter:hue-rotate(200deg) saturate(6);transform:scaleY(1.04)}80%{filter:brightness(.2)}}
+      .pk-fl{animation:pkFl .22s steps(2) infinite}
+      #pkO{position:fixed;inset:0;z-index:2147483647;background:#000;display:grid;place-items:center;opacity:0;transition:opacity .25s}
+      #pkO.on{opacity:1}#pkF{width:min(92vw,520px);transform:scale(.2);opacity:0}
+      #pkO.boo #pkF{animation:pkB .18s ease-out forwards,pkS .06s .18s infinite}
+      @keyframes pkB{to{transform:scale(1.15);opacity:1}}@keyframes pkS{50%{transform:scale(1.18) translate(5px,-4px) rotate(1.5deg)}}
+      #pkT{position:absolute;bottom:12%;left:0;right:0;text-align:center;color:#b00;font:700 22px system-ui;letter-spacing:2px;opacity:0;transition:opacity 1.5s}
+      #pkM{position:fixed;inset:0;z-index:2147483647;background:#0a1120;color:#fff;display:grid;place-items:center;text-align:center;font:700 34px system-ui;padding:24px}
+      #pkM small{display:block;font:500 16px system-ui;color:#9aa;margin-top:14px}#pkM button{margin-top:22px;font:600 17px system-ui;padding:12px 26px;border-radius:14px;border:0;background:#ffb340;color:#111}`;
+    document.head.appendChild(st);
+    const b=document.body;b.classList.add("pk-fl");noise(2.2,.25,4000);try{navigator.vibrate&&navigator.vibrate([40,60,40,200,40])}catch(e){}
+    const O=document.createElement("div");O.id="pkO";O.innerHTML=`<svg id="pkF" viewBox="0 0 200 240"><defs><radialGradient id="pkG" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#d9d4c7"/><stop offset=".7" stop-color="#8d877a"/><stop offset="1" stop-color="#1a1714"/></radialGradient><filter id="pkR"><feTurbulence baseFrequency=".9" numOctaves="2"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .35 0"/><feComposite in2="SourceGraphic" operator="in"/></filter></defs>
+      <path d="M100 8C46 8 22 58 26 112c3 46 30 110 74 120 44-10 71-74 74-120 4-54-20-104-74-104z" fill="url(#pkG)"/><path d="M100 8C46 8 22 58 26 112c3 46 30 110 74 120 44-10 71-74 74-120 4-54-20-104-74-104z" filter="url(#pkR)"/>
+      <ellipse cx="68" cy="98" rx="22" ry="27" fill="#000"/><ellipse cx="132" cy="98" rx="22" ry="27" fill="#000"/><circle cx="70" cy="102" r="4" fill="#f22"/><circle cx="130" cy="102" r="4" fill="#f22"/>
+      <path d="M92 132l8-14 8 14z" fill="#2a2520"/><path d="M58 160c14 50 70 50 84 0-14 14-70 14-84 0z" fill="#000"/>
+      <path d="M68 166l6 14 6-12 6 14 6-13 6 14 6-13 6 13 6-12 6 12" stroke="#cfc6b0" stroke-width="3" fill="none"/>
+      <path d="M68 125c-2 20 0 40-3 60M131 126c2 18 1 36 4 55" stroke="#6a0000" stroke-width="2.5" fill="none"/></svg><div id="pkT">لا تلتفت وراك...</div>`;
+    setTimeout(()=>{b.classList.remove("pk-fl");b.appendChild(O);requestAnimationFrame(()=>O.classList.add("on"));noise(2.4,.6,180)},2200);
+    setTimeout(()=>{O.querySelector("#pkT").style.opacity=1},3000);
+    setTimeout(()=>{O.classList.add("boo");scream();try{navigator.vibrate&&navigator.vibrate([400,80,400,80,600])}catch(e){}},5000);
+    setTimeout(()=>{O.remove();const M=document.createElement("div");M.id="pkM";M.innerHTML=`<div>😂 مقلب!<small>تحيات مضلّه · التطبيق سليم 100%</small><button>رجوع للتطبيق</button></div>`;
+      M.querySelector("button").onclick=()=>M.remove();b.appendChild(M);try{ctx&&ctx.close()}catch(e){}},7300);
+  }
+}catch(e){}})();
+</script>
 </body>
 </html>
