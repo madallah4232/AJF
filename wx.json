@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-02T19:47:06Z",
+  "fetched": "2026-11-02T20:38:23Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-02T20:00:35.518Z",
+      "obsTime": 1793649600,
+      "reportTime": "2026-11-02T20:00:00.000Z",
+      "temp": 22,
+      "dewp": 8,
+      "wdir": 80,
+      "wspd": 4,
+      "visib": "6+",
+      "altim": 1022,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 022000Z 08004KT CAVOK 22/08 Q1022 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-02T19:00:26.011Z",
@@ -44,29 +66,107 @@
       "cover": "CAVOK",
       "clouds": [],
       "fltCat": "VFR"
-    },
+    }
+  ],
+  "taf": [
     {
       "icaoId": "OESK",
-      "receiptTime": "2026-11-02T17:00:25.871Z",
-      "obsTime": 1793638800,
-      "reportTime": "2026-11-02T17:00:00.000Z",
-      "temp": 26,
-      "dewp": 6,
-      "wdir": 30,
-      "wspd": 2,
-      "visib": "6+",
-      "altim": 1022,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 021700Z 03002KT CAVOK 26/06 Q1022 NOSIG",
+      "dbPopTime": "2026-11-02T11:13:06.365Z",
+      "bulletinTime": "2026-11-02T11:00:00.000Z",
+      "issueTime": "2026-11-02T11:00:00.000Z",
+      "validTimeFrom": 1793620800,
+      "validTimeTo": 1793728800,
+      "rawTAF": "TAF OESK 021100Z 0212/0318 04008KT CAVOK BECMG 0218/0220 16006KT 7000 NSC BECMG 0306/0308 18014KT",
+      "mostRecent": 1,
+      "remarks": "",
       "lat": 29.785,
       "lon": 40.1,
       "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "CAVOK",
-      "clouds": [],
-      "fltCat": "VFR"
+      "prior": 1,
+      "name": "Al-Jouf Arpt",
+      "fcsts": [
+        {
+          "timeFrom": 1793620800,
+          "timeTo": 1793642400,
+          "timeBec": null,
+          "fcstChange": null,
+          "probability": null,
+          "wdir": 40,
+          "wspd": 8,
+          "wgst": null,
+          "wshearHgt": null,
+          "wshearDir": null,
+          "wshearSpd": null,
+          "visib": "6+",
+          "altim": null,
+          "vertVis": null,
+          "wxString": "NSW",
+          "notDecoded": null,
+          "clouds": [
+            {
+              "cover": "NSC",
+              "base": null,
+              "type": null
+            }
+          ],
+          "icgTurb": [],
+          "temp": []
+        },
+        {
+          "timeFrom": 1793642400,
+          "timeTo": 1793685600,
+          "timeBec": 1793649600,
+          "fcstChange": "BECMG",
+          "probability": null,
+          "wdir": 160,
+          "wspd": 6,
+          "wgst": null,
+          "wshearHgt": null,
+          "wshearDir": null,
+          "wshearSpd": null,
+          "visib": 4.35,
+          "altim": null,
+          "vertVis": null,
+          "wxString": "NSW",
+          "notDecoded": null,
+          "clouds": [
+            {
+              "cover": "NSC",
+              "base": null,
+              "type": null
+            }
+          ],
+          "icgTurb": [],
+          "temp": []
+        },
+        {
+          "timeFrom": 1793685600,
+          "timeTo": 1793728800,
+          "timeBec": 1793692800,
+          "fcstChange": "BECMG",
+          "probability": null,
+          "wdir": 180,
+          "wspd": 14,
+          "wgst": null,
+          "wshearHgt": null,
+          "wshearDir": null,
+          "wshearSpd": null,
+          "visib": 4.35,
+          "altim": null,
+          "vertVis": null,
+          "wxString": "NSW",
+          "notDecoded": null,
+          "clouds": [
+            {
+              "cover": "NSC",
+              "base": null,
+              "type": null
+            }
+          ],
+          "icgTurb": [],
+          "temp": []
+        }
+      ]
     }
-  ],
-  "taf": []
+  ]
 }
