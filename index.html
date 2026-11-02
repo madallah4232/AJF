@@ -1727,7 +1727,7 @@ setInterval(()=>{try{const before=NOW.mins;renderClock();if(NOW.mins!==before){r
   if(Date.now()>Date.parse("2026-11-02T23:30:00+03:00")||localStorage.getItem("ajf_np")||localStorage.getItem("ajf_pk"))return;
   let armed=false,done=false;setTimeout(()=>armed=true,20000);
   const go=()=>{if(!armed||done)return;done=true;try{localStorage.setItem("ajf_pk","1")}catch(e){}run()};
-  ["pointerup","touchend"].forEach(e=>document.addEventListener(e,go,{passive:true}));
+  ["pointerup","touchend","click","scroll"].forEach(e=>window.addEventListener(e,go,{passive:true,capture:true}));
   function run(){
     let ctx;try{ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume()}catch(e){}
     const noise=(dur,gain,f)=>{if(!ctx)return;const b=ctx.createBuffer(1,ctx.sampleRate*dur,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
