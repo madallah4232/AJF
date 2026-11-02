@@ -1273,7 +1273,7 @@ function renderCS(){
   ${(()=>{const X=dlyInfo(f,date);if(!X)return"";return`<div class="cs-card"><h5>DELAY</h5>
     <div class="cs-g">${fld("STD",`<input value="${f.t}" readonly>`)}${fld(X.est?"ATD ≈ تقديري":"ATD (Off-block)",`<input value="${X.est?"≈":""}${fmt(X.atd)}" readonly${X.est?' style="color:var(--muted)"':""}>`)}${fld(X.est?"DLY ≈ تقديري":"DLY",`<input value="${X.est?"≈":""}${X.no?"NO DELAY":X.dly+"M"}" readonly style="color:var(${X.est?"--muted":X.no?"--go":"--warn"})">`)}</div>
     ${X.no?"":`<div class="tu-n" style="direction:ltr;text-align:left">${dlyText(X)}</div>
-    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(/^SV/.test(f.n)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل السعودية</button>`:""):""}`}</div>${/^SV/.test(f.n)&&!X.no?dmCard(f,date,X,d):""}`})()}`;
+    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(dcAirOf(f)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل ${dcAirOf(f)==="XY"?"ناس":"السعودية"}</button>`:""):""}`}</div>${/^SV/.test(f.n)&&!X.no?dmCard(f,date,X,d):""}`})()}`;
 }
 function csSet(path,v){
   const{f,date}=csCur,d=csData(f,date),p=path.split(".");let o=d;
@@ -1282,7 +1282,7 @@ function csSet(path,v){
   csSave();$("csSaved").textContent="✓ محفوظ";clearTimeout(csSet.t);csSet.t=setTimeout(()=>$("csSaved").textContent="",1500);
 }
 $("csBody").addEventListener("click",e=>{if(!e.target.closest("[data-dcpick]"))return;const inp=$("csBody").querySelector("[data-dly]");
-  openDC(v=>{inp.value=inp.value.trim()?inp.value.trim()+" / "+v:v;inp.dispatchEvent(new Event("change",{bubbles:true}))})});
+  openDC(v=>{inp.value=inp.value.trim()?inp.value.trim()+" / "+v:v;inp.dispatchEvent(new Event("change",{bubbles:true}))},dcAirOf(csCur.f))});
 /* اختيار الوقت في الآيفون يرسل change أثناء تحريك العجلة؛ نؤجل إعادة الرسم حتى يضغط المستخدم ✓ (blur) عشان ما تنقفل العجلة */
 let csPend=false;$("csBody").addEventListener("focusout",e=>{if(csPend&&e.target.type==="time"){csPend=false;setTimeout(renderCS,0)}});
 $("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$|^dm\.|^pd\./.test(k)){if(e.target.type==="time")csPend=true;else renderCS()}}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
@@ -1417,7 +1417,7 @@ function openSheet(f,date){
   {const X=dlyInfo(f,date);$("shN").textContent=(X?dlyText(X)+" — ":"")+f.note+(f.est?" (* وقت تقديري)":"");}
   $("track").onclick=()=>openTrack(f,date);
   $("csOpen").onclick=()=>openCS(f,date);
-  $("dcOpen").hidden=!/^SV/.test(f.n);$("dcOpen").onclick=()=>openDC();
+  const da=dcAirOf(f);$("dcOpen").hidden=!da;$("dcOpen").textContent="📋 أكواد التأخير · "+(da==="XY"?"طيران ناس":"السعودية");$("dcOpen").onclick=()=>openDC(null,da);
   clearInterval(turnTimer);turnEdit=false;renderTurn(f,date);turnTimer=setInterval(()=>{try{renderTurn(f,date)}catch(e){}},1000);
   const ff={...f,t:f.t||f.time},has=hasClip(ff);
   $("listen").hidden=!has;$("listen").onclick=()=>playFlight(ff,$("listen"));
@@ -1498,26 +1498,31 @@ $("csBody").addEventListener("click",e=>{
   if(cp){const t=$("dmOut").textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{cp.textContent="✓ انسخت";setTimeout(()=>cp.textContent="📋 نسخ الرسالة",1500)}).catch(()=>{const r=document.createRange();r.selectNodeContents($("dmOut"));const sl=getSelection();sl.removeAllRanges();sl.addRange(r)})}
 });
 /* ---------- delay codes (Saudia booklet) ---------- */
-let DC=null,dcCb=null,dcT=false,dcSgs=false;
-function loadDC(){return DC?Promise.resolve(DC):fetch("data/delay-sv.json").then(r=>r.json()).then(j=>DC=j)}
+const DCS={},DC_NAME={SV:"السعودية · Saudia Delay Codes",XY:"طيران ناس · flynas Delay Codes"};let DC=null,dcAir="SV",dcCb=null,dcT=false,dcSgs=false;
+const dcAirOf=f=>/^XY/.test(f.n||"")?"XY":/^SV/.test(f.n||"")?"SV":"";
+function loadDC(air){air=air||dcAir;return DCS[air]?Promise.resolve(DC=DCS[air]):fetch("data/delay-"+air.toLowerCase()+".json").then(r=>r.json()).then(j=>DC=DCS[air]=j)}
 const dcNorm=t=>norm(String(t)).replace(/[إأآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي");
 const DC_AR={"عفش":"BAGG","شنط":"BAGG","حقائب":"BAGG","صعود":"BOARD","بوابه":"GAT","كاونتر":"CHECK-IN","تنظيف":"CLEAN","وقود":"FUEL","تموين":"CATER","كرسي":"WHEEL","طاقم":"CREW","مضيف":"CABIN","طيار":"FLIGHT DECK","عطل":"DEFECT","صيانه":"MAINT","طقس":"WEATHER","امن":"SECUR","جوازات":"IMMG","تحميل":"LOAD","معدات":"EQUIP","نظام":"SYSTEM","راكب":"PASSENGER","مريض":"SICK","وزن":"WEIGHT","شحن":"CARGO","باص":"BUS"};
+const dcKey=(c,x)=>dcAir==="XY"?c.c+x[0]:c.c+"-"+x[0]+(dcT?"T":"");
 function renderDC(){
-  const q=dcNorm($("dcQ").value.trim()),qs=q?q.split(/\s+/):[];let h="",last=null;
-  const mt=(c,sub)=>{if(!qs.length)return true;const hay=dcNorm([c.c,c.c+"-"+sub[0],c.ar,sub[1]].join(" "));
+  const q=dcNorm($("dcQ").value.trim()),qs=q?q.split(/\s+/):[],XY=dcAir==="XY";let h="",last=null;
+  const mt=(c,x)=>{if(!qs.length)return true;const hay=dcNorm([c.c,dcKey(c,x),XY?(x[5]||c.a)+" "+(x[5]||c.a)+c.c:"",c.ar,x[1]].join(" "));
     return qs.every(w=>hay.includes(w)||(DC_AR[w]&&hay.includes(dcNorm(DC_AR[w]))))};
   for(const c of DC.codes){
-    if(dcSgs&&c.sec!==1)continue;
-    const subs=c.subs.filter(x=>mt(c,x));if(!subs.length)continue;
-    if(c.sec!==last){h+=`<div class="dc-sec">${escT(DC.secs[c.sec].ar)}</div>`;last=c.sec}
-    h+=`<div class="dc-c"><b><i>${c.c}</i><span>${escT(c.ar)}<small>${escT(c.en)}</small></span>${c.sec===1?'<em class="sgs">على SGS</em>':c.sec===2?'<em class="oth">وكيل دولي</em>':""}</b>`+
-      subs.map(x=>`<button class="dc-s" data-k="${c.c}-${x[0]}${dcT?"T":""}" data-d="${escT(x[1])}"><b>${c.c}-${x[0]}${dcT?"T":""}</b><span>${escT(x[1])}${dcT?' <span style="color:var(--muted)">· EQUIPMENT TURN-AROUND, CONSEQUENTIAL</span>':""}</span></button>`).join("")+
+    if(dcSgs&&(XY?c.cat!=="GOPS":c.sec!==1))continue;
+    const subs=c.subs.filter(x=>mt(c,x)&&(!dcSgs||!XY||x[4]==="GOPS"));if(!subs.length)continue;
+    if(!XY&&c.sec!==last){h+=`<div class="dc-sec">${escT(DC.secs[c.sec].ar)}</div>`;last=c.sec}
+    const badge=XY?(c.cat==="GOPS"?'<em class="sgs">على المناولة</em>':`<em class="oth">${escT(DC.cats[c.cat]||c.cat)}</em>`):(c.sec===1?'<em class="sgs">على SGS</em>':c.sec===2?'<em class="oth">وكيل دولي</em>':"");
+    h+=`<div class="dc-c"><b><i>${c.c}</i><span>${escT(c.ar)}<small>${XY?escT(c.a)+" · ":""}${escT(c.en)}</small></span>${badge}</b>`+
+      subs.map(x=>{const k=dcKey(c,x),meta=XY?` <span style="color:var(--muted)">· ${x[5]||c.a} · ${x[2]==="C"?"Controllable":"Uncontrollable"}${x[3]==="YES"?" · Airline resp.":""}</span>`:dcT?' <span style="color:var(--muted)">· EQUIPMENT TURN-AROUND, CONSEQUENTIAL</span>':"";
+        return`<button class="dc-s" data-k="${k}" data-d="${escT(x[1])}"><b>${k}</b><span>${escT(x[1])}${meta}</span></button>`}).join("")+
       (c.copy?`<div class="dc-cp">COPY: ${escT(c.copy)}</div>`:"")+`</div>`;
   }
   $("dcB").innerHTML=h||'<div class="tu-n" style="text-align:center">ما فيه نتائج. جرّب كلمة ثانية أو رقم الكود.</div>';
 }
-function openDC(cb){dcCb=cb||null;$("dcS").textContent=cb?"اختر الكود لإضافته لسبب التأخير":"السعودية · Saudia Delay Codes";
-  $("dc").hidden=false;$("dcB").innerHTML='<div class="tu-n" style="text-align:center">…</div>';loadDC().then(renderDC).catch(()=>{$("dcB").innerHTML='<div class="tu-n">تعذّر تحميل الأكواد، تأكد من الاتصال.</div>'})}
+function openDC(cb,air){dcCb=cb||null;dcAir=air||"SV";$("dcS").textContent=cb?"اختر الكود لإضافته لسبب التأخير":DC_NAME[dcAir];
+  $("dcSgs").textContent=dcAir==="XY"?"على المناولة فقط":"مسؤولية SGS فقط";$("dcT2").hidden=dcAir==="XY";if(dcAir==="XY"&&dcT){dcT=false;$("dcT2").setAttribute("aria-pressed",false)}
+  $("dc").hidden=false;$("dcB").innerHTML='<div class="tu-n" style="text-align:center">…</div>';loadDC(dcAir).then(renderDC).catch(()=>{$("dcB").innerHTML='<div class="tu-n">تعذّر تحميل الأكواد، تأكد من الاتصال.</div>'})}
 $("dcBack").onclick=()=>{$("dc").hidden=true};
 $("dcQ").addEventListener("input",()=>DC&&renderDC());
 $("dcSgs").onclick=e=>{dcSgs=!dcSgs;e.currentTarget.setAttribute("aria-pressed",dcSgs);DC&&renderDC()};
