@@ -1283,13 +1283,35 @@ function csSet(path,v){
 }
 $("csBody").addEventListener("click",e=>{if(!e.target.closest("[data-dcpick]"))return;const inp=$("csBody").querySelector("[data-dly]");
   openDC(v=>{inp.value=inp.value.trim()?inp.value.trim()+" / "+v:v;inp.dispatchEvent(new Event("change",{bubbles:true}))},dcAirOf(csCur.f))});
+/* ---------- تدقيق الأوقات: يرفض أي وقت يخالف تسلسل الدوران أو غير منطقي ---------- */
+const CS_SEQ=[["dm.td","Touchdown"],["ata","On-block (ATA)"],["act.open.s","Open Door"],["act.dpF.s","Deplaning · First Pax"],["act.dpL.s","Deplaning · Last Pax"],["act.clIn.s","Cleaning In"],["act.clOut.s","Cleaning Out"],["act.paxReq.s","Pax Request"],["act.bdF.s","Boarding · First Pax"],["act.bdL.s","Boarding · Last Pax"],["act.close.s","Close Door"],["atd","Off-block"],["dm.abn","Airborne"]];
+const CS_LBL=Object.fromEntries(CS_SEQ);
+const CS_PAIRS=[["dm.td","ata"],["ata","act.open.s"],["act.open.s","act.dpF.s"],["act.dpF.s","act.dpL.s"],["act.dpL.s","act.clIn.s"],["act.clIn.s","act.clOut.s"],["act.clOut.s","act.bdF.s"],["act.dpL.s","act.paxReq.s"],["act.paxReq.s","act.bdF.s"],["act.bdF.s","act.bdL.s"],["act.bdL.s","act.close.s"],["act.close.s","atd"],["atd","dm.abn"],["ata","atd"],["dm.td","dm.abn"]];
+const csGet=(d,k)=>k.split(".").reduce((o,x)=>o&&o[x],d);
+function csCheck(f,date,d,k,v){
+  if(!CS_LBL[k]||!hm(v))return"";
+  const std=tm(f.t),near=t=>{let x=toMin(t);while(x-std>720)x-=1440;while(std-x>720)x+=1440;return x};
+  const val=K=>K===k?near(v):hm(csGet(d,K))?near(csGet(d,K)):(K==="atd"&&csDerived(f,d).atd?near(csDerived(f,d).atd):null);
+  const x=near(v),sta=f.ia?near(f.ia):null;
+  if(iso(date)===iso(TODAY)&&x>nowMin()+2)return`${CS_LBL[k]} ${v} في المستقبل — الوقت الحالي ${fmt(Math.floor(nowMin()))}`;
+  if((k==="ata"||k==="dm.td")&&sta!=null&&(x<sta-180||x>sta+600))return`${CS_LBL[k]} ${v} بعيد جداً عن الوصول المجدول ${f.ia}`;
+  if((k==="atd"||k==="dm.abn")&&(x<std-60||x>std+720))return`${CS_LBL[k]} ${v} بعيد جداً عن الإقلاع المجدول ${f.t}`;
+  for(const[a,b]of CS_PAIRS){if(a!==k&&b!==k)continue;const A=val(a),B=val(b);if(A==null||B==null)continue;
+    if(A>B)return`${CS_LBL[a]} (${fmt(A)}) لازم يكون قبل ${CS_LBL[b]} (${fmt(B)})`;}
+  const td=val("dm.td"),ata=val("ata");if(td!=null&&ata!=null&&ata-td>30)return`الفرق بين Touchdown (${fmt(td)}) و On-block (${fmt(ata)}) أكثر من 30 دقيقة`;
+  const ob=val("atd"),ab=val("dm.abn");if(ob!=null&&ab!=null&&ab-ob>60)return`الفرق بين Off-block (${fmt(ob)}) و Airborne (${fmt(ab)}) أكثر من ساعة`;
+  return"";
+}
+function csErr(msg,el){let t=$("csErr");if(!t){t=document.createElement("div");t.id="csErr";t.setAttribute("role","alert");t.style.cssText="position:fixed;inset-inline:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:40;background:#3a1414;border:1px solid var(--warn);color:#ffd9d2;border-radius:14px;padding:12px 14px;font:600 14px/1.6 var(--body);box-shadow:0 12px 30px rgba(0,0,0,.5)";document.body.appendChild(t)}
+  t.innerHTML="⛔ ما انحفظ الوقت<br><span style='font-weight:500'>"+escT(msg)+"</span>";t.hidden=false;clearTimeout(csErr.t);csErr.t=setTimeout(()=>t.hidden=true,5000);
+  if(el){el.style.outline="2px solid var(--warn)";setTimeout(()=>el.style.outline="",2500)}try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}}
 /* اختيار الوقت في الآيفون يرسل change أثناء تحريك العجلة؛ نؤجل إعادة الرسم حتى يضغط المستخدم ✓ (blur) عشان ما تنقفل العجلة */
-let csPend=false;$("csBody").addEventListener("focusout",e=>{if(csPend&&e.target.type==="time"){csPend=false;setTimeout(renderCS,0)}});
-$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$|^dm\.|^pd\./.test(k)){if(e.target.type==="time")csPend=true;else renderCS()}}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
+let csPend=false,csBad=null;$("csBody").addEventListener("focusout",e=>{if(e.target.type!=="time")return;if(csBad&&csBad.el===e.target){const m=csBad.err,k=e.target.dataset.k;csBad=null;const{f,date}=csCur;e.target.value=csGet(csData(f,date),k)||"";csErr(m,e.target);if(!csPend)return}if(csPend){csPend=false;setTimeout(renderCS,0)}});
+$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k&&CS_LBL[k]&&e.target.type==="time"&&e.target.value){const{f,date}=csCur,d=csData(f,date),err=csCheck(f,date,d,k,e.target.value);if(err){csBad={err,el:e.target};return}}if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$|^dm\.|^pd\./.test(k)){if(e.target.type==="time")csPend=true;else renderCS()}}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
 $("csBody").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.chk){const{f,date}=csCur,d=csData(f,date);d.chk[b.dataset.chk]=!d.chk[b.dataset.chk];csSave();b.classList.toggle("on");return}
-  if(b.dataset.now){const inp=b.previousElementSibling;if(!inp.value){csSet(b.dataset.now,fmt(Math.floor(nowMin())));renderCS()}else{inp.focus();inp.showPicker&&inp.showPicker()}}
+  if(b.dataset.now){const inp=b.previousElementSibling;if(!inp.value){const v=fmt(Math.floor(nowMin())),{f,date}=csCur,err=csCheck(f,date,csData(f,date),b.dataset.now,v);if(err){csErr(err,inp);return}csSet(b.dataset.now,v);renderCS()}else{inp.focus();inp.showPicker&&inp.showPicker()}}
 });
 $("csBack").onclick=()=>{$("cs").hidden=true;if(open&&curTurn)renderTurn(curTurn.f,curTurn.date)};
 let csClr=0;
