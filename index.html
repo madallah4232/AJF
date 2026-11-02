@@ -1507,9 +1507,9 @@ function mvtBuild(f,date,d){
   const I=f.ia?inboundInfo(f,date):null,ata=hm(d.ata)?toMin(d.ata):isActual(I)?I.m:null,td=hm(m.td)?toMin(m.td):null;
   const ia=f.ia?toMin(f.ia):null,ddA=new Date(date.getTime()+((ia??std)-180)*60e3);
   const arr=["MVT",`${f.ino||"XY"}/${pad(ddA.getUTCDate())}.${reg}.AJF`,`AA${td!=null?utc4(td):"----"}/${ata!=null?utc4(ata):"----"}`].join("\n");
-  if(td==null)W.push("ARR: اكتب وقت الهبوط Touchdown");if(ata==null)W.push("ARR: اكتب ATA (On-block)");
+  if(td==null)W.push("ARR: اكتب وقت الهبوط Touchdown");else if(ata!=null&&(ata-td<0||ata-td>60))W.push("ARR: Touchdown و On-block بينهم فرق غير منطقي — تأكد إنهم بالتوقيت المحلي");if(ata==null)W.push("ARR: اكتب ATA (On-block)");
   const cA=csDerived(f,d).atd,ob=cA?toMin(cA):X?X.atd:null,abn=hm(m.abn)?toMin(m.abn):null;
-  if(ob==null)W.push("DEP: سجّل Push Back (Off-block)");if(abn==null)W.push("DEP: اكتب وقت الإقلاع Airborne");
+  if(ob==null)W.push("DEP: اكتب وقت Off-block");if(abn==null)W.push("DEP: اكتب وقت الإقلاع Airborne");
   let dly=ob!=null?ob-std:0;if(dly>720)dly-=1440;if(dly<-720)dly+=1440;dly=Math.max(0,dly);
   const react=ata!=null?Math.max(0,Math.min(dly,doorAt(f,ata)-std)):0,other=dly-react,DL=[];
   if(react>0)DL.push([n(m.xinb)||"93",react]);
@@ -1526,10 +1526,10 @@ function mvtCard(f,date,d){
   const out=(id,t,lab)=>`<pre class="dm-out" id="${id}">${escT(t)}</pre><button class="dc-pick" data-mvtcopy="${id}" style="border-style:solid">📋 نسخ ${lab}</button>`;
   return`<div class="cs-card"><h5>MVT · طيران ناس <span style="font-family:var(--mono)">UTC</span></h5>
    <div class="dm-h">برقية الوصول ARR</div>
-   <div class="cs-g two">${fl("TOUCHDOWN (محلي)","td","","time")}<label class="cs-f"><span>ON-BLOCK = ATA</span><input value="${v(d.ata)||"—"}" readonly></label></div>
+   <div class="cs-g two">${fl("TOUCHDOWN (محلي)","td","","time")}<label class="cs-f"><span>ON-BLOCK (محلي) = ATA</span><input data-k="ata" type="time" value="${v(d.ata)}"></label></div>
    ${out("mvtArr",B.arr,"برقية الوصول")}
    <div class="dm-h" style="margin-top:6px">برقية المغادرة DEP ${B.dly?`· DLY ${B.dly}M`:"· بدون تأخير"}</div>
-   <div class="cs-g two"><label class="cs-f"><span>OFF-BLOCK = PUSH BACK</span><input value="${v(csDerived(f,d).atd)||"—"}" readonly></label>${fl("AIRBORNE (محلي)","abn","","time")}</div>
+   <div class="cs-g two"><label class="cs-f"><span>OFF-BLOCK (محلي)</span><input data-k="atd" type="time" value="${v(csDerived(f,d).atd)}"></label>${fl("AIRBORNE (محلي)","abn","","time")}</div>
    ${B.react>0?`<div class="dm-h">${B.react} د سببها تأخر وصول ${f.ino||"الطائرة"} ← <b style="font-family:var(--mono)">93</b></div>`:""}
    ${B.other>0?`<div class="dm-h">وش سبب الـ ${B.other} د${B.react>0?" الباقية":""}؟</div>
      <div class="dm-q">${XYQ.map(q=>`<button data-xyq="${q[0]}" aria-pressed="${lc===q[0]}">${q[1]}<small>${q[0]}</small></button>`).join("")}<button data-xypick aria-pressed="${!!lc&&!XYQ.some(q=>q[0]===lc)}">غير ذلك · بحث في الدليل<small>${lc&&!XYQ.some(q=>q[0]===lc)?escT(lc):"…"}</small></button></div>`:""}
