@@ -1757,7 +1757,7 @@ setInterval(()=>{try{const before=NOW.mins;renderClock();if(NOW.mins!==before){r
     setTimeout(()=>{b.classList.remove("pk-fl");b.appendChild(O);requestAnimationFrame(()=>O.classList.add("on"));noise(2.4,.6,180)},2200);
     setTimeout(()=>{O.querySelector("#pkT").style.opacity=1},3000);
     setTimeout(()=>{O.classList.add("boo");scream();try{navigator.vibrate&&navigator.vibrate([400,80,400,80,600])}catch(e){}},5000);
-    setTimeout(()=>{O.remove();const M=document.createElement("div");M.id="pkM";M.innerHTML=`<div>😂 مقلب!<small>تحيات مضلّه · التطبيق سليم 100%</small><button>رجوع للتطبيق</button></div>`;
+    setTimeout(()=>{O.remove();const M=document.createElement("div");M.id="pkM";M.innerHTML=`<div>😂 مقلب!<small>مع تحيات مدالله · التطبيق سليم 100%</small><button>رجوع للتطبيق</button></div>`;
       M.querySelector("button").onclick=()=>M.remove();b.appendChild(M);try{ctx&&ctx.close()}catch(e){}},7300);
   }
 }catch(e){}})();
