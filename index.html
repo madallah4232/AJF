@@ -719,10 +719,10 @@ function flightsOn(date,{all=false}={}){
 const LIVE={"date":"","updated":"","flights":{},"dly":{}};
 const REVIEWED="2026-10-31"; /* آخر مراجعة لجدول الرحلات — تحدّثه المهمة اليومية */
 const LIVE_TXT={departed:["done","أقلعت"],landed:["done","أقلعت"],canceled:["cxl","ملغاة"],diverted:["cxl","تحويل"],delayed:["soon","متأخرة"],sched:["sched","في الموعد"]};
-const state={week:0,sel:0,q:""};
-try{const s=JSON.parse(localStorage.getItem("ajf2")||"{}");if(s.week>=0&&s.week<8){state.week=s.week;state.sel=s.sel||0}}catch(e){}
-const save=()=>{try{localStorage.setItem("ajf2",JSON.stringify({week:state.week,sel:state.sel}))}catch(e){}};
-const selDate=()=>addDays(TODAY,state.week*7+state.sel);
+const PAST=2,state={week:0,sel:PAST,q:""};
+try{const s=JSON.parse(localStorage.getItem("ajf3")||"{}");if(s.week>=0&&s.week<8&&s.sel>=0&&s.sel<7){state.week=s.week;state.sel=s.sel}}catch(e){}
+const save=()=>{try{localStorage.setItem("ajf3",JSON.stringify({week:state.week,sel:state.sel}))}catch(e){}};
+const selDate=()=>addDays(TODAY,state.week*7-PAST+state.sel);
 
 /* ---------- clock + next departure ---------- */
 function renderClock(){
@@ -789,7 +789,7 @@ function groundTrack(f,dayOffset){
 
 /* ---------- week strip ---------- */
 function renderWeek(){
-  const start=addDays(TODAY,state.week*7),wk=$("week");
+  const start=addDays(TODAY,state.week*7-PAST),wk=$("week");
   const counts=[...Array(7)].map((_,i)=>flightsOn(addDays(start,i)).length),max=Math.max(...counts,1);
   wk.innerHTML="";
   counts.forEach((c,i)=>{
@@ -797,13 +797,13 @@ function renderWeek(){
     b.className="day"+(c===max&&c>0?" peak":"")+(iso(d)===iso(TODAY)?" today":"");
     b.setAttribute("aria-pressed",i===state.sel);
     b.setAttribute("aria-label",`${DAYS[d.getUTCDay()]} ${dLabel(d)}، ${c} رحلات`);
-    b.innerHTML=`<span class="dn">${iso(d)===iso(TODAY)?"اليوم":SHORT[d.getUTCDay()]}</span><span class="dd">${d.getUTCDate()}</span>
+    b.innerHTML=`<span class="dn">${iso(d)===iso(TODAY)?"اليوم":iso(d)===iso(addDays(TODAY,-1))?"أمس":SHORT[d.getUTCDay()]}</span><span class="dd">${d.getUTCDate()}</span>
       <span class="meter"><i style="height:${Math.max(4,c/max*34)}px"></i></span><span class="dc">${c}</span>`;
     b.onclick=()=>{state.sel=i;save();render()};
     wk.appendChild(b);
   });
   const end=addDays(start,6);
-  $("weekTitle").textContent=state.week===0?"الأيام السبعة القادمة":state.week===1?"الأسبوع اللي بعده":`بعد ${state.week} أسابيع`;
+  $("weekTitle").textContent=state.week===0?"أمس واليوم والأيام القادمة":state.week===1?"الأسبوع اللي بعده":`بعد ${state.week} أسابيع`;
   $("weekRange").textContent=`${dLabel(start)} – ${dLabel(end)} · ${counts.reduce((a,b)=>a+b,0)} رحلة`;
   $("prev").disabled=state.week===0;$("nextw").disabled=state.week>=7;
 }
@@ -837,7 +837,7 @@ function arrDlyTxt(f,t,cert=true){
 }
 function inboundTxt(f,date){
   if(!f.ia)return"";
-  const L=LIVE.date===iso(date)&&f.ino&&LIVE.flights[f.ino],man=MAN[ataKey(f,date)];
+  const L=f.ino&&LV(date).flights[f.ino],man=MAN[ataKey(f,date)];
   if(man)return`<span style="color:var(--go)">وصلت <span class="num">${man}</span> ✎</span>${arrDlyTxt(f,man)}`;
   if(L){
     if(L.s==="landed")return isCert(L)?`<span style="color:var(--go)">وصلت <span class="num">${dispT(L.t)}</span></span>${arrDlyTxt(f,L.t||"")}`:`<span style="color:var(--muted)">هبطت ≈<span class="num">${dispT(L.t).replace("≈","")}</span> (تقديري)</span>${arrDlyTxt(f,L.t||"",false)}`;
@@ -865,10 +865,11 @@ function hl(text){
 }
 function status(f,date){
   if(f.off)return["off","تبدأ "+dLabel(new Date(f.start+"T00:00:00Z"))];
-  if(iso(date)!==iso(TODAY))return f.est?["sched","وقت تقديري"]:["sched","مجدولة"];
-  const L=LIVE.date===iso(date)&&LIVE.flights[f.n];
+  if(iso(date)>iso(TODAY))return f.est?["sched","وقت تقديري"]:["sched","مجدولة"];
+  const L=LV(date).flights[f.n];
   if(L&&L.s==="departed"&&L.t){const X=depInfo(f,date);if(X)return["done live",X.cert?"غادرت "+fmt(X.m):"غادرت ≈"+fmt(X.m)+(X.tko!=null?" · إقلاع "+fmt(X.tko):"")]}
   if(L&&LIVE_TXT[L.s]){const[c,w]=LIVE_TXT[L.s];return[c+" live",w+(L.t?" "+dispT(L.t):"")]}
+  if(iso(date)<iso(TODAY))return["sched",LV(date).date?"لا توجد حالة مسجلة":"مضت"];
   const m=toMin(f.t);
   if(m<NOW.mins)return["sched","بانتظار التحديث"];
   if(m-NOW.mins<=120)return["soon","بعد "+(m-NOW.mins)+"د"];
@@ -1069,7 +1070,7 @@ const isActual=I=>!!I&&I.kind!=="eta"&&I.kind!=="approx"&&I.kind!=="sched";
 const canCount=I=>!!I&&I.kind!=="eta";
 /* Ground Time: بعد الإقلاع الفعلي = ATD − ATA (Actual GT)، قبله = المجدول (Sched GT) */
 function actGT(f,date){
-  if(iso(date)!==iso(TODAY)||LIVE.date!==iso(date))return null;
+  if(!LV(date).date)return null;
   const X=depInfo(f,date);if(!X)return null;
   const I=inboundInfo(f,date);if(!I||I.kind==="eta"||I.kind==="sched")return null;
   const g=X.m-I.m;return g>0&&g<600?{g,approx:!X.cert||!certI(I)}:null;
@@ -1077,9 +1078,9 @@ function actGT(f,date){
 /* Delay: ATD − STD. الجزء الناتج عن تأخر الوصول (93 Late Arrival) = ATA + Sched GT − STD، والباقي سببه آخر يُكتب كملاحظة */
 let DLYR={};try{DLYR=JSON.parse(localStorage.getItem("ajf_dly")||"{}")}catch(e){}
 const dlyKey=(f,date)=>iso(date)+"_"+f.n;
-function dlyReason(f,date){return(LIVE.date===iso(date)&&LIVE.dly&&LIVE.dly[f.n])||DLYR[dlyKey(f,date)]||""}
+function dlyReason(f,date){return(LV(date).dly&&LV(date).dly[f.n])||DLYR[dlyKey(f,date)]||""}
 function dlyInfo(f,date){
-  if(iso(date)!==iso(TODAY)||LIVE.date!==iso(date))return null;
+  if(!LV(date).date)return null;
   const Q=depInfo(f,date);if(!Q)return null;
   const atd=Q.m,std=tm(f.t),est=!Q.cert;
   let dly=atd-std;if(dly>720)dly-=1440;if(dly<-720)dly+=1440;if(dly<=0)return{atd,std,dly:0,raw:dly,no:true,est,tko:Q.tko};
@@ -1113,8 +1114,8 @@ const isCert=L=>!!L&&!!L.t&&(!!L.fix||String(L.t).trim().startsWith("@"));
 const certI=I=>!!I&&(I.kind==="manual"||I.kind==="exact");
 const dispT=t=>String(t||"").replace("@","").replace("~","≈");
 function depInfo(f,date){/* ATD = Off-block · tko = وقت الإقلاع (FR24) إن وُجد */
-  if(iso(date)!==iso(TODAY)||LIVE.date!==iso(date))return null;
-  const D=LIVE.flights[f.n];if(!D||D.s!=="departed"||!D.t)return null;
+  if(!LV(date).date)return null;
+  const D=LV(date).flights[f.n];if(!D||D.s!=="departed"||!D.t)return null;
   const t=String(D.t).trim(),cert=isCert(D);let m=tm(t),tko=null;if(isNaN(m))return null;
   const nm=String(D.note||"").match(/إقلاع(?:\s*FR24)?\s*(\d{1,2}:\d{2})/);if(nm)tko=tm(nm[1]);
   if(!cert&&!t.startsWith("~")){tko=m;m=(m-10+1440)%1440}/* قيمة قديمة = إقلاع FR24 → Off-block تقديري = الإقلاع − 10 */
@@ -1126,13 +1127,14 @@ const LIVE_ETA={},SEEN_AIR={};let turnTimer;
 let ATA={};try{ATA=JSON.parse(localStorage.getItem("ajf_ata")||"{}")}catch(e){}
 const ataKey=(f,date)=>iso(date)+"_"+f.ino;
 function inboundInfo(f,date){
-  if(!f.ino||!f.ia||f.off||iso(date)!==iso(TODAY))return null;
-  const L=LIVE.date===iso(date)&&LIVE.flights[f.ino];
+  if(!f.ino||!f.ia||f.off||iso(date)>iso(TODAY))return null;const past=iso(date)<iso(TODAY);
+  const L=LV(date).flights[f.ino];
   if(L&&L.s==="canceled")return null;
   const man=MAN[ataKey(f,date)];if(man)return{m:tm(man),kind:"manual"};
   const loc=ATA[ataKey(f,date)];
   if(loc&&!String(loc).startsWith("~")&&!(L&&L.s==="landed"&&isCert(L)))return{m:tm(loc),kind:"adsb"};/* رصد ADS-B دقيق يتقدم على التقديري */
   if(L&&L.s==="landed"&&L.t)return{m:tm(L.t),kind:L.fix?"manual":isCert(L)?"exact":"fr24"};if(loc)return{m:tm(loc),kind:String(loc).startsWith("~")?"approx":"adsb"};
+  if(past)return LV(date).date?{m:toMin(f.ia),kind:"sched"}:null;
   const eta=LIVE_ETA[f.ino]!=null?LIVE_ETA[f.ino]:L&&(L.s==="departed"||L.s==="delayed")&&L.t?tm(L.t):null;
   const sta=toMin(f.ia);
   if(eta!=null){if(nowMin()<eta+3)return{m:eta,kind:"eta"};return eta>=sta?{m:eta,kind:"approx"}:nowMin()>=sta?{m:sta,kind:"sched"}:{m:eta,kind:"eta"}}
@@ -1147,8 +1149,9 @@ function turnPlan(f,ata){
 }
 const clockFmt=x=>{x=Math.max(0,Math.round(x*60));const h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return(h?h+":"+pad(m):pad(m))+":"+pad(s)};
 function turnChip(f,date){
+  if(iso(date)!==iso(TODAY))return"";
   const I=inboundInfo(f,date);if(!canCount(I))return"";
-  const D=LIVE.date===iso(date)&&LIVE.flights[f.n];if(D&&["departed","landed","canceled"].includes(D.s))return"";
+  const D=LV(date).flights[f.n];if(D&&["departed","landed","canceled"].includes(D.s))return"";
   const P=turnPlan(f,I.m),left=Math.ceil(P.dep-NOW.mins);
   if(left<-30)return"";
   return left>0?`<small class="tw">⏱ Close Door <span class="num">${left}</span> د</small>`:`<small class="tw" style="color:var(--warn)">تجاوزت الموعد</small>`;
@@ -1173,16 +1176,17 @@ $("turn").addEventListener("click",e=>{
 });
 function renderTurn(f,date){
   curTurn={f,date};if(turnEdit)return;
+  if(iso(date)<iso(TODAY)){$("turn").hidden=true;return}
   const el=$("turn"),I=inboundInfo(f,date),edBtn=`<button class="tu-ed" id="tuEd">✎ تعديل الوصول</button>`;
   if(!canCount(I)){
     /* قبل الوصول: لا عدّ */
-    const D0=LIVE.date===iso(date)&&LIVE.flights[f.n],gone0=D0&&["departed","landed","canceled"].includes(D0.s);
+    const D0=LV(date).flights[f.n],gone0=D0&&["departed","landed","canceled"].includes(D0.s);
     const ok=!gone0&&f.ino&&f.ia&&!f.off&&iso(date)===iso(TODAY)&&NOW.mins>=toMin(f.ia)-90&&NOW.mins<=toMin(f.t)+60;
     const msg=!I?`بانتظار بيانات وصول ${f.ino}.`:I.kind==="eta"?`${f.ino} لم تصل بعد · متوقع ≈<span class="num">${fmt(I.m)}</span>.`:`${f.ino} يُرجّح أنها وصلت ≈<span class="num">${fmt(I.m)}</span> ولم يتأكد وقت الوصول الفعلي بعد.`;
     if(ok){el.innerHTML=`<div class="tu-h"><b>Sched GT · ${gtRule(f)}M</b>${edBtn}</div><div class="tu-n">${msg} العدّ التنازلي يبدأ عند الوصول الفعلي. إذا عندك وقت الوصول من النظام أدخله من «تعديل الوصول».${LIVE.updated?` <br>آخر تحديث للحالة ${LIVE.updated}.`:""} <a href="https://www.flightradar24.com/data/flights/${f.ino.toLowerCase()}" target="_blank" rel="noopener" style="color:var(--amber)">تحقق من الهبوط في Flightradar24 ↗</a></div>`;el.hidden=false}
     else el.hidden=true;
     return}
-  const P=turnPlan(f,I.m),now=nowMin(),D=LIVE.date===iso(date)&&LIVE.flights[f.n];
+  const P=turnPlan(f,I.m),now=nowMin(),D=LV(date).flights[f.n];
   const gone=D&&["departed","landed"].includes(D.s)&&D.t,DQ=gone?depInfo(f,date):null,atd=gone?(DQ?DQ.m:tm(D.t)):null,gEst=!DQ||!DQ.cert||!certI(I);
   if(gone&&now>atd+60){el.hidden=true;return}
   const pre=I.kind==="eta"&&now<I.m;
@@ -1416,7 +1420,7 @@ function openSheet(f,date){
   const ff={...f,t:f.t||f.time},has=hasClip(ff);
   $("listen").hidden=!has;$("listen").onclick=()=>playFlight(ff,$("listen"));
   if(has)playFlight(ff,$("listen"));
-  const L=LIVE.date===iso(date)&&LIVE.flights[f.n];
+  const L=LV(date).flights[f.n];
   if(L&&L.note)$("shN").textContent+=" · "+L.note;
   scrim.classList.add("on");open=true;sAnim&&sAnim.stop();
   if(y>=innerHeight)setY(sheet.offsetHeight+20);
@@ -1448,7 +1452,10 @@ const dmCode=v=>String(v||"").toUpperCase().replace(/\s/g,"").replace(/T$/,"").m
 function dmBuild(f,date,X,d){
   const m=d.dm||{},I=f.ia?inboundInfo(f,date):null,ata=hm(d.ata)?toMin(d.ata):isActual(I)?I.m:null;
   const std=tm(f.t),dd=new Date(date.getTime()+(std-180)*60e3);
-  const react=X.react||0,other=X.dly-react,L=[],W=[];let ab=65;
+  /* Off-block المدخل في الشيت يتقدّم على وقت FR24 التقديري */
+  const cA=csDerived(f,d).atd,atd=cA?toMin(cA):X.atd;let dly=atd-std;if(dly>720)dly-=1440;if(dly<-720)dly+=1440;dly=Math.max(0,dly);
+  const react=ata!=null?Math.max(0,Math.min(dly,doorAt(f,ata)-std)):0,other=dly-react,L=[],W=[];let ab=65;
+  if(!cA&&X.est)W.push("ATD تقديري من FR24 — سجّل وقت Push Back الفعلي في الأنشطة فوق");
   if(react>0){const c=dmCode(m.inb);if(!c)W.push(`اكتب كود تأخير الرحلة القادمة ${f.ino||""}`);
     L.push({k:String.fromCharCode(ab++),min:react,code:(c||"??-?")+"T",txt:m.t1||`LATE ARRIVAL OF INBOUND ${f.ino||""}${c?" DLY "+c:""}`})}
   if(other>0){const c=dmCode(m.loc);if(!c)W.push(`اختر سبب الـ ${other} دقائق الباقية`);
@@ -1457,17 +1464,17 @@ function dmBuild(f,date,X,d){
   const n=v=>String(v??"").trim(),p2=v=>pad(+n(v)||0);
   const pd=d.pd||{},fc=n(m.fc)||n(pd.F),jc=n(m.jc)||n(pd.J),yc=n(m.yc)||n(pd.Y);
   const txt=["DLY MSG",`1-${f.n} /${pad(dd.getUTCDate())}${MON[dd.getUTCMonth()]}${String(dd.getUTCFullYear()).slice(2)}`,`2-AJF/${f.iata}/Turnaround`,`3-${n(d.reg).toUpperCase().replace(/[^A-Z0-9]/g,"")||"HZ"}`,
-    `4-STA ${f.ia?utc(toMin(f.ia)):"--:--"} ATA ${ata!=null?utc(ata):"--:--"}`,` STD ${utc(std)} ATD ${utc(X.atd)}`,
+    `4-STA ${f.ia?utc(toMin(f.ia)):"--:--"} ATA ${ata!=null?utc(ata):"--:--"}`,` STD ${utc(std)} ATD ${utc(atd)}`,
     "5-"+L.map(l=>`${l.k}- (${hhmm(l.min)}/${l.code})`).join(" "),
     "6-"+L.map(l=>`${l.k}-${l.txt}`).join("\n"),
     `7-FC${p2(fc)} JC${p2(jc)} WC${p2(m.wc)} YC${p2(yc)} LOST PAX${p2(m.lost)}`,
     `8-ACTION TAKEN: ${n(m.act)||"NIL"}`,`9-PAX REACTION: ${n(m.rea)||"NIL"}`,`10-EXPENSE: ${n(m.exp)||"NIL"}`].join("\n");
-  return{txt,L,W,react,other};
+  return{txt,L,W,react,other,dly};
 }
 function dmCard(f,date,X,d){
   const B=dmBuild(f,date,X,d),m=d.dm||{},v=x=>escT(x||""),lc=dmCode(m.loc);
   const fl=(lab,k,ph,cls="")=>`<label class="cs-f"><span>${lab}</span><input data-k="dm.${k}" value="${v(m[k])}" placeholder="${ph}" class="${cls}"></label>`;
-  return`<div class="cs-card"><h5>DLY MSG · رسالة التأخير <span style="font-family:var(--mono)">DLY ${X.dly}M</span></h5>
+  return`<div class="cs-card"><h5>DLY MSG · رسالة التأخير <span style="font-family:var(--mono)">DLY ${B.dly}M</span></h5>
    ${B.react>0?`<div class="dm-h">١) ${B.react} د سببها تأخر وصول ${f.ino||"الطائرة"} — وش كان كود تأخيرها؟</div>
      <div class="cs-g two">${fl("كود الرحلة القادمة (من MVT)","inb","41-A","l")}<label class="cs-f"><span>&nbsp;</span><button class="dc-pick" data-dmpick="inb">📋 من الدليل</button></label></div>
      ${fl("سطر 6 · A","t1",`LATE ARRIVAL OF INBOUND ${f.ino||""}`,"l")}`:""}
@@ -1529,17 +1536,28 @@ function cleanLive(j){
     o.flights[k]={s:/^[a-z]{3,12}$/.test(v.s)?v.s:"sched",t:t?t[0]:"",note:escT(v.note).slice(0,200),...(v.fix?{fix:1}:{})}}
   for(const[k,v]of Object.entries(j.dly||{}))if(/^[A-Z0-9]{2,8}$/.test(k))o.dly[k]=escT(v).slice(0,200);
   return o}
-function applyLive(j){if(j&&j.flights){j=cleanLive(j);Object.assign(LIVE,j);renderNext();if(!open)render();renderSync()}}
-async function loadLive(){
-  /* primary: shared Google Sheet written by the tracking task; fallback: live.json in the repo */
-  try{
-    const r=await fetch(LIVE_SHEET+"&t="+Date.now(),{cache:"no-store"});
-    if(r.ok){const rows=parseCSV(await r.text());const j={date:"",updated:"",flights:{},dly:{}};
+/* سجل آخر يومين: يحتفظ بحالة كل يوم على الجهاز، ويقرأ أرشيف الجدول (أمس وقبله) */
+let HIST={};try{HIST=JSON.parse(localStorage.getItem("ajf_hist")||"{}")}catch(e){}
+const EMPTY_LV={date:"",flights:{},dly:{}};
+function LV(date){const k=iso(date);if(LIVE.date===k)return LIVE;return HIST[k]||EMPTY_LV}
+function keepHist(j){if(!j||!j.date)return;const old=HIST[j.date];if(old&&old.updated>j.updated&&j.date!==LIVE.date)return;HIST[j.date]=j;
+  const keep=[0,1,2].map(i=>iso(addDays(TODAY,-i)));for(const k of Object.keys(HIST))if(!keep.includes(k))delete HIST[k];
+  try{localStorage.setItem("ajf_hist",JSON.stringify(HIST))}catch(e){}}
+function applyLive(j){if(j&&j.flights){j=cleanLive(j);keepHist(j);Object.assign(LIVE,j);renderNext();if(!open)render();renderSync()}}
+function parseLiveCSV(t){const rows=parseCSV(t);const j={date:"",updated:"",flights:{},dly:{}};
       const fix={};
       rows.slice(1).forEach(r=>{const[k,s,t,n]=r;const F=(r[5]||"").toUpperCase().replace(/\s/g,""),G=r[6]||"";if(F&&/\d{1,2}:\d{2}/.test(G))fix[F]=normT(G);const DI=(r[8]||"").toUpperCase().replace(/\s/g,""),DJ=(r[9]||"").trim();if(DI&&DJ)j.dly[DI]=DJ;
         if(!k)return;if(k==="_date")j.date=s;else if(k==="_updated")j.updated=s;else if(s)j.flights[k]={s,t:normT(t),note:n||""}});
       /* تصحيح يدوي من الجدول (عمودي F و G) يتقدّم على أي وقت تلقائي */
       Object.entries(fix).forEach(([k,v])=>{const t="@"+v.replace(/[~@]/g,""),o=j.flights[k]||{};j.flights[k]=DEPNO.has(k)?{s:"departed",t,note:o.note||"",fix:1}:{s:"landed",t,note:o.note||"",fix:1}});
+  return j}
+/* أرشيف الأيام السابقة: تبويبات D1 (أمس) و D2 (قبل أمس) يكتبها مهمة التتبع عند بداية يوم جديد */
+async function loadArchive(){for(const t of["D1","D2"]){try{const r=await fetch(LIVE_SHEET.replace(/&gid=\d+/,"")+"&sheet="+t+"&t="+Date.now(),{cache:"no-store"});if(r.ok){const j=cleanLive(parseLiveCSV(await r.text()));if(j.date&&j.date<iso(TODAY))keepHist(j)}}catch(e){}}if(!open)render()}
+async function loadLive(){
+  /* primary: shared Google Sheet written by the tracking task; fallback: live.json in the repo */
+  try{
+    const r=await fetch(LIVE_SHEET+"&t="+Date.now(),{cache:"no-store"});
+    if(r.ok){const j=parseLiveCSV(await r.text());
       if(j.date){applyLive(j);return}}
   }catch(e){}
   try{const r=await fetch("live.json?t="+Date.now(),{cache:"no-store"});if(r.ok)applyLive(await r.json())}catch(e){}
@@ -1844,7 +1862,7 @@ requestAnimationFrame(()=>setY(innerHeight));
 addEventListener("resize",()=>{if(!open)setY(innerHeight)});
 if(DEMO){const k=iso(TODAY);applyLive({date:k,updated:fmt(NOW.mins),flights:{SM321:{s:"landed",t:"~08:28"},SM322:{s:"departed",t:"09:27"},SV8382:{s:"landed",t:"08:55"},SV8383:{s:"departed",t:"09:38"},G9221:{s:"landed",t:"16:02"},G9222:{s:"departed",t:"17:01"},SV8034:{s:"landed",t:"17:44"},SV1382:{s:"departed",t:"~18:27"},NP109:{s:"delayed",t:"~21:25"},XY149:{s:"departed",t:"~18:20"}}});
   const b=document.createElement("div");b.textContent="وضع تجريبي · أوقات وهمية للعرض فقط";b.style.cssText="position:fixed;top:0;inset-inline:0;z-index:50;background:#ffb340;color:#1a1205;font:600 12px/26px system-ui;text-align:center";document.body.appendChild(b);
-}else{loadLive();setInterval(()=>{if(!document.hidden)loadLive()},30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadLive()});}
+}else{loadLive();setTimeout(loadArchive,3000);setInterval(()=>{if(!document.hidden)loadLive()},30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadLive()});}
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 setInterval(()=>{try{const before=NOW.mins;renderClock();if(NOW.mins!==before){renderNext();if(!open)render()}}catch(e){}},15000);
 </script>
