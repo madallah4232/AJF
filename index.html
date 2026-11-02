@@ -726,16 +726,26 @@ function renderNext(){
 }
 function groundTrack(f,dayOffset){
   if(!f.ia||dayOffset!==0)return"";
-  const a=toMin(f.ia),dep=toMin(f.t),now=NOW.mins;
+  /* العدّ لا يبدأ إلا بعد الوصول الفعلي، ويحسب مدة الدوران المجدولة لكل رحلة (gtRule) من ATA */
+  const a=toMin(f.ia),now=NOW.mins,gt=gtRule(f);
   const L=LIVE.date===iso(TODAY)&&f.ino&&LIVE.flights[f.ino];
-  let st,cls="st",pct;
-  if(L&&L.s==="landed"){st=isCert(L)?"وصلت الجوف "+dispT(L.t):"هبطت ≈"+dispT(L.t).replace("≈","")+" (تقديري)";cls+=" ok"}
-  else if(L&&L.s==="canceled"){st="الوصول ملغى"}
+  const I=inboundInfo(f,TODAY),act=isActual(I);
+  const D=LIVE.date===iso(TODAY)&&LIVE.flights[f.n],gone=D&&D.s==="departed";
+  let st,cls="st",pct=0,arrLbl=f.ia,depLbl=f.t;
+  if(L&&L.s==="canceled"){st="الوصول ملغى"}
+  else if(act){
+    const door=I.m+gt,left=Math.ceil(door-now),est=!certI(I);
+    arrLbl=(est?"≈":"")+fmt(I.m);depLbl=fmt(door);
+    pct=gone?1:Math.max(0,Math.min(1,(now-I.m)/gt));
+    if(gone){st="غادرت";cls+=" ok"}
+    else if(left>0){st=(est?"≈":"")+"متبقي "+left+" د · Sched GT "+gt+"M";cls+=" ok"}
+    else{st="تجاوزت Close Door بـ "+(-left)+" د";cls="st"}
+  }
+  else if(I&&I.kind==="eta"&&I.m>now){st="تصل ≈"+fmt(I.m)+" · بعد "+Math.ceil(I.m-now)+" د"}
+  else if(I&&I.kind==="approx"){st="يُرجّح وصلت ≈"+fmt(I.m)+" · لم يتأكد"}
   else if(now<a){const m=a-now;st=m>90?"الطائرة لم تصل بعد":"تصل بعد "+m+" د"}
-  else{st="على الأرض";cls+=" ok"}
-  pct=Math.max(0,Math.min(1,(now-a)/Math.max(1,dep-a)));
-  if(now<a)pct=0;
-  return`<div class="ground"><div class="gl"><span>وصول ${f.ino||""} <b>${f.ia}</b></span><span class="${cls}">${st}</span><span>إقلاع <b>${f.t}</b></span></div><div class="gbar"><i style="width:${(pct*100).toFixed(1)}%"></i><em style="right:${(pct*100).toFixed(1)}%"><svg viewBox="0 0 24 24" width="1em" height="1em" style="display:block;transform:rotate(-90deg)"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg></em></div></div>`;
+  else{st="بانتظار تأكيد الوصول"}
+  return`<div class="ground"><div class="gl"><span>وصول ${f.ino||""} <b>${arrLbl}</b></span><span class="${cls}">${st}</span><span>${act?"Close Door":"إقلاع"} <b>${depLbl}</b></span></div><div class="gbar"><i style="width:${(pct*100).toFixed(1)}%"></i><em style="right:${(pct*100).toFixed(1)}%"><svg viewBox="0 0 24 24" width="1em" height="1em" style="display:block;transform:rotate(-90deg)"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg></em></div></div>`;
 }
 
 /* ---------- week strip ---------- */
