@@ -734,12 +734,12 @@ function groundTrack(f,dayOffset){
   let st,cls="st",pct=0,arrLbl=f.ia,depLbl=f.t;
   if(L&&L.s==="canceled"){st="الوصول ملغى"}
   else if(act){
-    const door=I.m+gt,left=Math.ceil(door-now),est=!isActual(I)||!certI(I);
+    const door=doorAt(f,I.m),left=Math.ceil(door-now),est=!isActual(I)||!certI(I);
     arrLbl=(est?"≈":"")+fmt(I.m);depLbl=fmt(door);
-    pct=gone?1:Math.max(0,Math.min(1,(now-I.m)/gt));
+    pct=gone?1:Math.max(0,Math.min(1,(now-I.m)/Math.max(1,door-I.m)));
     if(gone){st="غادرت";cls+=" ok"}
-    else if(left>0){st=(est?"≈":"")+"متبقي "+left+" د · Sched GT "+gt+"M";cls+=" ok"}
-    else{st="تجاوزت Close Door بـ "+(-left)+" د";cls="st"}
+    else if(left>0){st=(est?"≈":"")+"متبقي "+left+" د"+(door>tm(f.t)?" · تأخير "+(door-tm(f.t))+" د":"");cls+=" ok"}
+    else{st="+"+(-left)+" د بعد الموعد";cls="st"}
   }
   else if(I&&I.kind==="eta"&&I.m>now){st="تصل ≈"+fmt(I.m)+" · بعد "+Math.ceil(I.m-now)+" د"}
   else if(I&&I.kind==="approx"){st="يُرجّح وصلت ≈"+fmt(I.m)+" · لم يتأكد"}
@@ -1022,6 +1022,9 @@ function spring(from,to,{velocity=0,damping=1,response=.35,onUpdate,onDone}={}){
 const INTL=new Set(["CAI","SHJ","HMB"]);
 /* مدة الدوران = وقت بقاء الطائرة على الأرض حسب جدول كل رحلة (الإقلاع المجدول − الوصول المجدول) */
 const gtRule=f=>{const a=f.ia||f.inArr,d=f.t||f.time;if(!a||!d)return 60;return(toMin(d)-toMin(a)+1440)%1440||60};
+/* أقل بقاء على الأرض: السعودية 40 د. موعد الإقفال = الأبعد بين STD و (الوصول + أقل بقاء) */
+const minGT=f=>/^SV/.test(f.n||f.no||"")?40:gtRule(f);
+const doorAt=(f,ata)=>{const std=tm(f.t);let d=ata+minGT(f);if(d-std>720)d-=1440;if(std-d>720)d+=1440;return Math.max(std,d)};
 const isActual=I=>!!I&&I.kind!=="eta"&&I.kind!=="approx"&&I.kind!=="sched";
 /* العدّ يشتغل بعد الوصول: الفعلي إن وُجد، وإلا تقديري من الأبعد بين المتوقع والمجدول، ويتصحح تلقائياً عند تأكد الوقت الفعلي */
 const canCount=I=>!!I&&I.kind!=="eta";
@@ -1042,7 +1045,7 @@ function dlyInfo(f,date){
   const atd=Q.m,std=tm(f.t),est=!Q.cert;
   let dly=atd-std;if(dly>720)dly-=1440;if(dly<-720)dly+=1440;if(dly<=0)return{atd,std,dly:0,raw:dly,no:true,est,tko:Q.tko};
   const I=f.ia?inboundInfo(f,date):null;let react=null;
-  if(I&&I.kind!=="eta"&&I.kind!=="sched")react=Math.max(0,Math.min(dly,I.m+gtRule(f)-std));
+  if(I&&I.kind!=="eta"&&I.kind!=="sched")react=Math.max(0,Math.min(dly,doorAt(f,I.m)-std));
   return{atd,std,dly,raw:dly,no:false,est,tko:Q.tko,react,other:react==null?null:dly-react,approx:est||(!!I&&!certI(I)),reason:dlyReason(f,date)};
 }
 function dlyText(X){
@@ -1099,7 +1102,7 @@ function inboundInfo(f,date){
 }
 function turnPlan(f,ata){
   /* Close Door = الأبعد بين STD و ATA + الدوران حسب الناقل */
-  const std=tm(f.t),door=ata+gtRule(f),dep=door;
+  const std=tm(f.t),door=doorAt(f,ata),dep=door;
   const ph=[["Pax Deplane",ata,ata+8,"#7cc4ff"],["Cabin Cleaning",ata+8,ata+15,"#b48cff"],["Boarding Pax",ata+15,ata+29,"#ffb340"],["Close Door",ata+29,door,"#38d39f",1]];
   return{std,dep,door,ph,delay:door-std,ground:door-ata};
 }
@@ -1156,7 +1159,7 @@ function renderTurn(f,date){
     const r=st==="done"?"✓":st==="now"?clockFmt(b-now):"بعد "+Math.ceil((pt?b:a)-now)+" د";
     return`<li class="${st}" style="--pc:${c}"><i></i><b>${n}</b><span class="num">${pt?fmt(b):fmt(a)+"–"+fmt(b)}</span><em>${pre&&st==="up"?"":r}</em></li>`}).join("");
   const note=gone?(()=>{const X=dlyInfo(f,date);return X&&!X.no?dlyText(X):""})():pre?"الخطة محسوبة على وقت الوصول المتوقع وتتعدّل تلقائياً أول ما تهبط الطائرة":
-    P.delay>0?`<b>تأخير متوقع ${P.delay} د</b> — Close Door بعد ${gtRule(f)} د من الوصول الفعلي`:!isActual(I)?"العدّ تقديري حتى يتأكد وقت الوصول الفعلي، ويتصحح تلقائياً. إذا عندك الوقت من النظام أدخله من «تعديل الوصول».":"";
+    P.delay>0?`<b>تأخير متوقع ${P.delay} د</b> — الإقلاع بعد ${minGT(f)} د من الوصول الفعلي`:!isActual(I)?"العدّ تقديري حتى يتأكد وقت الوصول الفعلي، ويتصحح تلقائياً. إذا عندك الوقت من النظام أدخله من «تعديل الوصول».":"";
   el.innerHTML=`<div class="tu-h"><b>${gone?`${gEst?"≈":""}Actual GT · ${atd-I.m}M${gEst?" · تقديري":""}`:`Sched GT · ${P.ground}M`}</b>${src}</div>${gone?"":`<div class="tu-acts">${edBtn}</div>`}<div class="tu-big">${big}</div><div class="tu-bar">${bar}</div><ul class="tu-ph">${li}</ul>${note?`<div class="tu-n">${note}</div>`:""}`;
   el.hidden=false;
 }
@@ -1188,7 +1191,7 @@ let csCur=null;
 const hm=v=>/^\d{2}:\d{2}$/.test(v||"");
 function csPlan(f,d){
   const ata=hm(d.ata)?toMin(d.ata):f.ia?toMin(f.ia):null;if(ata==null)return{};
-  const door=ata+gtRule(f);
+  const door=doorAt(f,ata);
   const r={open:ata,dpF:ata+1,dpL:ata+8,clIn:ata+8,clOut:ata+15,paxReq:ata+15,bdF:ata+16,bdL:ata+29,close:door};
   Object.keys(r).forEach(k=>r[k]=fmt(r[k]));return r;
 }
