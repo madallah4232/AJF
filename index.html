@@ -202,6 +202,29 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .dots i{flex:1;text-align:center;font-style:normal;font-size:12px;padding:7px 0;border-radius:9px;background:var(--raise);color:var(--muted)}
 .dots i.on{background:color-mix(in oklab,var(--amber) 22%,var(--raise));color:var(--amber);font-weight:600}
 .sheet .note{font-size:13px;color:var(--muted);line-height:1.7}
+/* delay codes */
+.dc{position:fixed;inset:0;z-index:34;background:var(--night);display:grid;grid-template-rows:auto auto 1fr}
+.dc[hidden]{display:none}
+.dc-q{padding:10px 14px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.dc-q input{height:44px;border-radius:22px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:15px var(--body);padding:0 16px;width:100%}
+.dc-q input:focus{outline:2px solid var(--amber);outline-offset:-1px}
+.dc-tg{display:flex;gap:6px;flex-wrap:wrap}
+.dc-tg button{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--line);background:var(--raise);color:var(--muted);font:600 12.5px var(--body)}
+.dc-tg button[aria-pressed=true]{background:color-mix(in oklab,var(--amber) 22%,var(--raise));color:var(--amber);border-color:color-mix(in oklab,var(--amber) 50%,var(--line))}
+.dc-b{overflow-y:auto;overscroll-behavior:contain;padding:10px 14px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;min-height:0;max-width:680px;width:100%;margin:0 auto}
+.dc-sec{font:600 12px var(--display);color:var(--muted);margin:8px 2px 0}
+.dc-c{flex:none;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.dc-c>b{display:flex;gap:10px;align-items:baseline;padding:10px 12px;border-bottom:1px solid var(--line)}
+.dc-c>b i{font:700 18px var(--mono);font-style:normal;color:var(--amber);min-width:28px}
+.dc-c>b span{display:grid;gap:2px}.dc-c>b small{font:500 11px var(--mono);color:var(--muted);direction:ltr;text-align:right}
+.dc-c em{font-style:normal;font-size:10.5px;padding:2px 7px;border-radius:99px;margin-inline-start:auto;white-space:nowrap}
+.dc-c em.sgs{background:color-mix(in oklab,var(--warn) 18%,transparent);color:var(--warn)}
+.dc-c em.oth{background:color-mix(in oklab,var(--go) 14%,transparent);color:var(--go)}
+.dc-s{display:grid;grid-template-columns:auto 1fr;gap:10px;width:100%;text-align:left;direction:ltr;padding:10px 12px;border-top:1px solid color-mix(in oklab,var(--line) 60%,transparent);color:var(--ink);font:13px/1.5 var(--body);background:none}
+.dc-s:first-of-type{border-top:0}.dc-s:active{background:var(--raise)}
+.dc-s b{font:700 13px var(--mono);color:var(--amber);white-space:nowrap}
+.dc-cp{font:11px var(--mono);color:var(--muted);padding:6px 12px 10px;direction:ltr;text-align:left}
+.dc-pick{height:40px;border-radius:10px;border:1px dashed color-mix(in oklab,var(--amber) 60%,var(--line));background:color-mix(in oklab,var(--amber) 10%,transparent);color:var(--amber);font:600 14px var(--body)}
 /* turnaround countdown */
 .turn{background:linear-gradient(180deg,color-mix(in oklab,var(--amber) 9%,var(--raise)),var(--raise));border:1px solid color-mix(in oklab,var(--amber) 28%,var(--line));border-radius:16px;padding:12px 14px;display:grid;gap:10px}
 .turn[hidden]{display:none}
@@ -573,6 +596,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   <div class="note" id="shN"></div>
   <button class="track-btn" id="listen" hidden><span class="eq"><i></i><i></i><i></i><i></i></span>استمع لإعلان الرحلة</button>
   <button class="track-btn" id="csOpen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3z"/><path d="M9 12l2 2 4-4"/></svg>Coordination Sheet</button>
+  <button class="track-btn" id="dcOpen" hidden>📋 أكواد التأخير · السعودية</button>
   <button class="track-btn" id="track"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>تتبّع الرحلة على الخريطة</button>
   <button class="done-btn" id="done">تم</button>
 </div>
@@ -599,6 +623,14 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 </div>
 
 
+<div class="dc" id="dc" role="dialog" aria-modal="true" aria-labelledby="dcT" hidden>
+  <div class="trk-top">
+    <button class="trk-back" id="dcBack" aria-label="رجوع"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div><b id="dcT">أكواد التأخير</b><span id="dcS">السعودية · Saudia Delay Codes</span></div>
+  </div>
+  <div class="dc-q"><input id="dcQ" type="search" placeholder="ابحث: رقم، كلمة… مثل 15 أو عفش أو boarding" autocomplete="off"><div class="dc-tg"><button id="dcSgs" aria-pressed="false">مسؤولية SGS فقط</button><button id="dcT2" aria-pressed="false">تأخير تبعي (T)</button></div></div>
+  <div class="dc-b" id="dcB"></div>
+</div>
 <div class="trk" id="trk" role="dialog" aria-modal="true" aria-labelledby="trkT" hidden>
   <div class="trk-top">
     <button class="trk-back" id="trkBack" aria-label="رجوع"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -1230,7 +1262,7 @@ function renderCS(){
   ${(()=>{const X=dlyInfo(f,date);if(!X)return"";return`<div class="cs-card"><h5>DELAY</h5>
     <div class="cs-g">${fld("STD",`<input value="${f.t}" readonly>`)}${fld(X.est?"ATD ≈ تقديري":"ATD (Off-block)",`<input value="${X.est?"≈":""}${fmt(X.atd)}" readonly${X.est?' style="color:var(--muted)"':""}>`)}${fld(X.est?"DLY ≈ تقديري":"DLY",`<input value="${X.est?"≈":""}${X.no?"NO DELAY":X.dly+"M"}" readonly style="color:var(${X.est?"--muted":X.no?"--go":"--warn"})">`)}</div>
     ${X.no?"":`<div class="tu-n" style="direction:ltr;text-align:left">${dlyText(X)}</div>
-    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`):""}`}</div>`})()}`;
+    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(/^SV/.test(f.n)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل السعودية</button>`:""):""}`}</div>`})()}`;
 }
 function csSet(path,v){
   const{f,date}=csCur,d=csData(f,date),p=path.split(".");let o=d;
@@ -1238,6 +1270,8 @@ function csSet(path,v){
   if(path==="ata"){const k=ataKey(f,date);if(hm(v))MAN[k]=v;else delete MAN[k];try{localStorage.setItem(DEMO?"ajf_man_demo":"ajf_man",JSON.stringify(MAN))}catch(e){}}
   csSave();$("csSaved").textContent="✓ محفوظ";clearTimeout(csSet.t);csSet.t=setTimeout(()=>$("csSaved").textContent="",1500);
 }
+$("csBody").addEventListener("click",e=>{if(!e.target.closest("[data-dcpick]"))return;const inp=$("csBody").querySelector("[data-dly]");
+  openDC(v=>{inp.value=inp.value.trim()?inp.value.trim()+" / "+v:v;inp.dispatchEvent(new Event("change",{bubbles:true}))})});
 $("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$/.test(k))renderCS()}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
 $("csBody").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
@@ -1370,6 +1404,7 @@ function openSheet(f,date){
   {const X=dlyInfo(f,date);$("shN").textContent=(X?dlyText(X)+" — ":"")+f.note+(f.est?" (* وقت تقديري)":"");}
   $("track").onclick=()=>openTrack(f,date);
   $("csOpen").onclick=()=>openCS(f,date);
+  $("dcOpen").hidden=!/^SV/.test(f.n);$("dcOpen").onclick=()=>openDC();
   clearInterval(turnTimer);turnEdit=false;renderTurn(f,date);turnTimer=setInterval(()=>{try{renderTurn(f,date)}catch(e){}},1000);
   const ff={...f,t:f.t||f.time},has=hasClip(ff);
   $("listen").hidden=!has;$("listen").onclick=()=>playFlight(ff,$("listen"));
@@ -1397,6 +1432,34 @@ function endDrag(){if(!drag)return;const a=drag.h[0],b=drag.h[drag.h.length-1],v
   if(landing>sheet.offsetHeight*.5||v>900)closeSheet(v);else sAnim=spring(y,0,{velocity:v,damping:.85,response:.32,onUpdate:setY})}
 sheet.addEventListener("pointerup",endDrag);sheet.addEventListener("pointercancel",endDrag);
 
+/* ---------- delay codes (Saudia booklet) ---------- */
+let DC=null,dcCb=null,dcT=false,dcSgs=false;
+function loadDC(){return DC?Promise.resolve(DC):fetch("data/delay-sv.json").then(r=>r.json()).then(j=>DC=j)}
+const dcNorm=t=>norm(String(t)).replace(/[إأآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي");
+const DC_AR={"عفش":"BAGG","شنط":"BAGG","حقائب":"BAGG","صعود":"BOARD","بوابه":"GAT","كاونتر":"CHECK-IN","تنظيف":"CLEAN","وقود":"FUEL","تموين":"CATER","كرسي":"WHEEL","طاقم":"CREW","مضيف":"CABIN","طيار":"FLIGHT DECK","عطل":"DEFECT","صيانه":"MAINT","طقس":"WEATHER","امن":"SECUR","جوازات":"IMMG","تحميل":"LOAD","معدات":"EQUIP","نظام":"SYSTEM","راكب":"PASSENGER","مريض":"SICK","وزن":"WEIGHT","شحن":"CARGO","باص":"BUS"};
+function renderDC(){
+  const q=dcNorm($("dcQ").value.trim()),qs=q?q.split(/\s+/):[];let h="",last=null;
+  const mt=(c,sub)=>{if(!qs.length)return true;const hay=dcNorm([c.c,c.c+"-"+sub[0],c.ar,sub[1]].join(" "));
+    return qs.every(w=>hay.includes(w)||(DC_AR[w]&&hay.includes(dcNorm(DC_AR[w]))))};
+  for(const c of DC.codes){
+    if(dcSgs&&c.sec!==1)continue;
+    const subs=c.subs.filter(x=>mt(c,x));if(!subs.length)continue;
+    if(c.sec!==last){h+=`<div class="dc-sec">${escT(DC.secs[c.sec].ar)}</div>`;last=c.sec}
+    h+=`<div class="dc-c"><b><i>${c.c}</i><span>${escT(c.ar)}<small>${escT(c.en)}</small></span>${c.sec===1?'<em class="sgs">على SGS</em>':c.sec===2?'<em class="oth">وكيل دولي</em>':""}</b>`+
+      subs.map(x=>`<button class="dc-s" data-k="${c.c}-${x[0]}${dcT?"T":""}" data-d="${escT(x[1])}"><b>${c.c}-${x[0]}${dcT?"T":""}</b><span>${escT(x[1])}${dcT?' <span style="color:var(--muted)">· EQUIPMENT TURN-AROUND, CONSEQUENTIAL</span>':""}</span></button>`).join("")+
+      (c.copy?`<div class="dc-cp">COPY: ${escT(c.copy)}</div>`:"")+`</div>`;
+  }
+  $("dcB").innerHTML=h||'<div class="tu-n" style="text-align:center">ما فيه نتائج. جرّب كلمة ثانية أو رقم الكود.</div>';
+}
+function openDC(cb){dcCb=cb||null;$("dcS").textContent=cb?"اختر الكود لإضافته لسبب التأخير":"السعودية · Saudia Delay Codes";
+  $("dc").hidden=false;$("dcB").innerHTML='<div class="tu-n" style="text-align:center">…</div>';loadDC().then(renderDC).catch(()=>{$("dcB").innerHTML='<div class="tu-n">تعذّر تحميل الأكواد، تأكد من الاتصال.</div>'})}
+$("dcBack").onclick=()=>{$("dc").hidden=true};
+$("dcQ").addEventListener("input",()=>DC&&renderDC());
+$("dcSgs").onclick=e=>{dcSgs=!dcSgs;e.currentTarget.setAttribute("aria-pressed",dcSgs);DC&&renderDC()};
+$("dcT2").onclick=e=>{dcT=!dcT;e.currentTarget.setAttribute("aria-pressed",dcT);DC&&renderDC()};
+$("dcB").addEventListener("click",e=>{const b=e.target.closest(".dc-s");if(!b)return;
+  if(dcCb){dcCb(b.dataset.k+" "+b.dataset.d.replace(/&amp;/g,"&").replace(/&#39;/g,"'").replace(/\.$/,""));$("dc").hidden=true}
+  else{try{navigator.clipboard.writeText(b.dataset.k)}catch(x){}b.style.background="var(--raise)";setTimeout(()=>b.style.background="",400)}});
 /* ---------- live data (live.json, updated by the hourly task) ---------- */
 const LIVE_SHEET="https://docs.google.com/spreadsheets/d/15lfKxUHljob3uZ2xaSbvXE3L813g4apDTVQHhQshPn8/gviz/tq?tqx=out:csv&gid=1369330995";
 function parseCSV(t){return t.trim().split(/\r?\n/).map(l=>{const o=[];let c="",q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else if(ch==='"')q=true;else if(ch===","){o.push(c);c=""}else c+=ch}o.push(c);return o})}
