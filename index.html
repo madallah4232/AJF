@@ -1293,9 +1293,13 @@ function csCheck(f,date,d,k,v){
   const std=tm(f.t),near=t=>{let x=toMin(t);while(x-std>720)x-=1440;while(std-x>720)x+=1440;return x};
   const val=K=>K===k?near(v):hm(csGet(d,K))?near(csGet(d,K)):(K==="atd"&&csDerived(f,d).atd?near(csDerived(f,d).atd):null);
   const x=near(v),sta=f.ia?near(f.ia):null;
-  if(iso(date)===iso(TODAY)&&x>nowMin()+2)return`${CS_LBL[k]} ${v} في المستقبل — الوقت الحالي ${fmt(Math.floor(nowMin()))}`;
-  if((k==="ata"||k==="dm.td")&&sta!=null&&(x<sta-180||x>sta+600))return`${CS_LBL[k]} ${v} بعيد جداً عن الوصول المجدول ${f.ia}`;
-  if((k==="atd"||k==="dm.abn")&&(x<std-60||x>std+720))return`${CS_LBL[k]} ${v} بعيد جداً عن الإقلاع المجدول ${f.t}`;
+  /* نافذة بقاء الطائرة على الأرض حسب جدول الرحلة (مو حسب الساعة الحالية): من قبل الوصول المجدول بـ40 د إلى بعد الإقلاع المجدول بـ6 ساعات */
+  const lo=(sta!=null?sta:std-60)-40,hi=std+360,dif=(a,b)=>{const m=Math.abs(a-b);return m>=60?Math.floor(m/60)+" س"+(m%60?" و"+(m%60)+" د":""):m+" د"};
+  if(x<lo)return`${CS_LBL[k]} ${v} قبل ${sta!=null?"الوصول المجدول "+f.ia:"الإقلاع المجدول "+f.t} بـ ${dif(x,sta!=null?sta:std)} — الطائرة ما كانت على الأرض. تأكد من الساعة`;
+  if(x>hi)return`${CS_LBL[k]} ${v} بعد الإقلاع المجدول ${f.t} بـ ${dif(x,std)} — خارج فترة الرحلة. تأكد من الساعة`;
+  if((k==="atd"||k==="dm.abn")&&x<std-30)return`${CS_LBL[k]} ${v} قبل الإقلاع المجدول ${f.t} بـ ${dif(x,std)} — تأكد من الساعة`;
+  /* مقارنة مع وقت الهبوط المرصود */
+  if(k==="ata"||k==="dm.td"){const L=f.ino&&LV(date).flights[f.ino];if(L&&L.s==="landed"&&L.t&&!L.fix){const o=near(dispT(L.t).replace("≈",""));if(Math.abs(x-o)>45)return`${CS_LBL[k]} ${v} يختلف عن الهبوط المرصود ${fmt(o)} بـ ${dif(x,o)} — تأكد من الساعة`}}
   for(const[a,b]of CS_PAIRS){if(a!==k&&b!==k)continue;const A=val(a),B=val(b);if(A==null||B==null)continue;
     if(A>B)return`${CS_LBL[a]} (${fmt(A)}) لازم يكون قبل ${CS_LBL[b]} (${fmt(B)})`;}
   const td=val("dm.td"),ata=val("ata");if(td!=null&&ata!=null&&ata-td>30)return`الفرق بين Touchdown (${fmt(td)}) و On-block (${fmt(ata)}) أكثر من 30 دقيقة`;
