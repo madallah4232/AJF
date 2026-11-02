@@ -1283,7 +1283,9 @@ function csSet(path,v){
 }
 $("csBody").addEventListener("click",e=>{if(!e.target.closest("[data-dcpick]"))return;const inp=$("csBody").querySelector("[data-dly]");
   openDC(v=>{inp.value=inp.value.trim()?inp.value.trim()+" / "+v:v;inp.dispatchEvent(new Event("change",{bubbles:true}))})});
-$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$|^dm\.|^pd\./.test(k))renderCS()}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
+/* اختيار الوقت في الآيفون يرسل change أثناء تحريك العجلة؛ نؤجل إعادة الرسم حتى يضغط المستخدم ✓ (blur) عشان ما تنقفل العجلة */
+let csPend=false;$("csBody").addEventListener("focusout",e=>{if(csPend&&e.target.type==="time"){csPend=false;setTimeout(renderCS,0)}});
+$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$|^dm\.|^pd\./.test(k)){if(e.target.type==="time")csPend=true;else renderCS()}}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
 $("csBody").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.chk){const{f,date}=csCur,d=csData(f,date);d.chk[b.dataset.chk]=!d.chk[b.dataset.chk];csSave();b.classList.toggle("on");return}
