@@ -1274,6 +1274,8 @@ function renderCS(){
     <div class="cs-g">${fld("STD",`<input value="${f.t}" readonly>`)}${fld(X.est?"ATD ≈ تقديري":"ATD (Off-block)",`<input value="${X.est?"≈":""}${fmt(X.atd)}" readonly${X.est?' style="color:var(--muted)"':""}>`)}${fld(X.est?"DLY ≈ تقديري":"DLY",`<input value="${X.est?"≈":""}${X.no?"NO DELAY":X.dly+"M"}" readonly style="color:var(${X.est?"--muted":X.no?"--go":"--warn"})">`)}</div>
     ${X.no?"":`<div class="tu-n" style="direction:ltr;text-align:left">${dlyText(X)}</div>
     ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(dcAirOf(f)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل ${dcAirOf(f)==="XY"?"ناس":"السعودية"}</button>`:""):""}`}</div>${/^SV/.test(f.n)&&!X.no?dmCard(f,date,X,d):""}`})()}${dcAirOf(f)==="XY"?mvtCard(f,date,d):""}`;
+  try{const{f,date}=csCur,d=csData(f,date);for(const[k]of CS_SEQ){const v=csGet(d,k);if(!hm(v))continue;const e=csCheck(f,date,d,k,v);
+    $("csBody").querySelectorAll(`[data-k="${k}"]`).forEach(el=>{if(e){el.style.outline="2px solid var(--warn)";el.title=e;el.insertAdjacentHTML?.("afterend",`<div class="dm-w" style="grid-column:1/-1">⚠︎ ${escT(e)}</div>`)}})}}catch(x){}
 }
 function csSet(path,v){
   const{f,date}=csCur,d=csData(f,date),p=path.split(".");let o=d;
@@ -1287,23 +1289,30 @@ $("csBody").addEventListener("click",e=>{if(!e.target.closest("[data-dcpick]"))r
 const CS_SEQ=[["dm.td","Touchdown"],["ata","On-block (ATA)"],["act.open.s","Open Door"],["act.dpF.s","Deplaning · First Pax"],["act.dpL.s","Deplaning · Last Pax"],["act.clIn.s","Cleaning In"],["act.clOut.s","Cleaning Out"],["act.paxReq.s","Pax Request"],["act.bdF.s","Boarding · First Pax"],["act.bdL.s","Boarding · Last Pax"],["act.close.s","Close Door"],["atd","Off-block"],["dm.abn","Airborne"]];
 const CS_LBL=Object.fromEntries(CS_SEQ);
 const CS_PAIRS=[["dm.td","ata"],["ata","act.open.s"],["act.open.s","act.dpF.s"],["act.dpF.s","act.dpL.s"],["act.dpL.s","act.clIn.s"],["act.clIn.s","act.clOut.s"],["act.clOut.s","act.bdF.s"],["act.dpL.s","act.paxReq.s"],["act.paxReq.s","act.bdF.s"],["act.bdF.s","act.bdL.s"],["act.bdL.s","act.close.s"],["act.close.s","atd"],["atd","dm.abn"],["ata","atd"],["dm.td","dm.abn"]];
+/* أقصى فرق منطقي (دقائق) بين كل خطوة واللي قبلها */
+const CS_GAP=[["dm.td","ata",30],["ata","act.open.s",30],["act.open.s","act.dpF.s",20],["act.dpF.s","act.dpL.s",45],["act.dpL.s","act.clIn.s",30],["act.clIn.s","act.clOut.s",60],["act.bdF.s","act.bdL.s",90],["act.bdL.s","act.close.s",60],["act.close.s","atd",60],["atd","dm.abn",60]];
 const csGet=(d,k)=>k.split(".").reduce((o,x)=>o&&o[x],d);
 function csCheck(f,date,d,k,v){
   if(!CS_LBL[k]||!hm(v))return"";
-  const std=tm(f.t),near=t=>{let x=toMin(t);while(x-std>720)x-=1440;while(std-x>720)x+=1440;return x};
+  const std=tm(f.t),sta0=f.ia?toMin(f.ia):std-60,w0=Math.min(sta0,std),w1=Math.max(sta0,std);
+  /* يفسّر الوقت على يوم الرحلة نفسه أو اللي قبله/بعده: الأقرب لفترة الرحلة (STA→STD) */
+  const near=t=>{const b=toMin(t);return[b-1440,b,b+1440].sort((p,q)=>(p<w0?w0-p:p>w1?p-w1:0)-(q<w0?w0-q:q>w1?q-w1:0))[0]};
   const val=K=>K===k?near(v):hm(csGet(d,K))?near(csGet(d,K)):(K==="atd"&&csDerived(f,d).atd?near(csDerived(f,d).atd):null);
   const x=near(v),sta=f.ia?near(f.ia):null;
   /* نافذة بقاء الطائرة على الأرض حسب جدول الرحلة (مو حسب الساعة الحالية): من قبل الوصول المجدول بـ40 د إلى بعد الإقلاع المجدول بـ6 ساعات */
-  const lo=(sta!=null?sta:std-60)-40,hi=std+360,dif=(a,b)=>{const m=Math.abs(a-b);return m>=60?Math.floor(m/60)+" س"+(m%60?" و"+(m%60)+" د":""):m+" د"};
-  if(x<lo)return`${CS_LBL[k]} ${v} قبل ${sta!=null?"الوصول المجدول "+f.ia:"الإقلاع المجدول "+f.t} بـ ${dif(x,sta!=null?sta:std)} — الطائرة ما كانت على الأرض. تأكد من الساعة`;
-  if(x>hi)return`${CS_LBL[k]} ${v} بعد الإقلاع المجدول ${f.t} بـ ${dif(x,std)} — خارج فترة الرحلة. تأكد من الساعة`;
+  const ataN=val("ata"),door=ataN!=null?Math.max(std,ataN+minGT(f)):std;
+  const lo=(sta!=null?sta:std-60)-40,hi=(k==="ata"||k==="dm.td")?std+360:door+240,dif=(a,b)=>{const m=Math.abs(a-b);return m>=60?Math.floor(m/60)+" س"+(m%60?" و"+(m%60)+" د":""):m+" د"};
+  const win=`${f.ia||fmt(std-60)} – ${fmt(Math.max(std,door))}`;
+  if(x<lo||x>hi)return`${CS_LBL[k]} ${v} خارج فترة بقاء الطائرة على الأرض (${win}) — تأكد من الساعة`;
   if((k==="atd"||k==="dm.abn")&&x<std-30)return`${CS_LBL[k]} ${v} قبل الإقلاع المجدول ${f.t} بـ ${dif(x,std)} — تأكد من الساعة`;
   /* مقارنة مع وقت الهبوط المرصود */
   if(k==="ata"||k==="dm.td"){const L=f.ino&&LV(date).flights[f.ino];if(L&&L.s==="landed"&&L.t&&!L.fix){const o=near(dispT(L.t).replace("≈",""));if(Math.abs(x-o)>45)return`${CS_LBL[k]} ${v} يختلف عن الهبوط المرصود ${fmt(o)} بـ ${dif(x,o)} — تأكد من الساعة`}}
-  for(const[a,b]of CS_PAIRS){if(a!==k&&b!==k)continue;const A=val(a),B=val(b);if(A==null||B==null)continue;
+  /* وقت محفوظ سابقاً وخارج فترة الرحلة نتجاهله عشان ما يمنع التصحيح */
+  const bad=t=>t<lo||t>Math.max(std+360,door+240);
+  for(const[a,b]of CS_PAIRS){if(a!==k&&b!==k)continue;const A=val(a),B=val(b);if(A==null||B==null||bad(a===k?B:A))continue;
     if(A>B)return`${CS_LBL[a]} (${fmt(A)}) لازم يكون قبل ${CS_LBL[b]} (${fmt(B)})`;}
-  const td=val("dm.td"),ata=val("ata");if(td!=null&&ata!=null&&ata-td>30)return`الفرق بين Touchdown (${fmt(td)}) و On-block (${fmt(ata)}) أكثر من 30 دقيقة`;
-  const ob=val("atd"),ab=val("dm.abn");if(ob!=null&&ab!=null&&ab-ob>60)return`الفرق بين Off-block (${fmt(ob)}) و Airborne (${fmt(ab)}) أكثر من ساعة`;
+  for(const[a,b,g]of CS_GAP){if(b!==k)continue;const A=val(a),B=val(b);if(A==null||B==null||bad(A))continue;
+    if(B-A>g)return`بين ${CS_LBL[a]} (${fmt(A)}) و ${CS_LBL[b]} (${fmt(B)}) ${dif(A,B)} — غير منطقي (الحد ${g} د). تأكد من الساعة`;}
   return"";
 }
 function csErr(msg,el){let t=$("csErr");if(!t){t=document.createElement("div");t.id="csErr";t.setAttribute("role","alert");t.style.cssText="position:fixed;inset-inline:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:40;background:#3a1414;border:1px solid var(--warn);color:#ffd9d2;border-radius:14px;padding:12px 14px;font:600 14px/1.6 var(--body);box-shadow:0 12px 30px rgba(0,0,0,.5)";document.body.appendChild(t)}
