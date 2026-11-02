@@ -635,7 +635,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
     <button class="trk-back" id="dcBack" aria-label="رجوع"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
     <div><b id="dcT">أكواد التأخير</b><span id="dcS">السعودية · Saudia Delay Codes</span></div>
   </div>
-  <div class="dc-q"><input id="dcQ" type="search" placeholder="ابحث: رقم، كلمة… مثل 15 أو عفش أو boarding" autocomplete="off"><div class="dc-tg"><button id="dcSgs" aria-pressed="false">مسؤولية SGS فقط</button><button id="dcT2" aria-pressed="false">تأخير تبعي (T)</button></div></div>
+  <div class="dc-q"><input id="dcQ" type="search" placeholder="اكتب وش صار… مثل: تأخر سيارة الوقود، أو رقم الكود 15" autocomplete="off"><div class="dc-tg"><button id="dcSgs" aria-pressed="false">مسؤولية SGS فقط</button><button id="dcT2" aria-pressed="false">تأخير تبعي (T)</button></div></div>
   <div class="dc-b" id="dcB"></div>
 </div>
 <div class="trk" id="trk" role="dialog" aria-modal="true" aria-labelledby="trkT" hidden>
@@ -1582,22 +1582,79 @@ $("csBody").addEventListener("click",e=>{
 const DCS={},DC_NAME={SV:"السعودية · Saudia Delay Codes",XY:"طيران ناس · flynas Delay Codes"};let DC=null,dcAir="SV",dcCb=null,dcT=false,dcSgs=false;
 const dcAirOf=f=>/^XY/.test(f.n||"")?"XY":/^SV/.test(f.n||"")?"SV":"";
 function loadDC(air){air=air||dcAir;return DCS[air]?Promise.resolve(DC=DCS[air]):fetch("data/delay-"+air.toLowerCase()+".json").then(r=>r.json()).then(j=>DC=DCS[air]=j)}
-const dcNorm=t=>norm(String(t)).replace(/[إأآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي");
+/* بحث ذكي: يفهم الوصف بالعربي العامي ويرتّب الأكواد حسب التطابق */
+const dcDn=t=>String(t||"").toLowerCase().replace(/[ً-ْـ]/g,"").replace(/[إأآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/[^؀-ۿa-z0-9\s-]/g," ");
+const dcStem=w=>{w=w.replace(/^(وال|بال|فال|كال|لل|ال)(?=..)/,"");if(w.length>4)w=w.replace(/^[وب](?=...)/,"");if(w.length>4)w=w.replace(/(ات|ين|ون|يه|ها)$/,"");return w};
+const dcNorm=t=>dcDn(t).split(/\s+/).filter(Boolean).map(dcStem).join(" ");
+const DC_STOP=new Set("تاخر تاخير تاخيرات متاخر متاخره تاخرت تاخره سبب بسبب من في على عن الى الي مع قبل بعد اللي هو هي او تم صار صارت كان كانت عند فيه في وش ما مو يوجد بطء بطئ بطيء بطيي ابطء رحله رحل طاير طياره طائره late delay delayed due to the of by and or slow".split(" ").map(w=>dcStem(dcDn(w).trim())));
+const DC_GROUPS=[
+ "وقود فيول فيل بترول ديزل تزويد تعبيه تانكر صهريج fuel fueling fueler defuel",
+ "طاقم كرو مضيف مضيفه مضيفين ضيافه كابين cabin crew",
+ "طيار طيارين كابتن قائد مساعد cockpit deck pic pilot",
+ "تجليس جلوس يجلس جلس مقعد مقاعد سيت seat seating",
+ "عفش شنط شنطه حقيبه حقايب بقج لقيج baggage bag bags luggage",
+ "تحميل تنزيل لودر عمال load loading offload unload",
+ "صعود ركوب بوردنق بوردينق boarding board",
+ "بوابه قيت gate gatting",
+ "كاونتر اجراءات تسجيل شيك check-in counter acceptance",
+ "حضر يحضر غايب متخلف نوشو show missing",
+ "تنظيف نظافه منظف كلينر cleaning cleaners clean",
+ "تموين اكل وجبه وجبات كيترنق catering meals galley",
+ "متحرك ويلشير ويل احتياجات معاق wheelchair mobility",
+ "عطل فني صيانه مهندس خراب خربان technical defect maintenance apu mel mechanic",
+ "معدات سياره سيارات تراكتور سلم درج equipment gse",
+ "باص باصات حافله حافلات bus busses shuttle",
+ "دفع بوش push pushback",
+ "امن تفتيش امني security search",
+ "جوازات جمارك صحه immigration customs immg",
+ "طقس مطر امطار غبار رياح ضباب عاصفه رعد weather rain dust fog wind thunderstorm sandstorm",
+ "برج مراقبه تصريح سلوت atc slot clearance",
+ "لودشيت لود وزن توازن مانفست نوتوك وثايق اوراق weight balance manifest notoc documents lir",
+ "مريض مرض اسعاف sick ambulance paramedic",
+ "مشاغب مزعج unruly",
+ "كبار وفد vip delegation",
+ "نظام سيستم شبكه انترنت system dcs network",
+ "ربط ترانزيت connection transit connecting",
+ "جسر جسور jet-way bridge",
+ "موقف مواقف stand parking",
+ "انتظار ينتظر waiting held awaiting",
+ "كهرباء power electric",
+ "حاويه حاويات طبليه ull uld container pallet",
+ "شحن بضايع cargo",
+ "حجز تذكره تذاكر reservation ticket booking",
+ "نقص قله ناقص عدم shortage lack",
+ "تاكسي taxi",
+ "طير طيور bird"
+].map(g=>g.split(" ").map(dcStem));
+function dcUnits(q){const seen=new Set();return dcDn(q).split(/\s+/).filter(Boolean).map(dcStem).filter(w=>w.length>1&&!DC_STOP.has(w)&&!seen.has(w)&&seen.add(w)).map(w=>{const t=new Set();
+  for(const g of DC_GROUPS)if(g.some(x=>x.length>2&&w.length>2&&(x.startsWith(w)||w.startsWith(x))))g.forEach(x=>t.add(x));t.delete(w);return{w,syn:[...t]}})}
+/* تطابق على بداية الكلمة (مو أي جزء منها): "عطل" ما تطابق "تعطل" */
+const dcHit=(toks,t)=>t.length>1&&toks.some(k=>k.startsWith(t));
 const DC_AR={"عفش":"BAGG","شنط":"BAGG","حقائب":"BAGG","صعود":"BOARD","بوابه":"GAT","كاونتر":"CHECK-IN","تنظيف":"CLEAN","وقود":"FUEL","تموين":"CATER","كرسي":"WHEEL","طاقم":"CREW","مضيف":"CABIN","طيار":"FLIGHT DECK","عطل":"DEFECT","صيانه":"MAINT","طقس":"WEATHER","امن":"SECUR","جوازات":"IMMG","تحميل":"LOAD","معدات":"EQUIP","نظام":"SYSTEM","راكب":"PASSENGER","مريض":"SICK","وزن":"WEIGHT","شحن":"CARGO","باص":"BUS"};
 const dcKey=(c,x)=>dcAir==="XY"?c.c+x[0]:c.c+"-"+x[0]+(dcT?"T":"");
+const dcHay=(c,x)=>{const k="_h"+x[0];return c[k]||(c[k]=dcNorm([c.ar,(c.sa||{})[x[0]]||"",c.en,x[1],dcAir==="XY"?c.a:""].join(" ")))};
+function dcRow(c,x){const k=dcKey(c,x),XY=dcAir==="XY",ar=(c.sa||{})[x[0]]||"",meta=XY?` · ${x[5]||c.a} · ${x[2]==="C"?"Controllable":"Uncontrollable"}${x[3]==="YES"?" · Airline resp.":""}`:dcT?" · EQUIPMENT TURN-AROUND, CONSEQUENTIAL":"";
+  return`<button class="dc-s" data-k="${k}" data-d="${escT(x[1])}"><b>${k}</b><span>${ar?`<span style="display:block;direction:rtl;text-align:right;font-weight:600">${escT(ar)}</span>`:""}<span style="color:var(--muted);font-size:12px">${escT(x[1])}${meta}</span></span></button>`}
+function dcBadge(c){const XY=dcAir==="XY";return XY?(c.cat==="GOPS"?'<em class="sgs">على المناولة</em>':`<em class="oth">${escT(DC.cats[c.cat]||c.cat)}</em>`):(c.sec===1?'<em class="sgs">على SGS</em>':c.sec===2?'<em class="oth">وكيل دولي</em>':"")}
+const dcMine=(c,x)=>dcAir==="XY"?(x[4]||c.cat)==="GOPS":c.sec===1;
 function renderDC(){
-  const q=dcNorm($("dcQ").value.trim()),qs=q?q.split(/\s+/):[],XY=dcAir==="XY";let h="",last=null;
-  const mt=(c,x)=>{if(!qs.length)return true;const hay=dcNorm([c.c,dcKey(c,x),XY?(x[5]||c.a)+" "+(x[5]||c.a)+c.c:"",c.ar,x[1]].join(" "));
-    return qs.every(w=>hay.includes(w)||(DC_AR[w]&&hay.includes(dcNorm(DC_AR[w]))))};
+  const raw=$("dcQ").value.trim(),XY=dcAir==="XY";let h="",last=null;
+  const codeQ=raw.toUpperCase().replace(/\s/g,"").match(/^(\d{1,2})-?([A-Z]{0,2})$/);
+  if(raw&&!codeQ){/* بحث بالوصف: نتائج مرتبة */
+    const U=dcUnits(raw);if(!U.length){$("dcB").innerHTML='<div class="tu-n" style="text-align:center">اكتب وش صار، مثل: تأخر سيارة الوقود، أو بطء تجليس الركاب من الطاقم</div>';return}
+    const lateQ=/تا?خ|بط|late|slow/.test(dcDn(raw)),lateRx=/تاخر|تاخير|بطء|late|slow/;
+    const R=[];for(const c of DC.codes)for(const x of c.subs){if(dcSgs&&!dcMine(c,x))continue;const hy=dcHay(c,x).split(" "),sub=dcNorm(((c.sa||{})[x[0]]||"")+" "+x[1]).split(" ");let sc=0;
+      for(const u of U){const inSub=dcHit(sub,u.w)?1:u.syn.some(t=>dcHit(sub,t))?.6:0,inAll=dcHit(hy,u.w)?1:u.syn.some(t=>dcHit(hy,t))?.6:0;sc+=inSub?inSub*1.3:inAll*.8}
+      if(sc>0&&lateQ&&lateRx.test(dcDn(((c.sa||{})[x[0]]||"")+" "+x[1])))sc+=.4;
+      if(sc>0)R.push({c,x,sc:sc+(dcMine(c,x)?.05:0)})}
+    const best=R.reduce((m,r)=>Math.max(m,r.sc),0),need=Math.max(.5,best*.6),top=R.filter(r=>r.sc>=need).sort((a,b)=>b.sc-a.sc).slice(0,20);
+    h=top.length?`<div class="dc-sec">أقرب الأكواد لـ «${escT(raw)}»</div>`+top.map(({c,x})=>`<div class="dc-c"><b><i>${c.c}</i><span>${escT(c.ar)}<small>${XY?escT(c.a)+" · ":""}${escT(c.en)}</small></span>${dcBadge(c)}</b>${dcRow(c,x)}</div>`).join(""):"";
+    $("dcB").innerHTML=h||'<div class="tu-n" style="text-align:center">ما لقيت كود مناسب. جرّب كلمات ثانية، مثل: عفش، وقود، طاقم، صعود، تنظيف</div>';return}
   for(const c of DC.codes){
     if(dcSgs&&(XY?c.cat!=="GOPS":c.sec!==1))continue;
-    const subs=c.subs.filter(x=>mt(c,x)&&(!dcSgs||!XY||x[4]==="GOPS"));if(!subs.length)continue;
+    const subs=c.subs.filter(x=>(!codeQ||c.c.replace(/^0/,"")===codeQ[1].replace(/^0/,"")&&(!codeQ[2]||x[0]===codeQ[2].replace(/T$/,"")))&&(!dcSgs||!XY||x[4]==="GOPS"));if(!subs.length)continue;
     if(!XY&&c.sec!==last){h+=`<div class="dc-sec">${escT(DC.secs[c.sec].ar)}</div>`;last=c.sec}
-    const badge=XY?(c.cat==="GOPS"?'<em class="sgs">على المناولة</em>':`<em class="oth">${escT(DC.cats[c.cat]||c.cat)}</em>`):(c.sec===1?'<em class="sgs">على SGS</em>':c.sec===2?'<em class="oth">وكيل دولي</em>':"");
-    h+=`<div class="dc-c"><b><i>${c.c}</i><span>${escT(c.ar)}<small>${XY?escT(c.a)+" · ":""}${escT(c.en)}</small></span>${badge}</b>`+
-      subs.map(x=>{const k=dcKey(c,x),meta=XY?` <span style="color:var(--muted)">· ${x[5]||c.a} · ${x[2]==="C"?"Controllable":"Uncontrollable"}${x[3]==="YES"?" · Airline resp.":""}</span>`:dcT?' <span style="color:var(--muted)">· EQUIPMENT TURN-AROUND, CONSEQUENTIAL</span>':"";
-        return`<button class="dc-s" data-k="${k}" data-d="${escT(x[1])}"><b>${k}</b><span>${escT(x[1])}${meta}</span></button>`}).join("")+
-      (c.copy?`<div class="dc-cp">COPY: ${escT(c.copy)}</div>`:"")+`</div>`;
+    h+=`<div class="dc-c"><b><i>${c.c}</i><span>${escT(c.ar)}<small>${XY?escT(c.a)+" · ":""}${escT(c.en)}</small></span>${dcBadge(c)}</b>`+subs.map(x=>dcRow(c,x)).join("")+(c.copy?`<div class="dc-cp">COPY: ${escT(c.copy)}</div>`:"")+`</div>`;
   }
   $("dcB").innerHTML=h||'<div class="tu-n" style="text-align:center">ما فيه نتائج. جرّب كلمة ثانية أو رقم الكود.</div>';
 }
