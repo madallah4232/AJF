@@ -1508,12 +1508,12 @@ function mvtBuild(f,date,d){
   const ia=f.ia?toMin(f.ia):null,ddA=new Date(date.getTime()+((ia??std)-180)*60e3);
   const arr=["MVT",`${f.ino||"XY"}/${pad(ddA.getUTCDate())}.${reg}.AJF`,`AA${td!=null?utc4(td):"----"}/${ata!=null?utc4(ata):"----"}`].join("\n");
   if(td==null)W.push("ARR: اكتب وقت الهبوط Touchdown");if(ata==null)W.push("ARR: اكتب ATA (On-block)");
-  const cA=csDerived(f,d).atd,ob=cA?toMin(cA):X?X.atd:null,abn=hm(m.abn)?toMin(m.abn):X&&X.tko!=null?X.tko:null;
+  const cA=csDerived(f,d).atd,ob=cA?toMin(cA):X?X.atd:null,abn=hm(m.abn)?toMin(m.abn):null;
   if(ob==null)W.push("DEP: سجّل Push Back (Off-block)");if(abn==null)W.push("DEP: اكتب وقت الإقلاع Airborne");
   let dly=ob!=null?ob-std:0;if(dly>720)dly-=1440;if(dly<-720)dly+=1440;dly=Math.max(0,dly);
   const react=ata!=null?Math.max(0,Math.min(dly,doorAt(f,ata)-std)):0,other=dly-react,DL=[];
   if(react>0)DL.push([n(m.xinb)||"93",react]);
-  if(other>0){if(!n(m.xloc))W.push(`DEP: اختر سبب الـ ${other} د`);DL.push([n(m.xloc).replace(/[^0-9A-Z]/gi,"").toUpperCase()||"??",other])}
+  if(other>0){if(!n(m.xloc))W.push(`DEP: اختر سبب الـ ${other} د`);DL.push([(n(m.xloc).match(/^\d{1,2}/)||["??"])[0],other])}
   const dl=DL.length?"DL"+DL.map(x=>x[0]).join("/")+"/"+DL.map(x=>hhmm4(x[1])).join("/"):"";
   const pax=n(m.pax)||String(["F","J","Y"].reduce((a,k)=>a+(+(d.pd||{})[k]||0),0)||"");
   const dep=["MVT",`${f.n}/${pad(dd.getUTCDate())}.${reg}.AJF`,`AD${ob!=null?utc4(ob):"----"}/${abn!=null?utc4(abn):"----"} EA${abn!=null?utc4(abn+f.dur):"----"} ${f.iata}`,dl,
