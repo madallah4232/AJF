@@ -203,8 +203,8 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .dots i.on{background:color-mix(in oklab,var(--amber) 22%,var(--raise));color:var(--amber);font-weight:600}
 .sheet .note{font-size:13px;color:var(--muted);line-height:1.7}
 /* delay codes */
-.dc{position:fixed;inset:0;z-index:34;background:var(--night);display:grid;grid-template-rows:auto auto 1fr}
-.dc[hidden]{display:none}
+.dlyc{position:fixed;inset:0;z-index:34;background:var(--night);display:grid;grid-template-rows:auto auto 1fr}
+.dlyc[hidden]{display:none}
 .dc-q{padding:10px 14px;border-bottom:1px solid var(--line);display:grid;gap:8px}
 .dc-q input{height:44px;border-radius:22px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:15px var(--body);padding:0 16px;width:100%}
 .dc-q input:focus{outline:2px solid var(--amber);outline-offset:-1px}
@@ -623,7 +623,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 </div>
 
 
-<div class="dc" id="dc" role="dialog" aria-modal="true" aria-labelledby="dcT" hidden>
+<div class="dlyc" id="dc" role="dialog" aria-modal="true" aria-labelledby="dcT" hidden>
   <div class="trk-top">
     <button class="trk-back" id="dcBack" aria-label="رجوع"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
     <div><b id="dcT">أكواد التأخير</b><span id="dcS">السعودية · Saudia Delay Codes</span></div>
