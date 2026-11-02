@@ -225,6 +225,13 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .dc-s b{font:700 13px var(--mono);color:var(--amber);white-space:nowrap}
 .dc-cp{font:11px var(--mono);color:var(--muted);padding:6px 12px 10px;direction:ltr;text-align:left}
 .dc-pick{height:40px;border-radius:10px;border:1px dashed color-mix(in oklab,var(--amber) 60%,var(--line));background:color-mix(in oklab,var(--amber) 10%,transparent);color:var(--amber);font:600 14px var(--body)}
+.dm-q{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.dm-q button{min-height:44px;padding:6px 8px;border-radius:10px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:600 12.5px/1.35 var(--body);text-align:right;display:grid;gap:1px}
+.dm-q button small{font:600 11px var(--mono);color:var(--amber);direction:ltr;text-align:right}
+.dm-q button[aria-pressed=true]{border-color:var(--amber);background:color-mix(in oklab,var(--amber) 16%,var(--raise))}
+.dm-out{margin:0;white-space:pre-wrap;direction:ltr;text-align:left;font:13px/1.55 var(--mono);background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--ink)}
+.dm-h{font:600 12.5px var(--body);color:var(--ink)}.dm-w{color:var(--warn);font-size:12px}
+.cs-f input.l{font:600 13px var(--mono);text-align:left;direction:ltr}
 /* turnaround countdown */
 .turn{background:linear-gradient(180deg,color-mix(in oklab,var(--amber) 9%,var(--raise)),var(--raise));border:1px solid color-mix(in oklab,var(--amber) 28%,var(--line));border-radius:16px;padding:12px 14px;display:grid;gap:10px}
 .turn[hidden]{display:none}
@@ -1262,7 +1269,7 @@ function renderCS(){
   ${(()=>{const X=dlyInfo(f,date);if(!X)return"";return`<div class="cs-card"><h5>DELAY</h5>
     <div class="cs-g">${fld("STD",`<input value="${f.t}" readonly>`)}${fld(X.est?"ATD ≈ تقديري":"ATD (Off-block)",`<input value="${X.est?"≈":""}${fmt(X.atd)}" readonly${X.est?' style="color:var(--muted)"':""}>`)}${fld(X.est?"DLY ≈ تقديري":"DLY",`<input value="${X.est?"≈":""}${X.no?"NO DELAY":X.dly+"M"}" readonly style="color:var(${X.est?"--muted":X.no?"--go":"--warn"})">`)}</div>
     ${X.no?"":`<div class="tu-n" style="direction:ltr;text-align:left">${dlyText(X)}</div>
-    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(/^SV/.test(f.n)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل السعودية</button>`:""):""}`}</div>`})()}`;
+    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(/^SV/.test(f.n)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل السعودية</button>`:""):""}`}</div>${/^SV/.test(f.n)&&!X.no?dmCard(f,date,X,d):""}`})()}`;
 }
 function csSet(path,v){
   const{f,date}=csCur,d=csData(f,date),p=path.split(".");let o=d;
@@ -1272,7 +1279,7 @@ function csSet(path,v){
 }
 $("csBody").addEventListener("click",e=>{if(!e.target.closest("[data-dcpick]"))return;const inp=$("csBody").querySelector("[data-dly]");
   openDC(v=>{inp.value=inp.value.trim()?inp.value.trim()+" / "+v:v;inp.dispatchEvent(new Event("change",{bubbles:true}))})});
-$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$/.test(k))renderCS()}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
+$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$|^dm\.|^pd\./.test(k))renderCS()}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
 $("csBody").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.chk){const{f,date}=csCur,d=csData(f,date);d.chk[b.dataset.chk]=!d.chk[b.dataset.chk];csSave();b.classList.toggle("on");return}
@@ -1432,6 +1439,55 @@ function endDrag(){if(!drag)return;const a=drag.h[0],b=drag.h[drag.h.length-1],v
   if(landing>sheet.offsetHeight*.5||v>900)closeSheet(v);else sAnim=spring(y,0,{velocity:v,damping:.85,response:.32,onUpdate:setY})}
 sheet.addEventListener("pointerup",endDrag);sheet.addEventListener("pointercancel",endDrag);
 
+/* ---------- DLY MSG (Saudia format) ----------
+   الجزء التبعي = كود تأخير الرحلة القادمة + T · الباقي = السبب المحلي · الأوقات UTC */
+const DMQ=[["15-A","تأخر صعود الركاب","DUE TO LATE BOARDING"],["15-B","راكب ما حضر · تنزيل عفشه","DUE TO MISSING CHKD-IN PAX (NO SHOW) AND OFFLOADING HIS BAGGAGE"],["11-A","تأخر إنهاء الإجراءات","DUE TO ACCEPTANCE AFTER DEADLINE"],["18-A","تأخر فرز العفش","DUE TO BAGGAGE HANDLING AND SORTING"],["32-A","تأخر التحميل على الطائرة","DUE TO LATE AIRCRAFT LOADING/OFFLOADING"],["33-A","نقص أو تعطل معدات","DUE TO LACK OR BREAKDOWN OF GSE"],["35-A","تأخر التنظيف","DUE TO LATE AIRCRAFT CLEANING"],["54-A","تأخر مشغّل الكرسي المتحرك","DUE TO LATE ARRIVAL OF WHEELCHAIR OPERATOR"],["54-B","نقص الكراسي المتحركة","DUE TO SHORTAGE OF WHEELCHAIR OR OPERATOR"],["68-A","تأخر طاقم الضيافة","DUE TO CABIN CREW ARRIVED LATE TO AIRCRAFT"],["67-A","تأخر أو عدم توفر الطيارين","DUE TO LATE OR NON-AVAILABILITY OF COCKPIT CREW"],["41-A","عطل فني","DUE TO TECHNICAL PROBLEM"],["84-I","تأخر موظفي الجوازات أو الأمن","DUE TO LATE SHOW UP OF GOVERNMENT PERSONNEL"],["82-C","تفتيش أمني استثنائي","DUE TO EXTRAORDINARY SECURITY CHECKS BY AIRPORT SECURITY"],["77-A","طقس يعيق المناولة","DUE TO ADVERSE WEATHER CONDITION ON APRON"],["89-A","المراقبة الجوية ATC","DUE TO ATC"],["52-B","انتظار ركاب بقرار الناقل","FLIGHT HELD BY SV TO ACCOMMODATE PASSENGER"]];
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const utc=m=>fmt(((m-180)%1440+1440)%1440),hhmm=m=>pad(Math.floor(m/60))+":"+pad(m%60);
+const dmCode=v=>String(v||"").toUpperCase().replace(/\s/g,"").replace(/T$/,"").match(/^\d{2}-[A-Z]{1,2}$/)?String(v).toUpperCase().replace(/\s/g,"").replace(/T$/,""):"";
+function dmBuild(f,date,X,d){
+  const m=d.dm||{},I=f.ia?inboundInfo(f,date):null,ata=hm(d.ata)?toMin(d.ata):isActual(I)?I.m:null;
+  const std=tm(f.t),dd=new Date(date.getTime()+(std-180)*60e3);
+  const react=X.react||0,other=X.dly-react,L=[],W=[];let ab=65;
+  if(react>0){const c=dmCode(m.inb);if(!c)W.push(`اكتب كود تأخير الرحلة القادمة ${f.ino||""}`);
+    L.push({k:String.fromCharCode(ab++),min:react,code:(c||"??-?")+"T",txt:m.t1||`LATE ARRIVAL OF INBOUND ${f.ino||""}${c?" DLY "+c:""}`})}
+  if(other>0){const c=dmCode(m.loc);if(!c)W.push(`اختر سبب الـ ${other} دقائق الباقية`);
+    L.push({k:String.fromCharCode(ab++),min:other,code:c||"??-?",txt:m.t2||(DMQ.find(q=>q[0]===c)||[])[2]||""})}
+  if(ata==null)W.push("أدخل ATA عشان ينحسب جزء تأخر الوصول");
+  const n=v=>String(v??"").trim(),p2=v=>pad(+n(v)||0);
+  const pd=d.pd||{},fc=n(m.fc)||n(pd.F),jc=n(m.jc)||n(pd.J),yc=n(m.yc)||n(pd.Y);
+  const txt=["DLY MSG",`1-${f.n} /${pad(dd.getUTCDate())}${MON[dd.getUTCMonth()]}${String(dd.getUTCFullYear()).slice(2)}`,`2-AJF/${f.iata}/Turnaround`,`3-${n(d.reg).toUpperCase().replace(/[^A-Z0-9]/g,"")||"HZ"}`,
+    `4-STA ${f.ia?utc(toMin(f.ia)):"--:--"} ATA ${ata!=null?utc(ata):"--:--"}`,` STD ${utc(std)} ATD ${utc(X.atd)}`,
+    "5-"+L.map(l=>`${l.k}- (${hhmm(l.min)}/${l.code})`).join(" "),
+    "6-"+L.map(l=>`${l.k}-${l.txt}`).join("\n"),
+    `7-FC${p2(fc)} JC${p2(jc)} WC${p2(m.wc)} YC${p2(yc)} LOST PAX${p2(m.lost)}`,
+    `8-ACTION TAKEN: ${n(m.act)||"NIL"}`,`9-PAX REACTION: ${n(m.rea)||"NIL"}`,`10-EXPENSE: ${n(m.exp)||"NIL"}`].join("\n");
+  return{txt,L,W,react,other};
+}
+function dmCard(f,date,X,d){
+  const B=dmBuild(f,date,X,d),m=d.dm||{},v=x=>escT(x||""),lc=dmCode(m.loc);
+  const fl=(lab,k,ph,cls="")=>`<label class="cs-f"><span>${lab}</span><input data-k="dm.${k}" value="${v(m[k])}" placeholder="${ph}" class="${cls}"></label>`;
+  return`<div class="cs-card"><h5>DLY MSG · رسالة التأخير <span style="font-family:var(--mono)">DLY ${X.dly}M</span></h5>
+   ${B.react>0?`<div class="dm-h">١) ${B.react} د سببها تأخر وصول ${f.ino||"الطائرة"} — وش كان كود تأخيرها؟</div>
+     <div class="cs-g two">${fl("كود الرحلة القادمة (من MVT)","inb","41-A","l")}<label class="cs-f"><span>&nbsp;</span><button class="dc-pick" data-dmpick="inb">📋 من الدليل</button></label></div>
+     ${fl("سطر 6 · A","t1",`LATE ARRIVAL OF INBOUND ${f.ino||""}`,"l")}`:""}
+   ${B.other>0?`<div class="dm-h">${B.react>0?"٢) ":""}وش سبب الـ ${B.other} د${B.react>0?" الباقية":""}؟</div>
+     <div class="dm-q">${DMQ.map(q=>`<button data-dmq="${q[0]}" aria-pressed="${lc===q[0]}">${q[1]}<small>${q[0]}</small></button>`).join("")}<button data-dmpick="loc" aria-pressed="${!!lc&&!DMQ.some(q=>q[0]===lc)}">غير ذلك · بحث في الدليل<small>${lc&&!DMQ.some(q=>q[0]===lc)?lc:"…"}</small></button></div>
+     ${fl(`سطر 6 · ${B.react>0?"B":"A"}`,"t2","DUE TO …","l")}`:""}
+   <div class="cs-g">${fl("FC","fc",(d.pd||{}).F||"0")}${fl("JC","jc",(d.pd||{}).J||"0")}${fl("WC","wc","0")}</div>
+   <div class="cs-g two">${fl("YC","yc",(d.pd||{}).Y||"0")}${fl("LOST PAX","lost","0")}</div>
+   ${fl("8 · ACTION TAKEN","act","NIL","l")}${fl("9 · PAX REACTION","rea","NIL","l")}${fl("10 · EXPENSE","exp","NIL","l")}
+   ${B.W.length?`<div class="dm-w">⚠︎ ${B.W.join(" · ")}</div>`:""}
+   <pre class="dm-out" id="dmOut">${escT(B.txt)}</pre><button class="dc-pick" data-dmcopy style="border-style:solid">📋 نسخ الرسالة</button></div>`;
+}
+$("csBody").addEventListener("click",e=>{
+  const q=e.target.closest("[data-dmq]"),pk=e.target.closest("[data-dmpick]"),cp=e.target.closest("[data-dmcopy]");if(!q&&!pk&&!cp)return;
+  const{f,date}=csCur,d=csData(f,date);
+  if(q){const Q=DMQ.find(x=>x[0]===q.dataset.dmq);csSet("dm.loc",Q[0]);csSet("dm.t2",Q[2]);renderCS()}
+  if(pk){const w=pk.dataset.dmpick;openDC(val=>{const c=val.split(" ")[0].replace(/T$/,""),desc=val.slice(val.indexOf(" ")+1);
+    if(w==="inb"){csSet("dm.inb",c)}else{csSet("dm.loc",c);csSet("dm.t2","DUE TO "+desc)}renderCS()})}
+  if(cp){const t=$("dmOut").textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{cp.textContent="✓ انسخت";setTimeout(()=>cp.textContent="📋 نسخ الرسالة",1500)}).catch(()=>{const r=document.createRange();r.selectNodeContents($("dmOut"));const sl=getSelection();sl.removeAllRanges();sl.addRange(r)})}
+});
 /* ---------- delay codes (Saudia booklet) ---------- */
 let DC=null,dcCb=null,dcT=false,dcSgs=false;
 function loadDC(){return DC?Promise.resolve(DC):fetch("data/delay-sv.json").then(r=>r.json()).then(j=>DC=j)}
