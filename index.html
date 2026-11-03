@@ -337,6 +337,16 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .ask-ref mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .ask-ref button{justify-self:start;font-size:12px;color:var(--amber)}
 .ask-note{font-size:11.5px;color:var(--muted);text-align:center}
+.ans-t{font:700 16.5px var(--display);color:var(--amber)}
+.ans-l{margin:0;padding-inline-start:22px;display:grid;gap:7px;font-size:14.5px;line-height:1.7}
+.ans-l li::marker{color:var(--amber);font-weight:700}
+.ans-src{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ans-src bdi{font-family:var(--mono);border:1px solid var(--line);border-radius:8px;padding:1px 7px}
+.ans-orig{justify-self:start;font-size:12.5px;color:var(--amber);text-decoration:underline}
+.ans-o{display:grid;gap:8px}
+.ans-rel{justify-content:flex-start}
+.ask-ref.full p{display:block;-webkit-line-clamp:unset;white-space:pre-wrap}
+
 .ask-lock{display:grid;gap:14px;justify-items:center;text-align:center;padding:40px 10px}
 .ask-lock .orb{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);color:var(--amber)}
 .ask-lock input{width:100%;max-width:300px;height:52px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 20px var(--mono);text-align:center;letter-spacing:2px;text-transform:uppercase}
@@ -1534,22 +1544,29 @@ function kbIndex(){
   const docs=KB.c.map(([s,h,p,t])=>{const tk=(h+" "+h+" "+t).toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(w=>w.length>1);const tf=new Map();tk.forEach(w=>tf.set(w,(tf.get(w)||0)+1));return{s,h,p,t,tf,len:tk.length}});
   const df=new Map();docs.forEach(d=>d.tf.forEach((_,w)=>df.set(w,(df.get(w)||0)+1)));
   const avg=docs.reduce((a,d)=>a+d.len,0)/docs.length;
-  const qa=KB.qa.map(x=>({...x,tk:new Set(toks(x.q+" "+x.k))}));
-  KBI={docs,df,avg,qa};
+  /* أجوبة عربية جاهزة: عنوان + صيغ أسئلة + كلمات إنجليزية مساعدة */
+  const qa=KB.qa.map(x=>{const qs=[x.t,...(x.q||[])];const tk=new Set(toks(qs.join(" ")));const en=new Set(String(x.k||"").toLowerCase().split(/\s+/).filter(Boolean));
+    return{...x,tk,en,ph:qs.map(v=>toks(v).join(" ")).filter(Boolean)}});
+  const bySec={};docs.forEach(d=>{if(!bySec[d.s])bySec[d.s]=d});
+  KBI={docs,df,avg,qa,bySec};
 }
 function kbSearch(q){
   const qt=toks(q),en=new Set();
   qt.forEach(w=>{if(/^[a-z0-9]+$/.test(w))en.add(w);const sy=SYNN[w];if(sy)sy.toLowerCase().split(" ").forEach(x=>en.add(x))});
-  /* QA match */
-  let best=null,bs=0;
-  KBI.qa.forEach(x=>{let m=0;qt.forEach(w=>{if(x.tk.has(w))m+=1;else if(w.length>=3&&[...x.tk].some(t=>t.length>=3&&(t.startsWith(w)||w.startsWith(t))))m+=.7});const sc=m/Math.max(1,Math.sqrt(qt.length*1.2));if(sc>bs){bs=sc;best=x}});
+  /* مطابقة الأجوبة العربية الجاهزة */
+  const qj=qt.join(" "),QG=new Set(["طياره","طائره","طيارة","طائرة","الطياره","الطائره","رحله","حاله","وضع","موظف","الموظف","شغل","اسال","سوال","جو"].map(w=>stem(arN(w)))),qq=qt.filter(w=>!QG.has(w));
+  const scored=!qq.length?[]:KBI.qa.map(x=>{let m=0;qq.forEach(w=>{if(x.tk.has(w))m+=1;else if(w.length>=3&&[...x.tk].some(t=>t.length>=3&&(t.startsWith(w)||w.startsWith(t))))m+=.7;
+      else{const sy=SYNN[w];if(sy&&sy.toLowerCase().split(" ").some(e=>x.en.has(e)))m+=.55;else if(/^[a-z0-9]+$/.test(w)&&x.en.has(w))m+=.9}});
+    let sc=m/Math.max(1,Math.sqrt(qq.length*1.1));if(qj&&x.ph.some(p=>p===qj||(qj.length>4&&p.includes(qj))))sc+=.6;return{x,sc}}).filter(r=>r.sc>0).sort((a,b)=>b.sc-a.sc);
+  const best=scored[0]&&scored[0].sc>=.5?scored[0].x:null,bs=best?scored[0].sc:0;
+  const rel=scored.slice(best?1:0,best?4:4).filter(r=>r.sc>=.45&&r.sc>=scored[0].sc*.55).map(r=>r.x);
   /* BM25 over the manual */
   const N=KBI.docs.length,k1=1.4,b=.75,terms=[...en];
   const res=terms.length?KBI.docs.map(d=>{let s=0;terms.forEach(w=>{const f=d.tf.get(w);if(!f)return;const idf=Math.log(1+(N-KBI.df.get(w)+.5)/(KBI.df.get(w)+.5));s+=idf*f*(k1+1)/(f+k1*(1-b+b*d.len/KBI.avg))});return{d,s}}).filter(r=>r.s>0).sort((a,b)=>b.s-a.s):[];
   const seen=new Set(),refs=[];
-  if(best&&bs>=.55)seen.add(best.s);
-  for(const r of res){const key=r.d.s+"|"+r.d.h;if(seen.has(key))continue;seen.add(key);refs.push(r.d);if(refs.length>=3)break}
-  return{qa:bs>=.55?best:null,refs,terms};
+  if(best)best.r.forEach(([s0])=>seen.add(s0));
+  for(const r of res){if(seen.has(r.d.s))continue;seen.add(r.d.s);refs.push(r.d);if(refs.length>=3)break}
+  return{qa:best,rel,refs,terms};
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function snippet(t,terms){
@@ -1557,28 +1574,33 @@ function snippet(t,terms){
   const st=Math.max(0,at-160),body=(st?"… ":"")+t.slice(st);
   let h=esc(body);terms.filter(w=>w.length>2).forEach(w=>{h=h.replace(new RegExp("\\b("+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>")});return h;
 }
-function askAnswer(q){
+function askAnswer(q,pick){
   const body=$("askBody");$("askHello")&&$("askHello").remove();
   body.insertAdjacentHTML("beforeend",`<div class="ask-q">${esc(q)}</div>`);const qEl=body.lastElementChild;
-  const r=kbSearch(q);let h="";
-  if(r.qa)h+=`<div class="ans">${esc(r.qa.a)}</div><span class="src">GOM ${r.qa.s}${r.qa.p?" · p."+r.qa.p:""}</span>`;
-  if(r.refs.length){h+=`<div class="lbl">${r.qa?"للاستزادة من الدليل":"أقرب ما وجدته في الدليل"}</div>`+r.refs.map((d,i)=>`<div class="ask-ref"><b>${d.s} ${esc(d.h)} <span>· p.${d.p||"—"}</span></b><p>${snippet(d.t,r.terms)}</p><button data-full>${"عرض الفقرة كاملة"}</button></div>`).join("")}
-  if(!h)h=`<div class="ans">ما لقيت جواب واضح لسؤالك في الدليل. جرّب تكتبه بكلمات ثانية أو بالإنجليزي (مثلاً: fueling, chocks, boarding).</div>`;
+  const r=pick?{qa:pick,rel:[],refs:[],terms:[]}:kbSearch(q);let h="";
+  if(r.qa){const x=r.qa;
+    h+=`<div class="ans-t">${esc(x.t)}</div><ol class="ans-l">${x.a.map(l=>`<li>${esc(l)}</li>`).join("")}</ol>`;
+    h+=`<div class="ans-src">المرجع: ${x.r.map(([s0,p0])=>`<bdi dir="ltr">GOM ${esc(s0)} · p.${p0}</bdi>`).join(" ")}</div>`;
+    h+=`<button class="ans-orig" data-orig="${esc(x.r.map(z=>z[0]).join(","))}">النص الأصلي من الدليل</button><div class="ans-o" hidden></div>`;
+    if(r.rel.length)h+=`<div class="lbl">مواضيع قريبة</div><div class="ask-sug ans-rel">${r.rel.map((y,i)=>`<button data-rel="${i}">${esc(y.t)}</button>`).join("")}</div>`;
+  }else if(r.rel.length){h+=`<div class="ans">ما لقيت جواب مطابق تماماً. تقصد واحد من هذي؟</div><div class="ask-sug ans-rel">${r.rel.map((y,i)=>`<button data-rel="${i}">${esc(y.t)}</button>`).join("")}</div>`}
+  if(!r.qa&&r.refs.length){h+=`<div class="lbl">${r.rel.length?"أو من نص الدليل مباشرة":"ما عندي جواب جاهز لهذا السؤال. هذي أقرب البنود في الدليل (بالإنجليزي):"}</div>`+r.refs.map(d=>`<div class="ask-ref"><b>${d.s} ${esc(d.h)} <span>· p.${d.p||"—"}</span></b><p>${snippet(d.t,r.terms)}</p><button data-full>عرض الفقرة كاملة</button></div>`).join("")}
+  if(!h)h=`<div class="ans">ما فهمت السؤال. جرّب تكتبه بكلمات ثانية، مثل: «وش أسوي إذا فيه برق؟» أو «حدود السرعة في الساحة».</div>`;
   body.insertAdjacentHTML("beforeend",`<div class="ask-a">${h}</div>`);
-  const last=body.lastElementChild;last.querySelectorAll("[data-full]").forEach(b=>b.onclick=()=>{const c=b.parentElement;c.classList.toggle("full");b.textContent=c.classList.contains("full")?"إخفاء":"عرض الفقرة كاملة"});
+  const last=body.lastElementChild;
+  last.querySelectorAll("[data-full]").forEach(b=>b.onclick=()=>{const c=b.parentElement;c.classList.toggle("full");b.textContent=c.classList.contains("full")?"إخفاء":"عرض الفقرة كاملة"});
+  last.querySelectorAll("[data-rel]").forEach(b=>b.onclick=()=>{const y=r.rel[+b.dataset.rel];askAnswer(y.t,y)});
+  const ob=last.querySelector("[data-orig]");if(ob)ob.onclick=()=>{const box=ob.nextElementSibling;if(!box.hidden){box.hidden=true;ob.textContent="النص الأصلي من الدليل";return}
+    box.innerHTML=ob.dataset.orig.split(",").map(s0=>{const d=KBI.bySec[s0];return d?`<div class="ask-ref full"><b>${esc(d.s)} ${esc(d.h)} <span>· p.${d.p||"—"}</span></b><p>${esc(d.t)}</p></div>`:""}).join("");box.hidden=false;ob.textContent="إخفاء النص الأصلي"};
   requestAnimationFrame(()=>qEl.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"}));
 }
 function askHello(){
-  const sug=["وش أسوي إذا فيه برق؟","كم حدود السرعة في الساحة؟","منطقة أمان الوقود","الفرق بين WCHR و WCHS","انسكاب وقود","متى أبدأ صعود الركاب؟","إجراءات الرياح القوية","من يفتح باب الطائرة؟"];
-  $("askBody").innerHTML=`<div class="ask-hello" id="askHello"><div class="orb"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/><path d="M9 7h7M9 11h5"/></svg></div><h3>اسأل عن أي إجراء</h3><p>الأجوبة من دليل العمليات الأرضية المعتمد (GOM Issue 07)، مع رقم البند والصفحة. المرجع النهائي هو الدليل وتعليمات الشركة الناقلة.</p><div class="ask-sug">${sug.map(s=>`<button>${s}</button>`).join("")}</div></div>`;
+  const sug=["وش أسوي إذا فيه برق؟","الجو حار وش أسوي؟","كم السرعة قرب الطائرة؟","انسكاب وقود","الفرق بين WCHR و WCHS","راكب مفقود عند البوابة","شنطة تسرّب","الحامل كم أسبوع تسافر؟","باور بانك مع الراكب","ساعات العمل والراحة"];
+  $("askBody").innerHTML=`<div class="ask-hello" id="askHello"><div class="orb"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/><path d="M9 7h7M9 11h5"/></svg></div><h3>اسأل عن أي إجراء</h3><p>اكتب سؤالك بكلامك العادي، والجواب يطلع لك بالعربي وبخطوات، مع رقم البند والصفحة من دليل العمليات الأرضية (GOM Issue 07). المرجع النهائي هو الدليل وتعليمات الشركة الناقلة.</p><div class="ask-sug">${sug.map(s=>`<button>${s}</button>`).join("")}</div></div>`;
   $("askBody").querySelectorAll(".ask-sug button").forEach(b=>b.onclick=()=>askAnswer(b.textContent));
 }
-async function kbUnlock(pw){
-  const buf=await getDoc("kb.bin");
-  const salt=buf.slice(5,21),iv=buf.slice(21,33),ct=buf.slice(33);
-  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw.trim().toUpperCase()),"PBKDF2",false,["deriveKey"]);
-  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
-  const gz=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,ct);
+async function kbLoad(){
+  const gz=await getDoc("gom.json.gz");
   const txt=await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
   KB=JSON.parse(txt);kbIndex();
 }
@@ -1594,9 +1616,8 @@ function askReady(){$("askFoot").hidden=false;askHello()}
 async function openAsk(){
   $("ask").hidden=false;
   if(KB){if(!$("askBody").children.length)askHello();$("askFoot").hidden=false;return}
-  let pw=null;try{pw=localStorage.getItem(KB_PW_KEY)}catch(e){}
-  if(pw){$("askBody").innerHTML=`<div class="ask-typing">جاري تحميل الدليل…</div>`;try{await kbUnlock(pw);askReady();return}catch(e){try{localStorage.removeItem(KB_PW_KEY)}catch(x){}}}
-  askLock();
+  $("askFoot").hidden=true;$("askBody").innerHTML=`<div class="ask-typing">جاري تحميل الدليل…</div>`;
+  try{await kbLoad();askReady()}catch(e){$("askBody").innerHTML=`<div class="ask-lock"><h3 style="margin:0;font:700 18px var(--display)">تعذّر تحميل الدليل</h3><p style="margin:0;color:var(--muted);font-size:13.5px">تأكد من الاتصال بالإنترنت وجرّب مرة ثانية.</p><button id="askRetry">إعادة المحاولة</button></div>`;$("askRetry").onclick=openAsk}
 }
 $("askFab").onclick=openAsk;
 $("askBack").onclick=()=>{$("ask").hidden=true};
