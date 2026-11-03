@@ -40,10 +40,10 @@ async function fr24Feed(calls) {
   } catch { return null; }
 }
 // جدول مطار الجوف من FR24: الإقلاع/الهبوط الفعلي والمتوقع والإلغاء — كل دقيقة
-async function fr24Board(iso) {
-  const ts = Math.floor(Date.now() / 1000), out = {};
+async function fr24Board(iso, iso2) {
+  const ts = Math.floor(Date.now() / 1000), out = {}, next = [];
   let ok = false;
-  for (const page of [-1, 1]) {
+  for (const page of [-1, 1, 2]) {
     try {
       // curl بدل fetch: Cloudflare عند FR24 يرفض بصمة Node ويقبل curl
       const txt = execFileSync("curl", ["-gsf", "-m", "15", "-A", UA["user-agent"], `https://api.flightradar24.com/common/v1/airport.json?code=AJF&plugin[]=schedule&plugin-setting[schedule][mode]=&plugin-setting[schedule][timestamp]=${ts}&page=${page}&limit=100`], { stdio: ["ignore", "pipe", "ignore"] }).toString();
@@ -51,7 +51,10 @@ async function fr24Board(iso) {
       for (const kind of ["departures", "arrivals"]) for (const it of S[kind].data || []) {
         const f = it.flight, no = f.identification.number.default, T = f.time, st = (f.status.generic.status.text || "").toLowerCase();
         const sch = kind === "departures" ? T.scheduled.departure : T.scheduled.arrival;
-        if (!no || !sch || riyadh(sch * 1000).iso !== iso) continue;
+        if (!no || !sch) continue;
+        const day = riyadh(sch * 1000).iso;
+        if (day === iso2) { if (st === "canceled" && !next.includes(no)) next.push(no); continue; } // إلغاء بكرة
+        if (day !== iso) continue;
         const hm = (u) => fmt(riyadh(u * 1000).mins), reg = f.aircraft && f.aircraft.registration || "";
         let e = null;
         if (st === "canceled") e = { s: "canceled", t: "" };
@@ -68,7 +71,7 @@ async function fr24Board(iso) {
       }
     } catch (x) { console.log("fr24 board", x.message); }
   }
-  return ok ? out : null;
+  return ok ? { out, next } : null;
 }
 const sh = (c) => execSync(c, { stdio: ["ignore", "pipe", "inherit"] }).toString();
 // استرجاع بيانات اليوم السابقة (ATA/ATD) إن وجدت
@@ -79,7 +82,7 @@ let lastOut = "";
 while (Date.now() - t0 < RUN_MS) {
   const loop = Date.now(), N = riyadh();
   if (state.date !== N.iso) state = { date: N.iso, ata: {}, atd: {}, low: {}, air: {}, fr: {} };
-  if (loop - boardAt >= 55e3) { const b = await fr24Board(N.iso); if (b) { state.fr = b; state.frAt = Math.round(Date.now() / 1000); boardAt = loop; } }
+  if (loop - boardAt >= 55e3) { const n2 = riyadh(Date.now() + 864e5).iso, b = await fr24Board(N.iso, n2); if (b) { state.fr = b.out; state.frx = { date: n2, cxl: b.next }; state.frAt = Math.round(Date.now() / 1000); boardAt = loop; } }
   const want = [];
   for (const f of flightsOn(N.iso, N.dow)) {
     if (f.ino && f.ia && !state.ata[f.ino] && N.mins >= toMin(f.ia) - 200 && N.mins <= toMin(f.ia) + 90) want.push({ no: f.ino, kind: "in" });
@@ -101,7 +104,7 @@ while (Date.now() - t0 < RUN_MS) {
   }
   // اختفت الإشارة في الاقتراب النهائي أكثر من 4 دقائق = هبطت (تقريبي مبني على آخر رصد)
   for (const [no, L] of Object.entries(state.low)) if (!state.ata[no] && !ac[cs(no)] && riyadh().mins - L.m >= 4) state.ata[no] = "~" + fmt(L.m + Math.max(1, Math.round(L.d / 4)));
-  const body = { date: state.date, ata: state.ata, atd: state.atd, low: state.low, air: state.air, fr: state.fr, frAt: state.frAt, want: want.map((w) => cs(w.no)), ac };
+  const body = { date: state.date, ata: state.ata, atd: state.atd, low: state.low, air: state.air, fr: state.fr, frx: state.frx, frAt: state.frAt, want: want.map((w) => cs(w.no)), ac };
   const out = JSON.stringify(body);
   if (out !== lastOut || Date.now() - (state.pushed || 0) > 3 * 60e3) {
     writeFileSync("adsb.json", JSON.stringify({ updated: Math.round(Date.now() / 1000), ...body }));

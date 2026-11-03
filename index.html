@@ -1117,7 +1117,7 @@ function loadRelay(){
   if(Date.now()-relayAt<8000&&RELAY)return Promise.resolve(RELAY);
   if(relayP)return relayP;
   relayP=fetch("https://raw.githubusercontent.com/madallah4232/AJF/live/adsb.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
-    .then(j=>{relayP=null;if(j&&j.date){RELAY=j;relayAt=Date.now();applyRelayATA();if(mergeRelay()){renderNext();if(!open)render();renderSync()}}return RELAY});
+    .then(j=>{relayP=null;if(j&&j.date){RELAY=j;relayAt=Date.now();applyRelayATA();if(mergeRelay()||(j.frx&&j.frx.cxl&&j.frx.cxl.length)){renderNext();if(!open)render();renderSync()}}return RELAY});
   return relayP;
 }
 /* حالة الرحلات المباشرة من وسيط GitHub (جدول FR24 لمطار الجوف كل دقيقة): تتقدّم على تحديث الجدول كل ساعة، والتصحيح اليدوي (@ / عمود F) يتقدّم على الكل */
@@ -1899,8 +1899,10 @@ function cleanLive(j){
 /* سجل آخر يومين: يحتفظ بحالة كل يوم على الجهاز، ويقرأ أرشيف الجدول (أمس وقبله) */
 let HIST={};try{HIST=JSON.parse(localStorage.getItem("ajf_hist")||"{}")}catch(e){}
 const EMPTY_LV={date:"",flights:{},dly:{}};
-function LV(date){const k=iso(date),b=LIVE.date===k?LIVE:HIST[k]||EMPTY_LV,c=CXL[k];if(!c)return b;
-  const fl={...b.flights};for(const n in c)if(!fl[n]||!fl[n].fix&&!["departed","landed"].includes(fl[n].s))fl[n]={s:"canceled",t:"",note:"ملغاة حسب البلاغ"};
+function relayCxl(k){const X=RELAY&&RELAY.frx;if(!X||X.date!==k||!Array.isArray(X.cxl)||!X.cxl.length||Date.now()/1000-(RELAY.frAt||0)>3600)return null;
+  const o={};for(const f of flightsOn(new Date(k+"T00:00:00Z")))if(X.cxl.includes(f.n)){o[f.n]=2;if(f.ino)o[f.ino]=2}else if(f.ino&&X.cxl.includes(f.ino))o[f.ino]=2;return o}
+function LV(date){const k=iso(date),b=LIVE.date===k?LIVE:HIST[k]||EMPTY_LV,r=relayCxl(k),c=r||CXL[k]?{...(CXL[k]||{}),...(r||{})}:null;if(!c)return b;
+  const fl={...b.flights};for(const n in c)if(!fl[n]||!fl[n].fix&&!["departed","landed"].includes(fl[n].s))fl[n]={s:"canceled",t:"",note:c[n]===2?"ملغاة حسب Flightradar24":"ملغاة حسب البلاغ"};
   return{...b,date:b.date||k,flights:fl}}
 function keepHist(j){if(!j||!j.date)return;const old=HIST[j.date];if(old&&old.updated>j.updated&&j.date!==LIVE.date)return;HIST[j.date]=j;
   const keep=[0,1,2].map(i=>iso(addDays(TODAY,-i)));for(const k of Object.keys(HIST))if(!keep.includes(k))delete HIST[k];
