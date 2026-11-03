@@ -1110,11 +1110,28 @@ function loadLeaflet(){
 /* وسيط ADS-B: GitHub يجلب المواقع كل 30 ثانية (adsb.lol يمنع المتصفح مباشرة) */
 let RELAY=null,relayAt=0,relayP=null;
 function loadRelay(){
-  if(Date.now()-relayAt<10000&&RELAY)return Promise.resolve(RELAY);
+  if(Date.now()-relayAt<8000&&RELAY)return Promise.resolve(RELAY);
   if(relayP)return relayP;
   relayP=fetch("https://raw.githubusercontent.com/madallah4232/AJF/live/adsb.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
-    .then(j=>{relayP=null;if(j&&j.date){RELAY=j;relayAt=Date.now();applyRelayATA()}return RELAY});
+    .then(j=>{relayP=null;if(j&&j.date){RELAY=j;relayAt=Date.now();applyRelayATA();if(mergeRelay()){renderNext();if(!open)render();renderSync()}}return RELAY});
   return relayP;
+}
+/* حالة الرحلات المباشرة من وسيط GitHub (جدول FR24 لمطار الجوف كل دقيقة): تتقدّم على تحديث الجدول كل ساعة، والتصحيح اليدوي (@ / عمود F) يتقدّم على الكل */
+function mergeRelay(){
+  const R=RELAY;if(!R||!R.fr||!R.frAt||!/^\d{4}-\d{2}-\d{2}$/.test(R.date||"")||Date.now()/1000-R.frAt>900)return false;
+  if(!LIVE.date||R.date>LIVE.date){LIVE.date=R.date;LIVE.updated="";LIVE.flights={};LIVE.dly={}}
+  if(R.date!==LIVE.date)return false;
+  let hit=false;
+  for(const[k,v]of Object.entries(R.fr)){
+    if(!/^[A-Z0-9]{2,8}$/.test(k)||!v||!/^[a-z]{3,12}$/.test(v.s))continue;
+    const o=LIVE.flights[k];if(o&&(o.fix||isCert(o)))continue;
+    const n={s:v.s,t:/^\d{1,2}:\d{2}$/.test(v.t||"")?v.t:"",note:escT(v.note||(o&&o.note)||"").slice(0,200)};
+    if(!o||o.s!==n.s||o.t!==n.t||o.note!==n.note){LIVE.flights[k]=n;hit=true}
+  }
+  const u=fmt(Math.floor(((R.frAt+10800)%86400)/60));
+  if(!LIVE.updated||toMin(u)>toMin(LIVE.updated)){LIVE.updated=u;hit=true}
+  if(hit)keepHist({...LIVE,flights:{...LIVE.flights},dly:{...LIVE.dly}});
+  return hit;
 }
 function applyRelayATA(){
   if(!RELAY||RELAY.date!==iso(TODAY))return;let hit=false;
@@ -1397,7 +1414,7 @@ async function watchInbound(){
   }
   if(hit&&!open)render();
 }
-const watchSafe=()=>watchInbound().catch(()=>{});setInterval(()=>{if(!document.hidden&&!DEMO)loadRelay()},30000);setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
+const watchSafe=()=>watchInbound().catch(()=>{});setInterval(()=>{if(!document.hidden&&!DEMO)loadRelay()},20000);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay()}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
 
 /* ---------- Coordination Sheet (GS-OL-029) ----------
    نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن». يُحفظ على الجهاز. */
@@ -1882,7 +1899,7 @@ function LV(date){const k=iso(date);if(LIVE.date===k)return LIVE;return HIST[k]|
 function keepHist(j){if(!j||!j.date)return;const old=HIST[j.date];if(old&&old.updated>j.updated&&j.date!==LIVE.date)return;HIST[j.date]=j;
   const keep=[0,1,2].map(i=>iso(addDays(TODAY,-i)));for(const k of Object.keys(HIST))if(!keep.includes(k))delete HIST[k];
   try{localStorage.setItem("ajf_hist",JSON.stringify(HIST))}catch(e){}}
-function applyLive(j){if(j&&j.flights){j=cleanLive(j);keepHist(j);Object.assign(LIVE,j);renderNext();if(!open)render();renderSync()}}
+function applyLive(j){if(j&&j.flights){j=cleanLive(j);keepHist(j);if(!LIVE.date||j.date>=LIVE.date)Object.assign(LIVE,j);mergeRelay();renderNext();if(!open)render();renderSync()}}
 function parseLiveCSV(t){const rows=parseCSV(t);const j={date:"",updated:"",flights:{},dly:{}};
       const fix={};
       rows.slice(1).forEach(r=>{const[k,s,t,n]=r;const F=(r[5]||"").toUpperCase().replace(/\s/g,""),G=r[6]||"";if(F&&/\d{1,2}:\d{2}/.test(G))fix[F]=normT(G);const DI=(r[8]||"").toUpperCase().replace(/\s/g,""),DJ=(r[9]||"").trim();if(DI&&DJ)j.dly[DI]=DJ;
