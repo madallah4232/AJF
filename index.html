@@ -1606,12 +1606,13 @@ $("csBody").addEventListener("click",e=>{
 });
 /* ---------- delay codes (Saudia booklet) ---------- */
 /* أدلة أكواد التأخير: كل شركة لها دليلها المستقل في data/delay-xx.json — لإضافة شركة: ملف + سطر هنا */
-const DC_AIRS={SV:["السعودية","السعودية","السعودية · Saudia Delay Codes","مسؤولية SGS فقط"],XY:["ناس","طيران ناس","طيران ناس · flynas Delay Codes","على المناولة فقط"],SM:["إير كايرو","إير كايرو","إير كايرو · Air Cairo Delay Codes","على المحطة أو المناولة"]};
+const DC_AIRS={SV:["السعودية","السعودية","السعودية · Saudia Delay Codes","مسؤولية SGS فقط"],XY:["ناس","طيران ناس","طيران ناس · flynas Delay Codes","على المناولة فقط"],SM:["إير كايرو","إير كايرو","إير كايرو · Air Cairo Delay Codes","على المحطة أو المناولة"],F3:["فلاي أديل","فلاي أديل","فلاي أديل · flyadeal Delay Codes","على الخدمات الأرضية GS فقط"]};
 const DC_SHORT=Object.fromEntries(Object.entries(DC_AIRS).map(([k,v])=>[k,v[0]])),DC_LONG=Object.fromEntries(Object.entries(DC_AIRS).map(([k,v])=>[k,v[1]])),DC_NAME=Object.fromEntries(Object.entries(DC_AIRS).map(([k,v])=>[k,v[2]]));
 const DCS={};let DC=null,dcAir="SV",dcCb=null,dcT=false,dcSgs=false;
 const dcAirOf=f=>{const p=String(f.n||"").slice(0,2).toUpperCase();return DC_AIRS[p]?p:""};
-/* G = دليل عام (أي شركة غير السعودية وناس): الكود = رئيسي + فرعي (مثل 34e)، subs=[فرعي, وصف, المسؤول, على المحطة/المناولة 1/0] */
-const dcG=()=>dcAir!=="SV"&&dcAir!=="XY";
+/* G = دليل عام (أي شركة غير السعودية وناس): الكود = رئيسي + فرعي (مثل 34e)، subs=[فرعي, وصف, المسؤول, على المحطة/المناولة 1/0, كود صريح اختياري]
+   react: الدليل فيه أكواد تبعية (r) — c.rs = الصفوف اللي لها كود تبعي */
+const dcG=()=>dcAir!=="SV"&&dcAir!=="XY";const dcR=()=>dcG()&&dcT&&!!(DC&&DC.react);const dcRok=(c,x)=>!dcR()||(c.rs||[]).includes(x[0]);
 function loadDC(air){air=air||dcAir;return DCS[air]?Promise.resolve(DC=DCS[air]):fetch("data/delay-"+air.toLowerCase()+".json").then(r=>r.json()).then(j=>DC=DCS[air]=j)}
 /* بحث ذكي: يفهم الوصف بالعربي العامي ويرتّب الأكواد حسب التطابق */
 const dcDn=t=>String(t||"").toLowerCase().replace(/[ً-ْـ]/g,"").replace(/[إأآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/[^؀-ۿa-z0-9\s-]/g," ");
@@ -1662,19 +1663,19 @@ function dcUnits(q){const seen=new Set();return dcDn(q).split(/\s+/).filter(Bool
 /* تطابق على بداية الكلمة (مو أي جزء منها): "عطل" ما تطابق "تعطل" */
 const dcHit=(toks,t)=>t.length>1&&toks.some(k=>k.startsWith(t));
 const DC_AR={"عفش":"BAGG","شنط":"BAGG","حقائب":"BAGG","صعود":"BOARD","بوابه":"GAT","كاونتر":"CHECK-IN","تنظيف":"CLEAN","وقود":"FUEL","تموين":"CATER","كرسي":"WHEEL","طاقم":"CREW","مضيف":"CABIN","طيار":"FLIGHT DECK","عطل":"DEFECT","صيانه":"MAINT","طقس":"WEATHER","امن":"SECUR","جوازات":"IMMG","تحميل":"LOAD","معدات":"EQUIP","نظام":"SYSTEM","راكب":"PASSENGER","مريض":"SICK","وزن":"WEIGHT","شحن":"CARGO","باص":"BUS"};
-const dcKey=(c,x)=>dcAir==="XY"||dcG()?c.c+x[0]:c.c+"-"+x[0]+(dcT?"T":"");
+const dcKey=(c,x)=>dcG()?(x[4]||c.c+x[0])+(dcR()?"r":""):dcAir==="XY"?c.c+x[0]:c.c+"-"+x[0]+(dcT?"T":"");
 const dcHay=(c,x)=>{const k="_h"+x[0];return c[k]||(c[k]=dcNorm([c.ar,(c.sa||{})[x[0]]||"",c.en,x[1],dcAir==="XY"||dcG()?c.a:"",dcG()?x[2]:""].join(" ")))};
-function dcRow(c,x){const k=dcKey(c,x),XY=dcAir==="XY",ar=(c.sa||{})[x[0]]||"",meta=dcG()?` · المسؤول: ${escT(x[2])}`:XY?` · ${x[5]||c.a} · ${x[2]==="C"?"Controllable":"Uncontrollable"}${x[3]==="YES"?" · Airline resp.":""}`:dcT?" · EQUIPMENT TURN-AROUND, CONSEQUENTIAL":"";
+function dcRow(c,x){const k=dcKey(c,x),XY=dcAir==="XY",ar=(c.sa||{})[x[0]]||"",meta=dcG()?` · المسؤول: ${escT(x[2])}${dcR()?" · REACTIONARY (تبعي)":""}`:XY?` · ${x[5]||c.a} · ${x[2]==="C"?"Controllable":"Uncontrollable"}${x[3]==="YES"?" · Airline resp.":""}`:dcT?" · EQUIPMENT TURN-AROUND, CONSEQUENTIAL":"";
   return`<button class="dc-s" data-k="${k}" data-d="${escT(x[1])}"><b>${k}</b><span>${ar?`<span style="display:block;direction:rtl;text-align:right;font-weight:600">${escT(ar)}</span>`:""}<span style="color:var(--muted);font-size:12px">${escT(x[1])}${meta}</span></span></button>`}
-function dcBadge(c){const XY=dcAir==="XY";if(dcG()){const m=c.subs.filter(x=>x[3]).length;return m===c.subs.length?'<em class="sgs">على المحطة/المناولة</em>':m?'<em class="sgs">بعضها على المحطة</em>':""}return XY?(c.cat==="GOPS"?'<em class="sgs">على المناولة</em>':`<em class="oth">${escT(DC.cats[c.cat]||c.cat)}</em>`):(c.sec===1?'<em class="sgs">على SGS</em>':c.sec===2?'<em class="oth">وكيل دولي</em>':"")}
+function dcBadge(c){const XY=dcAir==="XY";if(dcG()){const m=c.subs.filter(x=>x[3]).length;const t=escT(DC.tag||"على المناولة");return m===c.subs.length?`<em class="sgs">${t}</em>`:m?`<em class="sgs">بعضها ${t}</em>`:""}return XY?(c.cat==="GOPS"?'<em class="sgs">على المناولة</em>':`<em class="oth">${escT(DC.cats[c.cat]||c.cat)}</em>`):(c.sec===1?'<em class="sgs">على SGS</em>':c.sec===2?'<em class="oth">وكيل دولي</em>':"")}
 const dcMine=(c,x)=>dcG()?x[3]===1:dcAir==="XY"?(x[4]||c.cat)==="GOPS":c.sec===1;
 function renderDC(){
   const raw=$("dcQ").value.trim(),XY=dcAir==="XY",G=dcG();let h="",last=null;
-  const codeQ=raw.toUpperCase().replace(/[\s.]/g,"").match(/^(\d{1,2})-?([A-Z]{0,2})$/);
+  const codeQ=raw.toUpperCase().replace(/[\s.]/g,"").replace(/^(\d{1,2}[A-Z]?)R$/,(m,a)=>G&&DC.react?a:m).match(/^(\d{1,2})-?([A-Z]{0,2})$/);
   if(raw&&!codeQ){/* بحث بالوصف: نتائج مرتبة */
     const U=dcUnits(raw);if(!U.length){$("dcB").innerHTML='<div class="tu-n" style="text-align:center">اكتب وش صار، مثل: تأخر سيارة الوقود، أو بطء تجليس الركاب من الطاقم</div>';return}
     const lateQ=/تا?خ|بط|late|slow/.test(dcDn(raw)),lateRx=/تاخر|تاخير|بطء|late|slow/;
-    const R=[];for(const c of DC.codes)for(const x of c.subs){if(dcSgs&&!dcMine(c,x))continue;const hy=dcHay(c,x).split(" "),sub=dcNorm(((c.sa||{})[x[0]]||"")+" "+x[1]).split(" ");let sc=0;
+    const R=[];for(const c of DC.codes)for(const x of c.subs){if(dcSgs&&!dcMine(c,x)||!dcRok(c,x))continue;const hy=dcHay(c,x).split(" "),sub=dcNorm(((c.sa||{})[x[0]]||"")+" "+x[1]).split(" ");let sc=0;
       for(const u of U){const inSub=dcHit(sub,u.w)?1:u.syn.some(t=>dcHit(sub,t))?.6:0,inAll=dcHit(hy,u.w)?1:u.syn.some(t=>dcHit(hy,t))?.6:0;sc+=inSub?inSub*1.3:inAll*.8}
       if(sc>0&&lateQ&&lateRx.test(dcDn(((c.sa||{})[x[0]]||"")+" "+x[1])))sc+=.4;
       if(sc>0)R.push({c,x,sc:sc+(dcMine(c,x)?.05:0)})}
@@ -1684,15 +1685,15 @@ function renderDC(){
   if(G&&DC.note&&!raw)h+=`<div class="tu-n">${escT(DC.note)}</div>`;
   for(const c of DC.codes){
     if(dcSgs&&!G&&(XY?c.cat!=="GOPS":c.sec!==1))continue;
-    const subs=c.subs.filter(x=>(!codeQ||c.c.replace(/^0/,"")===codeQ[1].replace(/^0/,"")&&(!codeQ[2]||x[0].toUpperCase()===(G?codeQ[2]:codeQ[2].replace(/T$/,""))))&&(!dcSgs||!XY||x[4]==="GOPS")&&(!dcSgs||!G||x[3]===1));if(!subs.length)continue;
+    const subs=c.subs.filter(x=>(!codeQ||c.c.replace(/^0/,"")===codeQ[1].replace(/^0/,"")&&(!codeQ[2]||x[0].toUpperCase()===(G?codeQ[2]:codeQ[2].replace(/T$/,""))))&&(!dcSgs||!XY||x[4]==="GOPS")&&(!dcSgs||!G||x[3]===1)&&dcRok(c,x));if(!subs.length)continue;
     if(!XY&&c.sec!==last){h+=`<div class="dc-sec">${escT(DC.secs[c.sec].ar)}</div>`;last=c.sec}
     h+=`<div class="dc-c"><b><i>${c.c}</i><span>${escT(c.ar)}<small>${(XY||G)&&c.a?escT(c.a)+" · ":""}${escT(c.en)}</small></span>${dcBadge(c)}</b>`+subs.map(x=>dcRow(c,x)).join("")+(c.copy?`<div class="dc-cp">COPY: ${escT(c.copy)}</div>`:"")+`</div>`;
   }
   $("dcB").innerHTML=h||'<div class="tu-n" style="text-align:center">ما فيه نتائج. جرّب كلمة ثانية أو رقم الكود.</div>';
 }
 function openDC(cb,air){dcCb=cb||null;dcAir=air||"SV";$("dcS").textContent=cb?"اختر الكود لإضافته لسبب التأخير":DC_NAME[dcAir];
-  $("dcSgs").textContent=DC_AIRS[dcAir][3];$("dcT2").hidden=dcAir!=="SV";if(dcAir!=="SV"&&dcT){dcT=false;$("dcT2").setAttribute("aria-pressed",false)}
-  $("dc").hidden=false;$("dcB").innerHTML='<div class="tu-n" style="text-align:center">…</div>';loadDC(dcAir).then(renderDC).catch(()=>{$("dcB").innerHTML='<div class="tu-n">تعذّر تحميل الأكواد، تأكد من الاتصال.</div>'})}
+  $("dcSgs").textContent=DC_AIRS[dcAir][3];$("dcT2").hidden=true;$("dcT2").textContent=dcAir==="SV"?"تأخير تبعي (T)":"تأخير تبعي (r)";if(dcT&&dcAir!==openDC.last){dcT=false;$("dcT2").setAttribute("aria-pressed",false)}openDC.last=dcAir;
+  $("dc").hidden=false;$("dcB").innerHTML='<div class="tu-n" style="text-align:center">…</div>';loadDC(dcAir).then(()=>{$("dcT2").hidden=!(dcAir==="SV"||dcG()&&DC.react);renderDC()}).catch(()=>{$("dcB").innerHTML='<div class="tu-n">تعذّر تحميل الأكواد، تأكد من الاتصال.</div>'})}
 $("dcBack").onclick=()=>{$("dc").hidden=true};
 $("dcQ").addEventListener("input",()=>DC&&renderDC());
 $("dcSgs").onclick=e=>{dcSgs=!dcSgs;e.currentTarget.setAttribute("aria-pressed",dcSgs);DC&&renderDC()};
