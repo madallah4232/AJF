@@ -843,12 +843,16 @@ function validSched(j){
       const alt=map(f.alt,HM),altNo=map(f.altNo,NO),inAlt=map(f.inAlt,HM),inAltNo=map(f.inAltNo,NO);
       if(alt)o.alt=alt;if(altNo)o.altNo=altNo;if(inAlt)o.inAlt=inAlt;if(inAltNo)o.inAltNo=inAltNo;
       if(f.start)o.start=f.start;if(f.until)o.until=f.until;if(f.est===true)o.est=true;
+      if(f.cxl!=null){if(!Array.isArray(f.cxl)||f.cxl.length>60||!f.cxl.every(d=>DT.test(d)))throw 0;if(f.cxl.length)o.cxl=[...new Set(f.cxl)].sort()}
       return o});
     if(new Set(out.map(f=>f.no)).size!==out.length)return null;
     return{rev:DT.test(j.reviewed||"")?j.reviewed:"",flights:out};
   }catch(e){return null}
 }
-function useSched(s){FLIGHTS.splice(0,FLIGHTS.length,...s.flights);if(s.rev)window.REV=s.rev}
+function useSched(s){FLIGHTS.splice(0,FLIGHTS.length,...s.flights);if(s.rev)window.REV=s.rev;buildCxl()}
+/* إلغاء يوم محدد من الجدول (حقل cxl: ["YYYY-MM-DD"]) — يُطبَّق على رحلة المغادرة والقادمة لذاك اليوم */
+var CXL={};
+function buildCxl(){const o={};FLIGHTS.forEach(f=>(f.cxl||[]).forEach(d=>{const w=new Date(d+"T00:00:00Z").getUTCDay();if(!f.days.includes(w))return;const m=o[d]=o[d]||{};m[f.altNo&&f.altNo[w]||f.no]=1;m[f.inAltNo&&f.inAltNo[w]||f.inNo]=1}));CXL=o}
 try{const s=validSched(JSON.parse(localStorage.getItem("ajf_sched")||"null"));if(s)useSched(s)}catch(e){}
 
 const $=id=>document.getElementById(id);
@@ -910,7 +914,7 @@ function renderClock(){
 function nextDeparture(){
   for(let i=0;i<21;i++){
     const d=addDays(TODAY,i);
-    const f=flightsOn(d).find(f=>i>0||toMin(f.t)>NOW.mins);
+    const f=flightsOn(d).find(f=>(i>0||toMin(f.t)>NOW.mins)&&(LV(d).flights[f.n]||{}).s!=="canceled");
     if(f)return{f,d,i,left:i*1440+toMin(f.t)-NOW.mins};
   }
 }
@@ -943,9 +947,9 @@ function groundTrack(f,dayOffset){
   if(!f.ia||dayOffset!==0)return"";
   /* العدّ لا يبدأ إلا بعد الوصول الفعلي، ويحسب مدة الدوران المجدولة لكل رحلة (gtRule) من ATA */
   const a=toMin(f.ia),now=NOW.mins,gt=gtRule(f);
-  const L=LIVE.date===iso(TODAY)&&f.ino&&LIVE.flights[f.ino];
+  const L=f.ino&&LV(TODAY).flights[f.ino];
   const I=inboundInfo(f,TODAY),act=canCount(I);
-  const D=LIVE.date===iso(TODAY)&&LIVE.flights[f.n],gone=D&&D.s==="departed";
+  const D=LV(TODAY).flights[f.n],gone=D&&D.s==="departed";
   let st,cls="st",pct=0,arrLbl=f.ia,depLbl=f.t;
   if(L&&L.s==="canceled"){st="الوصول ملغى"}
   else if(act){
@@ -1404,7 +1408,7 @@ async function watchInbound(){
   if(document.hidden||DEMO)return;let hit=false;
   for(const f of flightsOn(TODAY)){
     if(!f.ino||!f.ia)continue;
-    const L=LIVE.date===iso(TODAY)&&LIVE.flights[f.ino];
+    const L=LV(TODAY).flights[f.ino];
     if(L&&["landed","canceled"].includes(L.s)||ATA[ataKey(f,TODAY)])continue;
     const sta=toMin(f.ia);if(NOW.mins<sta-75||NOW.mins>sta+150)continue;
     const a=await adsb(callsign(f.ino));if(!a)continue;
@@ -1895,7 +1899,9 @@ function cleanLive(j){
 /* سجل آخر يومين: يحتفظ بحالة كل يوم على الجهاز، ويقرأ أرشيف الجدول (أمس وقبله) */
 let HIST={};try{HIST=JSON.parse(localStorage.getItem("ajf_hist")||"{}")}catch(e){}
 const EMPTY_LV={date:"",flights:{},dly:{}};
-function LV(date){const k=iso(date);if(LIVE.date===k)return LIVE;return HIST[k]||EMPTY_LV}
+function LV(date){const k=iso(date),b=LIVE.date===k?LIVE:HIST[k]||EMPTY_LV,c=CXL[k];if(!c)return b;
+  const fl={...b.flights};for(const n in c)if(!fl[n]||!fl[n].fix&&!["departed","landed"].includes(fl[n].s))fl[n]={s:"canceled",t:"",note:"ملغاة حسب البلاغ"};
+  return{...b,date:b.date||k,flights:fl}}
 function keepHist(j){if(!j||!j.date)return;const old=HIST[j.date];if(old&&old.updated>j.updated&&j.date!==LIVE.date)return;HIST[j.date]=j;
   const keep=[0,1,2].map(i=>iso(addDays(TODAY,-i)));for(const k of Object.keys(HIST))if(!keep.includes(k))delete HIST[k];
   try{localStorage.setItem("ajf_hist",JSON.stringify(HIST))}catch(e){}}
