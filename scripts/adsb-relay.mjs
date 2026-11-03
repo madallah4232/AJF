@@ -34,12 +34,14 @@ const UA = { "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS 
 async function fr24Feed(calls) {
   if (!calls.length) return {};
   try {
-    const r = await fetch("https://data-cloud.flightradar24.com/zones/fcgi/feed.js?faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=0&maxage=900&gliders=0&stats=0&callsign=" + calls.join(","), { headers: UA, signal: AbortSignal.timeout(10000) });
-    if (!r.ok) return null; const j = await r.json(), o = {};
+    // curl بدل fetch: Cloudflare عند FR24 يرفض بصمة Node (نفس سبب جدول المطار)
+    const txt = execFileSync("curl", ["-gsf", "-m", "12", "-A", UA["user-agent"], "https://data-cloud.flightradar24.com/zones/fcgi/feed.js?faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=0&maxage=900&gliders=0&stats=0&callsign=" + calls.join(",")], { stdio: ["ignore", "pipe", "ignore"] }).toString();
+    const j = JSON.parse(txt), o = {};
     for (const [k, v] of Object.entries(j)) if (Array.isArray(v) && v[16]) o[v[16].trim()] = { hex: v[0], lat: v[1], lon: v[2], track: v[3], alt_baro: v[14] ? "ground" : v[4], gs: v[5], t: v[8], r: v[9], seen: Math.max(0, Date.now() / 1000 - v[10]) };
     return o;
-  } catch { return null; }
+  } catch (x) { if (feedErr++ % 20 === 0) console.log("fr24 feed failed", x.status || x.message); return null; }
 }
+let feedErr = 0;
 // جدول مطار الجوف من FR24: الإقلاع/الهبوط الفعلي والمتوقع والإلغاء — كل دقيقة
 async function fr24Board(iso, iso2) {
   const ts = Math.floor(Date.now() / 1000), out = {}, next = [];
