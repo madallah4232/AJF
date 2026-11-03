@@ -1155,7 +1155,7 @@ function loadLeaflet(){
 /* وسيط ADS-B: GitHub يجلب المواقع كل 30 ثانية (adsb.lol يمنع المتصفح مباشرة) */
 let RELAY=null,relayAt=0,relayP=null;
 function loadRelay(){
-  if(Date.now()-relayAt<8000&&RELAY)return Promise.resolve(RELAY);
+  if(Date.now()-relayAt<6000&&RELAY)return Promise.resolve(RELAY);
   if(relayP)return relayP;
   relayP=fetch("https://raw.githubusercontent.com/madallah4232/AJF/live/adsb.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
     .then(j=>{relayP=null;if(j&&j.date){RELAY=j;relayAt=Date.now();applyRelayATA();if(mergeRelay()||(j.frx&&j.frx.cxl&&j.frx.cxl.length)){renderNext();if(!open)render();renderSync()}}return RELAY});
@@ -1459,7 +1459,11 @@ async function watchInbound(){
   }
   if(hit&&!open)render();
 }
-const watchSafe=()=>watchInbound().catch(()=>{});setInterval(()=>{if(!document.hidden&&!DEMO)loadRelay()},20000);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay()}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
+const watchSafe=()=>watchInbound().catch(()=>{});/* تحديث أسرع لما تقترب رحلة وصول: كل 8 ثواني بدل 20 */
+function relayFast(){try{return flightsOn(TODAY).some(f=>{if(!f.ino||!f.ia)return false;const k=ataKey(f,TODAY),L=LV(TODAY).flights[f.ino];
+  if(L&&["landed","canceled"].includes(L.s)||MAN[k]||(ATA[k]&&!String(ATA[k]).startsWith("~")))return false;
+  const a=LIVE_ETA[f.ino]!=null?LIVE_ETA[f.ino]:L&&L.s==="departed"&&L.t&&!isNaN(tm(L.t))?tm(L.t):toMin(f.ia);return NOW.mins>=a-25&&NOW.mins<=a+20})}catch(e){return false}}
+(function relayLoop(){if(!document.hidden&&!DEMO)loadRelay();setTimeout(relayLoop,relayFast()?8000:20000)})();document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay()}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
 
 /* ---------- Coordination Sheet (GS-OL-029) ----------
    نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن». يُحفظ على الجهاز. */

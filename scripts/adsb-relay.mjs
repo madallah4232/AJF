@@ -81,11 +81,11 @@ const sh = (c) => execSync(c, { stdio: ["ignore", "pipe", "inherit"] }).toString
 let state = { date: "", ata: {}, atd: {}, low: {}, air: {}, fr: {} };
 let boardAt = 0;
 try { const old = JSON.parse(sh("git show origin/live:adsb.json 2>/dev/null || echo '{}'")); if (old.date === riyadh().iso) state = { ...state, ...old }; } catch {}
-let lastOut = "";
+let lastOut = "", nearPrev = false;
 while (Date.now() - t0 < RUN_MS) {
   const loop = Date.now(), N = riyadh();
   if (state.date !== N.iso) state = { date: N.iso, ata: {}, atd: {}, low: {}, air: {}, fr: {} };
-  if (loop - boardAt >= 55e3) { const n2 = riyadh(Date.now() + 864e5).iso, b = await fr24Board(N.iso, n2); if (b) { state.fr = b.out; state.frx = { date: n2, cxl: b.next }; state.frAt = Math.round(Date.now() / 1000); boardAt = loop; } }
+  if (loop - boardAt >= (nearPrev ? 25e3 : 55e3)) { const n2 = riyadh(Date.now() + 864e5).iso, b = await fr24Board(N.iso, n2); if (b) { state.fr = b.out; state.frx = { date: n2, cxl: b.next }; state.frAt = Math.round(Date.now() / 1000); boardAt = loop; } }
   const want = [];
   for (const f of flightsOn(N.iso, N.dow)) {
     if (f.ino && f.ia && !state.ata[f.ino] && N.mins >= toMin(f.ia) - 200 && N.mins <= toMin(f.ia) + 90) want.push({ no: f.ino, kind: "in" });
@@ -118,5 +118,7 @@ while (Date.now() - t0 < RUN_MS) {
   }
   await pushTick(state, N, FLIGHTS); // تنبيهات الوصول على جوالات الموظفين
   console.log(new Date().toISOString(), want.map((w) => w.no).join(","), Object.keys(ac).join(","), JSON.stringify(state.ata));
-  await new Promise((r) => setTimeout(r, Math.max(2000, STEP - (Date.now() - loop))));
+  // رحلة وصول قريبة من الجوف (أقل من 250 كم أو في الاقتراب): نرصد كل 10 ثواني بدل 30 عشان يطلع الهبوط بسرعة
+  const near = nearPrev = want.some((w) => w.kind === "in" && (state.low[w.no] || (ac[cs(w.no)] && dist([ac[cs(w.no)].lat, ac[cs(w.no)].lon], AJF) < 250)));
+  await new Promise((r) => setTimeout(r, Math.max(2000, (near ? 10e3 : STEP) - (Date.now() - loop))));
 }
