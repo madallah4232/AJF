@@ -577,6 +577,8 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .emp>button{text-align:right;display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%}
 .emp .more{display:grid;gap:8px}
 .amsg{font-size:13px;color:var(--muted)}
+.pu-ban{position:fixed;z-index:55;inset:auto 12px calc(84px + env(safe-area-inset-bottom));padding:14px;border-radius:16px;background:var(--panel);border:1px solid var(--amber);display:grid;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.pu-ban b{font-size:15px}.pu-ban p{margin:0;font-size:13px;color:var(--muted)}.pu-ban .row{display:flex;gap:8px;background:none;border:0;padding:0;box-shadow:none}.pu-ban .abtn.a{flex:1}
 </style>
 </head>
 <body>
@@ -733,12 +735,46 @@ async function getDoc(name){if(DOCC[name])return DOCC[name];
 function devLabel(){const u=navigator.userAgent;const m=/iPhone|iPad|Android|Windows|Macintosh/.exec(u);const b=/CriOS|Chrome/.test(u)?"Chrome":/FxiOS|Firefox/.test(u)?"Firefox":/Safari/.test(u)?"Safari":"متصفح";
   const pwa=(navigator.standalone||matchMedia("(display-mode: standalone)").matches)?" · من الشاشة الرئيسية":"";return (m?m[0]:"جهاز")+" · "+b+pwa}
 function authSave(){try{AUTH.tok?localStorage.setItem("ajf_tok",AUTH.tok):localStorage.removeItem("ajf_tok");localStorage.setItem("ajf_me",JSON.stringify(AUTH.me))}catch(e){}}
-function authOut(msg){AUTH.tok=null;AUTH.me=null;authSave();for(const k in DOCC)delete DOCC[k];try{KB=null}catch(e){}
+function authOut(msg){pushOff();const pb=$("puBan");if(pb)pb.remove();AUTH.tok=null;AUTH.me=null;authSave();for(const k in DOCC)delete DOCC[k];try{KB=null}catch(e){}
   $("acctBtn").hidden=true;$("adm").hidden=true;gateShow(msg||"")}
 function acctPaint(n){$("acctBtn").hidden=!AUTH.tok;const i=$("acctN");if(AUTH.me&&AUTH.me.admin&&n>0){i.hidden=false;i.textContent=n}else i.hidden=true}
 async function authCheck(){if(!AUTH.tok)return;try{const j=await rpc("ajf_me",{p_token:AUTH.tok,p_device:AUTH.dev});
   if(j.s==="out"){authOut("انتهت الجلسة أو أُلغي اعتماد هذا الجوال. سجّل دخولك مرة ثانية.");return}
-  AUTH.me={emp:j.emp,name:j.name,admin:j.admin};authSave();acctPaint(j.pending)}catch(e){/* بدون اتصال: نكمل بالجلسة المحفوظة */}}
+  AUTH.me={emp:j.emp,name:j.name,admin:j.admin};authSave();acctPaint(j.pending);pushResync()}catch(e){/* بدون اتصال: نكمل بالجلسة المحفوظة */}}
+/* ---------- تنبيهات وصول الرحلات على الجوال (Web Push) ----------
+   الخادم (وسيط ADS-B) يرسل: قبل الوصول بـ10 دقائق ← قبل 5 دقائق ← هبطت. الآيفون يحتاج فتح التطبيق من الشاشة الرئيسية. */
+const VAPID_PUB="BJ5no9wReOamtLwOAtqgyyZNKKu5esoD6G6MgnQO6RIaGMizeCiL6Ck8I4i_EsXj7eGUIoUuNUKkeEMmodEKnw4";
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent),isPWA=!!(navigator.standalone||matchMedia("(display-mode: standalone)").matches);
+const pushOK=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&location.protocol==="https:";
+function b64u(s){const p="=".repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
+const swReady=()=>Promise.race([navigator.serviceWorker.ready,new Promise((_,no)=>setTimeout(()=>no(new Error("sw")),8000))]);
+async function pushSub(){const r=await swReady();return r.pushManager.getSubscription()}
+async function pushState(){if(!pushOK())return isIOS&&!isPWA?"ios":"no";if(Notification.permission==="denied")return"denied";
+  try{return(await pushSub())&&Notification.permission==="granted"?"on":"off"}catch(e){return"off"}}
+async function pushSend(sub){const j=await rpc("ajf_push_sub",{p_token:AUTH.tok||"",p_device:AUTH.dev,p_sub:sub.toJSON()});if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s)}
+async function pushOn(){/* لازم تنادى من ضغطة زر (شرط الآيفون) */
+  if(await Notification.requestPermission()!=="granted")throw new Error("denied");
+  const r=await swReady();let sub=await r.pushManager.getSubscription();
+  if(!sub)sub=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)});
+  await pushSend(sub);try{localStorage.setItem("ajf_push","1")}catch(e){}}
+async function pushOff(){try{localStorage.setItem("ajf_push","0")}catch(e){}if(!pushOK())return;
+  try{const sub=await pushSub();if(sub){rpc("ajf_push_unsub",{p_endpoint:sub.endpoint}).catch(()=>{});await sub.unsubscribe()}}catch(e){}}
+let pushSynced=false;/* مرة لكل فتح: يربط الاشتراك بالجلسة الحالية (لو تغيّر الرقم السري أو الجلسة) */
+async function pushResync(){if(pushSynced||!AUTH.tok||!pushOK()||Notification.permission!=="granted")return;pushSynced=true;try{const sub=await pushSub();if(sub)await pushSend(sub)}catch(e){pushSynced=false}}
+const PU_TXT={on:"مفعّلة ✅ يوصلك تنبيه قبل وصول كل رحلة بـ10 دقائق، ثم 5 دقائق، ثم عند الهبوط — حتى والجوال مقفل.",
+  off:"يوصلك تنبيه على شاشة القفل قبل وصول كل رحلة بـ10 دقائق، ثم 5 دقائق، ثم عند الهبوط.",
+  ios:"على الآيفون: افتح الموقع في Safari ← زر المشاركة ← «إضافة إلى الشاشة الرئيسية»، ثم افتح التطبيق من الأيقونة وفعّل التنبيهات من هنا.",
+  denied:"التنبيهات مرفوضة لهذا التطبيق. فعّلها من إعدادات الجوال ← الإشعارات ← رحلات الجوف، ثم ارجع هنا.",
+  no:"هذا المتصفح ما يدعم التنبيهات. على الآيفون استخدم Safari وأضف التطبيق للشاشة الرئيسية."};
+function pushErr(e){return e&&e.message==="denied"?PU_TXT.denied:"تعذّر التفعيل، تأكد من الإنترنت وجرّب مرة ثانية."}
+async function pushOffer(){if(!AUTH.tok||DEMO)return;let dis=0;try{dis=+localStorage.getItem("ajf_push_ask")||0}catch(e){}
+  if(Date.now()-dis<3*864e5)return;const st=await pushState();if(st!=="off"&&st!=="ios")return;if($("puBan"))return;
+  const d=document.createElement("div");d.className="pu-ban";d.id="puBan";
+  d.innerHTML=`<b>🔔 تنبيهات وصول الرحلات</b><p>${escT(st==="ios"?PU_TXT.ios:PU_TXT.off)}</p><div class="row">${st==="off"?'<button class="abtn a" id="puGo">تفعيل</button>':""}<button class="abtn" id="puNo">${st==="off"?"لاحقاً":"تمام"}</button></div>`;
+  document.body.appendChild(d);
+  $("puNo").onclick=()=>{try{localStorage.setItem("ajf_push_ask",Date.now())}catch(e){}d.remove()};
+  const g=$("puGo");if(g)g.onclick=async()=>{g.disabled=true;g.textContent="…";try{await pushOn();d.querySelector("p").textContent=PU_TXT.on;g.remove();$("puNo").textContent="تمام"}
+    catch(e){d.querySelector("p").textContent=pushErr(e);g.disabled=false;g.textContent="تفعيل"}}}
 const GATE={emp:"",pass:"",mode:""};
 const ICON_LOCK='<div class="orb"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>';
 function gateShow(msg){$("gate").hidden=false;gateEmp(msg)}
@@ -760,7 +796,7 @@ function gatePass(isNew){GATE.mode=isNew?"new":"old";$("gateC").innerHTML=`${ICO
   $("gGo").onclick=go;$("gateC").querySelectorAll("input").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")go()});setTimeout(()=>$("gP1").focus(),80)}
 async function gateLogin(){const b=$("gGo");if(b){b.disabled=true;b.textContent="…"}
   try{const j=await rpc("ajf_login",{p_emp:GATE.emp,p_pass:GATE.pass,p_device:AUTH.dev,p_label:devLabel()});
-    if(j.s==="ok"){AUTH.tok=j.token;AUTH.me={emp:GATE.emp,name:j.name,admin:j.admin};authSave();GATE.pass="";$("gate").hidden=true;acctPaint(0);authCheck();
+    if(j.s==="ok"){AUTH.tok=j.token;AUTH.me={emp:GATE.emp,name:j.name,admin:j.admin};authSave();GATE.pass="";$("gate").hidden=true;acctPaint(0);authCheck();setTimeout(pushOffer,2500);
       try{if($("intro").hidden&&!DEMO)showIntro()}catch(e){}return}
     if(j.s==="pending"){gateWait(j.new);return}
     const m={bad:"الرقم الوظيفي أو الرقم السري غير صحيح",locked:"محاولات كثيرة خاطئة. جرّب بعد "+(j.min||15)+" دقيقة",weak:"الرقم السري لازم 6 خانات على الأقل",rejected:"تم رفض هذا الجوال. راجع المشرف."}[j.s]||"صار خطأ، جرّب مرة ثانية";
@@ -778,6 +814,7 @@ const fdt=t=>{if(!t)return"—";const d=new Date(t);return d.toLocaleString("ar-
 async function admCall(action,arg){const j=await rpc("ajf_admin",{p_token:AUTH.tok,p_device:AUTH.dev,p_action:action,p_arg:arg||{}});if(j.s==="out"){authOut();throw new Error("out")}return j}
 async function openAcct(){$("adm").hidden=false;$("admS").textContent=AUTH.me?(AUTH.me.name||"")+" · "+AUTH.me.emp:"";await admRender()}
 async function admRender(){const me=AUTH.me||{};let h=`<div class="adm-s"><h3><span>${escT(me.name||"")}<span class="chip">${escT(me.emp||"")}</span>${me.admin?'<span class="chip a">مشرف</span>':""}</span><button class="abtn n" id="aOut">تسجيل خروج</button></h3><div class="amsg">هذا الجوال معتمد لحسابك. لو غيّرت جوالك أو مسحت بيانات Safari، تحتاج موافقة المشرف مرة ثانية.</div></div>`;
+  h+=`<div class="adm-s" id="aPushS"><h3>🔔 تنبيهات وصول الرحلات</h3><div class="amsg" id="aPushM">…</div></div>`;
   if(!me.admin){$("admB").innerHTML=h;admBind();return}
   $("admB").innerHTML=h+'<div class="adm-s"><div class="amsg">جاري التحميل…</div></div>';admBind();
   try{ADM=await admCall("list")}catch(e){$("admB").lastChild.innerHTML='<div class="amsg">تعذّر التحميل، تأكد من الاتصال.</div>';return}
@@ -790,8 +827,12 @@ async function admRender(){const me=AUTH.me||{};let h=`<div class="adm-s"><h3><s
       <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">${e.activated?`<button class="abtn" data-ac="reset_pass" data-e="${escT(e.emp)}" data-cf="1">إعادة تعيين الرقم السري</button>`:""}${e.locked?`<button class="abtn" data-ac="unlock" data-e="${escT(e.emp)}">فك القفل</button>`:""}${e.emp!==ADM.me?`<button class="abtn ${e.active?"n":"y"}" data-ac="active" data-e="${escT(e.emp)}" data-v="${!e.active}" ${e.active?'data-cf="1"':""}>${e.active?"إيقاف":"تفعيل"}</button><button class="abtn" data-ac="set_admin" data-e="${escT(e.emp)}" data-v="${!e.admin}" data-cf="1">${e.admin?"إلغاء الإشراف":"جعله مشرف"}</button><button class="abtn n" data-ac="delete" data-e="${escT(e.emp)}" data-cf="1">حذف</button>`:""}</div></div>`:""}</div>`}).join("")||'<div class="amsg">ما فيه نتائج.</div>'}</div>`;
   $("admB").innerHTML=h;admBind();
   const aq=$("aQ");if(aq)aq.oninput=()=>{admQ=aq.value;clearTimeout(aq._t);aq._t=setTimeout(()=>{const p=aq.selectionStart;admRender().then(()=>{const n=$("aQ");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(e){}}})},300)}}
-function admBind(){const o=$("aOut");if(o)o.onclick=async()=>{if(o.dataset.c!=="1"){o.dataset.c="1";o.textContent="متأكد؟ اضغط مرة ثانية";return}try{await rpc("ajf_logout",{p_token:AUTH.tok})}catch(e){}authOut()};
-  const B=$("admB");B.onclick=async ev=>{const t=ev.target.closest("button");if(!t||t.id==="aOut")return;
+async function pushPaint(){const S=$("aPushS");if(!S)return;const st=await pushState(),M=$("aPushM");if(!M)return;M.textContent=PU_TXT[st];
+  S.querySelectorAll(".abtn").forEach(b=>b.remove());if(st!=="on"&&st!=="off")return;
+  const b=document.createElement("button");b.className="abtn "+(st==="on"?"n":"a");b.id="aPush";b.textContent=st==="on"?"إيقاف التنبيهات":"تفعيل التنبيهات";S.appendChild(b);
+  b.onclick=async ev=>{ev.stopPropagation();b.disabled=true;b.textContent="…";try{st==="on"?await pushOff():await pushOn();pushPaint()}catch(e){M.textContent=pushErr(e);b.disabled=false;b.textContent="تفعيل التنبيهات"}}}
+function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.dataset.c!=="1"){o.dataset.c="1";o.textContent="متأكد؟ اضغط مرة ثانية";return}try{await rpc("ajf_logout",{p_token:AUTH.tok})}catch(e){}authOut()};
+  const B=$("admB");B.onclick=async ev=>{const t=ev.target.closest("button");if(!t||t.id==="aOut"||t.id==="aPush")return;
     if(t.dataset.op){admOpen.has(t.dataset.op)?admOpen.delete(t.dataset.op):admOpen.add(t.dataset.op);admRender();return}
     if(t.dataset.cf==="1"&&t.dataset.c!=="1"){t.dataset.c="1";t._txt=t.textContent;t.textContent="متأكد؟";setTimeout(()=>{if(t.isConnected){t.dataset.c="";t.textContent=t._txt}},3000);return}
     try{t.disabled=true;
@@ -804,7 +845,7 @@ function admBind(){const o=$("aOut");if(o)o.onclick=async()=>{if(o.dataset.c!=="
       await admRender()}catch(e){t.disabled=false}}}
 /* التشغيل بعد تحميل باقي السكربتات (تحتاج $ و escT) */
 addEventListener("DOMContentLoaded",()=>{$("acctBtn").onclick=openAcct;$("admBack").onclick=()=>{$("adm").hidden=true};
-  if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{acctPaint(0);authCheck()}
+  if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{acctPaint(0);authCheck();setTimeout(pushOffer,4000)}
   setInterval(()=>{if(!document.hidden)authCheck()},3*60e3);document.addEventListener("visibilitychange",()=>{if(!document.hidden)authCheck()})});
 </script>
 <script>

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [".github/workflows/adsb.yml", "scripts/adsb-relay.mjs"]
+    paths: [".github/workflows/adsb.yml", "scripts/adsb-relay.mjs", "scripts/push.mjs"]
 permissions:
   contents: write
 concurrency: { group: adsb-relay, cancel-in-progress: true }
@@ -22,6 +22,11 @@ jobs:
           git fetch -q origin live || true
           git checkout -q --orphan relay-work
           git rm -rq --cached . ; git commit -q --allow-empty -m "adsb live"
+      - name: Install web-push
+        run: npm i --no-save --no-package-lock web-push@3.6.7
       - name: Relay
-        env: { RUN_MIN: "230" }
+        env:
+          RUN_MIN: "230"
+          SB_SERVICE_KEY: ${{ secrets.SB_SERVICE_KEY }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
         run: node scripts/adsb-relay.mjs

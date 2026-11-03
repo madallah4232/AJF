@@ -2,6 +2,7 @@
 // يكتب adsb.json في فرع live كل ~30 ثانية + جدول FR24 الفعلي (fr) كل دقيقة، ويرصد وقت الهبوط الفعلي (ATA) والإقلاع (ATD) في الجوف.
 import { readFileSync, writeFileSync } from "node:fs";
 import { execSync, execFileSync } from "node:child_process";
+import { pushTick } from "./push.mjs";
 
 const html = readFileSync("index.html", "utf8");
 const grab = (re) => { const m = html.match(re); if (!m) throw new Error("parse " + re); return m[0]; };
@@ -113,6 +114,7 @@ while (Date.now() - t0 < RUN_MS) {
       lastOut = out; state.pushed = Date.now();
     } catch (e) { console.log("push failed", e.message); }
   }
+  await pushTick(state, N, FLIGHTS); // تنبيهات الوصول على جوالات الموظفين
   console.log(new Date().toISOString(), want.map((w) => w.no).join(","), Object.keys(ac).join(","), JSON.stringify(state.ata));
   await new Promise((r) => setTimeout(r, Math.max(2000, STEP - (Date.now() - loop))));
 }
