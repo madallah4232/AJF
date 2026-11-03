@@ -70,8 +70,11 @@ export async function pushTick(state, N, fallbackFlights) {
     if (ready === null) ready = await init();
     if (!ready) return;
     const F = await loadSched(fallbackFlights);
+    // وقت الهبوط اللي اعتمده موظف من التطبيق يتقدّم على الرصد التلقائي
+    const man = await rpc("ajf_ata_day", { p_day: N.iso }).catch(() => null);
+    const st = man && Object.keys(man).length ? { ...state, ata: { ...(state.ata || {}), ...man } } : state;
     for (const f of arrivals(F, N.iso, N.dow)) {
-      const s = stageOf(f, state, N.mins);
+      const s = stageOf(f, st, N.mins);
       if (!s) continue;
       if (!(await rpc("ajf_push_claim", { p_day: N.iso, p_flight: f.ino, p_stage: s.stage }))) continue;
       if (s.stage === "5") await rpc("ajf_push_claim", { p_day: N.iso, p_flight: f.ino, p_stage: "10" }); // لو تأخر الرصد ما نرجع لمرحلة 10

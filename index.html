@@ -370,7 +370,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   #csPrint .ft{display:flex;justify-content:space-between;margin-top:10px;font-size:10px}
 }
 
-.tu-acts{display:flex;justify-content:flex-end;margin-top:-6px}
+.tu-acts{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:-6px}
 .tu-ed{font-size:12px;color:var(--muted);padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:var(--panel)}
 .tu-form{display:flex;gap:8px}
 .tu-form input{flex:1;min-width:0;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 20px var(--mono);text-align:center;color-scheme:dark}
@@ -1058,8 +1058,8 @@ function arrDlyTxt(f,t,cert=true){
 }
 function inboundTxt(f,date){
   if(!f.ia)return"";
-  const L=f.ino&&LV(date).flights[f.ino],man=MAN[ataKey(f,date)];
-  if(man)return`<span style="color:var(--go)">وصلت <span class="num">${man}</span> ✎</span>${arrDlyTxt(f,man)}`;
+  const L=f.ino&&LV(date).flights[f.ino],man=manAt(ataKey(f,date)),shB=!MAN[ataKey(f,date)]&&SH[ataKey(f,date)];
+  if(man)return`<span style="color:var(--go)">وصلت <span class="num">${man}</span> ✎${shB&&shB.by?` <small style="color:var(--muted)">${escT(shB.by)}</small>`:""}</span>${arrDlyTxt(f,man)}`;
   if(L){
     if(L.s==="landed")return isCert(L)?`<span style="color:var(--go)">وصلت <span class="num">${dispT(L.t)}</span></span>${arrDlyTxt(f,L.t||"")}`:`<span style="color:var(--muted)">هبطت ≈<span class="num">${dispT(L.t).replace("≈","")}</span> (تقديري)</span>${arrDlyTxt(f,L.t||"",false)}`;
     if(L.s==="departed"){const e=L.t?tm(L.t):NaN;if(!isNaN(e)&&iso(date)===iso(TODAY)&&NOW.mins>e+10)return`<span style="color:var(--amber)">يُرجّح وصلت ≈<span class="num">${fmt(e)}</span> · لم يتأكد</span>`;
@@ -1364,11 +1364,25 @@ const nowMin=()=>((Date.now()/1000+10800)%86400)/60;
 const LIVE_ETA={},SEEN_AIR={};let turnTimer;
 let ATA={};try{ATA=JSON.parse(localStorage.getItem("ajf_ata")||"{}")}catch(e){}
 const ataKey=(f,date)=>iso(date)+"_"+f.ino;
+/* وقت الهبوط المشترك: أي موظف مسجّل يعتمده («هبطت الآن» أو «تعديل الوصول») فيظهر عند الكل خلال ثواني */
+let SH={};try{SH=JSON.parse(localStorage.getItem("ajf_sh")||"{}")}catch(e){}
+const manAt=k=>MAN[k]||(SH[k]&&SH[k].t)||"";
+let shAt=0,shP=null;
+function shStore(){try{const keep=iso(new Date(TODAY.getTime()-2*864e5));for(const k in SH)if(k.slice(0,10)<keep)delete SH[k];localStorage.setItem("ajf_sh",JSON.stringify(SH))}catch(e){}}
+function loadShared(){if(!AUTH.tok||DEMO||shP||Date.now()-shAt<5000)return;const d=iso(TODAY);
+  shP=rpc("ajf_ata_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_day:d}).then(j=>{shAt=Date.now();if(!j)return;if(j.s==="out"){authOut();return}if(j.s!=="ok")return;
+    const o={};for(const k in SH)if(!k.startsWith(d+"_"))o[k]=SH[k];
+    for(const r of j.rows||[])if(/^\d{2}:\d{2}$/.test(r.t||""))o[d+"_"+r.flight]={t:r.t,by:String(r.name||r.emp||"").slice(0,40)};
+    if(JSON.stringify(o)!==JSON.stringify(SH)){SH=o;shStore();if(!open)render();renderNext();if(curTurn&&!turnEdit)renderTurn(curTurn.f,curTurn.date)}})
+    .catch(()=>{}).finally(()=>{shP=null})}
+async function shSet(f,t){const j=await rpc("ajf_ata_set",{p_token:AUTH.tok||"",p_device:AUTH.dev,p_day:iso(TODAY),p_flight:f.ino,p_t:t||""});
+  if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s||"err");
+  const k=iso(TODAY)+"_"+f.ino;if(t)SH[k]={t,by:(AUTH.me&&AUTH.me.name)||""};else delete SH[k];shStore();shAt=0}
 function inboundInfo(f,date){
   if(!f.ino||!f.ia||f.off||iso(date)>iso(TODAY))return null;const past=iso(date)<iso(TODAY);
   const L=LV(date).flights[f.ino];
   if(L&&L.s==="canceled")return null;
-  const man=MAN[ataKey(f,date)];if(man)return{m:tm(man),kind:"manual"};
+  const man=manAt(ataKey(f,date));if(man)return{m:tm(man),kind:"manual"};
   const loc=ATA[ataKey(f,date)];
   if(loc&&!String(loc).startsWith("~")&&!(L&&L.s==="landed"&&isCert(L)))return{m:tm(loc),kind:"adsb"};/* رصد ADS-B دقيق يتقدم على التقديري */
   if(L&&L.s==="landed"&&L.t)return{m:tm(L.t),kind:L.fix?"manual":isCert(L)?"exact":"fr24"};if(loc)return{m:tm(loc),kind:String(loc).startsWith("~")?"approx":"adsb"};
@@ -1401,27 +1415,34 @@ function editTurn(){
   const{f,date}=curTurn,k=ataKey(f,date),I=inboundInfo(f,date),el=$("turn");turnEdit=true;
   el.innerHTML=`<div class="tu-h"><b>وقت الوصول الفعلي ATA · ${f.ino}</b></div>
   <div class="tu-form"><input type="time" id="tuIn" value="${I?fmt(I.m):f.ia}"><button id="tuOk">اعتماد</button><button id="tuX" class="g">إلغاء</button></div>
-  ${MAN[k]?`<button id="tuRm" class="tu-link">رجوع للوقت التلقائي</button>`:""}
-  <div class="tu-n">يُعتمد على جوالك فوراً. لاعتماده عند كل المستخدمين: اكتب <b style="color:var(--ink)">${f.ino}</b> والوقت في عمودي F و G في <a href="${SHEET_EDIT}" target="_blank" rel="noopener" style="color:var(--amber)">جدول AJF Live ↗</a></div>`;
+  ${manAt(k)?`<button id="tuRm" class="tu-link">رجوع للوقت التلقائي</button>`:""}
+  <div class="tu-n" id="tuMsg">${AUTH.tok&&iso(date)===iso(TODAY)?"يُعتمد عند كل الموظفين خلال ثواني، ويُحفظ اسمك معه.":"يُعتمد على جوالك فقط."}</div>`;
   $("tuIn").focus();
 }
 $("turn").addEventListener("click",e=>{
   if(!curTurn)return;const{f,date}=curTurn,k=ataKey(f,date),id=e.target.closest("button")?.id;
   if(id==="tuEd")return editTurn();
-  if(id==="tuOk"){const v=$("tuIn").value;if(/^\d{2}:\d{2}$/.test(v)){MAN[k]=v;try{localStorage.setItem(DEMO?"ajf_man_demo":"ajf_man",JSON.stringify(MAN))}catch(e){}}}
-  if(id==="tuRm"){delete MAN[k];try{localStorage.setItem(DEMO?"ajf_man_demo":"ajf_man",JSON.stringify(MAN))}catch(e){}}
-  if(["tuOk","tuX","tuRm"].includes(id)){turnEdit=false;renderTurn(f,date)}
+  const shared=AUTH.tok&&!DEMO&&iso(date)===iso(TODAY),saveMan=()=>{try{localStorage.setItem(DEMO?"ajf_man_demo":"ajf_man",JSON.stringify(MAN))}catch(e){}};
+  const done=()=>{turnEdit=false;renderTurn(f,date);if(!open)render();renderNext()};
+  const fail=()=>{const m=$("tuMsg");if(m)m.textContent="تعذّر الاعتماد عند الكل (تأكد من الإنترنت). انحفظ على جوالك فقط."};
+  if(id==="tuNow"){const b=e.target.closest("button");if(b.dataset.c!=="1"){b.dataset.c="1";b.textContent="اضغط للتأكيد · "+fmt(Math.floor(nowMin()));setTimeout(()=>{if(b.isConnected){b.dataset.c="";b.textContent="✈️ هبطت الآن"}},5000);return}
+    b.disabled=true;b.textContent="…";const v=fmt(Math.floor(nowMin()));shSet(f,v).then(()=>{delete MAN[k];saveMan();done()}).catch(()=>{MAN[k]=v;saveMan();done()});return}
+  if(id==="tuOk"){const v=$("tuIn").value;if(!/^\d{2}:\d{2}$/.test(v))return;
+    if(shared){e.target.disabled=true;shSet(f,v).then(()=>{delete MAN[k];saveMan();done()}).catch(()=>{MAN[k]=v;saveMan();fail();setTimeout(done,2500)});return}
+    MAN[k]=v;saveMan();return done()}
+  if(id==="tuRm"){delete MAN[k];saveMan();if(shared&&SH[k]){shSet(f,"").catch(()=>{}).finally(done);return}return done()}
+  if(id==="tuX")return done();
 });
 function renderTurn(f,date){
   curTurn={f,date};if(turnEdit)return;
   if(iso(date)<iso(TODAY)){$("turn").hidden=true;return}
-  const el=$("turn"),I=inboundInfo(f,date),edBtn=`<button class="tu-ed" id="tuEd">✎ تعديل الوصول</button>`;
+  const el=$("turn"),I=inboundInfo(f,date),nowBtn=AUTH.tok&&!DEMO&&iso(date)===iso(TODAY)&&f.ino&&(!I||!isActual(I))?`<button class="tu-ed" id="tuNow" style="border-color:var(--go);color:var(--go)">✈️ هبطت الآن</button>`:"",edBtn=`${nowBtn}<button class="tu-ed" id="tuEd">✎ تعديل الوصول</button>`;
   if(!canCount(I)){
     /* قبل الوصول: لا عدّ */
     const D0=LV(date).flights[f.n],gone0=D0&&["departed","landed","canceled"].includes(D0.s);
     const ok=!gone0&&f.ino&&f.ia&&!f.off&&iso(date)===iso(TODAY)&&NOW.mins>=toMin(f.ia)-90&&NOW.mins<=toMin(f.t)+60;
     const msg=!I?`بانتظار بيانات وصول ${f.ino}.`:I.kind==="eta"?`${f.ino} لم تصل بعد · متوقع ≈<span class="num">${fmt(I.m)}</span>.`:`${f.ino} يُرجّح أنها وصلت ≈<span class="num">${fmt(I.m)}</span> ولم يتأكد وقت الوصول الفعلي بعد.`;
-    if(ok){el.innerHTML=`<div class="tu-h"><b>Sched GT · ${gtRule(f)}M</b>${edBtn}</div><div class="tu-n">${msg} العدّ التنازلي يبدأ عند الوصول الفعلي. إذا عندك وقت الوصول من النظام أدخله من «تعديل الوصول».${LIVE.updated?` <br>آخر تحديث للحالة ${LIVE.updated}.`:""} <a href="https://www.flightradar24.com/data/flights/${f.ino.toLowerCase()}" target="_blank" rel="noopener" style="color:var(--amber)">تحقق من الهبوط في Flightradar24 ↗</a></div>`;el.hidden=false}
+    if(ok){el.innerHTML=`<div class="tu-h"><b>Sched GT · ${gtRule(f)}M</b><span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${edBtn}</span></div><div class="tu-n">${msg} العدّ التنازلي يبدأ عند الوصول الفعلي. إذا عندك وقت الوصول من النظام أدخله من «تعديل الوصول».${LIVE.updated?` <br>آخر تحديث للحالة ${LIVE.updated}.`:""} <a href="https://www.flightradar24.com/data/flights/${f.ino.toLowerCase()}" target="_blank" rel="noopener" style="color:var(--amber)">تحقق من الهبوط في Flightradar24 ↗</a></div>`;el.hidden=false}
     else el.hidden=true;
     return}
   const P=turnPlan(f,I.m),now=nowMin(),D=LV(date).flights[f.n];
@@ -1461,9 +1482,9 @@ async function watchInbound(){
 }
 const watchSafe=()=>watchInbound().catch(()=>{});/* تحديث أسرع لما تقترب رحلة وصول: كل 8 ثواني بدل 20 */
 function relayFast(){try{return flightsOn(TODAY).some(f=>{if(!f.ino||!f.ia)return false;const k=ataKey(f,TODAY),L=LV(TODAY).flights[f.ino];
-  if(L&&["landed","canceled"].includes(L.s)||MAN[k]||(ATA[k]&&!String(ATA[k]).startsWith("~")))return false;
+  if(L&&["landed","canceled"].includes(L.s)||manAt(k)||(ATA[k]&&!String(ATA[k]).startsWith("~")))return false;
   const a=LIVE_ETA[f.ino]!=null?LIVE_ETA[f.ino]:L&&L.s==="departed"&&L.t&&!isNaN(tm(L.t))?tm(L.t):toMin(f.ia);return NOW.mins>=a-25&&NOW.mins<=a+20})}catch(e){return false}}
-(function relayLoop(){if(!document.hidden&&!DEMO)loadRelay();setTimeout(relayLoop,relayFast()?8000:20000)})();document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay()}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
+(function relayLoop(){if(!document.hidden&&!DEMO){loadRelay();loadShared()}setTimeout(relayLoop,relayFast()?8000:20000)})();document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay();shAt=0;loadShared()}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
 
 /* ---------- Coordination Sheet (GS-OL-029) ----------
    نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن». يُحفظ على الجهاز. */
