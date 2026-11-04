@@ -304,6 +304,8 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .cs-bar button{flex:1;height:46px;border-radius:14px;font-weight:700;background:var(--raise);color:var(--ink);border:1px solid var(--line)}
 .cs-bar button.p{background:var(--amber);color:#1a1205;border:0;flex:1.4}
 .cs-saved{font-size:11px;color:var(--go);font-family:var(--body)}
+.cs-by{font-size:11px;color:var(--muted);font-family:var(--body);direction:rtl;text-align:right;grid-column:1/-1}
+.cs-ro{background:var(--raise);border:1px dashed var(--line);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--muted);text-align:center}
 /* operations assistant */
 .ask-fab{position:fixed;z-index:8;left:16px;bottom:calc(18px + env(safe-area-inset-bottom));height:52px;padding:0 18px 0 14px;border-radius:26px;background:linear-gradient(135deg,#ffc867,var(--amber));color:#1a1205;font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.15) inset;transition:transform .18s var(--ease)}
 .ask-fab:active{transform:scale(.95)}
@@ -821,14 +823,15 @@ async function admRender(){const me=AUTH.me||{};let h=`<div class="adm-s"><h3><s
   h+=`<div class="adm-s" id="aPushS"><h3>🔔 تنبيهات وصول الرحلات</h3><div class="amsg" id="aPushM">…</div></div>`;
   if(!me.admin){$("admB").innerHTML=h;admBind();return}
   $("admB").innerHTML=h+'<div class="adm-s"><div class="amsg">جاري التحميل…</div></div>';admBind();
-  try{ADM=await admCall("list")}catch(e){$("admB").lastChild.innerHTML='<div class="amsg">تعذّر التحميل، تأكد من الاتصال.</div>';return}
+  try{ADM=await admCall("list");await csSync(true)}catch(e){$("admB").lastChild.innerHTML='<div class="amsg">تعذّر التحميل، تأكد من الاتصال.</div>';return}
   const emps=ADM.emps||[],pend=[];emps.forEach(e=>e.devices.forEach(d=>{if(d.status==="pending")pend.push({e,d})}));acctPaint(pend.length);
   h+=`<div class="adm-s"><h3>طلبات بانتظار موافقتك <span class="chip ${pend.length?"w":""}">${pend.length}</span></h3>${pend.length?pend.map(({e,d})=>`<div class="req"><div><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${d.first?'<span class="chip a">تفعيل حساب جديد</span>':'<span class="chip">جوال إضافي</span>'}<small>${escT(d.label)} · ${fdt(d.created)}</small></div><div class="row"><button class="abtn y" data-dv="${d.id}" data-st="approved">✅ موافقة</button><button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button></div></div>`).join(""):'<div class="amsg">ما فيه طلبات حالياً.</div>'}</div>`;
   h+=`<div class="adm-s"><h3>إضافة موظفين</h3><div class="amsg">كل سطر: الرقم الوظيفي ثم الاسم. مثال:<br>12345 محمد أحمد</div><textarea id="aAdd" placeholder="12345 محمد أحمد"></textarea><button class="abtn a" id="aAddGo">إضافة</button><div class="amsg" id="aAddMsg"></div></div>`;
+  {const nm=x=>(emps.find(e=>e.emp===x)||{}).name||x;h+=`<div class="adm-s"><h3>صلاحية الكوردنيتر شيت <span class="chip">${CSPERM.length}</span></h3><div class="amsg">الكل يشوف الشيت وأسماء اللي سجّلوا. التسجيل والتعديل (ومنه Push Back) لك ولهؤلاء فقط. تعطي الصلاحية من صفحة الموظف تحت.</div>${CSPERM.map(x=>`<div class="req"><div><b>${escT(nm(x))}</b> <span class="chip">${escT(x)}</span></div><div class="row"><button class="abtn n" data-csp="${escT(x)}" data-v="false">سحب</button></div></div>`).join("")}</div>`}
   const q=norm(admQ),list=emps.filter(e=>!q||norm(e.name+" "+e.emp).includes(q));
   h+=`<div class="adm-s"><h3>الموظفين <span class="chip">${emps.length}</span></h3><input id="aQ" type="search" placeholder="بحث بالاسم أو الرقم" value="${escT(admQ)}">${list.map(e=>{const ap=e.devices.filter(d=>d.status==="approved").length;const st=!e.active?'<span class="chip w">موقوف</span>':e.locked?'<span class="chip w">مقفل مؤقتاً</span>':!e.activated?'<span class="chip">لم يفعّل</span>':ap?'<span class="chip g">فعّال</span>':'<span class="chip w">بدون جوال معتمد</span>';
     const o=admOpen.has(e.emp);return`<div class="emp"><button data-op="${escT(e.emp)}"><span><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${e.admin?'<span class="chip a">مشرف</span>':""}</span><span>${st}</span></button>${o?`<div class="more">${e.devices.length?e.devices.map(d=>`<div class="req"><small>${escT(d.label)} · ${{approved:"✅ معتمد",pending:"⏳ بانتظار",rejected:"⛔ مرفوض"}[d.status]} · آخر دخول ${fdt(d.seen)}</small><div class="row">${d.status!=="approved"?`<button class="abtn y" data-dv="${d.id}" data-st="approved">اعتماد</button>`:""}${d.status!=="rejected"?`<button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button>`:""}<button class="abtn" data-dv="${d.id}" data-st="delete" data-cf="1">حذف الجوال</button></div></div>`).join(""):'<div class="amsg">ما سجّل دخول من أي جوال.</div>'}
-      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">${e.activated?`<button class="abtn" data-ac="reset_pass" data-e="${escT(e.emp)}" data-cf="1">إعادة تعيين الرقم السري</button>`:""}${e.locked?`<button class="abtn" data-ac="unlock" data-e="${escT(e.emp)}">فك القفل</button>`:""}${e.emp!==ADM.me?`<button class="abtn ${e.active?"n":"y"}" data-ac="active" data-e="${escT(e.emp)}" data-v="${!e.active}" ${e.active?'data-cf="1"':""}>${e.active?"إيقاف":"تفعيل"}</button><button class="abtn" data-ac="set_admin" data-e="${escT(e.emp)}" data-v="${!e.admin}" data-cf="1">${e.admin?"إلغاء الإشراف":"جعله مشرف"}</button><button class="abtn n" data-ac="delete" data-e="${escT(e.emp)}" data-cf="1">حذف</button>`:""}</div></div>`:""}</div>`}).join("")||'<div class="amsg">ما فيه نتائج.</div>'}</div>`;
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">${e.activated?`<button class="abtn" data-ac="reset_pass" data-e="${escT(e.emp)}" data-cf="1">إعادة تعيين الرقم السري</button>`:""}${e.locked?`<button class="abtn" data-ac="unlock" data-e="${escT(e.emp)}">فك القفل</button>`:""}${!e.admin?`<button class="abtn ${CSPERM.includes(e.emp)?"n":"y"}" data-csp="${escT(e.emp)}" data-v="${!CSPERM.includes(e.emp)}">${CSPERM.includes(e.emp)?"سحب صلاحية الكوردنيتر شيت":"إعطاء صلاحية الكوردنيتر شيت"}</button>`:""}${e.emp!==ADM.me?`<button class="abtn ${e.active?"n":"y"}" data-ac="active" data-e="${escT(e.emp)}" data-v="${!e.active}" ${e.active?'data-cf="1"':""}>${e.active?"إيقاف":"تفعيل"}</button><button class="abtn" data-ac="set_admin" data-e="${escT(e.emp)}" data-v="${!e.admin}" data-cf="1">${e.admin?"إلغاء الإشراف":"جعله مشرف"}</button><button class="abtn n" data-ac="delete" data-e="${escT(e.emp)}" data-cf="1">حذف</button>`:""}</div></div>`:""}</div>`}).join("")||'<div class="amsg">ما فيه نتائج.</div>'}</div>`;
   $("admB").innerHTML=h;admBind();
   const aq=$("aQ");if(aq)aq.oninput=()=>{admQ=aq.value;clearTimeout(aq._t);aq._t=setTimeout(()=>{const p=aq.selectionStart;admRender().then(()=>{const n=$("aQ");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(e){}}})},300)}}
 async function pushPaint(){const S=$("aPushS");if(!S)return;const st=await pushState(),M=$("aPushM");if(!M)return;M.textContent=PU_TXT[st];
@@ -851,7 +854,8 @@ function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.d
     if(t.dataset.op){admOpen.has(t.dataset.op)?admOpen.delete(t.dataset.op):admOpen.add(t.dataset.op);admRender();return}
     if(t.dataset.cf==="1"&&t.dataset.c!=="1"){t.dataset.c="1";t._txt=t.textContent;t.textContent="متأكد؟";setTimeout(()=>{if(t.isConnected){t.dataset.c="";t.textContent=t._txt}},3000);return}
     try{t.disabled=true;
-      if(t.dataset.dv)await admCall("device",{id:+t.dataset.dv,status:t.dataset.st});
+      if(t.dataset.csp){const j=await rpc("ajf_cs_perm_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_emp:t.dataset.csp,p_on:t.dataset.v==="true"});if(j.s==="out"){authOut();return}if(j.s!=="ok")throw new Error(j.s);CSPERM=j.perm||[];csAt=0}
+      else if(t.dataset.dv)await admCall("device",{id:+t.dataset.dv,status:t.dataset.st});
       else if(t.dataset.ac)await admCall(t.dataset.ac,{emp:t.dataset.e,active:t.dataset.v==="true",admin:t.dataset.v==="true"});
       else if(t.id==="aAddGo"){const lines=$("aAdd").value.split(/\n/).map(l=>l.trim()).filter(Boolean);let ok=0,bad=[];
         for(const l of lines){const m=l.replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).match(/^([0-9A-Za-z]{2,20})[\s,،\-–:|]+(.+)$/);if(!m){bad.push(l);continue}
@@ -1333,7 +1337,7 @@ function actGT(f,date){
 /* Delay: ATD − STD. الجزء الناتج عن تأخر الوصول (93 Late Arrival) = ATA + Sched GT − STD، والباقي سببه آخر يُكتب كملاحظة */
 let DLYR={};try{DLYR=JSON.parse(localStorage.getItem("ajf_dly")||"{}")}catch(e){}
 const dlyKey=(f,date)=>iso(date)+"_"+f.n;
-function dlyReason(f,date){return(LV(date).dly&&LV(date).dly[f.n])||DLYR[dlyKey(f,date)]||""}
+function dlyReason(f,date){return(LV(date).dly&&LV(date).dly[f.n])||(CSV[dlyKey(f,date)]||{}).dlyr||DLYR[dlyKey(f,date)]||""}
 function dlyInfo(f,date){
   if(!LV(date).date)return null;
   const Q=depInfo(f,date);if(!Q)return null;
@@ -1501,13 +1505,30 @@ const watchSafe=()=>watchInbound().catch(()=>{});/* تحديث أسرع لما �
 function relayFast(){try{return flightsOn(TODAY).some(f=>{if(!f.ino||!f.ia)return false;const k=ataKey(f,TODAY),L=LV(TODAY).flights[f.ino];
   if(L&&["landed","canceled"].includes(L.s)||manAt(k)||(ATA[k]&&!String(ATA[k]).startsWith("~")))return false;
   const a=LIVE_ETA[f.ino]!=null?LIVE_ETA[f.ino]:L&&L.s==="departed"&&L.t&&!isNaN(tm(L.t))?tm(L.t):toMin(f.ia);return NOW.mins>=a-25&&NOW.mins<=a+20})}catch(e){return false}}
-(function relayLoop(){if(!document.hidden&&!DEMO){loadRelay();loadShared()}setTimeout(relayLoop,relayFast()?8000:20000)})();document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay();shAt=0;loadShared()}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
+/* الكوردنيتر شيت المشترك (التخزين والمزامنة) — قبل حلقة التحديث لأنها تناديه */
+const CS_KEY=DEMO?"ajf_cs_demo":"ajf_cs2";
+/* CSV[يوم_رحلة] = {خانة: قيمة} · CSN[يوم_رحلة] = {خانة: اسم اللي سجّلها} */
+let CSV={},CSN={},CSCAN=DEMO,CSPERM=[];
+try{const o=JSON.parse(localStorage.getItem(CS_KEY)||"{}");CSV=o.v||{};CSN=o.n||{};if(!DEMO)CSCAN=!!o.can}catch(e){}
+const csSave=()=>{try{const keep=iso(addDays(TODAY,-3));for(const k in CSV)if(k.slice(0,10)<keep){delete CSV[k];delete CSN[k]}localStorage.setItem(CS_KEY,JSON.stringify({v:CSV,n:CSN,can:CSCAN}))}catch(e){}};
+const csCan=()=>DEMO||!!(AUTH.me&&AUTH.me.admin)||CSCAN;
+/* Push Back (ATD) المسجّل في الشيت = Off-block معتمد للرحلة عند الكل */
+const csATD=k=>{const o={},p=k+"_";for(const x in CSV)if(x.startsWith(p)&&hm(CSV[x].atd||""))o[x.slice(p.length)]=CSV[x].atd;return o};
+let csAt=0,csP=null;
+function csSync(force){if(DEMO||!AUTH.tok||csP||(!force&&Date.now()-csAt<8000))return csP||Promise.resolve();const day=iso(TODAY),days=[iso(addDays(TODAY,-1)),day];
+  csP=rpc("ajf_cs_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_day:day}).then(j=>{csAt=Date.now();if(!j)return;if(j.s==="out"){authOut();return}if(j.s!=="ok")return;
+    const V={},N={};for(const k in CSV)if(!days.includes(k.slice(0,10))){V[k]=CSV[k];N[k]=CSN[k]}
+    for(const r of j.rows||[]){const k=r.day+"_"+r.flight;(V[k]=V[k]||{})[r.k]=String(r.v);(N[k]=N[k]||{})[r.k]=String(r.name||r.emp||"").slice(0,40)}
+    const can=!!j.can;CSPERM=Array.isArray(j.perm)?j.perm:[];
+    if(JSON.stringify([V,N,can])!==JSON.stringify([CSV,CSN,CSCAN])){CSV=V;CSN=N;CSCAN=can;csSave();if(!open)render();renderNext();
+      if(!$("cs").hidden&&csCur){const a=document.activeElement;if(a&&$("csBody").contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))csPend=true;else renderCS()}}})
+    .catch(()=>{}).finally(()=>{csP=null});return csP}
+(function relayLoop(){if(!document.hidden&&!DEMO){loadRelay();loadShared();csSync()}setTimeout(relayLoop,relayFast()?8000:20000)})();document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay();shAt=0;loadShared();csSync(true)}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
 
 /* ---------- Coordination Sheet (GS-OL-029) ----------
-   نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن». يُحفظ على الجهاز. */
-const CS_KEY=DEMO?"ajf_cs_demo":"ajf_cs";
-let CSDB={};try{CSDB=JSON.parse(localStorage.getItem(CS_KEY)||"{}")}catch(e){}
-const csSave=()=>{try{localStorage.setItem(CS_KEY,JSON.stringify(CSDB))}catch(e){}};
+   نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن».
+   مشترك عبر Supabase: يظهر عند كل الموظفين مع اسم اللي سجّل كل خانة، والكتابة للمشرف ومن يعطيه صلاحية فقط. */
+
 /* الأنشطة المطلوبة فقط (من المشرف) — كلها أوقات نقطية */
 const CS_ACTS=[["open","Open Door"],["dpF","Deplaning · First Pax"],["dpL","Deplaning · Last Pax"],["clIn","Cleaning In"],["clOut","Cleaning Out"],["paxReq","Pax Request"],["bdF","Boarding · First Pax"],["bdL","Boarding · Last Pax"],["close","Close Door"]];
 let csCur=null;
@@ -1519,14 +1540,15 @@ function csPlan(f,d){
   Object.keys(r).forEach(k=>r[k]=fmt(r[k]));return r;
 }
 function csData(f,date){
-  const k=iso(date)+"_"+f.n;
-  if(!CSDB[k]){const I=inboundInfo(f,date);CSDB[k]={reg:"",gate:"",pa:{F:"",J:"",Y:""},pd:{F:"",J:"",Y:""},ld3:"",plt:"",pcs:"",ata:isActual(I)?fmt(I.m):"",atd:"",dlyc:"",chk:{},act:{},rem:""}}
-  return CSDB[k];
+  const k=iso(date)+"_"+f.n,V=CSV[k]||{},I=inboundInfo(f,date);
+  const d={reg:"",gate:"",pa:{F:"",J:"",Y:""},pd:{F:"",J:"",Y:""},ld3:"",plt:"",pcs:"",ata:isActual(I)?fmt(I.m):"",atd:"",dlyc:"",chk:{},act:{},rem:"",dm:{}};
+  for(const path in V){const p=path.split(".");let o=d;for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]&&typeof o[p[i]]==="object"?o[p[i]]:{};o[p[p.length-1]]=p[0]==="chk"?V[path]==="1":V[path]}
+  return d;
 }
 function openCS(f,date){
   csCur={f,date};$("cs").hidden=false;$("csT").textContent="Coordination Sheet";
   $("csS").textContent=(f.ino?f.ino+" "+f.iata+"→AJF · ":"")+f.n+" AJF→"+f.iata+" · "+dLabel(date);
-  renderCS();$("cs").scrollTop=0;
+  renderCS();$("cs").scrollTop=0;csSync(true);
 }
 function csDerived(f,d){
   const atd=hm(d.atd)?d.atd:d.act.push&&hm(d.act.push.s)?d.act.push.s:"";
@@ -1542,8 +1564,11 @@ function renderCS(){
   const acts=CS_ACTS.map(([k,n])=>{
     const a=d.act[k]||{},st=hm(a.s)?"done":"";
     return`<div class="cs-act ${st}"><div class="h"><b>${n}</b><small>Plan ${P[k]||"—"}</small></div>
-      <div class="cs-tm one"><label><span>Time</span><input type="time" data-k="act.${k}.s" value="${a.s||""}">${a.s?"":`<button class="cs-now" data-now="act.${k}.s">الآن</button>`}</label></div></div>`}).join("");
-  $("csBody").innerHTML=`
+      <div class="cs-tm one"><label><span>Time</span><input type="time" data-k="act.${k}.s" value="${a.s||""}">${a.s?"":`<button class="cs-now" data-now="act.${k}.s">الآن</button>`}</label></div></div>`}).join("")+
+    `<div class="cs-act ${hm(d.atd)?"done":""}"><div class="h"><b>Push Back · ATD</b><small>Plan ${P.close||"—"}</small></div>
+      <div class="cs-tm one"><label><span>Off-block</span><input type="time" data-k="atd" value="${d.atd||""}">${d.atd?"":`<button class="cs-now" data-now="atd">الآن</button>`}</label></div></div>`;
+  const can=csCan();
+  $("csBody").innerHTML=(can?"":`<div class="cs-ro">👁️ عرض فقط — التسجيل والتعديل للمشرف ومن يعطيه صلاحية</div>`)+`
   <div class="cs-card"><h5>FLIGHT</h5>
     <div class="cs-g two">${fld("DATE",`<input value="${iso(date)}" readonly>`)}${fld("A/C REG",inp("reg",d.reg,"HZ-","text",'autocapitalize="characters" dir="ltr"'))}</div>
     <div class="cs-g two">${fld("ARRIVAL · FROM",`<input value="${f.ino||"—"} · ${f.iata}" readonly>`)}${fld("DEPARTURE · TO",`<input value="${f.n} · ${f.iata}" readonly>`)}</div>
@@ -1553,15 +1578,34 @@ function renderCS(){
   ${(()=>{const X=dlyInfo(f,date);if(!X)return"";return`<div class="cs-card"><h5>DELAY</h5>
     <div class="cs-g">${fld("STD",`<input value="${f.t}" readonly>`)}${fld(X.est?"ATD ≈ تقديري":"ATD (Off-block)",`<input value="${X.est?"≈":""}${fmt(X.atd)}" readonly${X.est?' style="color:var(--muted)"':""}>`)}${fld(X.est?"DLY ≈ تقديري":"DLY",`<input value="${X.est?"≈":""}${X.no?"NO DELAY":X.dly+"M"}" readonly style="color:var(${X.est?"--muted":X.no?"--go":"--warn"})">`)}</div>
     ${X.no?"":`<div class="tu-n" style="direction:ltr;text-align:left">${dlyText(X)}</div>
-    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${(DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(dcAirOf(f)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل ${DC_SHORT[dcAirOf(f)]}</button>`:""):""}`}</div>${/^SV/.test(f.n)&&!X.no?dmCard(f,date,X,d):""}`})()}${dcAirOf(f)==="XY"?mvtCard(f,date,d):""}`;
+    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${((CSV[dlyKey(f,date)]||{}).dlyr||DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(dcAirOf(f)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل ${DC_SHORT[dcAirOf(f)]}</button>`:""):""}`}</div>${/^SV/.test(f.n)&&!X.no?dmCard(f,date,X,d):""}`})()}${dcAirOf(f)==="XY"?mvtCard(f,date,d):""}`;
   try{const{f,date}=csCur,d=csData(f,date);for(const[k]of CS_SEQ){const v=csGet(d,k);if(!hm(v))continue;const e=csCheck(f,date,d,k,v);
     $("csBody").querySelectorAll(`[data-k="${k}"]`).forEach(el=>{if(e){el.style.outline="2px solid var(--warn)";el.title=e;el.insertAdjacentHTML?.("afterend",`<div class="dm-w" style="grid-column:1/-1">⚠︎ ${escT(e)}</div>`)}})}}catch(x){}
+  /* اسم اللي سجّل كل خانة */
+  const N=CSN[iso(date)+"_"+f.n]||{};
+  $("csBody").querySelectorAll("[data-k]").forEach(el=>{const n=N[el.dataset.k];if(!n)return;const h=el.closest(".cs-act")||el.closest(".cs-f")||el.parentElement;if(h&&!h.querySelector(`.cs-by[data-for="${el.dataset.k}"]`))h.insertAdjacentHTML("beforeend",`<div class="cs-by" data-for="${escT(el.dataset.k)}">✍︎ ${escT(n)}</div>`)});
+  {const el=$("csBody").querySelector("[data-dly]"),n=N.dlyr;if(el&&n)el.closest(".cs-f").insertAdjacentHTML("beforeend",`<div class="cs-by">✍︎ ${escT(n)}</div>`)}
+  /* بدون صلاحية: عرض فقط (النسخ والطباعة تشتغل) */
+  if(!can)$("csBody").querySelectorAll("input,select,textarea,button[data-now],button[data-chk],button[data-dmq],button[data-dmpick],button[data-xyq],button[data-xypick],button[data-dcpick]").forEach(el=>{if(el.tagName==="BUTTON"){if(el.dataset.now)el.remove();else el.disabled=true}else{el.readOnly=true;el.disabled=el.type==="time"||el.tagName==="SELECT"}});
+  $("csClear").hidden=!can;
 }
 function csSet(path,v){
-  const{f,date}=csCur,d=csData(f,date),p=path.split(".");let o=d;
-  for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]||{};o[p[p.length-1]]=v;
-  if(path==="ata"){const k=ataKey(f,date);if(hm(v))MAN[k]=v;else delete MAN[k];try{localStorage.setItem(DEMO?"ajf_man_demo":"ajf_man",JSON.stringify(MAN))}catch(e){}}
-  csSave();$("csSaved").textContent="✓ محفوظ";clearTimeout(csSet.t);csSet.t=setTimeout(()=>$("csSaved").textContent="",1500);
+  const{f,date}=csCur,k=iso(date)+"_"+f.n;v=v==null?"":String(v).trim();
+  if(!csCan()){csErr("ما عندك صلاحية التسجيل في الكوردنيتر شيت. الصلاحية من المشرف.");renderCS();return}
+  const V=CSV[k]=CSV[k]||{},N=CSN[k]=CSN[k]||{},ov=V[path],on=N[path],me=(AUTH.me&&(AUTH.me.name||AUTH.me.emp))||"";
+  if(v){V[path]=v;N[path]=me}else{delete V[path];delete N[path]}csSave();if(!open)render();renderNext();
+  const ok=()=>{$("csSaved").textContent="✓ محفوظ عند الكل";clearTimeout(csSet.t);csSet.t=setTimeout(()=>$("csSaved").textContent="",1800)};
+  if(DEMO)return ok();
+  $("csSaved").textContent="…";
+  rpc("ajf_cs_set",{p_token:AUTH.tok||"",p_device:AUTH.dev,p_day:iso(date),p_flight:f.n,p_k:path,p_v:v}).then(j=>{
+    if(j.s==="out"){authOut();throw new Error("out")}if(j.s==="denied"){CSCAN=false;throw new Error("denied")}if(j.s!=="ok")throw new Error(j.s||"err");
+    if(j.name)N[path]=v?j.name:undefined;if(!v)delete N[path];csSave();ok();csAt=0;
+    /* ATA من الشيت = وقت الوصول المعتمد عند الكل في اللوحة */
+    if(path==="ata"&&v&&f.ino&&iso(date)===iso(TODAY))shSet(f,v).catch(()=>{});
+    if(csCur&&csCur.f===f&&!$("cs").hidden){const a=document.activeElement;if(!(a&&$("csBody").contains(a)&&/INPUT|TEXTAREA/.test(a.tagName)))renderCS()}})
+  .catch(e=>{const V2=CSV[k]=CSV[k]||{},N2=CSN[k]=CSN[k]||{};if(ov!=null){V2[path]=ov;N2[path]=on}else{delete V2[path];delete N2[path]}csSave();
+    $("csSaved").textContent="";csErr(e.message==="denied"?"ما عندك صلاحية التسجيل في الكوردنيتر شيت. الصلاحية من المشرف.":"ما انحفظ — تأكد من الإنترنت وجرّب مرة ثانية.");
+    if(csCur&&!$("cs").hidden)renderCS();if(!open)render();renderNext()});
 }
 $("csBody").addEventListener("click",e=>{if(!e.target.closest("[data-dcpick]"))return;const inp=$("csBody").querySelector("[data-dly]");
   openDC(v=>{inp.value=inp.value.trim()?inp.value.trim()+" / "+v:v;inp.dispatchEvent(new Event("change",{bubbles:true}))},dcAirOf(csCur.f))});
@@ -1600,15 +1644,17 @@ function csErr(msg,el){let t=$("csErr");if(!t){t=document.createElement("div");t
   if(el){el.style.outline="2px solid var(--warn)";setTimeout(()=>el.style.outline="",2500)}try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}}
 /* اختيار الوقت في الآيفون يرسل change أثناء تحريك العجلة؛ نؤجل إعادة الرسم حتى يضغط المستخدم ✓ (blur) عشان ما تنقفل العجلة */
 let csPend=false,csBad=null;$("csBody").addEventListener("focusout",e=>{if(e.target.type!=="time")return;if(csBad&&csBad.el===e.target){const m=csBad.err,k=e.target.dataset.k;csBad=null;const{f,date}=csCur;e.target.value=csGet(csData(f,date),k)||"";csErr(m,e.target);if(!csPend)return}if(csPend){csPend=false;setTimeout(renderCS,0)}});
-$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k&&CS_LBL[k]&&e.target.type==="time"&&e.target.value){const{f,date}=csCur,d=csData(f,date),err=csCheck(f,date,d,k,e.target.value);if(err){csBad={err,el:e.target};return}}if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$|^dm\.|^pd\./.test(k)){if(e.target.type==="time")csPend=true;else renderCS()}}else if(e.target.hasAttribute("data-dly")){const{f,date}=csCur,v=e.target.value.trim();if(v)DLYR[dlyKey(f,date)]=v;else delete DLYR[dlyKey(f,date)];try{localStorage.setItem("ajf_dly",JSON.stringify(DLYR))}catch(x){}renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
+$("csBody").addEventListener("change",e=>{const k=e.target.dataset.k;if(k&&CS_LBL[k]&&e.target.type==="time"&&e.target.value){const{f,date}=csCur,d=csData(f,date),err=csCheck(f,date,d,k,e.target.value);if(err){csBad={err,el:e.target};return}}if(k){csSet(k,e.target.value.trim());if(/^(ata|atd)$|^act\.\w+\.[se]$|^dm\.|^pd\./.test(k)){if(e.target.type==="time")csPend=true;else renderCS()}}else if(e.target.hasAttribute("data-dly")){csSet("dlyr",e.target.value.trim());renderCS()}else if(e.target.hasAttribute("data-by")){try{localStorage.setItem("ajf_by",e.target.value.trim())}catch(x){}}});
 $("csBody").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
-  if(b.dataset.chk){const{f,date}=csCur,d=csData(f,date);d.chk[b.dataset.chk]=!d.chk[b.dataset.chk];csSave();b.classList.toggle("on");return}
+  if(b.dataset.chk){const{f,date}=csCur,d=csData(f,date);csSet("chk."+b.dataset.chk,d.chk[b.dataset.chk]?"":"1");b.classList.toggle("on");return}
   if(b.dataset.now){const inp=b.previousElementSibling;if(!inp.value){const v=fmt(Math.floor(nowMin())),{f,date}=csCur,err=csCheck(f,date,csData(f,date),b.dataset.now,v);if(err){csErr(err,inp);return}csSet(b.dataset.now,v);renderCS()}else{inp.focus();inp.showPicker&&inp.showPicker()}}
 });
 $("csBack").onclick=()=>{$("cs").hidden=true;if(open&&curTurn)renderTurn(curTurn.f,curTurn.date)};
 let csClr=0;
-$("csClear").onclick=()=>{const b=$("csClear");if(Date.now()-csClr<3000){const{f,date}=csCur;delete CSDB[iso(date)+"_"+f.n];csSave();renderCS();b.textContent="مسح";csClr=0}else{csClr=Date.now();b.textContent="اضغط مرة ثانية";setTimeout(()=>{b.textContent="مسح"},3000)}};
+$("csClear").onclick=()=>{const b=$("csClear");if(Date.now()-csClr<3000){const{f,date}=csCur,k=iso(date)+"_"+f.n;b.textContent="مسح";csClr=0;if(!csCan())return;
+    const bk=[CSV[k],CSN[k]];delete CSV[k];delete CSN[k];csSave();renderCS();if(!open)render();renderNext();
+    if(!DEMO)rpc("ajf_cs_set",{p_token:AUTH.tok||"",p_device:AUTH.dev,p_day:iso(date),p_flight:f.n,p_k:"*",p_v:""}).then(j=>{if(j.s!=="ok")throw new Error(j.s)}).catch(()=>{if(bk[0])CSV[k]=bk[0];if(bk[1])CSN[k]=bk[1];csSave();renderCS();csErr("ما انمسح — تأكد من الإنترنت.")})}else{csClr=Date.now();b.textContent="اضغط مرة ثانية";setTimeout(()=>{b.textContent="مسح"},3000)}};
 function csPrintHTML(){
   const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d);
   const c=(v)=>v||"";
@@ -1984,8 +2030,10 @@ let HIST={};try{HIST=JSON.parse(localStorage.getItem("ajf_hist")||"{}")}catch(e)
 const EMPTY_LV={date:"",flights:{},dly:{}};
 function relayCxl(k){const X=RELAY&&RELAY.frx;if(!X||X.date!==k||!Array.isArray(X.cxl)||!X.cxl.length||Date.now()/1000-(RELAY.frAt||0)>3600)return null;
   const o={};for(const f of flightsOn(new Date(k+"T00:00:00Z")))if(X.cxl.includes(f.n)){o[f.n]=2;if(f.ino)o[f.ino]=2}else if(f.ino&&X.cxl.includes(f.ino))o[f.ino]=2;return o}
-function LV(date){const k=iso(date),b=LIVE.date===k?LIVE:HIST[k]||EMPTY_LV,r=relayCxl(k),c=r||CXL[k]?{...(CXL[k]||{}),...(r||{})}:null;if(!c)return b;
-  const fl={...b.flights};for(const n in c)if(!fl[n]||!fl[n].fix&&!["departed","landed"].includes(fl[n].s))fl[n]={s:"canceled",t:"",note:c[n]===2?"ملغاة حسب Flightradar24":"ملغاة حسب البلاغ"};
+function LV(date){const k=iso(date),b=LIVE.date===k?LIVE:HIST[k]||EMPTY_LV,r=relayCxl(k),c=r||CXL[k]?{...(CXL[k]||{}),...(r||{})}:null,A=csATD(k),an=Object.keys(A);if(!c&&!an.length)return b;
+  const fl={...b.flights};if(c)for(const n in c)if(!fl[n]||!fl[n].fix&&!["departed","landed"].includes(fl[n].s))fl[n]={s:"canceled",t:"",note:c[n]===2?"ملغاة حسب Flightradar24":"ملغاة حسب البلاغ"};
+  /* Push Back من الكوردنيتر شيت = Off-block معتمد (يتقدّم على FR24) */
+  for(const n of an){const o=fl[n]||{};fl[n]={s:"departed",t:"@"+A[n],note:o.note||"",fix:1}}
   return{...b,date:b.date||k,flights:fl}}
 function keepHist(j){if(!j||!j.date)return;const old=HIST[j.date];if(old&&old.updated>j.updated&&j.date!==LIVE.date)return;HIST[j.date]=j;
   const keep=[0,1,2].map(i=>iso(addDays(TODAY,-i)));for(const k of Object.keys(HIST))if(!keep.includes(k))delete HIST[k];
