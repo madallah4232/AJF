@@ -743,12 +743,14 @@ async function authCheck(){if(!AUTH.tok)return;try{const j=await rpc("ajf_me",{p
   AUTH.me={emp:j.emp,name:j.name,admin:j.admin};authSave();acctPaint(j.pending);pushResync()}catch(e){/* بدون اتصال: نكمل بالجلسة المحفوظة */}}
 /* ---------- تنبيهات وصول الرحلات على الجوال (Web Push) ----------
    الخادم (وسيط ADS-B) يرسل: قبل الوصول بـ10 دقائق ← قبل 5 دقائق ← هبطت. الآيفون يحتاج فتح التطبيق من الشاشة الرئيسية. */
-const VAPID_PUB="BJ5no9wReOamtLwOAtqgyyZNKKu5esoD6G6MgnQO6RIaGMizeCiL6Ck8I4i_EsXj7eGUIoUuNUKkeEMmodEKnw4";
+const VAPID_PUB="BMomC-1J0x_63i0lye7d6qV8aAH5loPmXSaC_xGo7ktQWBpgdcuSsBTwjRb62gbG1VUQIHWTaScBS0QpvooTufI";
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent),isPWA=!!(navigator.standalone||matchMedia("(display-mode: standalone)").matches);
 const pushOK=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&location.protocol==="https:";
 function b64u(s){const p="=".repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
 const swReady=()=>Promise.race([navigator.serviceWorker.ready,new Promise((_,no)=>setTimeout(()=>no(new Error("sw")),8000))]);
-async function pushSub(){const r=await swReady();return r.pushManager.getSubscription()}
+/* اشتراك قديم بمفتاح مختلف = ما يوصله شي، نعامله كأنه غير مفعّل */
+const keyOK=sub=>{try{const k=sub&&sub.options&&sub.options.applicationServerKey;if(!k)return true;const a=new Uint8Array(k),b=b64u(VAPID_PUB);return a.length===b.length&&a.every((x,i)=>x===b[i])}catch(e){return true}};
+async function pushSub(){const r=await swReady();const s=await r.pushManager.getSubscription();if(s&&!keyOK(s)){try{await s.unsubscribe()}catch(e){}return null}return s}
 async function pushState(){if(!pushOK())return isIOS&&!isPWA?"ios":"no";if(Notification.permission==="denied")return"denied";
   try{return(await pushSub())&&Notification.permission==="granted"?"on":"off"}catch(e){return"off"}}
 async function pushSend(sub){const j=await rpc("ajf_push_sub",{p_token:AUTH.tok||"",p_device:AUTH.dev,p_sub:sub.toJSON()});if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s)}
@@ -760,7 +762,9 @@ async function pushOn(){/* لازم تنادى من ضغطة زر (شرط الآ
 async function pushOff(){try{localStorage.setItem("ajf_push","0")}catch(e){}if(!pushOK())return;
   try{const sub=await pushSub();if(sub){rpc("ajf_push_unsub",{p_endpoint:sub.endpoint}).catch(()=>{});await sub.unsubscribe()}}catch(e){}}
 let pushSynced=false;/* مرة لكل فتح: يربط الاشتراك بالجلسة الحالية (لو تغيّر الرقم السري أو الجلسة) */
-async function pushResync(){if(pushSynced||!AUTH.tok||!pushOK()||Notification.permission!=="granted")return;pushSynced=true;try{const sub=await pushSub();if(sub)await pushSend(sub)}catch(e){pushSynced=false}}
+async function pushResync(){if(pushSynced||!AUTH.tok||!pushOK()||Notification.permission!=="granted")return;pushSynced=true;try{let sub=await pushSub();
+  if(!sub&&localStorage.getItem("ajf_push")==="1"){const r=await swReady();sub=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)}).catch(()=>null)}
+  if(sub)await pushSend(sub)}catch(e){pushSynced=false}}
 const PU_TXT={on:"مفعّلة ✅ يوصلك تنبيه قبل وصول كل رحلة بـ10 دقائق، ثم 5 دقائق، ثم عند الهبوط — حتى والجوال مقفل.",
   off:"يوصلك تنبيه على شاشة القفل قبل وصول كل رحلة بـ10 دقائق، ثم 5 دقائق، ثم عند الهبوط.",
   ios:"على الآيفون: افتح الموقع في Safari ← زر المشاركة ← «إضافة إلى الشاشة الرئيسية»، ثم افتح التطبيق من الأيقونة وفعّل التنبيهات من هنا.",

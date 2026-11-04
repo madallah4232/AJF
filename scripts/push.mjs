@@ -3,7 +3,7 @@
 // يحتاج أسرار GitHub: SB_SERVICE_KEY و VAPID_PRIVATE. بدونها ما يسوي شيء.
 
 const SB_URL = "https://izhrblrbjdaujshzqqrp.supabase.co";
-const VAPID_PUBLIC = "BJ5no9wReOamtLwOAtqgyyZNKKu5esoD6G6MgnQO6RIaGMizeCiL6Ck8I4i_EsXj7eGUIoUuNUKkeEMmodEKnw4";
+const VAPID_PUBLIC = "BMomC-1J0x_63i0lye7d6qV8aAH5loPmXSaC_xGo7ktQWBpgdcuSsBTwjRb62gbG1VUQIHWTaScBS0QpvooTufI";
 const SCHED = "https://docs.google.com/spreadsheets/d/15lfKxUHljob3uZ2xaSbvXE3L813g4apDTVQHhQshPn8/gviz/tq?tqx=out:csv&headers=1&sheet=SCHED";
 const KEY = process.env.SB_SERVICE_KEY, PRIV = process.env.VAPID_PRIVATE;
 
