@@ -1301,7 +1301,9 @@ const INTL=new Set(["CAI","SHJ","HMB"]);
 /* مدة الدوران = وقت بقاء الطائرة على الأرض حسب جدول كل رحلة (الإقلاع المجدول − الوصول المجدول) */
 const gtRule=f=>{const a=f.ia||f.inArr,d=f.t||f.time;if(!a||!d)return 60;return(toMin(d)-toMin(a)+1440)%1440||60};
 /* أقل بقاء على الأرض من الوصول الفعلي: الدولي 60 د · السعودية وناس وأديل 40 د. موعد الإقلاع = الأبعد بين STD و (الوصول + أقل بقاء) */
-const minGT=f=>INTL.has(f.iata)?60:/^(SV|XY|F3)/.test(f.n||f.no||"")?40:gtRule(f);
+/* استثناءات حسب الناقل (من المشرف): العربية للطيران 50 د رغم إنها دولية */
+const GT_CARRIER={G9:50};
+const minGT=f=>{const c=String(f.n||f.no||"").slice(0,2);return GT_CARRIER[c]!=null?GT_CARRIER[c]:INTL.has(f.iata)?60:/^(SV|XY|F3)/.test(c)?40:gtRule(f)};
 const doorAt=(f,ata)=>{const std=tm(f.t);let d=ata+minGT(f);if(d-std>720)d-=1440;if(std-d>720)d+=1440;return Math.max(std,d)};
 const isActual=I=>!!I&&I.kind!=="eta"&&I.kind!=="approx"&&I.kind!=="sched";
 /* العدّ يشتغل بعد الوصول: الفعلي إن وُجد، وإلا تقديري من الأبعد بين المتوقع والمجدول، ويتصحح تلقائياً عند تأكد الوقت الفعلي */
