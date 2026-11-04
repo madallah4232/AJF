@@ -63,12 +63,26 @@ function payload(f, s, iso) {
     : `تصل خلال ${s.left === 1 ? "دقيقة" : s.left === 2 ? "دقيقتين" : s.left + " دقائق"} · المتوقع ${s.t}${next}`;
   return JSON.stringify({ title: (s.stage === "land" ? "🛬 " : "✈️ ") + head, body, tag: "ajf-" + iso + "-" + f.ino, url: "./" });
 }
+// تنبيه المشرف: طلب دخول جديد بانتظار الموافقة (كل دقيقة تقريباً، مرة لكل عدد جديد في اليوم)
+let admAt = 0;
+async function adminTick(N) {
+  if (Date.now() - admAt < 55e3) return; admAt = Date.now();
+  let rows; try { rows = await rpc("ajf_admin_alerts"); } catch (e) { if (!/404|PGRST202/.test(e.message)) console.log("push: admin", e.message); return; }
+  for (const x of rows || []) {
+    const id = x.endpoint.slice(-24);
+    if (!(await rpc("ajf_push_claim", { p_day: N.iso, p_flight: "ADM", p_stage: id + "-" + x.pending }).catch(() => false))) continue;
+    const msg = JSON.stringify({ title: "👤 طلب دخول جديد", body: x.pending === 1 ? "موظف بانتظار موافقتك على الدخول للوحة — اضغط للمراجعة" : `${x.pending} طلبات بانتظار موافقتك على الدخول للوحة — اضغط للمراجعة`, tag: "ajf-admin", url: "./?acct" });
+    try { await wp.sendNotification({ endpoint: x.endpoint, keys: { p256dh: x.p256dh, auth: x.auth } }, msg, { TTL: 6 * 3600, urgency: "high", topic: "adminreq" }); console.log("push: admin pending", x.pending); }
+    catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await rpc("ajf_push_drop", { p_endpoint: x.endpoint }).catch(() => {}); else console.log("push: admin send", e.statusCode || e.message); }
+  }
+}
 let busy = false;
 export async function pushTick(state, N, fallbackFlights) {
   if (busy) return; busy = true;
   try {
     if (ready === null) ready = await init();
     if (!ready) return;
+    await adminTick(N).catch((e) => console.log("push: admin", e.message));
     const F = await loadSched(fallbackFlights);
     // وقت الهبوط اللي اعتمده موظف من التطبيق يتقدّم على الرصد التلقائي
     const man = await rpc("ajf_ata_day", { p_day: N.iso }).catch(() => null);

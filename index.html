@@ -845,7 +845,7 @@ function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.d
       await admRender()}catch(e){t.disabled=false}}}
 /* التشغيل بعد تحميل باقي السكربتات (تحتاج $ و escT) */
 addEventListener("DOMContentLoaded",()=>{$("acctBtn").onclick=openAcct;$("admBack").onclick=()=>{$("adm").hidden=true};
-  if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{acctPaint(0);authCheck();setTimeout(pushOffer,4000)}
+  if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{acctPaint(0);authCheck();setTimeout(pushOffer,4000);if(/[?&]acct/.test(location.search))openAcct()}
   setInterval(()=>{if(!document.hidden)authCheck()},3*60e3);document.addEventListener("visibilitychange",()=>{if(!document.hidden)authCheck()})});
 </script>
 <script>
