@@ -834,7 +834,18 @@ async function admRender(){const me=AUTH.me||{};let h=`<div class="adm-s"><h3><s
 async function pushPaint(){const S=$("aPushS");if(!S)return;const st=await pushState(),M=$("aPushM");if(!M)return;M.textContent=PU_TXT[st];
   S.querySelectorAll(".abtn").forEach(b=>b.remove());if(st!=="on"&&st!=="off")return;
   const b=document.createElement("button");b.className="abtn "+(st==="on"?"n":"a");b.id="aPush";b.textContent=st==="on"?"إيقاف التنبيهات":"تفعيل التنبيهات";S.appendChild(b);
-  b.onclick=async ev=>{ev.stopPropagation();b.disabled=true;b.textContent="…";try{st==="on"?await pushOff():await pushOn();pushPaint()}catch(e){M.textContent=pushErr(e);b.disabled=false;b.textContent="تفعيل التنبيهات"}}}
+  b.onclick=async ev=>{ev.stopPropagation();b.disabled=true;b.textContent="…";try{st==="on"?await pushOff():await pushOn();pushPaint()}catch(e){M.textContent=pushErr(e);b.disabled=false;b.textContent="تفعيل التنبيهات"}}
+  if(st!=="on")return;
+  /* تجربة: شكل التنبيه على هذا الجوال فوراً، وتنبيه حقيقي من الخادم (يوصل حتى والجوال مقفل خلال دقيقة) */
+  const row=document.createElement("div");row.style.cssText="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px";
+  const t1=document.createElement("button");t1.className="abtn";t1.textContent="👁️ شكل التنبيه الحين";
+  const t2=document.createElement("button");t2.className="abtn a";t2.textContent="📡 تنبيه حقيقي من الخادم";
+  row.append(t1,t2);S.appendChild(row);
+  t1.onclick=async ev=>{ev.stopPropagation();try{const r=await swReady();await r.showNotification("✈️ SV1382 من جدة",{body:"تصل خلال 10 دقائق · المتوقع 18:25 · المغادرة SV1383 19:15 (تجربة)",tag:"ajf-test",renotify:true,icon:"icon-192.png",badge:"icon-192.png",lang:"ar",dir:"rtl",vibrate:[200,100,200],data:{url:"./"}});t1.textContent="✅ طلع التنبيه"}catch(e){t1.textContent="تعذّر العرض"}};
+  t2.onclick=async ev=>{ev.stopPropagation();t2.disabled=true;t2.textContent="…";
+    try{const j=await rpc("ajf_ata_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_day:iso(TODAY),p_flight:"PUSHTEST",p_t:fmt(NOW.mins)});
+      if(j.s!=="ok")throw new Error(j.s);t2.textContent="✅ انطلب — اقفل الجوال، يوصلك خلال دقيقة"}
+    catch(e){t2.disabled=false;t2.textContent="تعذّر الطلب، جرّب مرة ثانية"}}}
 function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.dataset.c!=="1"){o.dataset.c="1";o.textContent="متأكد؟ اضغط مرة ثانية";return}try{await rpc("ajf_logout",{p_token:AUTH.tok})}catch(e){}authOut()};
   const B=$("admB");B.onclick=async ev=>{const t=ev.target.closest("button");if(!t||t.id==="aOut"||t.id==="aPush")return;
     if(t.dataset.op){admOpen.has(t.dataset.op)?admOpen.delete(t.dataset.op):admOpen.add(t.dataset.op);admRender();return}

@@ -86,6 +86,17 @@ export async function pushTick(state, N, fallbackFlights) {
     const F = await loadSched(fallbackFlights);
     // وقت الهبوط اللي اعتمده موظف من التطبيق يتقدّم على الرصد التلقائي
     const man = await rpc("ajf_ata_day", { p_day: N.iso }).catch(() => null);
+    // تنبيه تجريبي يطلبه المشرف من صفحة الحساب (يُسجَّل كـ PUSHTEST بوقت الطلب)
+    if (man && man.PUSHTEST) {
+      const tm = toMin(man.PUSHTEST), age = tm == null ? 99 : N.mins - tm;
+      if (age >= 0 && age <= 5 && (await rpc("ajf_push_claim", { p_day: N.iso, p_flight: "PUSHTEST", p_stage: man.PUSHTEST }).catch(() => false))) {
+        const subs = await rpc("ajf_push_targets"), msg = JSON.stringify({ title: "🔔 تنبيه تجريبي · رحلات الجوف", body: "هذا شكل تنبيه وصول الرحلة: يوصلك قبل الوصول بـ10 دقائق، ثم 5، ثم عند الهبوط.", tag: "ajf-test", url: "./" });
+        let ok = 0;
+        await Promise.all(subs.map(async (x) => { try { await wp.sendNotification({ endpoint: x.endpoint, keys: { p256dh: x.p256dh, auth: x.auth } }, msg, { TTL: 600, urgency: "high", topic: "pushtest" }); ok++; } catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await rpc("ajf_push_drop", { p_endpoint: x.endpoint }).catch(() => {}); else console.log("push: test send", e.statusCode || e.message); } }));
+        console.log(`push: TEST → ${ok}/${subs.length}`);
+      }
+      delete man.PUSHTEST;
+    }
     const st = man && Object.keys(man).length ? { ...state, ata: { ...(state.ata || {}), ...man } } : state;
     for (const f of arrivals(F, N.iso, N.dow)) {
       const s = stageOf(f, st, N.mins);
