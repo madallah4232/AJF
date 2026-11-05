@@ -363,7 +363,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .ask-typing{align-self:stretch;color:var(--muted);font-size:13px;padding:4px 6px}
 
 /* official forms */
-.fm{position:fixed;inset:0;z-index:32;background:var(--night);display:grid;grid-template-rows:auto auto 1fr auto}
+.fm{position:fixed;inset:0;z-index:32;background:var(--night);display:grid;grid-template-rows:auto auto 1fr auto;grid-template-columns:minmax(0,1fr);overflow:hidden}
 .fm[hidden]{display:none}
 .fm .trk-top b{font-size:16px;line-height:1.25}
 .fm-tools{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
@@ -375,6 +375,18 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .fm-c{position:absolute;padding:0 1px;border:0;border-radius:2px;background:rgba(255,190,40,.16);color:#1b2f8a;font:600 calc(var(--fs)*100cqw)/1 system-ui,-apple-system,Tahoma,Arial,sans-serif;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;unicode-bidi:plaintext}
 .fm-c.on{background:transparent}
 .fm-cb{background:rgba(255,190,40,.14)}.fm-cb.on{background:rgba(60,200,120,.12)}
+.fm-sig{position:absolute;overflow:visible;cursor:pointer}.fm-sig path{fill:none;stroke:#1b2f8a;stroke-width:24;stroke-linecap:round;stroke-linejoin:round}
+.fm-sig.del{outline:2px dashed var(--warn);outline-offset:2px;background:rgba(255,80,80,.08)}
+.fm-tools button.sig.on{background:var(--amber);color:#1a1205;border-color:var(--amber)}
+.fm-tools button.mini{width:34px;font-size:16px;flex:none}
+.fm-tools span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fm-pad{position:fixed;inset:0;z-index:36;background:rgba(5,8,15,.7);display:grid;place-items:end center}
+.fm-pad[hidden]{display:none}
+.fm-pad .in{width:100%;max-width:640px;background:var(--panel);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));display:grid;gap:10px}
+.fm-pad b{font:700 16px var(--display)}.fm-pad span{font-size:12.5px;color:var(--muted)}
+.fm-pad canvas{width:100%;aspect-ratio:3/1.25;background:#fff;border-radius:12px;touch-action:none;border:2px dashed #c9d2e3}
+.fm-pad .row2{display:flex;gap:8px}.fm-pad .row2 button{flex:1;height:46px;border-radius:12px;background:var(--raise);border:1px solid var(--line);color:var(--muted);font-weight:700}
+.fm-pad .row2 #fmPadOk{background:var(--amber);color:#1a1205;border:0;flex:1.6}
 .fm-tick{position:absolute;transform:translate(-50%,-58%);color:#1b2f8a;font:700 calc(var(--fs)*100cqw)/1 system-ui,-apple-system,Arial,sans-serif;font-style:normal;pointer-events:none}
 .fm-v.on:not(.fm-cb){background:rgba(80,140,255,.10)}.fm-c:active{background:rgba(255,190,40,.4)}
 .fm-t{position:absolute;transform:translateY(-50%);color:#1b2f8a;font:600 calc(var(--fs)*100cqw)/1 system-ui,-apple-system,Tahoma,Arial,sans-serif;white-space:nowrap;unicode-bidi:plaintext;background:rgba(255,190,40,.18);border-radius:2px;padding:0 1px}
@@ -726,7 +738,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
     <div><b id="fmT">النموذج</b><span id="fmS"></span></div>
     <span class="cs-saved" id="fmSaved"></span>
   </div>
-  <div class="fm-tools"><button id="fmZo" aria-label="تصغير">−</button><button id="fmZi" aria-label="تكبير">+</button><button id="fmAll" class="all" hidden>✓ الكل</button><span>اضغط أي خانة، أو أي مكان فاضي لكتابة نص</span></div>
+  <div class="fm-tools"><button id="fmZo" aria-label="تصغير">−</button><button id="fmZi" aria-label="تكبير">+</button><button id="fmAll" class="all" hidden>✓ الكل</button><button id="fmSig" class="all sig">✍︎ توقيع</button><button id="fmSigNew" class="mini" aria-label="رسم توقيع جديد" title="رسم توقيع جديد">↺</button><span>اضغط أي خانة، أو أي مكان فاضي لكتابة نص</span></div>
   <div class="fm-body" id="fmBody"></div>
   <div class="cs-bar"><button class="p" id="fmPdf">PDF / طباعة</button><button id="fmClear">مسح</button></div>
   <div class="fm-pop" id="fmPop" hidden>
@@ -734,6 +746,8 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
     <input id="fmIn" dir="auto" placeholder="اكتب هنا…" autocomplete="off" enterkeyhint="done">
     <div class="row2"><button id="fmOk">حفظ</button><button id="fmDel">مسح</button><button id="fmX">إلغاء</button></div>
   </div>
+  <div class="fm-pad" id="fmPad" hidden><div class="in"><b>ارسم توقيعك</b><span id="fmPadH">بإصبعك داخل المربع — ينحفظ على جوالك للمرات الجاية</span><canvas id="fmPadC"></canvas>
+    <div class="row2"><button id="fmPadOk">حفظ التوقيع</button><button id="fmPadClr">مسح</button><button id="fmPadX">إلغاء</button></div></div></div>
 </div>
 <div id="csPrint"></div>
 <button class="acct-b" id="acctBtn" aria-label="الحساب" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><i id="acctN" hidden></i></button>
@@ -1820,9 +1834,10 @@ function fmRender(){const F=fmCur,V=fmVals(),B=$("fmBody");B.style.setProperty("
     (F.v||[]).filter(v=>v[0]===pi).map(v=>{const k=fmVK(F,v),val=V[k]!=null?V[k]:(v[6]==="c"?"":fmAuto(v[5]));
       if(v[6]==="c")return`<button class="fm-c fm-v fm-cb${val?" on":""}" data-k="${k}" data-v="${v[5]}" aria-label="${v[5].endsWith("y")?"Yes / نعم":"No / لا"}" style="left:${v[1]/P.W*100}%;top:${v[2]/P.H*100}%;width:${v[3]/P.W*100}%;height:${v[4]/P.H*100}%"></button>${val?`<i class="fm-tick" style="left:${v[7]/P.W*100}%;top:${v[8]/P.H*100}%;--fs:${22/P.W}">✓</i>`:""}`;
       return`<button class="fm-c fm-v${val?" on":""}" data-k="${k}" data-v="${v[5]}" style="left:${v[1]/P.W*100}%;top:${v[2]/P.H*100}%;width:${v[3]/P.W*100}%;height:${v[4]/P.H*100}%;--fs:${Math.min(v[4]*.72,24)/P.W}">${val?escT(val):""}</button>`}).join("")}${
-    pts.filter(p=>p.pi===pi).map(p=>`<span class="fm-t" data-k="${p.k}" style="${fmRTL(p.t)?"right:"+((1-p.x)*100)+"%":"left:"+(p.x*100)+"%"};top:${p.y*100}%;--fs:${22/P.W}">${escT(p.t)}</span>`).join("")}</div>`).join("");
+    pts.filter(p=>p.pi===pi).map(p=>`<span class="fm-t" data-k="${p.k}" style="${fmRTL(p.t)?"right:"+((1-p.x)*100)+"%":"left:"+(p.x*100)+"%"};top:${p.y*100}%;--fs:${22/P.W}">${escT(p.t)}</span>`).join("")}${
+    fmSigs(F,V).filter(g=>g.pi===pi).map(g=>sigSVG(g,P)).join("")}</div>`).join("");
   $("fmS").textContent=csCur.f.n+" · "+fmDate(csCur.date)+(csCan()?"":" · عرض فقط")}
-async function openForm(id){const F=FORMS.find(x=>x.id===id);if(!F||!csCur)return;fmCur=F;fmZoom=1;$("fm").hidden=false;$("fmAll").hidden=!F.y||!csCan();$("fmT").textContent=F.t;$("fmS").textContent=F.code;
+async function openForm(id){const F=FORMS.find(x=>x.id===id);if(!F||!csCur)return;fmCur=F;fmZoom=1;fmSigMode=false;fmSigDel=null;$("fmSig").classList.remove("on");$("fmSig").hidden=$("fmSigNew").hidden=!csCan();$("fm").hidden=false;$("fmAll").hidden=!F.y||!csCan();$("fmT").textContent=F.t;$("fmS").textContent=F.code;
   $("fmBody").innerHTML=`<div class="fm-msg">جاري فتح النموذج…</div>`;
   try{await Promise.all(F.p.map(P=>fmImg(P.f)));fmRender()}
   catch(e){$("fmBody").innerHTML=`<div class="fm-msg">${/404|PGRST202/.test(e.message)?"النماذج تحتاج تفعيل مرة وحدة من المشرف (ملف ajf_forms_key.sql في Supabase).":e.message==="out"?"سجّل دخولك أول.":"تعذّر فتح النموذج. تأكد من الاتصال وجرّب مرة ثانية."}</div>`}}
@@ -1831,6 +1846,9 @@ function fmSave(v){const s=fmSel;$("fmPop").hidden=true;fmSel=null;if(!s)return;
   if(s.pt){if(!v&&!s.k)return;const k=s.k||`f.${fmCur.id}.p${Date.now().toString(36)}`;csSet(k,v?`${s.pi}|${s.x.toFixed(4)}|${s.y.toFixed(4)}|${v.replace(/\|/g,"/")}`:"")}
   else csSet(s.k,v);fmRender();setTimeout(()=>{$("fmSaved").textContent=$("csSaved").textContent},900)}
 $("fmBody").addEventListener("click",e=>{if(!csCan()){$("fmSaved").textContent="عرض فقط";return}
+  if(fmSigMode){const pg=e.target.closest(".fm-pg");if(pg){const r=pg.getBoundingClientRect();sigPlace(+pg.dataset.pi,(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height)}return}
+  const sg=e.target.closest(".fm-sig");if(sg){const k=sg.dataset.k;if(fmSigDel===k){const V=fmVals();Object.keys(V).filter(x=>x===k||x.startsWith(k+".")).forEach(x=>csSet(x,""));fmSigDel=null;fmRender();return}
+    fmSigDel=k;fmRender();$("fmSaved").textContent="اضغط التوقيع مرة ثانية لحذفه";setTimeout(()=>{if(fmSigDel===k){fmSigDel=null;fmRender()}},3000);return}
   const vb=e.target.closest(".fm-v");if(vb){const k=vb.dataset.k,V=fmVals();
     if(vb.classList.contains("fm-cb")){const on=V[k]==="✓",sib=k.replace(/([yn])$/,m=>m==="y"?"n":"y");csSet(k,on?"":"✓");if(!on&&V[sib])csSet(sib,"");fmRender();return}
     fmPop({k,v:V[k]!=null?V[k]:fmAuto(vb.dataset.v)});return}
@@ -1859,6 +1877,7 @@ async function fmPDF(){const F=fmCur,b=$("fmPdf"),t0=b.textContent,{f,date}=csCu
       (F.v||[]).filter(v=>v[0]===pi).forEach(v=>{const k=fmVK(F,v),val=V[k]!=null?V[k]:(v[6]==="c"?"":fmAuto(v[5]));if(!val)return;
         if(v[6]==="c"){x.font=font(22);x.direction="ltr";x.textAlign="center";x.fillText("✓",v[7]+1,v[8]-1);return}
         let s=Math.min(v[4]*.72,24);x.font=font(s);while(s>9&&x.measureText(val).width>v[3]-6){s-=1;x.font=font(s)}x.direction=fmRTL(val)?"rtl":"ltr";x.textAlign="center";x.fillText(val,v[1]+v[3]/2,v[2]+v[4]/2+1)});
+      fmSigs(F,V).filter(g=>g.pi===pi).forEach(g=>sigDraw(x,g,P));
       pts.filter(p=>p.pi===pi).forEach(p=>{x.font=font(22);const r=fmRTL(p.t);x.direction=r?"rtl":"ltr";x.textAlign=r?"right":"left";x.fillText(p.t,p.x*P.W,p.y*P.H)});
       if(pi)pdf.addPage(pf,"p");pdf.addImage(cv.toDataURL("image/jpeg",.93),"JPEG",0,0,pw,ph)}
     const file=new File([pdf.output("blob")],name,{type:"application/pdf"});b.disabled=false;b.textContent=t0;
@@ -1866,6 +1885,46 @@ async function fmPDF(){const F=fmCur,b=$("fmPdf"),t0=b.textContent,{f,date}=csCu
     const u=URL.createObjectURL(file),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),6e4)}
   catch(e){b.disabled=false;b.textContent="تعذّر — جرّب مرة ثانية";setTimeout(()=>b.textContent=t0,2500)}}
 $("fmPdf").onclick=fmPDF;
+/* ---------- التوقيع على النماذج ----------
+   التوقيع يُرسم مرة على الجوال (ينحفظ عليه للمرات الجاية)، ثم يُوضع بلمسة في أي مكان من النموذج.
+   يُخزَّن كخطوط مضغوطة مع الكوردنيتر شيت (ajf_cs) فيظهر عند الكل وفي الـ PDF. */
+const SIG_KEY="ajf_sig";let fmSigMode=false,fmSigDel=null;
+const b36=n=>Math.max(0,Math.min(1295,Math.round(n))).toString(36).padStart(2,"0");
+function sigEncode(strokes){/* strokes: [[[x,y],...],...] بإحداثيات الشاشة → نص مضغوط + نسبة الارتفاع */
+  const all=strokes.flat();if(all.length<2)return null;
+  const x0=Math.min(...all.map(p=>p[0])),x1=Math.max(...all.map(p=>p[0])),y0=Math.min(...all.map(p=>p[1])),y1=Math.max(...all.map(p=>p[1]));
+  const w=Math.max(x1-x0,1),ar=Math.max((y1-y0)/w,.08);
+  const rdp=(pts,eps)=>{if(pts.length<3)return pts;let d=0,ix=0;const[a,b]=[pts[0],pts[pts.length-1]],L=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
+    for(let i=1;i<pts.length-1;i++){const t=Math.abs((b[0]-a[0])*(a[1]-pts[i][1])-(a[0]-pts[i][0])*(b[1]-a[1]))/L;if(t>d){d=t;ix=i}}
+    return d>eps?[...rdp(pts.slice(0,ix+1),eps).slice(0,-1),...rdp(pts.slice(ix),eps)]:[a,b]};
+  const s=strokes.filter(st=>st.length).map(st=>rdp(st,w*.004).map(p=>b36((p[0]-x0)/w*1295)+b36((p[1]-y0)/w*1295)).join("")).join(";");
+  return{s,ar:+ar.toFixed(3)}}
+const sigDecode=s=>s.split(";").map(st=>{const o=[];for(let i=0;i+3<st.length;i+=4)o.push([parseInt(st.slice(i,i+2),36),parseInt(st.slice(i+2,i+4),36)]);return o});
+function fmSigs(F,V){return Object.keys(V).filter(k=>new RegExp("^f\\."+F.id+"\\.g[0-9a-z]+$").test(k)).map(k=>{const a=String(V[k]).split("|");const n=+a[5]||0;let s="";for(let i=0;i<n;i++)s+=V[k+"."+i]||"";
+  return{k,pi:+a[0],x:+a[1],y:+a[2],w:+a[3],ar:+a[4],n,s}}).filter(g=>g.s)}
+function sigSVG(g,P){const h=g.ar*1295,paths=sigDecode(g.s).map(st=>st.length===1?`M${st[0][0]} ${st[0][1]}h1`:"M"+st.map(p=>p[0]+" "+p[1]).join("L")).join("");
+  return`<svg class="fm-sig${fmSigDel===g.k?" del":""}" data-k="${g.k}" viewBox="-20 -20 1335 ${h+40}" style="left:${g.x*100}%;top:${g.y*100}%;width:${g.w*100}%"><path d="${paths}"/></svg>`}
+function sigDraw(x,g,P){const sc=g.w*P.W/1295,ox=g.x*P.W,oy=g.y*P.H;x.save();x.strokeStyle="#1b2f8a";x.lineWidth=Math.max(1.6,24*sc);x.lineCap=x.lineJoin="round";
+  sigDecode(g.s).forEach(st=>{if(!st.length)return;x.beginPath();x.moveTo(ox+st[0][0]*sc,oy+st[0][1]*sc);st.forEach(p=>x.lineTo(ox+p[0]*sc,oy+p[1]*sc));if(st.length===1)x.lineTo(ox+st[0][0]*sc+1,oy+st[0][1]*sc);x.stroke()});x.restore()}
+function sigPlace(pi,fx,fy){const raw=(()=>{try{return JSON.parse(localStorage.getItem(SIG_KEY)||"null")}catch(e){return null}})();if(!raw)return;
+  const P=fmCur.p[pi],w=.2,h=w*raw.ar*P.W/P.H,id=`f.${fmCur.id}.g${Date.now().toString(36)}`,ch=raw.s.match(/.{1,390}/g)||[];
+  ch.forEach((c,i)=>csSet(id+"."+i,c));csSet(id,`${pi}|${Math.max(0,fx-w/2).toFixed(4)}|${Math.max(0,fy-h/2).toFixed(4)}|${w}|${raw.ar}|${ch.length}`);
+  fmSigMode=false;$("fmSig").classList.remove("on");fmRender();$("fmSaved").textContent="✓ تم التوقيع — لمسته مرتين تحذفه"}
+function sigPad(){const o=$("fmPad");o.hidden=false;const cv=$("fmPadC"),r=cv.getBoundingClientRect(),dpr=devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;
+  const x=cv.getContext("2d");x.scale(dpr,dpr);x.lineWidth=2.6;x.lineCap=x.lineJoin="round";x.strokeStyle="#1b2f8a";const S=[];let cur=null;
+  const pt=e=>{const b=cv.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
+  cv.onpointerdown=e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);cur=[pt(e)];S.push(cur);x.beginPath();x.moveTo(...cur[0])};
+  cv.onpointermove=e=>{if(!cur)return;const p=pt(e);cur.push(p);x.lineTo(...p);x.stroke()};
+  cv.onpointerup=cv.onpointercancel=()=>{cur=null};
+  $("fmPadClr").onclick=()=>{S.length=0;x.clearRect(0,0,cv.width,cv.height)};
+  $("fmPadX").onclick=()=>{o.hidden=true};
+  $("fmPadOk").onclick=()=>{const enc=sigEncode(S);if(!enc){$("fmPadH").textContent="ارسم توقيعك أول";return}
+    try{localStorage.setItem(SIG_KEY,JSON.stringify(enc))}catch(e){}o.hidden=true;sigArm()}}
+function sigArm(){fmSigMode=true;$("fmSig").classList.add("on");$("fmSaved").textContent="✍︎ اضغط مكان التوقيع في النموذج"}
+$("fmSig").onclick=()=>{if(!csCan())return;if(fmSigMode){fmSigMode=false;$("fmSig").classList.remove("on");$("fmSaved").textContent="";return}
+  let has=false;try{has=!!localStorage.getItem(SIG_KEY)}catch(e){}has?sigArm():sigPad()};
+$("fmSigNew").onclick=e=>{e.stopPropagation();sigPad()};
+
 /* ✓ الكل: يعلّم كل خانات عمود الإجابة (✓ / نعم / YES) الفاضية — ما يغيّر أي خانة معبّاة */
 $("fmAll").onclick=()=>{const F=fmCur;if(!F||!F.y||!csCan())return;const V=fmVals();let n=0;
   F.p.forEach((P,pi)=>P.c.forEach((c,ci)=>{if(Math.abs(c[0]-F.y[0])>6||Math.abs(c[2]-F.y[1])>6)return;const k=`f.${F.id}.${pi}.${ci}`;if(V[k]!=null||fmDef(F,pi,ci))return;csSet(k,"✓");n++}));
