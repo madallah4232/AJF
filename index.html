@@ -1953,7 +1953,7 @@ function mvtBuild(f,date,d){
   const std=tm(f.t),dd=new Date(date.getTime()+(std-180)*60e3),reg=n(d.reg).toUpperCase().replace(/[^A-Z0-9]/g,"")||"HZ";
   const I=f.ia?inboundInfo(f,date):null,ata=hm(d.ata)?toMin(d.ata):isActual(I)?I.m:null,td=hm(m.td)?toMin(m.td):null;
   const ia=f.ia?toMin(f.ia):null,ddA=new Date(date.getTime()+((ia??std)-180)*60e3);
-  const arr=["MVT",`${f.ino||"XY"}/${pad(ddA.getUTCDate())}.${reg}.AJF`,`AA${td!=null?utc4(td):"----"}/${ata!=null?utc4(ata):"----"}`].join("\n");
+  const arr=["MVT ARR",`${f.ino||"XY"}/${pad(ddA.getUTCDate())}.${reg}.AJF`,`AA${td!=null?utc4(td):"----"}/${ata!=null?utc4(ata):"----"}`].join("\n");
   if(td==null)W.push("ARR: اكتب وقت الهبوط Touchdown");else if(ata!=null&&(ata-td<0||ata-td>60))W.push("ARR: Touchdown و On-block بينهم فرق غير منطقي — تأكد إنهم بالتوقيت المحلي");if(ata==null)W.push("ARR: اكتب ATA (On-block)");
   const cA=csDerived(f,d).atd,ob=cA?toMin(cA):X?X.atd:null,abn=hm(m.abn)?toMin(m.abn):null;
   if(ob==null)W.push("DEP: اكتب وقت Off-block");if(abn==null)W.push("DEP: اكتب وقت الإقلاع Airborne");
@@ -1963,7 +1963,7 @@ function mvtBuild(f,date,d){
   if(other>0){if(!n(m.xloc))W.push(`DEP: اختر سبب الـ ${other} د`);DL.push([(n(m.xloc).match(/^\d{1,2}/)||["??"])[0],other])}
   const dl=DL.length?"DL"+DL.map(x=>x[0]).join("/")+"/"+DL.map(x=>hhmm4(x[1])).join("/"):"";
   const pax=n(m.pax)||String(["F","J","Y"].reduce((a,k)=>a+(+(d.pd||{})[k]||0),0)||"");
-  const dep=["MVT",`${f.n}/${pad(dd.getUTCDate())}.${reg}.AJF`,`AD${ob!=null?utc4(ob):"----"}/${abn!=null?utc4(abn):"----"} EA${abn!=null?utc4(abn+f.dur):"----"} ${f.iata}`,dl,
+  const dep=["MVT DEP",`${f.n}/${pad(dd.getUTCDate())}.${reg}.AJF`,`AD${ob!=null?utc4(ob):"----"}/${abn!=null?utc4(abn):"----"} EA${abn!=null?utc4(abn+f.dur):"----"} ${f.iata}`,dl,
     `SI ${pad(+pax||0)} PAX + ${pad(+n(m.inf)||0)} INF, ${pad(+n(m.wch)||0)} WCHR`].filter(Boolean).join("\n");
   return{arr,dep,W,dly,react,other};
 }
