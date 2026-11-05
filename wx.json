@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-05T16:59:54Z",
+  "fetched": "2026-11-05T17:55:06Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-05T17:16:40.433Z",
+      "obsTime": 1793898000,
+      "reportTime": "2026-11-05T17:00:00.000Z",
+      "temp": 22,
+      "dewp": 5,
+      "wdir": 290,
+      "wspd": 5,
+      "visib": "6+",
+      "altim": 1018,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 051700Z 29005KT CAVOK 22/05 Q1018 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-05T16:11:43.813Z",
@@ -32,12 +54,12 @@
   "taf": [
     {
       "icaoId": "OESK",
-      "dbPopTime": "2026-11-05T11:30:34.261Z",
-      "bulletinTime": "2026-11-05T11:00:00.000Z",
-      "issueTime": "2026-11-05T11:00:00.000Z",
-      "validTimeFrom": 1793880000,
+      "dbPopTime": "2026-11-05T17:16:30.978Z",
+      "bulletinTime": "2026-11-05T17:15:00.000Z",
+      "issueTime": "2026-11-05T17:15:00.000Z",
+      "validTimeFrom": 1793901600,
       "validTimeTo": 1793988000,
-      "rawTAF": "TAF OESK 051100Z 0512/0618 36005KT 9999 FEW040 BECMG 0522/0600 09008KT TEMPO 0522/0618 TSRA FEW035CB SCT040 BECMG 0610/0612 25010KT",
+      "rawTAF": "TAF AMD OESK 051715Z 0518/0618 09008KT 9999 SCT040 TEMPO 0518/0609 VRB25KT 6000 TSRA FEW035CB BKN040 BECMG 0606/0608 25010KT",
       "mostRecent": 1,
       "remarks": "",
       "lat": 29.785,
@@ -47,37 +69,10 @@
       "name": "Al-Jouf Arpt",
       "fcsts": [
         {
-          "timeFrom": 1793880000,
-          "timeTo": 1793916000,
+          "timeFrom": 1793901600,
+          "timeTo": 1793944800,
           "timeBec": null,
           "fcstChange": null,
-          "probability": null,
-          "wdir": 360,
-          "wspd": 5,
-          "wgst": null,
-          "wshearHgt": null,
-          "wshearDir": null,
-          "wshearSpd": null,
-          "visib": "6+",
-          "altim": null,
-          "vertVis": null,
-          "wxString": null,
-          "notDecoded": null,
-          "clouds": [
-            {
-              "cover": "FEW",
-              "base": 4000,
-              "type": null
-            }
-          ],
-          "icgTurb": [],
-          "temp": []
-        },
-        {
-          "timeFrom": 1793916000,
-          "timeTo": 1793959200,
-          "timeBec": 1793923200,
-          "fcstChange": "BECMG",
           "probability": null,
           "wdir": 90,
           "wspd": 8,
@@ -92,7 +87,7 @@
           "notDecoded": null,
           "clouds": [
             {
-              "cover": "FEW",
+              "cover": "SCT",
               "base": 4000,
               "type": null
             }
@@ -101,18 +96,18 @@
           "temp": []
         },
         {
-          "timeFrom": 1793916000,
-          "timeTo": 1793988000,
+          "timeFrom": 1793901600,
+          "timeTo": 1793955600,
           "timeBec": null,
           "fcstChange": "TEMPO",
           "probability": null,
-          "wdir": null,
-          "wspd": null,
+          "wdir": "VRB",
+          "wspd": 25,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
           "wshearSpd": null,
-          "visib": "",
+          "visib": 3.73,
           "altim": null,
           "vertVis": null,
           "wxString": "TSRA",
@@ -124,7 +119,7 @@
               "type": "CB"
             },
             {
-              "cover": "SCT",
+              "cover": "BKN",
               "base": 4000,
               "type": null
             }
@@ -133,9 +128,9 @@
           "temp": []
         },
         {
-          "timeFrom": 1793959200,
+          "timeFrom": 1793944800,
           "timeTo": 1793988000,
-          "timeBec": 1793966400,
+          "timeBec": 1793952000,
           "fcstChange": "BECMG",
           "probability": null,
           "wdir": 250,
@@ -151,7 +146,7 @@
           "notDecoded": null,
           "clouds": [
             {
-              "cover": "FEW",
+              "cover": "SCT",
               "base": 4000,
               "type": null
             }
