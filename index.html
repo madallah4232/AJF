@@ -1840,7 +1840,10 @@ function fmRender(){const F=fmCur,V=fmVals(),B=$("fmBody");B.style.setProperty("
       return`<button class="fm-c fm-v${val?" on":""}" data-k="${k}" data-v="${v[5]}" style="left:${v[1]/P.W*100}%;top:${v[2]/P.H*100}%;width:${v[3]/P.W*100}%;height:${v[4]/P.H*100}%;--fs:${Math.min(v[4]*.72,24)/P.W}">${val?escT(val):""}</button>`}).join("")}${
     pts.filter(p=>p.pi===pi).map(p=>`<span class="fm-t" data-k="${p.k}" style="${fmRTL(p.t)?"right:"+((1-p.x)*100)+"%":"left:"+(p.x*100)+"%"};top:${p.y*100}%;--fs:${22/P.W}">${escT(p.t)}</span>`).join("")}${
     fmSigs(F,V).filter(g=>g.pi===pi).map(g=>sigSVG(g,P)).join("")}</div>`).join("");
-  $("fmS").textContent=csCur.f.n+" · "+fmDate(csCur.date)+(csCan()?"":" · عرض فقط")}
+  $("fmS").textContent=csCur.f.n+" · "+fmDate(csCur.date)+(csCan()?"":" · عرض فقط");
+  /* النص الطويل (مثل خط السير) يصغر لين يظهر كامل داخل خانته */
+  requestAnimationFrame(()=>B.querySelectorAll(".fm-c.on").forEach(el=>{if(el.scrollWidth>el.clientWidth+1){const f=parseFloat(el.style.getPropertyValue("--fs"))||0;
+    if(f)el.style.setProperty("--fs",f*Math.max(.35,(el.clientWidth-2)/el.scrollWidth))}}))}
 async function openForm(id){const F=FORMS.find(x=>x.id===id);if(!F||!csCur)return;fmCur=F;fmZoom=1;fmSigMode=false;fmSigDel=null;fmSigSel=null;$("fmSig").classList.remove("on");$("fmSig").hidden=$("fmSigNew").hidden=!csCan();$("fm").hidden=false;$("fmAll").hidden=!F.y||!csCan();$("fmT").textContent=F.t;$("fmS").textContent=F.code;
   $("fmBody").innerHTML=`<div class="fm-msg">جاري فتح النموذج…</div>`;
   try{await Promise.all(F.p.map(P=>fmImg(P.f)));fmRender()}
