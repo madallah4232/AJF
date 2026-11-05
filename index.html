@@ -421,6 +421,8 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .intro .go{width:100%;height:54px;border-radius:16px;background:var(--amber);color:#1a1205;font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .16s var(--ease)}
 .intro .go:active{transform:scale(.97)}
 .intro .skip{color:var(--muted);font-size:14px;padding:6px 12px}
+/* الأصوات موقوفة: نخفي أزرار الصوت */
+#say,#listen,#introSkip,#introGo .eq{display:none!important}
 .intro .x{display:none!important}
 .intro.cine .x{display:flex!important}
 .intro .x{position:absolute;z-index:2;top:calc(14px + env(safe-area-inset-top));left:14px;display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:19px;background:rgba(10,17,32,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);color:#fff;font-size:14px;font-weight:600}
@@ -2163,7 +2165,9 @@ async function loadLive(){
 }
 
 /* ---------- welcome + voice announcement ---------- */
-function chime(){
+/* كل أصوات التطبيق موقوفة بطلب المشرف (الافتتاحية، المذيع، الجرس). تنبيهات الجوال يتحكم فيها إعداد الجوال. */
+const SOUND_OFF=true;
+function chime(){if(SOUND_OFF)return 0;
   try{
     const ctx=new (window.AudioContext||window.webkitAudioContext)();
     [[659.25,0],[523.25,.42],[392,.84]].forEach(([f,t])=>{
@@ -2192,7 +2196,7 @@ const hasClip=f=>CLIPS.includes(routeKey(f))&&CLIPS.includes(timeKey(f));
 let curAudio=null,seqId=0,introStop=null;
 /* أي صوت جديد يوقف كل الأصوات الشغالة (بما فيها إعلان الافتتاح) حتى ما تتداخل */
 function stopClips(){seqId++;try{curAudio&&curAudio.pause()}catch(e){}try{introStop&&introStop()}catch(e){}}
-function playSeq(keys,el,onEnd){
+function playSeq(keys,el,onEnd){if(SOUND_OFF)return false;
   keys=keys.filter(k=>CLIPS.includes(k));if(!keys.length)return false;
   stopClips();const id=seqId;el&&el.classList.add("speaking");
   const next=i=>{
@@ -2208,7 +2212,7 @@ function playFlight(f,el,withWelcome){
   if(!hasClip(f))return false;
   return playSeq([...(withWelcome?["welcome"]:[]),routeKey(f),timeKey(f)],el);
 }
-function speak(text,onEnd){
+function speak(text,onEnd){if(SOUND_OFF){onEnd&&onEnd();return}
   if(!("speechSynthesis" in window)){onEnd&&onEnd();return}
   const u=new SpeechSynthesisUtterance(text);u.lang="ar-SA";u.rate=.9;u.pitch=.95;
   const vs=speechSynthesis.getVoices().filter(v=>/^ar/i.test(v.lang));
@@ -2218,7 +2222,7 @@ function speak(text,onEnd){
   speechSynthesis.speak(u);
 }
 /* must be called directly inside a tap: iOS only allows sound that starts from a user gesture */
-function playAnnouncement(el){
+function playAnnouncement(el){if(SOUND_OFF)return Promise.resolve();
   const a=announcement();
   const off=()=>el&&el.classList.remove("speaking");el&&el.classList.add("speaking");
   const nd=nextDeparture();
@@ -2249,7 +2253,7 @@ function showIntro(){
   const v=$("introV"),still=reduce||(navigator.connection&&navigator.connection.saveData);
   if(!still){v.src="media/storm.mp4";v.loop=true;v.muted=true;v.play().catch(()=>{})}
   let done=false;
-  const enter=withSound=>{if(done)return;done=true;
+  const enter=withSound=>{if(done)return;done=true;if(SOUND_OFF)withSound=false;
     if(!withSound||still){if(withSound)playAnnouncement($("say"));v.pause();closeIntro();return}
     /* الصوتان يبدآن مع اللمسة نفسها (شرط iOS)، الرعد خافت تحت صوت المذيع */
     el.classList.add("cine");v.loop=false;v.currentTime=0;v.muted=false;v.volume=.45;
