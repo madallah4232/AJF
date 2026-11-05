@@ -268,6 +268,10 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .cs-g.two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cs-f{display:grid;gap:3px}
 .cs-f span{font-size:10.5px;color:var(--muted);font-family:var(--mono);letter-spacing:.2px;direction:ltr;text-align:right}
+.cs-f{min-width:0;overflow:hidden}
+.cs-f input[type=time],.cs-tm input[type=time]{-webkit-appearance:none;appearance:none;display:block;max-width:100%;box-sizing:border-box}
+.cs-f input[type=time]::-webkit-date-and-time-value,.cs-tm input[type=time]::-webkit-date-and-time-value{text-align:center}
+.mvt-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mvt-cor{font-size:12.5px;padding:7px 11px;border-radius:99px;border:1px solid var(--line);background:var(--raise);color:var(--muted);justify-self:start}.mvt-cor[aria-pressed=true]{color:var(--amber);border-color:var(--amber)}
 .cs-f input,.cs-f select{height:40px;min-width:0;width:100%;border-radius:10px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:600 15px var(--mono);text-align:center;padding:0 6px;color-scheme:dark}
 .cs-f input[readonly]{background:transparent;border-style:dashed;color:var(--muted)}
 .cs-f input:focus{outline:2px solid var(--amber);outline-offset:-1px}
@@ -834,6 +838,9 @@ async function admRender(){const me=AUTH.me||{};let h=`<div class="adm-s"><h3><s
   try{ADM=await admCall("list");await csSync(true)}catch(e){$("admB").lastChild.innerHTML='<div class="amsg">تعذّر التحميل، تأكد من الاتصال.</div>';return}
   const emps=ADM.emps||[],pend=[];emps.forEach(e=>e.devices.forEach(d=>{if(d.status==="pending")pend.push({e,d})}));acctPaint(pend.length);
   h+=`<div class="adm-s"><h3>طلبات بانتظار موافقتك <span class="chip ${pend.length?"w":""}">${pend.length}</span></h3>${pend.length?pend.map(({e,d})=>`<div class="req"><div><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${d.first?'<span class="chip a">تفعيل حساب جديد</span>':'<span class="chip">جوال إضافي</span>'}<small>${escT(d.label)} · ${fdt(d.created)}</small></div><div class="row"><button class="abtn y" data-dv="${d.id}" data-st="approved">✅ موافقة</button><button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button></div></div>`).join(""):'<div class="amsg">ما فيه طلبات حالياً.</div>'}</div>`;
+  {const C=(await mvtMailCfg())||{},L=a=>escT(mailList(a).join("\n"));h+=`<div class="adm-s"><h3>إيميلات برقيات MVT · طيران ناس</h3><div class="amsg">زر «📧 أوت لوك» في الكوردنيتر شيت يفتح مسودة فيها هذي العناوين، والموظف يراجعها ويرسلها من أوت لوك. إيميل واحد في كل سطر.</div>
+    <div class="amsg">إلى</div><textarea id="aMvtTo" dir="ltr" placeholder="name@flynas.com">${L(C.to)}</textarea><div class="amsg">نسخة (CC)</div><textarea id="aMvtCc" dir="ltr" style="min-height:60px">${L(C.cc)}</textarea>
+    <button class="abtn a" id="aMvtGo">حفظ الإيميلات</button><div class="amsg" id="aMvtMsg"></div></div>`}
   h+=`<div class="adm-s"><h3>إضافة موظفين</h3><div class="amsg">كل سطر: الرقم الوظيفي ثم الاسم. مثال:<br>12345 محمد أحمد</div><textarea id="aAdd" placeholder="12345 محمد أحمد"></textarea><button class="abtn a" id="aAddGo">إضافة</button><div class="amsg" id="aAddMsg"></div></div>`;
   {const nm=x=>(emps.find(e=>e.emp===x)||{}).name||x;h+=`<div class="adm-s"><h3>صلاحية الكوردنيتر شيت <span class="chip">${CSPERM.length}</span></h3><div class="amsg">الكل يشوف الشيت وأسماء اللي سجّلوا. التسجيل والتعديل (ومنه Push Back) لك ولهؤلاء فقط. تعطي الصلاحية من صفحة الموظف تحت.</div>${CSPERM.map(x=>`<div class="req"><div><b>${escT(nm(x))}</b> <span class="chip">${escT(x)}</span></div><div class="row"><button class="abtn n" data-csp="${escT(x)}" data-v="false">سحب</button></div></div>`).join("")}</div>`}
   const q=norm(admQ),list=emps.filter(e=>!q||norm(e.name+" "+e.emp).includes(q));
@@ -862,6 +869,9 @@ function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.d
     if(t.dataset.op){admOpen.has(t.dataset.op)?admOpen.delete(t.dataset.op):admOpen.add(t.dataset.op);admRender();return}
     if(t.dataset.cf==="1"&&t.dataset.c!=="1"){t.dataset.c="1";t._txt=t.textContent;t.textContent="متأكد؟";setTimeout(()=>{if(t.isConnected){t.dataset.c="";t.textContent=t._txt}},3000);return}
     try{t.disabled=true;
+      if(t.id==="aMvtGo"){const v={to:mailList($("aMvtTo").value),cc:mailList($("aMvtCc").value)};const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"mvt_xy",p_v:v});
+        if(j.s==="out"){authOut();return}if(j.s!=="ok")throw new Error(j.s);MVT_MAIL=v;try{localStorage.setItem("ajf_mvtmail",JSON.stringify(v))}catch(x){}
+        t.disabled=false;$("aMvtMsg").textContent=`✓ انحفظ: ${v.to.length} إلى · ${v.cc.length} نسخة`;return}
       if(t.dataset.csp){const j=await rpc("ajf_cs_perm_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_emp:t.dataset.csp,p_on:t.dataset.v==="true"});if(j.s==="out"){authOut();return}if(j.s!=="ok")throw new Error(j.s);CSPERM=j.perm||[];csAt=0}
       else if(t.dataset.dv)await admCall("device",{id:+t.dataset.dv,status:t.dataset.st});
       else if(t.dataset.ac)await admCall(t.dataset.ac,{emp:t.dataset.e,active:t.dataset.v==="true",admin:t.dataset.v==="true"});
@@ -1668,8 +1678,8 @@ function csCheck(f,date,d,k,v){
     if(B-A>g)return`بين ${CS_LBL[a]} (${fmt(A)}) و ${CS_LBL[b]} (${fmt(B)}) ${dif(A,B)} — غير منطقي (الحد ${g} د). تأكد من الساعة`;}
   return"";
 }
-function csErr(msg,el){let t=$("csErr");if(!t){t=document.createElement("div");t.id="csErr";t.setAttribute("role","alert");t.style.cssText="position:fixed;inset-inline:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:40;background:#3a1414;border:1px solid var(--warn);color:#ffd9d2;border-radius:14px;padding:12px 14px;font:600 14px/1.6 var(--body);box-shadow:0 12px 30px rgba(0,0,0,.5)";document.body.appendChild(t)}
-  t.innerHTML="⛔ ما انحفظ الوقت<br><span style='font-weight:500'>"+escT(msg)+"</span>";t.hidden=false;clearTimeout(csErr.t);csErr.t=setTimeout(()=>t.hidden=true,5000);
+function csErr(msg,el,title){let t=$("csErr");if(!t){t=document.createElement("div");t.id="csErr";t.setAttribute("role","alert");t.style.cssText="position:fixed;inset-inline:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:40;background:#3a1414;border:1px solid var(--warn);color:#ffd9d2;border-radius:14px;padding:12px 14px;font:600 14px/1.6 var(--body);box-shadow:0 12px 30px rgba(0,0,0,.5)";document.body.appendChild(t)}
+  t.innerHTML="⛔ "+escT(title||"ما انحفظ الوقت")+"<br><span style='font-weight:500'>"+escT(msg)+"</span>";t.hidden=false;clearTimeout(csErr.t);csErr.t=setTimeout(()=>t.hidden=true,5000);
   if(el){el.style.outline="2px solid var(--warn)";setTimeout(()=>el.style.outline="",2500)}try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}}
 /* اختيار الوقت في الآيفون يرسل change أثناء تحريك العجلة؛ نؤجل إعادة الرسم حتى يضغط المستخدم ✓ (blur) عشان ما تنقفل العجلة */
 let csPend=false,csBad=null;$("csBody").addEventListener("focusout",e=>{if(e.target.type!=="time")return;if(csBad&&csBad.el===e.target){const m=csBad.err,k=e.target.dataset.k;csBad=null;const{f,date}=csCur;e.target.value=csGet(csData(f,date),k)||"";csErr(m,e.target);if(!csPend)return}if(csPend){csPend=false;setTimeout(renderCS,0)}});
@@ -1960,7 +1970,9 @@ function mvtBuild(f,date,d){
 function mvtCard(f,date,d){
   const B=mvtBuild(f,date,d),m=d.dm||{},v=x=>escT(x||""),lc=String(m.xloc||"");
   const fl=(lab,k,ph,type="text",cls="")=>`<label class="cs-f"><span>${lab}</span><input data-k="dm.${k}" value="${v(m[k])}" placeholder="${ph}" type="${type}" class="${cls}"></label>`;
-  const out=(id,t,lab)=>`<pre class="dm-out" id="${id}">${escT(t)}</pre><button class="dc-pick" data-mvtcopy="${id}" style="border-style:solid">📋 نسخ ${lab}</button>`;
+  const ck=iso(date)+"_"+f.n,out=(id,t,lab)=>{const ty=id==="mvtArr"?"ARR":"DEP",cor=!!MVT_COR[ck+ty];
+    return`<button class="mvt-cor" data-mvtcor="${ty}" aria-pressed="${cor}">✏️ تصحيح لبرقية مرسلة (COR)</button><pre class="dm-out" id="${id}">${escT((cor?"COR\n":"")+t)}</pre>
+    <div class="mvt-row"><button class="dc-pick" data-mvtcopy="${id}" style="border-style:solid">📋 نسخ ${lab}</button><button class="dc-pick" data-mvtmail="${id}" data-ty="${ty}" style="border-style:solid">📧 أوت لوك</button></div>`};
   return`<div class="cs-card"><h5>MVT · طيران ناس <span style="font-family:var(--mono)">UTC</span></h5>
    <div class="dm-h">برقية الوصول ARR</div>
    <div class="cs-g two">${fl("TOUCHDOWN (محلي)","td","","time")}<label class="cs-f"><span>ON-BLOCK (محلي) = ATA</span><input data-k="ata" type="time" value="${v(d.ata)}"></label></div>
@@ -1974,7 +1986,26 @@ function mvtCard(f,date,d){
    ${B.W.length?`<div class="dm-w">⚠︎ ${B.W.join(" · ")}</div>`:""}
    ${out("mvtDep",B.dep,"برقية المغادرة")}</div>`;
 }
+/* إيميل البرقية: يفتح مسودة في أوت لوك (المستلمين والعنوان والنص جاهزة) — ما ينرسل شي إلا من أوت لوك بعد المراجعة */
+const MVT_COR={};let MVT_MAIL=null;try{MVT_MAIL=JSON.parse(localStorage.getItem("ajf_mvtmail")||"null")}catch(e){}
+async function mvtMailCfg(){if(DEMO||!AUTH.tok)return MVT_MAIL;try{const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"mvt_xy"});
+  if(j.s==="out"){authOut();return null}if(j.s==="ok"&&j.v){MVT_MAIL=j.v;try{localStorage.setItem("ajf_mvtmail",JSON.stringify(MVT_MAIL))}catch(e){}}}catch(e){}return MVT_MAIL}
+const mailList=a=>(Array.isArray(a)?a:String(a||"").split(/[\s,;،]+/)).map(x=>String(x).trim()).filter(x=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x));
+async function mvtMail(id,ty,btn){
+  const t0=btn.textContent;btn.textContent="…";const C=(await mvtMailCfg())||{};btn.textContent=t0;
+  const to=mailList(C.to),cc=mailList(C.cc);if(!to.length){csErr(AUTH.me&&AUTH.me.admin?"أضف إيميلات برقيات ناس من صفحة الحساب ← إيميلات برقيات MVT.":"إيميلات برقيات ناس ما انضافت بعد. راجع المشرف.",null,"ما فيه إيميلات");return}
+  const{f,date}=csCur,cor=!!MVT_COR[iso(date)+"_"+f.n+ty],body=$(id).textContent.replace(/\r/g,"").replace(/\n/g,"\r\n");
+  if(/----|\?\?/.test(body)){csErr("البرقية ناقصة — كمّل الأوقات المطلوبة فوق قبل الإرسال.",null,"البرقية ما اكتملت");return}
+  const subj="MVT "+ty+(cor?" - Correction of a sent MVT":""),q=x=>encodeURIComponent(x);
+  const qs=`subject=${q(subj)}&body=${q(body)}`+(cc.length?`&cc=${q(cc.join(","))}`:"");
+  const ol=`ms-outlook://compose?to=${q(to.join(","))}&${qs}`,ml=`mailto:${to.map(q).join(",")}?${qs}`;
+  let gone=false;const vis=()=>{if(document.hidden)gone=true};document.addEventListener("visibilitychange",vis);
+  mvtGo(ol);/* ما فيه أوت لوك بالجوال؟ نفتح تطبيق البريد الأساسي */
+  setTimeout(()=>{document.removeEventListener("visibilitychange",vis);if(!gone&&!document.hidden)mvtGo(ml)},1600)}
+function mvtGo(u){location.href=u}
 $("csBody").addEventListener("click",e=>{
+  const ml=e.target.closest("[data-mvtmail]");if(ml){mvtMail(ml.dataset.mvtmail,ml.dataset.ty,ml);return}
+  const cr=e.target.closest("[data-mvtcor]");if(cr){const{f,date}=csCur,k=iso(date)+"_"+f.n+cr.dataset.mvtcor;MVT_COR[k]=!MVT_COR[k];renderCS();return}
   const q=e.target.closest("[data-xyq]"),pk=e.target.closest("[data-xypick]"),cp=e.target.closest("[data-mvtcopy]");if(!q&&!pk&&!cp)return;
   if(q){csSet("dm.xloc",q.dataset.xyq);renderCS()}
   if(pk)openDC(val=>{csSet("dm.xloc",val.split(" ")[0]);renderCS()},"XY");
