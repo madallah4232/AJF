@@ -1998,7 +1998,9 @@ async function mvtMail(id,ty,btn){
   if(/----|\?\?/.test(body)){csErr("البرقية ناقصة — كمّل الأوقات المطلوبة فوق قبل الإرسال.",null,"البرقية ما اكتملت");return}
   const subj="MVT "+ty+(cor?" - Correction of a sent MVT":""),q=x=>encodeURIComponent(x);
   const qs=`subject=${q(subj)}&body=${q(body)}`+(cc.length?`&cc=${q(cc.join(","))}`:"");
-  const ol=`ms-outlook://compose?to=${q(to.join(","))}&${qs}`,ml=`mailto:${to.map(q).join(",")}?${qs}`;
+  /* أوت لوك بواجهة عربية يكتب من اليمين: نرسل النص بـ HTML اتجاهه يسار عشان تطلع البرقية إنجليزي من اليسار */
+  const hb=`<div dir="ltr" style="direction:ltr;text-align:left;font-family:Courier New,monospace">${$(id).textContent.split("\n").map(l=>escT(l)).join("<br>")}</div><br>`;
+  const ol=`ms-outlook://compose?to=${q(to.join(","))}&subject=${q(subj)}&body=${q(hb)}`+(cc.length?`&cc=${q(cc.join(","))}`:""),ml=`mailto:${to.map(q).join(",")}?${qs}`;
   let gone=false;const vis=()=>{if(document.hidden)gone=true};document.addEventListener("visibilitychange",vis);
   mvtGo(ol);/* ما فيه أوت لوك بالجوال؟ نفتح تطبيق البريد الأساسي */
   setTimeout(()=>{document.removeEventListener("visibilitychange",vis);if(!gone&&!document.hidden)mvtGo(ml)},1600)}
