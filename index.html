@@ -359,17 +359,25 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .ask-typing{align-self:stretch;color:var(--muted);font-size:13px;padding:4px 6px}
 
 #csPrint{display:none}
+#csPrint.render{display:block;position:fixed;left:-10000px;top:0;width:794px;background:#fff}
+.csf{width:794px;height:1123px;box-sizing:border-box;padding:56px 58px 40px 58px;background:#fff;color:#000;font:11.5px Calibri,Carlito,"Segoe UI",Arial,sans-serif;direction:ltr;position:relative}
+.csf .lg{display:block;width:132px;height:auto;margin:0 0 6px 40px}
+.csf .tt{text-align:center;font-weight:700;font-size:15px;margin:2px 0 10px}
+.csf table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:12px}
+.csf td{border:1px solid #000;padding:2px 3px;text-align:center;vertical-align:middle;height:26px;overflow:hidden;white-space:nowrap}
+.csf td.l{text-align:left}.csf td.g{background:#d9d9d9}
+.csf table.t1,.csf table.t2,.csf table.t3{border:1.6px solid #000}
+.csf .t2 td{height:22px}.csf .t2 td.hd{font-size:13px}.csf .t2 tr.ck td{height:38px;line-height:1.5;font-size:10.5px;border-left:0;border-right:0}
+.csf .t2 tr.ck td:first-child{border-left:1px solid #000}.csf .t2 tr.ck td:last-child{border-right:1px solid #000}
+.csf .tk{height:14px;vertical-align:-2px}
+.csf .bx{display:inline-block;width:10px;height:10px;border:1.2px solid #000;margin-left:6px;vertical-align:-1px;font:700 10px/10px Arial;text-align:center;font-style:normal}
+.csf .t3 tr.h1 td,.csf .t3 tr.h2 td{font-size:12.5px;height:19px}.csf .t3 tr.ac td{height:37px}.csf .t3 td.rm{font-size:10.5px;white-space:normal}
+.csf .ft{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;margin-top:3px}
+.csf .ft .pb{width:180px;font-size:8px}.csf .ft .pb span{font-size:10px}.csf .ft .no{font-size:11px}
 @media print{
-  @page{size:A4;margin:12mm}
+  @page{size:A4;margin:0}
   body>*:not(#csPrint){display:none!important}
-  #csPrint{display:block!important;color:#000;background:#fff;font:11px Arial,Helvetica,sans-serif;direction:ltr}
-  #csPrint h1{font-size:16px;text-align:center;margin:4px 0 10px}
-  #csPrint .lg{font:700 20px Arial;color:#555;margin-bottom:2px}
-  #csPrint table{width:100%;border-collapse:collapse;margin-bottom:8px}
-  #csPrint td,#csPrint th{border:1px solid #000;padding:4px 5px;text-align:left;vertical-align:middle}
-  #csPrint th{background:#eee;font-weight:700;text-align:center}
-  #csPrint td.c{text-align:center}
-  #csPrint .ft{display:flex;justify-content:space-between;margin-top:10px;font-size:10px}
+  #csPrint{display:block!important;position:static;background:#fff}
 }
 
 .tu-acts{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:-6px}
@@ -1508,17 +1516,18 @@ function relayFast(){try{return flightsOn(TODAY).some(f=>{if(!f.ino||!f.ia)retur
 /* الكوردنيتر شيت المشترك (التخزين والمزامنة) — قبل حلقة التحديث لأنها تناديه */
 const CS_KEY=DEMO?"ajf_cs_demo":"ajf_cs2";
 /* CSV[يوم_رحلة] = {خانة: قيمة} · CSN[يوم_رحلة] = {خانة: اسم اللي سجّلها} */
-let CSV={},CSN={},CSCAN=DEMO,CSPERM=[];
-try{const o=JSON.parse(localStorage.getItem(CS_KEY)||"{}");CSV=o.v||{};CSN=o.n||{};if(!DEMO)CSCAN=!!o.can}catch(e){}
-const csSave=()=>{try{const keep=iso(addDays(TODAY,-3));for(const k in CSV)if(k.slice(0,10)<keep){delete CSV[k];delete CSN[k]}localStorage.setItem(CS_KEY,JSON.stringify({v:CSV,n:CSN,can:CSCAN}))}catch(e){}};
+let CSV={},CSN={},CSE={},CSCAN=DEMO,CSPERM=[];
+try{const o=JSON.parse(localStorage.getItem(CS_KEY)||"{}");CSV=o.v||{};CSN=o.n||{};CSE=o.e||{};if(!DEMO)CSCAN=!!o.can}catch(e){}
+const csSave=()=>{try{const keep=iso(addDays(TODAY,-3));for(const k in CSV)if(k.slice(0,10)<keep){delete CSV[k];delete CSN[k];delete CSE[k]}localStorage.setItem(CS_KEY,JSON.stringify({v:CSV,n:CSN,e:CSE,can:CSCAN}))}catch(e){}};
 const csCan=()=>DEMO||!!(AUTH.me&&AUTH.me.admin)||CSCAN;
 /* Push Back (ATD) المسجّل في الشيت = Off-block معتمد للرحلة عند الكل */
 const csATD=k=>{const o={},p=k+"_";for(const x in CSV)if(x.startsWith(p)&&hm(CSV[x].atd||""))o[x.slice(p.length)]=CSV[x].atd;return o};
 let csAt=0,csP=null;
 function csSync(force){if(DEMO||!AUTH.tok||csP||(!force&&Date.now()-csAt<8000))return csP||Promise.resolve();const day=iso(TODAY),days=[iso(addDays(TODAY,-1)),day];
   csP=rpc("ajf_cs_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_day:day}).then(j=>{csAt=Date.now();if(!j)return;if(j.s==="out"){authOut();return}if(j.s!=="ok")return;
-    const V={},N={};for(const k in CSV)if(!days.includes(k.slice(0,10))){V[k]=CSV[k];N[k]=CSN[k]}
-    for(const r of j.rows||[]){const k=r.day+"_"+r.flight;(V[k]=V[k]||{})[r.k]=String(r.v);(N[k]=N[k]||{})[r.k]=String(r.name||r.emp||"").slice(0,40)}
+    const V={},N={},E={};for(const k in CSV)if(!days.includes(k.slice(0,10))){V[k]=CSV[k];N[k]=CSN[k];E[k]=CSE[k]}
+    for(const r of j.rows||[]){const k=r.day+"_"+r.flight;(V[k]=V[k]||{})[r.k]=String(r.v);(N[k]=N[k]||{})[r.k]=String(r.name||r.emp||"").slice(0,40);(E[k]=E[k]||{})[r.k]=String(r.emp||"").slice(0,20)}
+    CSE=E;
     const can=!!j.can;CSPERM=Array.isArray(j.perm)?j.perm:[];
     if(JSON.stringify([V,N,can])!==JSON.stringify([CSV,CSN,CSCAN])){CSV=V;CSN=N;CSCAN=can;csSave();if(!open)render();renderNext();
       if(!$("cs").hidden&&csCur){const a=document.activeElement;if(a&&$("csBody").contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))csPend=true;else renderCS()}}})
@@ -1531,6 +1540,12 @@ function csSync(force){if(DEMO||!AUTH.tok||csP||(!force&&Date.now()-csAt<8000))r
 
 /* الأنشطة المطلوبة فقط (من المشرف) — كلها أوقات نقطية */
 const CS_ACTS=[["open","Open Door"],["dpF","Deplaning · First Pax"],["dpL","Deplaning · Last Pax"],["clIn","Cleaning In"],["clOut","Cleaning Out"],["paxReq","Pax Request"],["bdF","Boarding · First Pax"],["bdL","Boarding · Last Pax"],["close","Close Door"]];
+/* صفوف نموذج SGS (GS-OL-029) بنفس الترتيب: [id, الاسم, خانة البداية, خانة النهاية, مفتاح المخطط للبداية, للنهاية] */
+const CS_ROWS=[["open","Open Door","act.open.s",null,"open",null],["dp","Passengers Deplane","act.dpF.s","act.dpL.s","dpF","dpL"],["cl","Cabin Cleaning","act.clIn.s","act.clOut.s","clIn","clOut"],
+  ["sec","Security at TRMNL","act.sec.s","act.sec.e"],["bd","Boarding Pax","act.bdF.s","act.bdL.s","bdF","bdL"],["bus1","1st Bus","act.bus1.s","act.bus1.e"],["busL","Last Bus","act.busL.s","act.busL.e"],
+  ["bulkU","Bulk Unloading","act.bulkU.s","act.bulkU.e"],["bulkL","Bulk Loading","act.bulkL.s","act.bulkL.e"],["fuel","Refuelling","act.fuel.s","act.fuel.e"],["close","Close Door","act.close.s",null,"close",null],
+  ["med","Medical Lift","act.med.s","act.med.e"],["push","Pushback/Block-out","atd",null,"close",null]];
+const CS_CHK=[["gse","GSE Dispatched"],["gate","Gate Free"],["insp","Inspection CGO/Mail"],["bag","Baggage Assembly"],["info","Info On/Bound CGO/Mail/Bags"],["spx","Special Pax Srvc (WCH/OP/…)"]];
 let csCur=null;
 const hm=v=>/^\d{2}:\d{2}$/.test(v||"");
 function csPlan(f,d){
@@ -1561,29 +1576,42 @@ function renderCS(){
   const inp=(id,v,ph="",type="text",extra="")=>`<input data-k="${id}" value="${escT(v||"")}" placeholder="${ph}" type="${type}" ${extra}>`;
   const fld=(lbl,html)=>`<label class="cs-f"><span>${lbl}</span>${html}</label>`;
   const now=fmt(NOW.mins);
-  const acts=CS_ACTS.map(([k,n])=>{
-    const a=d.act[k]||{},st=hm(a.s)?"done":"";
-    return`<div class="cs-act ${st}"><div class="h"><b>${n}</b><small>Plan ${P[k]||"—"}</small></div>
-      <div class="cs-tm one"><label><span>Time</span><input type="time" data-k="act.${k}.s" value="${a.s||""}">${a.s?"":`<button class="cs-now" data-now="act.${k}.s">الآن</button>`}</label></div></div>`}).join("")+
-    `<div class="cs-act ${hm(d.atd)?"done":""}"><div class="h"><b>Push Back · ATD</b><small>Plan ${P.close||"—"}</small></div>
-      <div class="cs-tm one"><label><span>Off-block</span><input type="time" data-k="atd" value="${d.atd||""}">${d.atd?"":`<button class="cs-now" data-now="atd">الآن</button>`}</label></div></div>`;
+  const tIn=(lbl,k)=>{const v=csGet(d,k)||"";return`<label><span>${lbl}</span><input type="time" data-k="${k}" value="${escT(v)}">${v?"":`<button class="cs-now" data-now="${k}">الآن</button>`}</label>`};
+  const acts=CS_ROWS.map(([id,n,ks,ke,ps,pe])=>{
+    const st=hm(csGet(d,ks)||"")?"done":"",pl=ps?(P[ps]||"—")+(pe?" – "+(P[pe]||"—"):""):"";
+    return`<div class="cs-act ${st}"><div class="h"><b>${n}</b>${pl?`<small>Plan ${pl}</small>`:""}</div>
+      <div class="cs-tm ${ke?"":"one"}">${tIn(ke?"Start":id==="push"?"Off-block":"Time",ks)}${ke?tIn("Finish",ke):""}</div>
+      ${id==="bd"?`<div class="cs-tm one">${tIn("Pax Request","act.paxReq.s")}</div>`:""}
+      <input class="cs-rm" data-k="rm.${id}" value="${escT((d.rm||{})[id]||"")}" placeholder="Remarks" dir="ltr"></div>`}).join("");
   const can=csCan();
   $("csBody").innerHTML=(can?"":`<div class="cs-ro">👁️ عرض فقط — التسجيل والتعديل للمشرف ومن يعطيه صلاحية</div>`)+`
   <div class="cs-card"><h5>FLIGHT</h5>
-    <div class="cs-g two">${fld("DATE",`<input value="${iso(date)}" readonly>`)}${fld("A/C REG",inp("reg",d.reg,"HZ-","text",'autocapitalize="characters" dir="ltr"'))}</div>
+    <div class="cs-g">${fld("DATE",`<input value="${iso(date)}" readonly>`)}${fld("A/C REG",inp("reg",d.reg,"HZ-","text",'autocapitalize="characters" dir="ltr"'))}${fld("GATE",inp("gate",d.gate,"00","text",'dir="ltr"'))}</div>
     <div class="cs-g two">${fld("ARRIVAL · FROM",`<input value="${f.ino||"—"} · ${f.iata}" readonly>`)}${fld("DEPARTURE · TO",`<input value="${f.n} · ${f.iata}" readonly>`)}</div>
     <div class="cs-g">${fld("STA",`<input value="${f.ia||"—"}" readonly>`)}${fld("ATA",inp("ata",d.ata,"","time"))}${fld("STD",`<input value="${f.t}" readonly>`)}</div>
+  </div>
+  <div class="cs-card"><h5>PAX LOAD · DEAD LOAD</h5>
+    <div class="cs-pax"><b></b><b style="text-align:center">F</b><b style="text-align:center">J</b><b style="text-align:center">Y</b>
+      ${[["pa","Arrival"],["pd","Departure"]].map(([g,l])=>`<b>${l}</b>${["F","J","Y"].map(c=>`<input data-k="${g}.${c}" value="${escT((d[g]||{})[c]||"")}" inputmode="numeric" placeholder="0">`).join("")}`).join("")}</div>
+    <div class="cs-g">${fld("LD3",inp("ld3",d.ld3,"NIL","text",'dir="ltr"'))}${fld("PLT",inp("plt",d.plt,"NIL","text",'dir="ltr"'))}${fld("PCS",inp("pcs",d.pcs,"00","text",'inputmode="numeric" dir="ltr"'))}</div>
+  </div>
+  <div class="cs-card"><h5>PRE-ARRIVAL CHECK</h5>
+    <div class="cs-chk">${CS_CHK.map(([k,n])=>`<button data-chk="${k}" class="${d.chk[k]?"on":""}">${n}</button>`).join("")}</div>
+    ${fld("GPU/ACU",inp("gpu",d.gpu,"","text",'dir="ltr"'))}
   </div>
   <div class="cs-card"><h5>ACTIVITIES <span style="font-family:var(--mono)">${now}</span></h5>${acts}</div>
   ${(()=>{const X=dlyInfo(f,date);if(!X)return"";return`<div class="cs-card"><h5>DELAY</h5>
     <div class="cs-g">${fld("STD",`<input value="${f.t}" readonly>`)}${fld(X.est?"ATD ≈ تقديري":"ATD (Off-block)",`<input value="${X.est?"≈":""}${fmt(X.atd)}" readonly${X.est?' style="color:var(--muted)"':""}>`)}${fld(X.est?"DLY ≈ تقديري":"DLY",`<input value="${X.est?"≈":""}${X.no?"NO DELAY":X.dly+"M"}" readonly style="color:var(${X.est?"--muted":X.no?"--go":"--warn"})">`)}</div>
     ${X.no?"":`<div class="tu-n" style="direction:ltr;text-align:left">${dlyText(X)}</div>
-    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${((CSV[dlyKey(f,date)]||{}).dlyr||DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(dcAirOf(f)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل ${DC_SHORT[dcAirOf(f)]}</button>`:""):""}`}</div>${/^SV/.test(f.n)&&!X.no?dmCard(f,date,X,d):""}`})()}${dcAirOf(f)==="XY"?mvtCard(f,date,d):""}`;
+    ${(X.other==null||X.other>0)?fld("DELAY REASON / REMARKS",`<input data-dly value="${((CSV[dlyKey(f,date)]||{}).dlyr||DLYR[dlyKey(f,date)]||(LIVE.dly&&LIVE.dly[f.n])||"").replace(/"/g,"&quot;")}" placeholder="e.g. 13 Late Check-in" style="font-family:var(--body);direction:ltr">`)+(dcAirOf(f)?`<button class="dc-pick" data-dcpick>📋 اختر كود التأخير من دليل ${DC_SHORT[dcAirOf(f)]}</button>`:""):""}`}</div>${/^SV/.test(f.n)&&!X.no?dmCard(f,date,X,d):""}`})()}${dcAirOf(f)==="XY"?mvtCard(f,date,d):""}
+  <div class="cs-card"><h5>NOTE</h5>${fld("DLY CODE",inp("dlyc",d.dlyc,csAutoCode(f,date,d)||"00","text",'dir="ltr" autocapitalize="characters"'))}${fld("NOTE",inp("rem",d.rem,"","text",'dir="ltr"'))}</div>`;
   try{const{f,date}=csCur,d=csData(f,date);for(const[k]of CS_SEQ){const v=csGet(d,k);if(!hm(v))continue;const e=csCheck(f,date,d,k,v);
-    $("csBody").querySelectorAll(`[data-k="${k}"]`).forEach(el=>{if(e){el.style.outline="2px solid var(--warn)";el.title=e;el.insertAdjacentHTML?.("afterend",`<div class="dm-w" style="grid-column:1/-1">⚠︎ ${escT(e)}</div>`)}})}}catch(x){}
+    $("csBody").querySelectorAll(`[data-k="${k}"]`).forEach(el=>{if(e){el.style.outline="2px solid var(--warn)";el.title=e;(el.closest(".cs-tm")||el).insertAdjacentHTML?.("afterend",`<div class="dm-w" style="grid-column:1/-1">⚠︎ ${escT(e)}</div>`)}})}}catch(x){}
   /* اسم اللي سجّل كل خانة */
   const N=CSN[iso(date)+"_"+f.n]||{};
-  $("csBody").querySelectorAll("[data-k]").forEach(el=>{const n=N[el.dataset.k];if(!n)return;const h=el.closest(".cs-act")||el.closest(".cs-f")||el.parentElement;if(h&&!h.querySelector(`.cs-by[data-for="${el.dataset.k}"]`))h.insertAdjacentHTML("beforeend",`<div class="cs-by" data-for="${escT(el.dataset.k)}">✍︎ ${escT(n)}</div>`)});
+  {const H=new Map();$("csBody").querySelectorAll("[data-k]").forEach(el=>{const n=N[el.dataset.k];if(!n)return;const h=el.closest(".cs-act")||el.closest(".cs-f")||el.closest(".cs-card");if(!h)return;if(!H.has(h))H.set(h,new Set());H.get(h).add(n)});
+   $("csBody").querySelectorAll("[data-chk]").forEach(el=>{const n=N["chk."+el.dataset.chk];if(!n)return;const h=el.closest(".cs-card");if(!H.has(h))H.set(h,new Set());H.get(h).add(n)});
+   H.forEach((ns,h)=>h.insertAdjacentHTML("beforeend",`<div class="cs-by">✍︎ ${[...ns].map(escT).join(" · ")}</div>`))}
   {const el=$("csBody").querySelector("[data-dly]"),n=N.dlyr;if(el&&n)el.closest(".cs-f").insertAdjacentHTML("beforeend",`<div class="cs-by">✍︎ ${escT(n)}</div>`)}
   /* بدون صلاحية: عرض فقط (النسخ والطباعة تشتغل) */
   if(!can)$("csBody").querySelectorAll("input,select,textarea,button[data-now],button[data-chk],button[data-dmq],button[data-dmpick],button[data-xyq],button[data-xypick],button[data-dcpick]").forEach(el=>{if(el.tagName==="BUTTON"){if(el.dataset.now)el.remove();else el.disabled=true}else{el.readOnly=true;el.disabled=el.type==="time"||el.tagName==="SELECT"}});
@@ -1593,7 +1621,7 @@ function csSet(path,v){
   const{f,date}=csCur,k=iso(date)+"_"+f.n;v=v==null?"":String(v).trim();
   if(!csCan()){csErr("ما عندك صلاحية التسجيل في الكوردنيتر شيت. الصلاحية من المشرف.");renderCS();return}
   const V=CSV[k]=CSV[k]||{},N=CSN[k]=CSN[k]||{},ov=V[path],on=N[path],me=(AUTH.me&&(AUTH.me.name||AUTH.me.emp))||"";
-  if(v){V[path]=v;N[path]=me}else{delete V[path];delete N[path]}csSave();if(!open)render();renderNext();
+  const EE=CSE[k]=CSE[k]||{};if(v){V[path]=v;N[path]=me;EE[path]=(AUTH.me&&AUTH.me.emp)||""}else{delete V[path];delete N[path];delete EE[path]}csSave();if(!open)render();renderNext();
   const ok=()=>{$("csSaved").textContent="✓ محفوظ عند الكل";clearTimeout(csSet.t);csSet.t=setTimeout(()=>$("csSaved").textContent="",1800)};
   if(DEMO)return ok();
   $("csSaved").textContent="…";
@@ -1610,9 +1638,10 @@ function csSet(path,v){
 $("csBody").addEventListener("click",e=>{if(!e.target.closest("[data-dcpick]"))return;const inp=$("csBody").querySelector("[data-dly]");
   openDC(v=>{inp.value=inp.value.trim()?inp.value.trim()+" / "+v:v;inp.dispatchEvent(new Event("change",{bubbles:true}))},dcAirOf(csCur.f))});
 /* ---------- تدقيق الأوقات: يرفض أي وقت يخالف تسلسل الدوران أو غير منطقي ---------- */
-const CS_SEQ=[["dm.td","Touchdown"],["ata","On-block (ATA)"],["act.open.s","Open Door"],["act.dpF.s","Deplaning · First Pax"],["act.dpL.s","Deplaning · Last Pax"],["act.clIn.s","Cleaning In"],["act.clOut.s","Cleaning Out"],["act.paxReq.s","Pax Request"],["act.bdF.s","Boarding · First Pax"],["act.bdL.s","Boarding · Last Pax"],["act.close.s","Close Door"],["atd","Off-block"],["dm.abn","Airborne"]];
+const CS_SEQ=[["dm.td","Touchdown"],["ata","On-block (ATA)"],["act.open.s","Open Door"],["act.dpF.s","Deplaning · First Pax"],["act.dpL.s","Deplaning · Last Pax"],["act.clIn.s","Cleaning In"],["act.clOut.s","Cleaning Out"],["act.paxReq.s","Pax Request"],["act.bdF.s","Boarding · First Pax"],["act.bdL.s","Boarding · Last Pax"],["act.close.s","Close Door"],["atd","Off-block"],["dm.abn","Airborne"],
+  ...CS_ROWS.filter(r=>r[3]&&!/^act\.(dpF|clIn|bdF)\.s$/.test(r[2])).flatMap(r=>[[r[2],r[1]+" · Start"],[r[3],r[1]+" · Finish"]])];
 const CS_LBL=Object.fromEntries(CS_SEQ);
-const CS_PAIRS=[["dm.td","ata"],["ata","act.open.s"],["act.open.s","act.dpF.s"],["act.dpF.s","act.dpL.s"],["act.dpL.s","act.clIn.s"],["act.clIn.s","act.clOut.s"],["act.clOut.s","act.bdF.s"],["act.dpL.s","act.paxReq.s"],["act.paxReq.s","act.bdF.s"],["act.bdF.s","act.bdL.s"],["act.bdL.s","act.close.s"],["act.close.s","atd"],["atd","dm.abn"],["ata","atd"],["dm.td","dm.abn"]];
+const CS_PAIRS=[["dm.td","ata"],["ata","act.open.s"],["act.open.s","act.dpF.s"],["act.dpF.s","act.dpL.s"],["act.dpL.s","act.clIn.s"],["act.clIn.s","act.clOut.s"],["act.clOut.s","act.bdF.s"],["act.dpL.s","act.paxReq.s"],["act.paxReq.s","act.bdF.s"],["act.bdF.s","act.bdL.s"],["act.bdL.s","act.close.s"],["act.close.s","atd"],["atd","dm.abn"],["ata","atd"],["dm.td","dm.abn"],...CS_ROWS.filter(r=>r[3]&&!/^act\.(dpF|clIn|bdF)\.s$/.test(r[2])).map(r=>[r[2],r[3]])];
 /* أقصى فرق منطقي (دقائق) بين كل خطوة واللي قبلها */
 const CS_GAP=[["dm.td","ata",30],["ata","act.open.s",30],["act.open.s","act.dpF.s",20],["act.dpF.s","act.dpL.s",45],["act.dpL.s","act.clIn.s",30],["act.clIn.s","act.clOut.s",60],["act.bdF.s","act.bdL.s",90],["act.bdL.s","act.close.s",60],["act.close.s","atd",60],["atd","dm.abn",60]];
 const csGet=(d,k)=>k.split(".").reduce((o,x)=>o&&o[x],d);
@@ -1655,25 +1684,61 @@ let csClr=0;
 $("csClear").onclick=()=>{const b=$("csClear");if(Date.now()-csClr<3000){const{f,date}=csCur,k=iso(date)+"_"+f.n;b.textContent="مسح";csClr=0;if(!csCan())return;
     const bk=[CSV[k],CSN[k]];delete CSV[k];delete CSN[k];csSave();renderCS();if(!open)render();renderNext();
     if(!DEMO)rpc("ajf_cs_set",{p_token:AUTH.tok||"",p_device:AUTH.dev,p_day:iso(date),p_flight:f.n,p_k:"*",p_v:""}).then(j=>{if(j.s!=="ok")throw new Error(j.s)}).catch(()=>{if(bk[0])CSV[k]=bk[0];if(bk[1])CSN[k]=bk[1];csSave();renderCS();csErr("ما انمسح — تأكد من الإنترنت.")})}else{csClr=Date.now();b.textContent="اضغط مرة ثانية";setTimeout(()=>{b.textContent="مسح"},3000)}};
-function csPrintHTML(){
-  const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d);
-  const c=(v)=>v||"";
-  const rows=CS_ACTS.map(([k,n])=>{const a=d.act[k]||{};return`<tr><td>${n}</td><td class="c">${c(P[k])}</td><td class="c">${c(a.s)}</td></tr>`}).join("");
-  const dt=date.getUTCDate()+["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][date.getUTCMonth()]+String(date.getUTCFullYear()).slice(2);
-  return`<div class="lg">SGS</div><h1>COORDINATION SHEET</h1>
-  <table><tr><td>DATE: <b>${dt}</b></td><td colspan="2">A/C REG: <b>${c(d.reg)}</b></td></tr>
-  <tr><td>Flight Arrival: <b>${c(f.ino)}</b></td><td colspan="2">From: <b>${f.iata}</b></td></tr>
-  <tr><td>Flight Departure: <b>${f.n}</b></td><td colspan="2">To: <b>${f.iata}</b></td></tr>
-  <tr><td>STA: <b>${c(f.ia)}</b></td><td>ATA: <b>${c(d.ata)}</b></td><td>STD: <b>${f.t}</b></td></tr></table>
-  <table><tr><th>Activities</th><th>Planned Time</th><th>Actual Time</th></tr>${rows}</table>
-  ${(()=>{const X=dlyInfo(f,date);return X?`<table><tr><td>ATD: <b>${X.est?"≈":""}${fmt(X.atd)}</b>${X.est?" (تقديري)":""}</td><td>${X.no?"<b>"+(X.est?"≈":"")+"NO DELAY</b>":"DLY: <b>"+(X.est?"≈":"")+X.dly+"M</b>"}</td></tr>${X.no?"":`<tr><td colspan="2">${dlyText(X)}</td></tr>`}</table>`:""})()}
-  <div class="ft"><span>GS-OL-029</span></div>`;
+/* كود التأخير التلقائي (السعودية من رسالة DLY MSG) */
+function csAutoCode(f,date,d){try{const X=dlyInfo(f,date);if(!X||X.no||!/^SV/.test(f.n))return"";return dmBuild(f,date,X,d).L.map(l=>l.code).filter(c=>!/\?/.test(c)).join("/")}catch(e){return""}}
+const csHM=v=>hm(v||"")?v.replace(":",""):"";
+const csDur=m=>m==null||isNaN(m)?"":pad(Math.floor(m/60))+"."+pad(m%60)+"M";
+/* نموذج SGS بنفس الشكل (A4) — نفس الصفوف والخانات والشعار */
+function csFormHTML(){
+  const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d),k=iso(date)+"_"+f.n,N=CSN[k]||{},E=CSE[k]||{},e=escT;
+  const X=dlyInfo(f,date),atd=hm(d.atd)?d.atd:X?(X.est?"≈":"")+fmt(X.atd):"",dly=hm(d.atd)?(()=>{let x=toMin(d.atd)-tm(f.t);if(x>720)x-=1440;if(x<-720)x+=1440;return Math.max(0,x)})():X?X.dly:null;
+  const dt=pad(date.getUTCDate())+["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][date.getUTCMonth()]+String(date.getUTCFullYear()).slice(2);
+  const pa=d.pa||{},pd=d.pd||{},n0=(v,z)=>String(v??"").trim()||z,rm=d.rm||{};
+  /* المُعد: أكثر موظف سجّل في الشيت، وإلا اللي يطبع */
+  const cnt={};for(const x in N)if(N[x])cnt[N[x]]=(cnt[N[x]]||0)+1;const top=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+  const prep=top||(AUTH.me&&AUTH.me.name)||"",prn=top?Object.keys(N).map(x=>N[x]===top&&E[x]).find(Boolean)||"":(AUTH.me&&AUTH.me.emp)||"";
+  const box=on=>`<i class="bx">${on?"✓":""}</i>`,tm4=v=>csHM(v)||(String(v||"").startsWith("≈")?"≈"+csHM(v.slice(1)):"");
+  const code=n0(d.dlyc,csAutoCode(f,date,d)||(dly===0?"NIL":"")),ata=csHM(d.ata);
+  const rows=CS_ROWS.map(([id,nm,ks,ke,ps,pe])=>{let r=rm[id]||"";if(id==="bd"&&hm(csGet(d,"act.paxReq.s")||""))r="Pax Req "+csHM(csGet(d,"act.paxReq.s"))+(r?" · "+r:"");
+    return`<tr class="ac"><td class="l">${nm}</td><td>${ps?csHM(P[ps]):""}</td><td>${pe?csHM(P[pe]):""}</td><td>${csHM(csGet(d,ks))}</td><td>${ke?csHM(csGet(d,ke)):""}</td><td colspan="3" class="l rm">${e(r)}</td></tr>`}).join("");
+  return`<div class="csf"><img class="lg" src="media/sgs-logo.png" alt="SGS"><div class="tt">COORDINATION SHEET</div>
+  <table class="t1"><colgroup><col style="width:17.6%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:12.8%"><col style="width:12.8%"><col style="width:12.8%"></colgroup>
+  <tr><td class="l">&nbsp;DATE: <b>${dt}</b></td><td colspan="2" class="l">REG : <b>${e(d.reg||"")}</b></td><td colspan="5" class="g"></td></tr>
+  <tr><td>Flight Arrival</td><td><b>${e(f.ino||"")}</b></td><td class="l">Fm: <b>${f.ino?f.iata:""}</b></td><td colspan="2">Pax Load</td><td class="l">(F) ${e(n0(pa.F,"00"))}</td><td class="l">(J) ${e(n0(pa.J,"00"))}</td><td class="l">(Y)&nbsp; ${e(n0(pa.Y,"000"))}</td></tr>
+  <tr><td>Flight Departure</td><td><b>${e(f.n)}</b></td><td class="l">To: <b>${f.iata}</b></td><td colspan="2">Pax Load</td><td class="l">(F) ${e(n0(pd.F,"00"))}</td><td class="l">(J) ${e(n0(pd.J,"00"))}</td><td class="l">(Y)&nbsp; ${e(n0(pd.Y,"000"))}</td></tr>
+  <tr><td class="l">Gate: ${e(n0(d.gate,"00"))}</td><td colspan="2">Dep Dead Load</td><td colspan="2" class="l">LD3: ${e(n0(d.ld3,"NIL"))}</td><td class="l">PLT: ${e(n0(d.plt,"NIL"))}</td><td colspan="2" class="l">&nbsp;&nbsp;&nbsp;PCS : ${e(n0(d.pcs,"00"))}</td></tr>
+  <tr><td class="l">STA:&nbsp; ${csHM(f.ia)||"0000"}</td><td colspan="2" class="l">ATA: ${ata||"0000"}</td><td colspan="2" class="l">STD: ${csHM(f.t)}</td><td class="l">ATD: ${tm4(atd)||"0000"}</td><td colspan="2" rowspan="2" class="g"></td></tr>
+  <tr><td class="l">MGT:${csDur(f.ia?minGT(f):null)||"00.00M"}</td><td colspan="2" class="l">DLY Amount: ${dly==null?"00.00M":csDur(dly)}</td><td colspan="3" class="l">DLY Code: ${e(code||"00")}</td></tr></table>
+  <table class="t2"><tr><td colspan="3" class="hd">PRE-ARRIVAL CHECK (Tick as appropriate <img class="tk" src="media/cs-tick.png" alt="✓"> &nbsp;&nbsp;&nbsp;)</td></tr>
+  <tr class="ck"><td style="width:28.6%;text-align:right">GSE Dispatched ${box(d.chk.gse)}<br>Gate Free ${box(d.chk.gate)}</td><td style="width:22%" class="l">Inspectio CGO.Mail ${box(d.chk.insp)}<br>Baggage Assembly ${box(d.chk.bag)}</td><td style="text-align:center">Info On/Bound CGO/Mail/Bags&nbsp;&nbsp;&nbsp;&nbsp; ${box(d.chk.info)}<br>Special pax Srvc (WCH/OP/….) ${box(d.chk.spx)}</td></tr>
+  <tr><td colspan="3" class="l">GPU/ACU&nbsp; ${e(d.gpu||"")}</td></tr></table>
+  <table class="t3"><colgroup><col style="width:17.6%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:12.8%"><col style="width:12.8%"><col style="width:12.8%"></colgroup>
+  <tr class="h1"><td rowspan="2">Activities</td><td colspan="2">Planned Time</td><td colspan="2">Actual Time</td><td colspan="3" rowspan="2">Remarks</td></tr>
+  <tr class="h2"><td>Start</td><td>Finish</td><td>Start</td><td>Finish</td></tr>${rows}</table>
+  <div class="ft"><div><b>Note :</b> ${e(d.rem||"")}</div><div class="pb"><b>PREPARED BY : NAME:</b> <span>${e(prep)}</span></div></div>
+  <div class="ft"><b>Please fill in this form after each schedule flight and send it by email to bellow addresses :</b><div class="pb"><b>P.R.N :</b> <span>${e(prn)}</span></div></div>
+  <div class="ft"><b class="no">GS-OL-029</b><div class="pb"><b>SIGNATURE:</b></div></div></div>`;
 }
-$("csPdf").onclick=()=>{$("csPrint").innerHTML=csPrintHTML();setTimeout(()=>window.print(),50)};
+const csLib=src=>new Promise((ok,no)=>{if(document.querySelector(`script[src="${src}"]`)&&csLib[src])return ok();const j=document.createElement("script");j.src=src;j.onload=()=>{csLib[src]=1;ok()};j.onerror=no;document.head.appendChild(j)});
+async function csPDF(){
+  const{f,date}=csCur,b=$("csPdf"),t0=b.textContent,name=`Coordination Sheet ${f.n} ${iso(date)}.pdf`;b.disabled=true;b.textContent="… جاري تجهيز PDF";
+  const host=$("csPrint");host.innerHTML=csFormHTML();host.classList.add("render");
+  try{
+    await Promise.all([csLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),csLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")]);
+    await Promise.all([...host.querySelectorAll("img")].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+    const cv=await html2canvas(host.firstElementChild,{scale:2.5,backgroundColor:"#ffffff",useCORS:true,logging:false});
+    const pdf=new jspdf.jsPDF({orientation:"p",unit:"mm",format:"a4"});pdf.addImage(cv.toDataURL("image/jpeg",.95),"JPEG",0,0,210,297);
+    const file=new File([pdf.output("blob")],name,{type:"application/pdf"});
+    host.classList.remove("render");b.disabled=false;b.textContent=t0;
+    if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name})}catch(e){}return}
+    const u=URL.createObjectURL(file),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),6e4);
+  }catch(e){host.classList.remove("render");b.disabled=false;b.textContent=t0;setTimeout(()=>window.print(),50)}/* بدون إنترنت: طباعة مباشرة بنفس النموذج */
+}
+$("csPdf").onclick=csPDF;
 $("csShare").onclick=async()=>{
-  const{f,date}=csCur,d=csData(f,date);
-  const t=[`COORDINATION SHEET · ${f.ino||""}/${f.n} · ${iso(date)}`,`A/C REG ${d.reg||"-"}`,`STA ${f.ia||"-"} · ATA ${d.ata||"-"} · STD ${f.t}`,...(dlyInfo(f,date)?["ATD "+fmt(dlyInfo(f,date).atd)+" · "+dlyText(dlyInfo(f,date))]:[]),
-    ...CS_ACTS.filter(([k])=>d.act[k]&&d.act[k].s).map(([k,n])=>`${n}: ${d.act[k].s}`)].join("\n");
+  const{f,date}=csCur,d=csData(f,date),X=dlyInfo(f,date),atd=hm(d.atd)?d.atd:X?(X.est?"≈":"")+fmt(X.atd):"-";
+  const t=[`COORDINATION SHEET · ${f.ino||""}/${f.n} · ${iso(date)}`,`A/C REG ${d.reg||"-"} · GATE ${d.gate||"-"}`,`STA ${f.ia||"-"} · ATA ${d.ata||"-"} · STD ${f.t} · ATD ${atd}`,...(X?[dlyText(X)]:[]),
+    ...CS_ROWS.filter(r=>hm(csGet(d,r[2])||"")).map(r=>`${r[1]}: ${csGet(d,r[2])}${r[3]&&hm(csGet(d,r[3])||"")?" – "+csGet(d,r[3]):""}${(d.rm||{})[r[0]]?" · "+d.rm[r[0]]:""}`)].join("\n");
   try{if(navigator.share){await navigator.share({title:"Coordination Sheet "+f.n,text:t});return}}catch(e){return}
   try{await navigator.clipboard.writeText(t);$("csShare").textContent="✓ نُسخ";setTimeout(()=>$("csShare").textContent="مشاركة",1500)}catch(e){}
 };
