@@ -1257,7 +1257,7 @@ addEventListener("scroll",()=>$("top").classList.toggle("scrolled",scrollY>4),{p
 
 
 /* ---------- in-app tracker: live ADS-B when available, estimated position otherwise ---------- */
-const AP={AJF:[29.7851,40.1000],CAI:[30.1219,31.4056],JED:[21.6796,39.1565],SHJ:[25.3286,55.5172],RUH:[24.9576,46.6988],ELQ:[26.3028,43.7744],HMB:[26.3428,31.7428]};
+const AP={AJF:[29.7851,40.1000],DMM:[26.4712,49.7979],MED:[24.5534,39.7051],AHB:[18.2404,42.6566],TIF:[21.4834,40.5443],TUU:[28.3654,36.6189],GIZ:[16.9011,42.5858],CAI:[30.1219,31.4056],JED:[21.6796,39.1565],SHJ:[25.3286,55.5172],RUH:[24.9576,46.6988],ELQ:[26.3028,43.7744],HMB:[26.3428,31.7428]};
 const ICAO={SV:"SVA",F3:"FAD",XY:"KNE",G9:"ABY",NP:"NIA",SM:"MSC"};
 const callsign=n=>n?(ICAO[n.slice(0,2)]||n.slice(0,2))+n.slice(2):"";
 const R=Math.PI/180;
@@ -2013,15 +2013,20 @@ const lcDD=d=>{const[y,m,dd]=iso(d).split("-");return{dd,m,y,yy:y.slice(2),mon:[
 let LCPREP="";try{LCPREP=localStorage.getItem("ajf_lc_prep")||""}catch(e){}
 /* القيم التلقائية (اللي ما يحتاج الموظف يكتبها) */
 function lcAuto(V){const{f,date}=csCur,d=csData(f,date),D=LCD,reg=(V.reg||d.reg||"").toUpperCase().replace(/\s/g,"").replace(/^HZ(?!-)/,"HZ-");
-  const R=D&&D.reg[reg],cfgK=V.cfg||(R&&R[0])||"",C=(D&&D.cfg[cfgK])||null,crew=V.crew||"2/5",cb=V.cbag==="1",adl=V.adl||"0",pan=V.pan||"C";
+  const R=D&&D.reg[reg],cfgK=V.cfg||(R&&R[0])||"",C=(D&&D.cfg[cfgK])||null,crew=V.crew||"2/5",cb=V.cbag==="1",adl=V.adl||"0",PA=lcPanAuto(f),pan=V.pan||PA.c;
   const op=C&&C.opv[crew],ad=C&&C.addl[adl],pn=C&&C.pan[pan];const J=lcN(V.J)!=null?lcN(V.J):lcN((d.pd||{}).J),Y=lcN(V.Y)!=null?lcN(V.Y):lcN((d.pd||{}).Y);
   const dd=lcDD(date);
-  return{reg,cfgK,C,crew,cb,adl,pan,
+  return{reg,cfgK,C,crew,cb,adl,pan,PA,
     bew:R?R[1]:null,bewi:R?R[2]:null,opv:op?op[cb?2:0]:null,opvi:op?op[cb?3:1]:null,adw:adl==="0"?0:ad?ad[cb?2:0]:null,adi:adl==="0"?0:ad?ad[cb?3:1]:null,
     pw:pn?pn[0]:null,pi:pn?pn[1]:null,ww:C?C.wat[0]:null,wi:C?C.wat[1]:null,
     mzfw:C&&C.lim?C.lim[0]:null,mlw:C&&C.lim?C.lim[1]:null,J,Y,
     zA:J,zB:Y!=null?Math.ceil(Y/2):null,zC:Y!=null?Math.floor(Y/2):null,
     dest:f.iata,adr:f.iata+"KLSV",org:"AJFKLSV",rch:`SV/${dd.dd}${dd.m}${dd.yy}`,from:f.iata,dens:0.785,aw:85,cw:35,iw:0,prep:LCPREP,lmc:"NIL",notoc:"NO"}}
+/* كود الـ Pantry حسب جدول Pantry Route Assignment: داخلي ≤1:29 → A، 1:30–2:45 → C (مدة البلوك تقديرية من المسافة) */
+function lcPanAuto(f){const D={CAI:"D",IST:"D",BEY:"C",DAM:"C",AMM:"C",KWI:"C",BAH:"C",DXB:"C",DOH:"C",AUH:"C",MCT:"C"};if(D[f.iata])return{c:D[f.iata],t:"دولي"};
+  const a=AP.AJF,b=AP[f.iata];if(!b)return{c:"C",t:""};const R=6371,r=Math.PI/180,dl=(b[0]-a[0])*r,dg=(b[1]-a[1])*r,
+  km=2*R*Math.asin(Math.sqrt(Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dg/2)**2)),m=Math.round(25+km/12.5);
+  return{c:m<=89?"A":m<=165?"C":"B",t:`${Math.floor(m/60)}:${String(m%60).padStart(2,"0")}`}}
 const lcG=(V,A,k,ak=k)=>{const v=lcN(V[k]);return v!=null?v:A[ak]};
 function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>lcG(V,A,k,ak),s=k=>V[k]!=null&&V[k]!==""?V[k]:(A[k]!=null?String(A[k]):"");
   const bew=g("bew"),bewi=g("bewi"),opv=g("opv"),opvi=g("opvi"),pw=g("pw"),pi=g("pi"),ww=g("ww"),wi=g("wi"),adw=g("adw"),adi=g("adi");
@@ -2099,12 +2104,13 @@ function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg
     <div class="cs-g two">${lcField("reg","A/C REG",R,{t:"t",ak:"reg",ph:A.reg||"HZ-"})}${lcSel("cfg","TYPE / CONFIG",[["","تلقائي من التسجيل"],...cfgs],R.V.cfg||"")}</div>
     ${nr?`<div class="lc-w">التسجيل ${escT(A.reg)} مو موجود في مستند الأوزان — اختر النوع واكتب BEW يدوي</div>`:""}
     <div class="cs-g">${lcSel("crew","CREW",crews.map(c=>[c,c]),A.crew)}${lcSel("adl","ADD'L CREW",[["0","0"],["1","1"],["2","2"]],A.adl)}${lcSel("pan","PANTRY",pans.map(c=>[c,c]),A.pan)}</div>
-    <label class="lc-ck"><input type="checkbox" data-l="cbag" ${A.cb?"checked":""}> مع عفش الطاقم (Crew Bag)</label>
+    <div class="lc-w i">Pantry ${R.V.pan?"(مختار يدوي)":"تلقائي"}: AJF–${escT(R.f.iata)}${A.PA.t?` · البلوك تقريباً ${A.PA.t}`:""} → Code ${A.PA.c} حسب Pantry Route Assignment</div>
+    <label class="lc-ck"><input type="checkbox" data-l="cbag" ${A.cb?"checked":""}> مع عفش الطاقم (Crew Bag)${C&&C.cbagc?` — في CMPT ${C.cbagc}`:""}</label>
     <details class="lc-det"><summary>القيم الثابتة من مستند الأوزان — عدّلها لو تغيّرت</summary>
       <div class="lc-g4">${lcField("bew","BEW",R)}${lcField("bewi","BI",R)}${lcField("opv","CREW KG",R)}${lcField("opvi","CREW IDX",R)}
       ${lcField("pw","PANTRY KG",R)}${lcField("pi","PANTRY IDX",R)}${lcField("ww","WATER KG",R)}${lcField("wi","WATER IDX",R)}
       ${lcField("adw","ADD'L KG",R)}${lcField("adi","ADD'L IDX",R)}</div>
-      <div class="lc-w i">المستند قديم (2022–2024): قارن BEW والـ Pantry بآخر Load Sheet من النظام.</div></details></div>
+      <div class="lc-w i">المصدر: SV Weight & Balance Reference Summary (أكتوبر 2026). الماء 200 كغ من الـ Load Sheet الآلي.</div></details></div>
   <div class="cs-card"><h5>PASSENGERS · الركاب</h5>
     <div class="cs-g two">${lcField("J","J",R)}${lcField("Y","Y",R)}</div>
     <div class="lc-g4">${lcField("M","M",R,{ph:"0"})}${lcField("F","F",R,{ph:"0"})}${lcField("Ch","C (طفل)",R,{ph:"0"})}${lcField("I","I (رضيع)",R,{ph:"0"})}</div>
