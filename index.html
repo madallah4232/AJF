@@ -2023,10 +2023,9 @@ function lcAuto(V){const{f,date}=csCur,d=csData(f,date),D=LCD,reg=(V.reg||d.reg|
     zA:J,zB:Y!=null?Math.ceil(Y/2):null,zC:Y!=null?Math.floor(Y/2):null,
     dest:f.iata,adr:f.iata+"KLSV",org:"AJFKLSV",rch:`SV/${dd.dd}${dd.m}${dd.yy}`,from:f.iata,dens:0.785,aw:85,cw:35,iw:0,prep:LCPREP,lmc:"NIL",notoc:"NO"}}
 /* كود الـ Pantry حسب جدول Pantry Route Assignment: داخلي ≤1:29 → A، 1:30–2:45 → C (مدة البلوك تقديرية من المسافة) */
-function lcPanAuto(f){const D={CAI:"D",IST:"D",BEY:"C",DAM:"C",AMM:"C",KWI:"C",BAH:"C",DXB:"C",DOH:"C",AUH:"C",MCT:"C"};if(D[f.iata])return{c:D[f.iata],t:"دولي"};
-  const a=AP.AJF,b=AP[f.iata];if(!b)return{c:"C",t:""};const R=6371,r=Math.PI/180,dl=(b[0]-a[0])*r,dg=(b[1]-a[1])*r,
-  km=2*R*Math.asin(Math.sqrt(Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dg/2)**2)),m=Math.round(25+km/12.5);
-  return{c:m<=89?"A":m<=165?"C":"B",t:`${Math.floor(m/60)}:${String(m%60).padStart(2,"0")}`}}
+function lcPanAuto(f){const D={CAI:"D",IST:"D"};if(D[f.iata])return{c:D[f.iata],t:"دولي"};
+  /* رحلات الجوف الداخلية: النظام يعطيها Code C (تأكد من SV1383 AJF-JED و SV8035 AJF-ELQ) */
+  return{c:"C",t:""}}
 const lcG=(V,A,k,ak=k)=>{const v=lcN(V[k]);return v!=null?v:A[ak]};
 function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>lcG(V,A,k,ak),s=k=>V[k]!=null&&V[k]!==""?V[k]:(A[k]!=null?String(A[k]):"");
   const bew=g("bew"),bewi=g("bewi"),opv=g("opv"),opvi=g("opvi"),pw=g("pw"),pi=g("pi"),ww=g("ww"),wi=g("wi"),adw=g("adw"),adi=g("adi");
@@ -2104,7 +2103,7 @@ function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg
     <div class="cs-g two">${lcField("reg","A/C REG",R,{t:"t",ak:"reg",ph:A.reg||"HZ-"})}${lcSel("cfg","TYPE / CONFIG",[["","تلقائي من التسجيل"],...cfgs],R.V.cfg||"")}</div>
     ${nr?`<div class="lc-w">التسجيل ${escT(A.reg)} مو موجود في مستند الأوزان — اختر النوع واكتب BEW يدوي</div>`:""}
     <div class="cs-g">${lcSel("crew","CREW",crews.map(c=>[c,c]),A.crew)}${lcSel("adl","ADD'L CREW",[["0","0"],["1","1"],["2","2"]],A.adl)}${lcSel("pan","PANTRY",pans.map(c=>[c,c]),A.pan)}</div>
-    <div class="lc-w i">Pantry ${R.V.pan?"(مختار يدوي)":"تلقائي"}: AJF–${escT(R.f.iata)}${A.PA.t?` · البلوك تقريباً ${A.PA.t}`:""} → Code ${A.PA.c} حسب Pantry Route Assignment</div>
+    <div class="lc-w i">Pantry ${R.V.pan?"(مختار يدوي)":"تلقائي"}: AJF–${escT(R.f.iata)} → Code ${A.PA.c}${A.PA.t?" (دولي)":" — الافتراضي لرحلات الجوف الداخلية مثل النظام"}</div>
     <label class="lc-ck"><input type="checkbox" data-l="cbag" ${A.cb?"checked":""}> مع عفش الطاقم (Crew Bag)${C&&C.cbagc?` — في CMPT ${C.cbagc}`:""}</label>
     <details class="lc-det"><summary>القيم الثابتة من مستند الأوزان — عدّلها لو تغيّرت</summary>
       <div class="lc-g4">${lcField("bew","BEW",R)}${lcField("bewi","BI",R)}${lcField("opv","CREW KG",R)}${lcField("opvi","CREW IDX",R)}
