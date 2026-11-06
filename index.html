@@ -410,10 +410,10 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .lc-g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .lc-kv,.lc-abc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .lc-kv div,.lc-abc div{background:var(--raise);border-radius:10px;padding:6px 6px;display:grid;gap:2px;text-align:center;min-width:0}
-.lc-kv span,.lc-abc span{font:10px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lc-kv b,.lc-abc b{font:700 15px var(--mono)}
+.lc-kv span,.lc-abc span{font:10px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lc-kv b,.lc-abc b{font:700 15px var(--mono);direction:ltr;unicode-bidi:isolate}
 .lc-abc .on{outline:2px solid var(--go);outline-offset:-2px}.lc-abc .off b{text-decoration:line-through;opacity:.55}
 .lc-kv .ok b{color:var(--go)}.lc-kv .bad b{color:var(--warn)}
-.lc-w{font-size:12px;color:var(--warn);background:color-mix(in oklab,var(--warn) 12%,transparent);border-radius:8px;padding:6px 9px;line-height:1.5}.lc-w.go{display:block;width:100%;text-align:start;border:0;font:inherit;font-size:13px;cursor:pointer}.lc-w.go i{font-style:normal;opacity:.75;font-size:11.5px}.lc-hi{outline:3px solid var(--amber)!important;outline-offset:1px;animation:lcp .6s 3}@keyframes lcp{50%{outline-color:transparent}}.lc-w.i{color:var(--muted);background:var(--raise)}
+.lc-w{font-size:12px;color:#ff6b6b;background:rgba(255,77,77,.13);border:1px solid rgba(255,77,77,.45)!important;border-radius:8px;padding:6px 9px;line-height:1.5}.lc-w.go{display:block;width:100%;text-align:start;border:0;font:inherit;font-size:13px;cursor:pointer}.lc-w.go i{font-style:normal;opacity:.75;font-size:11.5px}.lc-hi{outline:3px solid var(--amber)!important;outline-offset:1px;animation:lcp .6s 3}@keyframes lcp{50%{outline-color:transparent}}.lc-w.i{color:var(--muted);background:var(--raise);border-color:var(--line)!important}.lc-n{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:10px;background:#e5383b;color:#fff;font:700 12px var(--mono);font-style:normal;margin-inline-start:4px}
 .lc-cpt{display:grid;gap:6px;padding:8px;border:1px solid var(--line);border-radius:12px}.lc-cpt>b{font:700 12px var(--mono);color:var(--muted);direction:ltr;text-align:left}
 .lc-det summary{font-size:12.5px;color:var(--muted);cursor:pointer;padding:4px 0}.lc-det[open]{display:grid;gap:8px}
 .lc-ck{display:flex;align-items:center;gap:8px;font-size:13px}.lc-ck input{width:18px;height:18px}
@@ -2037,31 +2037,52 @@ function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>
   const a=mzfw!=null&&tof!=null?mzfw+tof:null,b=rtow,c=mlw!=null&&trip!=null?mlw+trip:null;
   const abc=[a,b,c],low=abc.every(x=>x!=null)?abc.indexOf(Math.min(a,b,c)):-1,allow=low>=0?abc[low]:null,atl=allow!=null&&ow!=null?allow-ow:null,ud=atl!=null?atl-ttl:null;
   if(tof==null)W.push("اكتب Take-off Fuel|tof");if(trip==null)W.push("اكتب Trip Fuel|trip");if(rtow==null)W.push("اكتب RTOW من الكابتن|rtow");if(mzfw==null||mlw==null)W.push("اكتب MZFW و MLW|"+(mzfw==null?"mzfw":"mlw"));
-  if(dow==null)W.push("القيم الثابتة ناقصة — اختر الطائرة أو اكتب BEW/OPVAR/Pantry");
-  if(ud!=null&&ud<0)W.push(`تجاوز الحمولة بـ ${-ud} كغ (Overload)`);
-  if(zfw!=null&&mzfw!=null&&zfw>mzfw)W.push("ZFW أكبر من MZFW");if(tow!=null&&rtow!=null&&tow>rtow)W.push("TOW أكبر من RTOW");if(law!=null&&mlw!=null&&law>mlw)W.push("LAW أكبر من MLW");
-  if(seats&&J+Y&&seats!==J+Y)W.push(`M+F+C = ${seats} وعدد J+Y = ${J+Y} — غير متطابق|M`);if(!seats&&J+Y)W.push("اكتب عدد الركاب M / F / C / I|M");
+  if(dow==null)W.push("القيم الثابتة ناقصة — اختر الطائرة أو اكتب BEW/OPVAR/Pantry|"+(A.reg?"cfg":"reg"));
+  const LZ=["zfw","tow","law"][low]||"",LN={zfw:"MZFW+TOF",tow:"RTOW",law:"MLW+TRIP"}[LZ];
+  if(ud!=null&&ud<0)W.push(`OVERLOAD: الحمولة أكثر من المسموح بـ ${(-ud).toLocaleString("en-US")} كغ (الحد ${LN}) — نزّل حمولة|b1kg`);
+  if(zfw!=null&&mzfw!=null&&zfw>mzfw)W.push(`ZFW ${zfw} أكبر من MZFW ${mzfw} بـ ${zfw-mzfw} كغ|b1kg`);
+  if(tow!=null&&rtow!=null&&tow>rtow)W.push(`TOW ${tow} أكبر من RTOW ${rtow} بـ ${tow-rtow} كغ|rtow`);
+  if(law!=null&&mlw!=null&&law>mlw)W.push(`LAW ${law} أكبر من MLW ${mlw} بـ ${law-mlw} كغ|trip`);
+  if(tof!=null&&trip!=null&&trip>=tof)W.push("Trip Fuel أكبر من أو يساوي Take-off Fuel|trip");
+  const taxi=g("taxi"),blk=tof!=null?tof+(taxi||0):null;
+  if(tof!=null&&taxi==null)W.push("اكتب Taxi Fuel عشان يطلع الـ Block|taxi");
+  if(tof!=null&&(tof<500||tof>30000))W.push("Take-off Fuel رقم غير منطقي|tof");
+  if(rtow!=null&&mzfw!=null&&rtow<mzfw)W.push("RTOW أقل من MZFW — تأكد من رقم الكابتن|rtow");
+  ["M","F","Ch","I"].forEach(k=>{const v=lcN(V[k]);if(v!=null&&(v<0||v%1))W.push(`عدد الركاب ${k} غير صحيح|${k}`)});
+  if(I>M+F)W.push(`الرضّع (${I}) أكثر من الكبار (${M+F})|I`);
+  if(A.C&&J+Y&&(J>A.C.seats[0]||Y>A.C.seats[1]))W.push(`الركاب J ${J} / Y ${Y} أكثر من مقاعد الطائرة ${A.C.ver}|${J>A.C.seats[0]?"J":"Y"}`);
+  LCCPT.forEach(c=>{const b=cp[c];if(b.bag&&!b.pcs)W.push(`عنبر ${c}: فيه وزن عفش بدون عدد قطع|b${c}BY`);if(b.pcs&&b.bag&&(b.bag/b.pcs<3||b.bag/b.pcs>45))W.push(`عنبر ${c}: متوسط القطعة ${(b.bag/b.pcs).toFixed(1)} كغ — غير منطقي|b${c}kg`)});
+  if(seats&&J+Y&&seats!==J+Y)W.push(`M+F+C = ${seats} وعدد J+Y = ${J+Y} — غير متطابق|M`);if(seats&&!(J+Y))W.push("اكتب عدد J و Y|J");if(!seats&&J+Y)W.push("اكتب عدد الركاب M / F / C / I|M");
   const zA=g("zA"),zB=g("zB"),zC=g("zC");
   /* التوازن من الـ Balance Chart (A320 12J/132Y) */
   let bal=null;const BL=A.C&&A.C.bal;
-  if(BL&&doi!=null){const zs=[zA||0,zB||0,zC||0];if(zs[0]+zs[1]+zs[2]!==J+Y)W.push(`توزيع المناطق A+B+C = ${zs[0]+zs[1]+zs[2]} ≠ ${J+Y}`);
-    const steps=[];let ix=doi;BL.zones.forEach(([n,cap,k],i)=>{if(zs[i]>cap)W.push(`Zone ${n} فيها ${zs[i]} والسعة ${cap}`);const dI=zs[i]*k;steps.push([n,zs[i],dI,ix,ix+dI]);ix+=dI});
-    LCCPT.forEach(c=>{const[k,mx]=BL.cpt[c],w=cp[c].tot;if(w>mx)W.push(`عنبر ${c} وزنه ${w} والحد ${mx}`);const dI=w*k;steps.push([c,w,dI,ix,ix+dI]);ix+=dI});
-    if(cp["3"].tot+cp["4"].tot>BL.c34)W.push(`العنبر 3+4 أكثر من ${BL.c34}`);
+  if(BL&&doi!=null){const zs=[zA||0,zB||0,zC||0];if(zs[0]+zs[1]+zs[2]!==J+Y)W.push(`توزيع المناطق A+B+C = ${zs[0]+zs[1]+zs[2]} ≠ ${J+Y}|zA`);
+    const steps=[];let ix=doi;BL.zones.forEach(([n,cap,k],i)=>{if(zs[i]>cap)W.push(`Zone ${n} فيها ${zs[i]} والسعة ${cap}|z${n}`);const dI=zs[i]*k;steps.push([n,zs[i],dI,ix,ix+dI]);ix+=dI});
+    LCCPT.forEach(c=>{const[k,mx]=BL.cpt[c],w=cp[c].tot;if(w>mx)W.push(`عنبر ${c} وزنه ${w} والحد ${mx}|b${c}kg`);const dI=w*k;steps.push([c,w,dI,ix,ix+dI]);ix+=dI});
+    if(cp["3"].tot+cp["4"].tot>BL.c34)W.push(`العنبر 3+4 وزنهم ${cp["3"].tot+cp["4"].tot} والحد ${BL.c34}|b3kg`);
     const fi=fw=>{if(fw==null)return null;const T=BL.fuel,dens=g("dens")||0.785;let col=0;T.d.forEach((x,i)=>{if(Math.abs(x-dens)<Math.abs(T.d[col]-dens))col=i});
       const r=T.t.reduce((p,q)=>Math.abs(q[0]-fw)<Math.abs(p[0]-fw)?q:p);let v=r[col+1];if(fw>T.t[T.t.length-1][0]+250||v==null)v=T.full[col];return v};
     const lizfw=ix,ftf=fi(tof),litow=ftf!=null?lizfw+ftf:null,flf=tof!=null&&trip!=null?fi(tof-trip):null,lilaw=flf!=null?lizfw+flf:null;
     const mac=(I_,w)=>I_==null||!w?null:((I_-50)*39370/w+742.124-BL.lemac)/BL.mac*100;
     const mz=mac(lizfw,zfw),mt=mac(litow,tow),ml=mac(lilaw,law);let st=mt!=null?(BL.stab[0]-mt)/BL.stab[1]:null;if(st!=null)st=Math.max(-2.5,Math.min(2.5,st));
-    bal={steps,lizfw,litow,lilaw,ftf,mz,mt,ml,st}}
-  return{V,A,s,g,W,bew,bewi,opvT,opviT,pw,pi,adw,adi,dow,doi,M,F,Cc,I,J,Y,seats,paxW,cp,bag,cgo,mail,pcs,codes,ttl,zfw,tof,trip,tow,law,ow,rtow,mzfw,mlw,a,b,c,low,allow,atl,ud,zA,zB,zC,bal,f,date}}
+    bal={steps,lizfw,litow,lilaw,ftf,mz,mt,ml,st};
+    /* حدود التوازن (Envelope) من الرسم في الـ Balance Chart */
+    const E=BL.env;if(E){const at=(P,w)=>{w/=1000;for(let i=0;i<P.length-1;i++){const[a1,b1]=P[i],[a2,b2]=P[i+1];if((w-b1)*(w-b2)<=0&&b1!==b2)return a1+(a2-a1)*(w-b1)/(b2-b1)}return null};
+      const chk=(lab,I_,w,fw,af,go)=>{if(I_==null||w==null)return;const lo=at(fw,w),hi=at(af,w);
+        if(lo!=null&&I_<lo)W.push(`OUT OF TRIM: ${lab} Index ${I_.toFixed(1)} قدّام الحد الأمامي ${lo.toFixed(1)} — حرّك ركاب/عفش للخلف|${go}`);
+        if(hi!=null&&I_>hi)W.push(`OUT OF TRIM: ${lab} Index ${I_.toFixed(1)} ورا الحد الخلفي ${hi.toFixed(1)} — حرّك ركاب/عفش لقدّام|${go}`)};
+      chk("ZFW",lizfw,zfw,E.zf[0],E.zf[1],"zC");chk("TOW",litow,tow,E.to[0],E.to[1],"zC");chk("LAW",lilaw,law,E.to[0],E.to[1],"zC")}
+    if(mt!=null&&mt<27)W.push(`MAC TOW ${mt.toFixed(1)}% أقل من 27% — لازم تصحيح الأداء (Basic Performance) أو RTOW chart المناسب|rtow`);
+    if(tow!=null&&tow<64000&&!/^NIL$/i.test(V.lmc||"NIL"))W.push("LMC ممنوع إذا TOW أقل من 64000 كغ|lmc")}
+  const taxi2=g("taxi"),block=tof!=null?tof+(taxi2||0):null;
+  return{V,A,s,g,W,taxi:taxi2,block,bew,bewi,opvT,opviT,pw,pi,adw,adi,dow,doi,M,F,Cc,I,J,Y,seats,paxW,cp,bag,cgo,mail,pcs,codes,ttl,zfw,tof,trip,tow,law,ow,rtow,mzfw,mlw,a,b,c,low,allow,atl,ud,zA,zB,zC,bal,f,date}}
 /* ---------- الواجهة ---------- */
 function lcField(k,lbl,R,o={}){const v=R.V[k]!=null?R.V[k]:"",ph=o.ph!=null?o.ph:(R.A[o.ak||k]!=null?String(R.A[o.ak||k]):"");
   return`<label class="cs-f"><span>${lbl}</span><input data-l="${k}" value="${escT(v)}" placeholder="${escT(ph)}" ${o.t==="t"?'dir="ltr"':'inputmode="decimal" dir="ltr"'}></label>`}
 function lcSel(k,lbl,opts,cur){return`<label class="cs-f"><span>${lbl}</span><select data-l="${k}">${opts.map(([v,t])=>`<option value="${escT(v)}"${v===cur?" selected":""}>${escT(t)}</option>`).join("")}</select></label>`}
 function lcSum(R){const n=x=>x==null?"—":Math.round(x).toLocaleString("en-US"),lim=["a · MZFW+TOF","b · RTOW","c · MLW+TRIP"];
   const B=R.bal;return`<div class="cs-card lc-sum"><h5>RESULT · النتيجة</h5>
-  <div class="lc-kv">${[["DOW",n(R.dow)],["DOI",R.doi==null?"—":R.doi.toFixed(2)],["TRAFFIC LOAD",n(R.ttl)],["ZFW",n(R.zfw)],["TOW",n(R.tow)],["LAW",n(R.law)]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>
+  <div class="lc-kv">${[["DOW",n(R.dow)],["DOI",R.doi==null?"—":R.doi.toFixed(2)],["TRAFFIC LOAD",n(R.ttl)],["ZFW",n(R.zfw)],["TOW",n(R.tow)],["LAW",n(R.law)],["TAKE-OFF FUEL",n(R.tof)],["TAXI",n(R.taxi)],["BLOCK FUEL",n(R.block)]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>
   <div class="lc-abc">${[R.a,R.b,R.c].map((x,i)=>`<div class="${R.low===i?"on":"off"}"><span>${lim[i]}</span><b>${n(x)}</b></div>`).join("")}</div>
   <div class="lc-kv">${[["ALLOWED TRAFFIC",n(R.atl)],["UNDERLOAD",n(R.ud)]].map(([a,b],i)=>`<div class="${i&&R.ud!=null?(R.ud<0?"bad":"ok"):""}"><span>${a}</span><b>${b}</b></div>`).join("")}</div>
   ${B?`<div class="lc-kv">${[["LIZFW",B.lizfw.toFixed(1)],["LITOW",B.litow==null?"—":B.litow.toFixed(1)],["MAC ZFW",B.mz==null?"—":B.mz.toFixed(1)+"%"],["MAC TOW",B.mt==null?"—":B.mt.toFixed(1)+"%"],["MAC LAW",B.ml==null?"—":B.ml.toFixed(1)+"%"],["STAB",B.st==null?"—":Math.abs(B.st).toFixed(1)+(B.st<0?" DN":" UP")]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>`:`<div class="lc-w i">الـ Balance Chart متوفر لطائرات A320-214 (12J/132Y) فقط</div>`}
@@ -2072,7 +2093,8 @@ function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg
     <div class="cs-g">${lcField("b"+c+"kg","BAG KG",R,{ph:"0"})}${lcField("c"+c,"CARGO KG",R,{ph:"0"})}${lcField("m"+c,"MAIL KG",R,{ph:"0"})}</div></div>`;
   return lcSum(R)+`
   <div class="cs-card"><h5>FUEL · LIMITS — الوقود والحدود</h5>
-    <div class="cs-g">${lcField("tof","TAKE-OFF FUEL",R,{ph:""})}${lcField("trip","TRIP FUEL",R,{ph:""})}${lcField("dens","DENSITY",R)}</div>
+    <div class="cs-g">${lcField("tof","TAKE-OFF FUEL",R,{ph:""})}${lcField("taxi","TAXI FUEL",R,{ph:""})}<label class="cs-f"><span>BLOCK = TOF + TAXI</span><input id="lcBlock" readonly value="${R.block==null?"":R.block}" dir="ltr"></label></div>
+    <div class="cs-g two">${lcField("trip","TRIP FUEL",R,{ph:""})}${lcField("dens","DENSITY",R)}</div>
     <div class="cs-g">${lcField("rtow","RTOW (الكابتن)",R,{ph:""})}${lcField("mzfw","MZFW",R)}${lcField("mlw","MLW",R)}</div></div>
   <div class="cs-card"><h5>AIRCRAFT · الطائرة</h5>
     <div class="cs-g two">${lcField("reg","A/C REG",R,{t:"t",ak:"reg",ph:A.reg||"HZ-"})}${lcSel("cfg","TYPE / CONFIG",[["","تلقائي من التسجيل"],...cfgs],R.V.cfg||"")}</div>
@@ -2099,15 +2121,16 @@ function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg
       <div class="cs-g two">${lcField("from","FROM",R,{t:"t"})}</div></details></div>`}
 function lcRender(){const B=$("lcBody");document.querySelectorAll("#lc .lc-tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===LCTAB));
   if(!LCD){B.innerHTML=`<div class="fm-msg">جاري التحميل…</div>`;return}
-  const R=lcCalc();
+  const R=lcCalc();lcBadge();
   if(LCTAB==="in"){const y=B.scrollTop,op=[...B.querySelectorAll("details")].map(d=>d.open);B.innerHTML=`<div class="cs-body lc-in">${csCan()?"":`<div class="cs-ro">👁️ عرض فقط</div>`}${lcIn(R)}</div>`;
     B.querySelectorAll("details").forEach((d,i)=>{if(op[i])d.open=true});B.scrollTop=y;if(!csCan())B.querySelectorAll("input,select").forEach(e=>e.disabled=true);return}
   B.innerHTML=`<div class="fm-msg">جاري تجهيز النموذج…</div>`;
   lcPage(LCTAB,R).then(cv=>{if(LCTAB==="in")return;cv.className="lc-pv";B.innerHTML="";const w=document.createElement("div");w.className="lc-pvw";
-    if(R.W.length)w.innerHTML=R.W.map(x=>`<div class="lc-w">⚠︎ ${escT(x.split("|")[0])}</div>`).join("");w.appendChild(cv);B.appendChild(w)})
+    if(R.W.length)w.innerHTML=R.W.map(x=>{const[t,k]=x.split("|");return`<button class="lc-w go" data-go="${k||""}">⚠︎ ${escT(t)} <i>← اضغط للتصحيح</i></button>`}).join("");w.appendChild(cv);B.appendChild(w)})
    .catch(e=>{B.innerHTML=`<div class="fm-msg">${e.message==="out"?"سجّل دخولك أول.":"تعذّر فتح النموذج. تأكد من الاتصال."}</div>`})}
-function lcUpd(){if(LCTAB!=="in")return;const s=$("lcBody").querySelector(".lc-sum");if(s)s.outerHTML=lcSum(lcCalc())}
-$("lcBody").addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(!g)return;const el=$("lcBody").querySelector(`[data-l="${g.dataset.go}"]`);if(!el)return;
+function lcUpd(){lcBadge();if(LCTAB!=="in")return;const R=lcCalc(),s=$("lcBody").querySelector(".lc-sum");if(s)s.outerHTML=lcSum(R);const b=$("lcBlock");if(b)b.value=R.block==null?"":R.block}
+function lcBadge(){try{const n=lcCalc().W.length,t=document.querySelector('#lc .lc-tabs [data-t="in"]');t.innerHTML="البيانات"+(n?` <i class="lc-n">${n}</i>`:"")}catch(e){}}
+$("lcBody").addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(!g)return;if(LCTAB!=="in"){LCTAB="in";lcRender()}const el=$("lcBody").querySelector(`[data-l="${g.dataset.go}"]`);if(!el)return;
   const d=el.closest("details");if(d)d.open=true;el.scrollIntoView({block:"center",behavior:"smooth"});el.classList.add("lc-hi");setTimeout(()=>{el.focus({preventScroll:true})},350);setTimeout(()=>el.classList.remove("lc-hi"),2600)});
 $("lcBody").addEventListener("change",e=>{const el=e.target.closest("[data-l]");if(!el)return;const k=el.dataset.l;let v=el.type==="checkbox"?(el.checked?"1":""):el.value.trim();
   if(k==="prep"&&v){LCPREP=v;try{localStorage.setItem("ajf_lc_prep",v)}catch(e){}}
@@ -2157,7 +2180,7 @@ function lcDrawLS(x,R){const s=R.s,{f,date}=R,dd=lcDD(date),r0=v=>v==null?"":Str
   P("lpw",r0(R.paxW));P("lttl",r0(R.ttl));P("ldow",r0(R.dow));P("lzfw",r0(R.zfw));P("lzm",r0(R.mzfw));P("ltof",r0(R.tof));P("ltow",r0(R.tow));P("ltm",r0(R.rtow));
   P("ltrip",r0(R.trip));P("llaw",r0(R.law));P("llm",r0(R.mlw));P("ratl",r0(R.atl));P("rttl",r0(R.ttl));P("rud",r0(R.ud));
   const B=R.bal,cd=Object.entries(R.codes).filter(([,n])=>n).map(([k,n])=>LCCPTC(R,k)).filter(Boolean).join(" ");
-  P("si",[`PANTRY CODE ${R.A.pan}`,R.pcs?`BAG PCS ${s("dest")} ${cd}`:"",s("si")].filter(Boolean).join("\n"));
+  P("si",[`PANTRY CODE ${R.A.pan}`+(R.block!=null?`  BLOCK FUEL ${R.block}${R.taxi!=null?` / TAXI ${R.taxi}`:""}`:""),R.pcs?`BAG PCS ${s("dest")} ${cd}`:"",s("si")].filter(Boolean).join("\n"));
   P("notes",[`DOI ${ix(R.doi)}`+(B?`  LIZFW ${B.lizfw.toFixed(1)}  LITOW ${B.litow==null?"-":B.litow.toFixed(1)}`:""),
     B&&B.mz!=null?`MAC ZFW ${B.mz.toFixed(1)}  TOW ${B.mt==null?"-":B.mt.toFixed(1)}  LAW ${B.ml==null?"-":B.ml.toFixed(1)}`:"",
     B&&B.st!=null?`STAB ${Math.abs(B.st).toFixed(1)} ${B.st<0?"DOWN":"UP"}`+(R.low===2?"  L=LAW LIMITING":R.low===0?"  Z=ZFW LIMITING":R.low===1?"  T=TOW LIMITING":""):"",s("notes")].filter(Boolean).join("\n"));
