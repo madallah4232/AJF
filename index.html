@@ -1980,7 +1980,7 @@ $("fmAll").onclick=()=>{const F=fmCur;if(!F||!F.y||!csCan())return;const V=fmVal
 function fmCard(){const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]||{};
   return`<div class="cs-card fm-card"><h5>FORMS · النماذج</h5><div class="fm-list">${FORMS.map(F=>{const n=Object.keys(V).filter(k=>k.startsWith("f."+F.id+".")).length;
     return`<button data-form="${F.id}"><b>${F.t}</b><span>${F.code}${n?" · ✍︎ "+n:""}</span></button>`}).join("")}</div>
-    <button class="fm-send" id="fmSend" type="button">📧 إرسال جميع النماذج (PDF) لإيميلي</button><p class="fm-sendh">يطلع ملف PDF واحد فيه كل النماذج المعبّاة ← اختر Outlook ← أرسله لإيميلك واطبعه للملف.</p></div><div class="cs-card"><h5>LOAD CONTROL · اللودشيت اليدوي</h5><button class="fm-send lc-open" data-lc type="button">⚖︎ Load Sheet · Balance Chart · LIR</button><p class="fm-sendh">الثابت (BEW، الطاقم، الـ Pantry، الحدود) يتعبّى تلقائي من مستند أوزان الأسطول، وموظف الكنترول يدخل الوقود والركاب والعفش.</p></div>`}
+    <button class="fm-send" id="fmSend" type="button">📧 إرسال جميع النماذج (PDF) لإيميلي</button><p class="fm-sendh">يطلع ملف PDF واحد فيه كل النماذج المعبّاة ← اختر Outlook ← أرسله لإيميلك واطبعه للملف.</p></div>${/^SV/i.test(f.n)?`<div class="cs-card"><h5>LOAD CONTROL · اللودشيت اليدوي</h5><button class="fm-send lc-open" data-lc type="button">⚖︎ Load Sheet · Balance Chart · LIR</button><p class="fm-sendh">الثابت (BEW، الطاقم، الـ Pantry، الحدود) يتعبّى تلقائي من مستند أوزان الأسطول، وموظف الكنترول يدخل الوقود والركاب والعفش.</p></div>`:""}`}
 /* إرسال كل النماذج المعبّاة في PDF واحد عبر قائمة المشاركة (Outlook) */
 let fmReady=null;
 async function fmSendAll(btn){const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]||{},name=`Forms ${f.n} ${iso(date)}.pdf`;
@@ -2138,7 +2138,7 @@ $("lcBody").addEventListener("change",e=>{const el=e.target.closest("[data-l]");
 $("lcBody").addEventListener("input",e=>{if(e.target.closest("[data-l]"))clearTimeout(lcUpd.t),lcUpd.t=setTimeout(()=>{const el=e.target;const k=el.dataset.l;
   const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]=CSV[iso(date)+"_"+f.n]||{};const ov=V["lc."+k];V["lc."+k]=el.value.trim();if(!V["lc."+k])delete V["lc."+k];lcUpd();if(ov!=null)V["lc."+k]=ov;else delete V["lc."+k]},250)});
 document.querySelectorAll("#lc .lc-tabs button").forEach(b=>b.onclick=()=>{LCTAB=b.dataset.t;lcRender()});
-async function openLC(){if(!csCur)return;$("lc").hidden=false;const{f,date}=csCur;$("lcS").textContent=f.n+" AJF→"+f.iata+" · "+fmDate(date);LCTAB="in";
+async function openLC(){if(!csCur||!/^SV/i.test(csCur.f.n))return;$("lc").hidden=false;const{f,date}=csCur;$("lcS").textContent=f.n+" AJF→"+f.iata+" · "+fmDate(date);LCTAB="in";
   $("lcBody").innerHTML=`<div class="fm-msg">جاري التحميل…</div>`;
   try{await lcData();lcRender()}catch(e){$("lcBody").innerHTML=`<div class="fm-msg">${/404|PGRST202/.test(e.message)?"تحتاج تفعيل النماذج من المشرف.":e.message==="out"?"سجّل دخولك أول.":"تعذّر التحميل. تأكد من الاتصال."}</div>`}}
 $("lcBack").onclick=()=>{$("lc").hidden=true;if(csCur&&!$("cs").hidden)renderCS()};
