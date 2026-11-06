@@ -2047,7 +2047,6 @@ function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>
   const taxi=g("taxi"),blk=tof!=null?tof+(taxi||0):null;
   if(tof!=null&&taxi==null)W.push("اكتب Taxi Fuel عشان يطلع الـ Block|taxi");
   if(tof!=null&&(tof<500||tof>30000))W.push("Take-off Fuel رقم غير منطقي|tof");
-  if(rtow!=null&&mzfw!=null&&rtow<mzfw)W.push("RTOW أقل من MZFW — تأكد من رقم الكابتن|rtow");
   ["M","F","Ch","I"].forEach(k=>{const v=lcN(V[k]);if(v!=null&&(v<0||v%1))W.push(`عدد الركاب ${k} غير صحيح|${k}`)});
   if(I>M+F)W.push(`الرضّع (${I}) أكثر من الكبار (${M+F})|I`);
   if(A.C&&J+Y&&(J>A.C.seats[0]||Y>A.C.seats[1]))W.push(`الركاب J ${J} / Y ${Y} أكثر من مقاعد الطائرة ${A.C.ver}|${J>A.C.seats[0]?"J":"Y"}`);
