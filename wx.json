@@ -1,6 +1,66 @@
 {
-  "fetched": "2026-11-06T20:05:31Z",
-  "metar": [],
+  "fetched": "2026-11-06T21:02:06Z",
+  "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-06T20:27:28.552Z",
+      "obsTime": 1793996580,
+      "reportTime": "2026-11-06T20:23:00.000Z",
+      "temp": 22,
+      "dewp": 13,
+      "wdir": 140,
+      "wspd": 11,
+      "visib": "6+",
+      "altim": 1014,
+      "qcField": 0,
+      "wxString": "TSRA",
+      "metarType": "SPECI",
+      "rawOb": "SPECI OESK 062023Z 14011KT 9999 TSRA FEW030CB BKN040 22/13 Q1014",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "BKN",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 3000
+        },
+        {
+          "cover": "BKN",
+          "base": 4000
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-06T20:11:53.942Z",
+      "obsTime": 1793995200,
+      "reportTime": "2026-11-06T20:00:00.000Z",
+      "temp": 22,
+      "dewp": 12,
+      "wdir": 110,
+      "wspd": 12,
+      "visib": "6+",
+      "altim": 1014,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 062000Z 11012KT 9999 BKN040 22/12 Q1014 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "BKN",
+      "clouds": [
+        {
+          "cover": "BKN",
+          "base": 4000
+        }
+      ],
+      "fltCat": "VFR"
+    }
+  ],
   "taf": [
     {
       "icaoId": "OESK",
