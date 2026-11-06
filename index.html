@@ -413,7 +413,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .lc-kv span,.lc-abc span{font:10px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lc-kv b,.lc-abc b{font:700 15px var(--mono)}
 .lc-abc .on{outline:2px solid var(--go);outline-offset:-2px}.lc-abc .off b{text-decoration:line-through;opacity:.55}
 .lc-kv .ok b{color:var(--go)}.lc-kv .bad b{color:var(--warn)}
-.lc-w{font-size:12px;color:var(--warn);background:color-mix(in oklab,var(--warn) 12%,transparent);border-radius:8px;padding:6px 9px;line-height:1.5}.lc-w.i{color:var(--muted);background:var(--raise)}
+.lc-w{font-size:12px;color:var(--warn);background:color-mix(in oklab,var(--warn) 12%,transparent);border-radius:8px;padding:6px 9px;line-height:1.5}.lc-w.go{display:block;width:100%;text-align:start;border:0;font:inherit;font-size:13px;cursor:pointer}.lc-w.go i{font-style:normal;opacity:.75;font-size:11.5px}.lc-hi{outline:3px solid var(--amber)!important;outline-offset:1px;animation:lcp .6s 3}@keyframes lcp{50%{outline-color:transparent}}.lc-w.i{color:var(--muted);background:var(--raise)}
 .lc-cpt{display:grid;gap:6px;padding:8px;border:1px solid var(--line);border-radius:12px}.lc-cpt>b{font:700 12px var(--mono);color:var(--muted);direction:ltr;text-align:left}
 .lc-det summary{font-size:12.5px;color:var(--muted);cursor:pointer;padding:4px 0}.lc-det[open]{display:grid;gap:8px}
 .lc-ck{display:flex;align-items:center;gap:8px;font-size:13px}.lc-ck input{width:18px;height:18px}
@@ -2031,16 +2031,16 @@ function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>
   const paxW=(M+F)*aw+Cc*cw+I*iw,seats=M+F+Cc;
   const cp={};let bag=0,cgo=0,mail=0,pcs=0;const codes={};
   LCCPT.forEach(c=>{const b=lcN(V["b"+c+"kg"])||0,cg=lcN(V["c"+c])||0,ml=lcN(V["m"+c])||0;let p=0;LCBC.forEach(k=>{const n=lcN(V["b"+c+k])||0;p+=n;codes[k]=(codes[k]||0)+n});
-    if(p&&!b)W.push(`عنبر ${c}: فيه ${p} قطعة بدون وزن`);cp[c]={bag:b,cgo:cg,mail:ml,pcs:p,tot:b+cg+ml};bag+=b;cgo+=cg;mail+=ml;pcs+=p});
+    if(p&&!b)W.push(`عنبر ${c}: فيه ${p} قطعة بدون وزن|b${c}kg`);cp[c]={bag:b,cgo:cg,mail:ml,pcs:p,tot:b+cg+ml};bag+=b;cgo+=cg;mail+=ml;pcs+=p});
   const ttl=paxW+bag+cgo+mail,zfw=dow!=null?dow+ttl:null,tof=g("tof"),trip=g("trip"),rtow=g("rtow"),mzfw=g("mzfw"),mlw=g("mlw");
   const tow=zfw!=null&&tof!=null?zfw+tof:null,law=tow!=null&&trip!=null?tow-trip:null,ow=dow!=null&&tof!=null?dow+tof:null;
   const a=mzfw!=null&&tof!=null?mzfw+tof:null,b=rtow,c=mlw!=null&&trip!=null?mlw+trip:null;
   const abc=[a,b,c],low=abc.every(x=>x!=null)?abc.indexOf(Math.min(a,b,c)):-1,allow=low>=0?abc[low]:null,atl=allow!=null&&ow!=null?allow-ow:null,ud=atl!=null?atl-ttl:null;
-  if(tof==null)W.push("اكتب Take-off Fuel");if(trip==null)W.push("اكتب Trip Fuel");if(rtow==null)W.push("اكتب RTOW من الكابتن");if(mzfw==null||mlw==null)W.push("اكتب MZFW و MLW");
+  if(tof==null)W.push("اكتب Take-off Fuel|tof");if(trip==null)W.push("اكتب Trip Fuel|trip");if(rtow==null)W.push("اكتب RTOW من الكابتن|rtow");if(mzfw==null||mlw==null)W.push("اكتب MZFW و MLW|"+(mzfw==null?"mzfw":"mlw"));
   if(dow==null)W.push("القيم الثابتة ناقصة — اختر الطائرة أو اكتب BEW/OPVAR/Pantry");
   if(ud!=null&&ud<0)W.push(`تجاوز الحمولة بـ ${-ud} كغ (Overload)`);
   if(zfw!=null&&mzfw!=null&&zfw>mzfw)W.push("ZFW أكبر من MZFW");if(tow!=null&&rtow!=null&&tow>rtow)W.push("TOW أكبر من RTOW");if(law!=null&&mlw!=null&&law>mlw)W.push("LAW أكبر من MLW");
-  if(seats&&J+Y&&seats!==J+Y)W.push(`M+F+C = ${seats} وعدد J+Y = ${J+Y} — غير متطابق`);
+  if(seats&&J+Y&&seats!==J+Y)W.push(`M+F+C = ${seats} وعدد J+Y = ${J+Y} — غير متطابق|M`);if(!seats&&J+Y)W.push("اكتب عدد الركاب M / F / C / I|M");
   const zA=g("zA"),zB=g("zB"),zC=g("zC");
   /* التوازن من الـ Balance Chart (A320 12J/132Y) */
   let bal=null;const BL=A.C&&A.C.bal;
@@ -2065,12 +2065,15 @@ function lcSum(R){const n=x=>x==null?"—":Math.round(x).toLocaleString("en-US")
   <div class="lc-abc">${[R.a,R.b,R.c].map((x,i)=>`<div class="${R.low===i?"on":"off"}"><span>${lim[i]}</span><b>${n(x)}</b></div>`).join("")}</div>
   <div class="lc-kv">${[["ALLOWED TRAFFIC",n(R.atl)],["UNDERLOAD",n(R.ud)]].map(([a,b],i)=>`<div class="${i&&R.ud!=null?(R.ud<0?"bad":"ok"):""}"><span>${a}</span><b>${b}</b></div>`).join("")}</div>
   ${B?`<div class="lc-kv">${[["LIZFW",B.lizfw.toFixed(1)],["LITOW",B.litow==null?"—":B.litow.toFixed(1)],["MAC ZFW",B.mz==null?"—":B.mz.toFixed(1)+"%"],["MAC TOW",B.mt==null?"—":B.mt.toFixed(1)+"%"],["MAC LAW",B.ml==null?"—":B.ml.toFixed(1)+"%"],["STAB",B.st==null?"—":Math.abs(B.st).toFixed(1)+(B.st<0?" DN":" UP")]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>`:`<div class="lc-w i">الـ Balance Chart متوفر لطائرات A320-214 (12J/132Y) فقط</div>`}
-  ${R.W.map(w=>`<div class="lc-w">⚠︎ ${escT(w)}</div>`).join("")}</div>`}
+  ${R.W.map(w=>{const[t,k]=w.split("|");return k?`<button class="lc-w go" data-go="${k}">⚠︎ ${escT(t)} <i>← اضغط هنا</i></button>`:`<div class="lc-w">⚠︎ ${escT(t)}</div>`}).join("")}</div>`}
 function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg[k].type+" · "+D.cfg[k].ver]);
   const crews=C?Object.keys(C.opv):["2/5"],pans=C?Object.keys(C.pan):["C"],nr=A.reg&&!D.reg[A.reg];
   const cpt=c=>`<div class="lc-cpt"><b>CMPT ${c}</b><div class="lc-g4">${LCBC.map(k=>lcField("b"+c+k,k+" pcs",R,{ph:"0"})).join("")}</div>
     <div class="cs-g">${lcField("b"+c+"kg","BAG KG",R,{ph:"0"})}${lcField("c"+c,"CARGO KG",R,{ph:"0"})}${lcField("m"+c,"MAIL KG",R,{ph:"0"})}</div></div>`;
   return lcSum(R)+`
+  <div class="cs-card"><h5>FUEL · LIMITS — الوقود والحدود</h5>
+    <div class="cs-g">${lcField("tof","TAKE-OFF FUEL",R,{ph:""})}${lcField("trip","TRIP FUEL",R,{ph:""})}${lcField("dens","DENSITY",R)}</div>
+    <div class="cs-g">${lcField("rtow","RTOW (الكابتن)",R,{ph:""})}${lcField("mzfw","MZFW",R)}${lcField("mlw","MLW",R)}</div></div>
   <div class="cs-card"><h5>AIRCRAFT · الطائرة</h5>
     <div class="cs-g two">${lcField("reg","A/C REG",R,{t:"t",ak:"reg",ph:A.reg||"HZ-"})}${lcSel("cfg","TYPE / CONFIG",[["","تلقائي من التسجيل"],...cfgs],R.V.cfg||"")}</div>
     ${nr?`<div class="lc-w">التسجيل ${escT(A.reg)} مو موجود في مستند الأوزان — اختر النوع واكتب BEW يدوي</div>`:""}
@@ -2081,9 +2084,6 @@ function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg
       ${lcField("pw","PANTRY KG",R)}${lcField("pi","PANTRY IDX",R)}${lcField("ww","WATER KG",R)}${lcField("wi","WATER IDX",R)}
       ${lcField("adw","ADD'L KG",R)}${lcField("adi","ADD'L IDX",R)}</div>
       <div class="lc-w i">المستند قديم (2022–2024): قارن BEW والـ Pantry بآخر Load Sheet من النظام.</div></details></div>
-  <div class="cs-card"><h5>FUEL · LIMITS — الوقود والحدود</h5>
-    <div class="cs-g">${lcField("tof","TAKE-OFF FUEL",R,{ph:""})}${lcField("trip","TRIP FUEL",R,{ph:""})}${lcField("dens","DENSITY",R)}</div>
-    <div class="cs-g">${lcField("rtow","RTOW (الكابتن)",R,{ph:""})}${lcField("mzfw","MZFW",R)}${lcField("mlw","MLW",R)}</div></div>
   <div class="cs-card"><h5>PASSENGERS · الركاب</h5>
     <div class="cs-g two">${lcField("J","J",R)}${lcField("Y","Y",R)}</div>
     <div class="lc-g4">${lcField("M","M",R,{ph:"0"})}${lcField("F","F",R,{ph:"0"})}${lcField("Ch","C (طفل)",R,{ph:"0"})}${lcField("I","I (رضيع)",R,{ph:"0"})}</div>
@@ -2104,9 +2104,11 @@ function lcRender(){const B=$("lcBody");document.querySelectorAll("#lc .lc-tabs 
     B.querySelectorAll("details").forEach((d,i)=>{if(op[i])d.open=true});B.scrollTop=y;if(!csCan())B.querySelectorAll("input,select").forEach(e=>e.disabled=true);return}
   B.innerHTML=`<div class="fm-msg">جاري تجهيز النموذج…</div>`;
   lcPage(LCTAB,R).then(cv=>{if(LCTAB==="in")return;cv.className="lc-pv";B.innerHTML="";const w=document.createElement("div");w.className="lc-pvw";
-    if(R.W.length)w.innerHTML=R.W.map(x=>`<div class="lc-w">⚠︎ ${escT(x)}</div>`).join("");w.appendChild(cv);B.appendChild(w)})
+    if(R.W.length)w.innerHTML=R.W.map(x=>`<div class="lc-w">⚠︎ ${escT(x.split("|")[0])}</div>`).join("");w.appendChild(cv);B.appendChild(w)})
    .catch(e=>{B.innerHTML=`<div class="fm-msg">${e.message==="out"?"سجّل دخولك أول.":"تعذّر فتح النموذج. تأكد من الاتصال."}</div>`})}
 function lcUpd(){if(LCTAB!=="in")return;const s=$("lcBody").querySelector(".lc-sum");if(s)s.outerHTML=lcSum(lcCalc())}
+$("lcBody").addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(!g)return;const el=$("lcBody").querySelector(`[data-l="${g.dataset.go}"]`);if(!el)return;
+  const d=el.closest("details");if(d)d.open=true;el.scrollIntoView({block:"center",behavior:"smooth"});el.classList.add("lc-hi");setTimeout(()=>{el.focus({preventScroll:true})},350);setTimeout(()=>el.classList.remove("lc-hi"),2600)});
 $("lcBody").addEventListener("change",e=>{const el=e.target.closest("[data-l]");if(!el)return;const k=el.dataset.l;let v=el.type==="checkbox"?(el.checked?"1":""):el.value.trim();
   if(k==="prep"&&v){LCPREP=v;try{localStorage.setItem("ajf_lc_prep",v)}catch(e){}}
   if(k==="reg"&&v)v=v.toUpperCase();csSet("lc."+k,v);if(["reg","cfg","crew","pan","adl","cbag"].includes(k))lcRender();else lcUpd()});
