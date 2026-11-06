@@ -2051,7 +2051,7 @@ function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>
   ["M","F","Ch","I"].forEach(k=>{const v=lcN(V[k]);if(v!=null&&(v<0||v%1))W.push(`عدد الركاب ${k} غير صحيح|${k}`)});
   if(I>M+F)W.push(`الرضّع (${I}) أكثر من الكبار (${M+F})|I`);
   if(A.C&&J+Y&&(J>A.C.seats[0]||Y>A.C.seats[1]))W.push(`الركاب J ${J} / Y ${Y} أكثر من مقاعد الطائرة ${A.C.ver}|${J>A.C.seats[0]?"J":"Y"}`);
-  LCCPT.forEach(c=>{const b=cp[c];if(b.bag&&!b.pcs)W.push(`عنبر ${c}: فيه وزن عفش بدون عدد قطع|b${c}BY`);if(b.pcs&&b.bag&&(b.bag/b.pcs<3||b.bag/b.pcs>45))W.push(`عنبر ${c}: متوسط القطعة ${(b.bag/b.pcs).toFixed(1)} كغ — غير منطقي|b${c}kg`)});
+  LCCPT.forEach(c=>{const b=cp[c];if(b.bag&&!b.pcs)W.push(`عنبر ${c}: فيه وزن عفش بدون عدد قطع|b${c}BY`);if(b.pcs&&b.bag&&(b.bag/b.pcs<3||b.bag/b.pcs>45))W.push(`عنبر ${c}: ${b.pcs} قطعة (${LCBC.filter(k=>lcN(V["b"+c+k])).map(k=>k+" "+lcN(V["b"+c+k])).join(" + ")}) ووزنها ${b.bag} كغ = متوسط ${(b.bag/b.pcs).toFixed(1)} كغ للقطعة — غير منطقي|b${c}kg`)});
   if(seats&&J+Y&&seats!==J+Y)W.push(`M+F+C = ${seats} وعدد J+Y = ${J+Y} — غير متطابق|M`);if(seats&&!(J+Y))W.push("اكتب عدد J و Y|J");if(!seats&&J+Y)W.push("اكتب عدد الركاب M / F / C / I|M");
   const zA=g("zA"),zB=g("zB"),zC=g("zC");
   /* التوازن من الـ Balance Chart (A320 12J/132Y) */
