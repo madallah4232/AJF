@@ -369,7 +369,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .fm-tools{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
 .fm-tools button.all{width:auto;white-space:nowrap;flex:none;padding:0 12px;font:700 14px var(--body);background:color-mix(in oklab,var(--go) 18%,var(--panel));color:var(--go);border-color:color-mix(in oklab,var(--go) 45%,var(--line))}
 .fm-tools button{width:38px;height:34px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font:700 18px var(--mono)}
-.fm-body{overflow:auto;overscroll-behavior:contain;padding:14px 10px calc(90px + env(safe-area-inset-bottom));--z:1}
+.fm-body{overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y;padding:14px 10px calc(90px + env(safe-area-inset-bottom));--z:1}
 .fm-pg{position:relative;width:calc(100% * var(--z));max-width:calc(900px * var(--z));margin:0 auto 16px;background:#fff;container-type:inline-size;box-shadow:0 8px 30px rgba(0,0,0,.45);direction:ltr}
 .fm-pg img{position:absolute;inset:0;width:100%;height:100%;user-select:none;-webkit-user-select:none;pointer-events:none}
 .fm-c{position:absolute;padding:0 1px;border:0;border-radius:2px;background:rgba(255,190,40,.16);color:#1b2f8a;font:600 calc(var(--fs)*100cqw)/1 system-ui,-apple-system,Tahoma,Arial,sans-serif;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;unicode-bidi:plaintext}
@@ -1877,12 +1877,31 @@ async function openForm(id){const F=FORMS.find(x=>x.id===id);if(!F||!csCur)retur
   $("fmBody").innerHTML=`<div class="fm-msg">جاري فتح النموذج…</div>`;
   try{await Promise.all(F.p.map(P=>fmImg(P.f)));fmRender()}
   catch(e){$("fmBody").innerHTML=`<div class="fm-msg">${/404|PGRST202/.test(e.message)?"النماذج تحتاج تفعيل مرة وحدة من المشرف (ملف ajf_forms_key.sql في Supabase).":e.message==="out"?"سجّل دخولك أول.":"تعذّر فتح النموذج. تأكد من الاتصال وجرّب مرة ثانية."}</div>`}}
+let fmEl=null;
 function fmPop(sel,el){fmSel=sel;const v=sel.v||"",P=$("fmPop");$("fmIn").value=v;$("fmDel").hidden=!v;
-  document.querySelectorAll(".fm-edit").forEach(x=>x.classList.remove("fm-edit"));
-  if(el){el.classList.add("fm-edit");const r=el.getBoundingClientRect(),W=Math.min(340,innerWidth-16);P.style.width=W+"px";P.hidden=false;
-    const ph=P.offsetHeight,below=innerHeight-r.bottom;P.style.left=Math.max(8,Math.min(innerWidth-W-8,r.left+r.width/2-W/2))+"px";
-    P.style.top=(below>ph+16?r.bottom+8:Math.max(8,r.top-ph-8))+"px"}else P.hidden=false;
-  setTimeout(()=>$("fmIn").focus({preventScroll:true}),60)}
+  document.querySelectorAll(".fm-edit").forEach(x=>x.classList.remove("fm-edit"));fmEl=el||null;if(el)el.classList.add("fm-edit");
+  P.hidden=false;fmPlace();setTimeout(()=>{$("fmIn").focus({preventScroll:true});fmPlace()},60)}
+/* مكان نافذة الكتابة: صغيرة وجنب الخانة دائماً، حتى لو الصفحة مكبّرة أو الكيبورد مفتوح */
+function fmPlace(){const P=$("fmPop");if(P.hidden)return;const vv=window.visualViewport,s=vv?vv.scale:1,ox=vv?vv.offsetLeft:0,oy=vv?vv.offsetTop:0,
+  SW=(vv?vv.width:innerWidth)*s,SH=(vv?vv.height:innerHeight)*s,Wp=Math.min(340,SW-16);
+  P.style.width=Wp+"px";P.style.transformOrigin="0 0";P.style.transform=s!==1?`scale(${1/s})`:"";const ph=P.offsetHeight;
+  let L=(SW-Wp)/2,T=SH-ph-8;
+  if(fmEl&&fmEl.isConnected){let r=fmEl.getBoundingClientRect();let st=(r.top-oy)*s,sb=(r.bottom-oy)*s;
+    if(sb<0||st>SH-ph-24){const B=$("fmBody"),br=B.getBoundingClientRect();B.scrollTop+=r.top-br.top-Math.max(60,(br.height-ph)/3);r=fmEl.getBoundingClientRect();st=(r.top-oy)*s;sb=(r.bottom-oy)*s}
+    const sl=(r.left-ox)*s,sw=r.width*s;L=Math.max(8,Math.min(SW-Wp-8,sl+sw/2-Wp/2));
+    T=SH-sb>ph+16?sb+8:st>ph+16?st-ph-8:Math.max(8,SH-ph-8)}
+  P.style.left=(ox+L/s)+"px";P.style.top=(oy+T/s)+"px"}
+if(window.visualViewport){visualViewport.addEventListener("resize",fmPlace);visualViewport.addEventListener("scroll",fmPlace)}
+$("fmBody").addEventListener("scroll",()=>{if(!$("fmPop").hidden)fmPlace()},{passive:true});
+/* تكبير بإصبعين داخل النموذج نفسه (بدل تكبير الصفحة كاملة اللي يلخبط الكتابة) */
+function fmSetZoom(z,cx,cy){const B=$("fmBody"),r=B.getBoundingClientRect(),old=fmZoom;z=Math.max(1,Math.min(3,z));if(Math.abs(z-old)<.005)return;
+  const ax=(cx==null?r.left+r.width/2:cx)-r.left,ay=(cy==null?r.top+r.height/2:cy)-r.top,px=B.scrollLeft+ax,py=B.scrollTop+ay;
+  fmZoom=+z.toFixed(2);B.style.setProperty("--z",fmZoom);const k=fmZoom/old;B.scrollLeft=px*k-ax;B.scrollTop=py*k-ay;fmPlace()}
+{let p0=null;const B=$("fmBody"),dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  B.addEventListener("touchstart",e=>{if(e.touches.length===2){p0={d:dist(e.touches),z:fmZoom}}},{passive:true});
+  B.addEventListener("touchmove",e=>{if(p0&&e.touches.length===2){e.preventDefault();const t=e.touches;fmSetZoom(p0.z*dist(t)/p0.d,(t[0].clientX+t[1].clientX)/2,(t[0].clientY+t[1].clientY)/2)}},{passive:false});
+  B.addEventListener("touchend",e=>{if(e.touches.length<2)p0=null},{passive:true});
+  ["gesturestart","gesturechange"].forEach(n=>document.addEventListener(n,e=>{if(!$("fm").hidden||!$("lc").hidden)e.preventDefault()},{passive:false}))}
 function fmSave(v){const s=fmSel;$("fmPop").hidden=true;fmSel=null;if(!s)return;v=String(v==null?"":v).trim();
   if(s.pt){if(!v&&!s.k)return;const k=s.k||`f.${fmCur.id}.p${Date.now().toString(36)}`;csSet(k,v?`${s.pi}|${s.x.toFixed(4)}|${s.y.toFixed(4)}|${v.replace(/\|/g,"/")}`:"")}
   else csSet(s.k,v);fmRender();setTimeout(()=>{$("fmSaved").textContent=$("csSaved").textContent},900)}
@@ -1904,8 +1923,8 @@ $("fmPop").addEventListener("click",e=>{const b=e.target.closest("button");if(!b
   if(b.dataset.q)fmSave(b.dataset.q);else if(b.id==="fmOk")fmSave($("fmIn").value);else if(b.id==="fmDel")fmSave("");else if(b.id==="fmX"){$("fmPop").hidden=true;fmSel=null;document.querySelectorAll(".fm-edit").forEach(x=>x.classList.remove("fm-edit"))}});
 $("fmIn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fmSave($("fmIn").value)}});
 $("fmBack").onclick=()=>{$("fm").hidden=true;$("fmPop").hidden=true;if(csCur&&!$("cs").hidden)renderCS()};
-$("fmZi").onclick=()=>{fmZoom=Math.min(2.6,+(fmZoom+.6).toFixed(1));$("fmBody").style.setProperty("--z",fmZoom)};
-$("fmZo").onclick=()=>{fmZoom=Math.max(1,+(fmZoom-.6).toFixed(1));$("fmBody").style.setProperty("--z",fmZoom)};
+$("fmZi").onclick=()=>fmSetZoom(fmZoom+.5);
+$("fmZo").onclick=()=>fmSetZoom(fmZoom-.5);
 let fmClr=0;$("fmClear").onclick=()=>{const b=$("fmClear");if(!csCan())return;if(Date.now()-fmClr>3000){fmClr=Date.now();b.textContent="اضغط مرة ثانية";setTimeout(()=>b.textContent="مسح",3000);return}
   fmClr=0;b.textContent="مسح";const V=fmVals();Object.keys(V).filter(k=>k.startsWith("f."+fmCur.id+".")).forEach(k=>csSet(k,""));fmRender()};
 /* PDF: نرسم صفحة النموذج الأصلية بدقتها الكاملة ونكتب القيم فوقها */
