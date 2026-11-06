@@ -2212,7 +2212,7 @@ function lcDrawLIR(x,R){const{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y,s,pt=10,w=
     if(!L.length){t(X,325,"NIL");return}t(X,320,R.s("dest"));let y=340;L.forEach(l=>{t(X,y,l);y+=19});if(q.bag)t(X,y+4,`B ${q.bag} KG`,9,400)});
   const cd=Object.entries(R.codes).filter(([,n])=>n).map(([k,n])=>`${k} ${n}`).join("  ");
   t(90,738,`TOTAL ${R.s("dest")} ${R.pcs} PCS / ${R.bag} KG${cd?` (${cd})`:""}.  C ${R.cgo}  M ${R.mail}.`,8,400);
-  const BL=R.A.C&&R.A.C.bal;t(90,752,(BL?`CMPT 1 ${R.cp["1"].tot} / ${BL.cpt["1"][1]}   CMPT 3+4 ${R.cp["3"].tot+R.cp["4"].tot} / ${BL.c34}   CMPT 5 ${R.cp["5"].tot} / ${BL.cpt["5"][1]}   `:"")+`NOTOC: ${R.s("notoc")}`,8,400)}
+  const BL=R.A.C&&R.A.C.bal;t(90,752,(BL?`CMPT 1: ${R.cp["1"].tot} KG (MAX ${BL.cpt["1"][1]})   CMPT 3+4: ${R.cp["3"].tot+R.cp["4"].tot} KG (MAX ${BL.c34})   CMPT 5: ${R.cp["5"].tot} KG (MAX ${BL.cpt["5"][1]})   `:"")+`NOTOC: ${R.s("notoc")}`,8,400)}
 /* PDF: الثلاثة في ملف واحد */
 let lcReady=null;
 async function lcPDF(){const b=$("lcPdf"),t0="PDF · إرسال الثلاثة",{f,date}=csCur,name=`LoadControl ${f.n} ${iso(date)}.pdf`;
