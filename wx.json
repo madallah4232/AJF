@@ -1,34 +1,6 @@
 {
-  "fetched": "2026-11-06T19:16:27Z",
-  "metar": [
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-06T17:04:06.527Z",
-      "obsTime": 1793984400,
-      "reportTime": "2026-11-06T17:00:00.000Z",
-      "temp": 24,
-      "dewp": 10,
-      "wdir": 100,
-      "wspd": 5,
-      "visib": "6+",
-      "altim": 1013,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 061700Z 10005KT 9999 BKN040 24/10 Q1013 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "BKN",
-      "clouds": [
-        {
-          "cover": "BKN",
-          "base": 4000
-        }
-      ],
-      "fltCat": "VFR"
-    }
-  ],
+  "fetched": "2026-11-06T20:05:31Z",
+  "metar": [],
   "taf": [
     {
       "icaoId": "OESK",
