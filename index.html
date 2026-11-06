@@ -403,6 +403,23 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .fm-pop .row2 #fmOk{background:var(--amber);color:#1a1205;border:0;flex:1.6}.fm-pop .row2 #fmDel{color:var(--warn)}
 .fm-list{display:grid;gap:8px}
 .fm-list button{display:grid;gap:2px;text-align:start;padding:11px 13px;border-radius:12px;background:var(--raise);border:1px solid var(--line);color:var(--ink)}
+.lc-tabs{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--line);overflow-x:auto}
+.lc-tabs button{flex:1;height:36px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font:700 13px var(--body);white-space:nowrap;padding:0 10px}
+.lc-tabs button.on{background:var(--amber);color:#1a1205;border-color:var(--amber)}
+.lc-body{overflow:auto;overscroll-behavior:contain;min-height:0}
+.lc-g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.lc-kv,.lc-abc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.lc-kv div,.lc-abc div{background:var(--raise);border-radius:10px;padding:6px 6px;display:grid;gap:2px;text-align:center;min-width:0}
+.lc-kv span,.lc-abc span{font:10px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lc-kv b,.lc-abc b{font:700 15px var(--mono)}
+.lc-abc .on{outline:2px solid var(--go);outline-offset:-2px}.lc-abc .off b{text-decoration:line-through;opacity:.55}
+.lc-kv .ok b{color:var(--go)}.lc-kv .bad b{color:var(--warn)}
+.lc-w{font-size:12px;color:var(--warn);background:color-mix(in oklab,var(--warn) 12%,transparent);border-radius:8px;padding:6px 9px;line-height:1.5}.lc-w.i{color:var(--muted);background:var(--raise)}
+.lc-cpt{display:grid;gap:6px;padding:8px;border:1px solid var(--line);border-radius:12px}.lc-cpt>b{font:700 12px var(--mono);color:var(--muted);direction:ltr;text-align:left}
+.lc-det summary{font-size:12.5px;color:var(--muted);cursor:pointer;padding:4px 0}.lc-det[open]{display:grid;gap:8px}
+.lc-ck{display:flex;align-items:center;gap:8px;font-size:13px}.lc-ck input{width:18px;height:18px}
+.lc-pvw{padding:12px 10px calc(90px + env(safe-area-inset-bottom));display:grid;gap:8px;max-width:900px;margin:0 auto}
+.lc-pv{width:100%;height:auto;border-radius:6px;background:#fff;display:block}
+.lc .cs-f span{font-size:10px}
 .fm-send{width:100%;margin-top:10px;padding:12px;border-radius:12px;background:#0a64c8;color:#fff;border:0;font-weight:700;font-size:14px}.fm-send:disabled{opacity:.7}.fm-sendh{margin:6px 2px 0;font-size:11.5px;color:var(--muted);line-height:1.5}.fm-list button b{font-size:14px}.fm-list button span{font:12px var(--mono);color:var(--muted)}
 #csPrint{display:none}
 #csPrint.render{display:block;position:fixed;left:-10000px;top:0;width:794px;background:#fff}
@@ -752,6 +769,16 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
   </div>
   <div class="fm-pad" id="fmPad" hidden><div class="in"><b>ارسم توقيعك</b><span id="fmPadH">بإصبعك داخل المربع — ينحفظ على جوالك للمرات الجاية</span><canvas id="fmPadC"></canvas>
     <div class="row2"><button id="fmPadOk">حفظ التوقيع</button><button id="fmPadClr">مسح</button><button id="fmPadX">إلغاء</button></div></div></div>
+</div>
+<div class="fm lc" id="lc" role="dialog" aria-modal="true" aria-labelledby="lcT" hidden>
+  <div class="trk-top">
+    <button class="trk-back" id="lcBack" aria-label="رجوع"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div><b id="lcT">Load Control</b><span id="lcS"></span></div>
+    <span class="cs-saved" id="lcSaved"></span>
+  </div>
+  <div class="lc-tabs"><button data-t="in" class="on">البيانات</button><button data-t="ls">Load Sheet</button><button data-t="bc">Balance</button><button data-t="lir">LIR</button></div>
+  <div class="lc-body" id="lcBody"></div>
+  <div class="cs-bar"><button class="p" id="lcPdf">PDF · إرسال الثلاثة</button></div>
 </div>
 <div id="csPrint"></div>
 <button class="acct-b" id="acctBtn" aria-label="الحساب" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><i id="acctN" hidden></i></button>
@@ -1953,7 +1980,7 @@ $("fmAll").onclick=()=>{const F=fmCur;if(!F||!F.y||!csCan())return;const V=fmVal
 function fmCard(){const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]||{};
   return`<div class="cs-card fm-card"><h5>FORMS · النماذج</h5><div class="fm-list">${FORMS.map(F=>{const n=Object.keys(V).filter(k=>k.startsWith("f."+F.id+".")).length;
     return`<button data-form="${F.id}"><b>${F.t}</b><span>${F.code}${n?" · ✍︎ "+n:""}</span></button>`}).join("")}</div>
-    <button class="fm-send" id="fmSend" type="button">📧 إرسال جميع النماذج (PDF) لإيميلي</button><p class="fm-sendh">يطلع ملف PDF واحد فيه كل النماذج المعبّاة ← اختر Outlook ← أرسله لإيميلك واطبعه للملف.</p></div>`}
+    <button class="fm-send" id="fmSend" type="button">📧 إرسال جميع النماذج (PDF) لإيميلي</button><p class="fm-sendh">يطلع ملف PDF واحد فيه كل النماذج المعبّاة ← اختر Outlook ← أرسله لإيميلك واطبعه للملف.</p></div><div class="cs-card"><h5>LOAD CONTROL · اللودشيت اليدوي</h5><button class="fm-send lc-open" data-lc type="button">⚖︎ Load Sheet · Balance Chart · LIR</button><p class="fm-sendh">الثابت (BEW، الطاقم، الـ Pantry، الحدود) يتعبّى تلقائي من مستند أوزان الأسطول، وموظف الكنترول يدخل الوقود والركاب والعفش.</p></div>`}
 /* إرسال كل النماذج المعبّاة في PDF واحد عبر قائمة المشاركة (Outlook) */
 let fmReady=null;
 async function fmSendAll(btn){const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]||{},name=`Forms ${f.n} ${iso(date)}.pdf`;
@@ -1970,7 +1997,210 @@ async function fmSendAll(btn){const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]||{},n
     try{await share(file);btn.textContent="📧 إرسال جميع النماذج (PDF) لإيميلي"}
     catch(e){if(e.name==="AbortError"){btn.textContent="📧 إرسال جميع النماذج (PDF) لإيميلي";return}fmReady=file;btn.textContent="✓ الملف جاهز — اضغط للإرسال"}}
   catch(e){btn.disabled=false;btn.textContent=e.message==="out"?"سجّل دخولك أول":"تعذّر — جرّب مرة ثانية";setTimeout(()=>btn.textContent="📧 إرسال جميع النماذج (PDF) لإيميلي",2500)}}
-$("csBody").addEventListener("click",e=>{const s=e.target.closest("#fmSend");if(s){e.stopPropagation();fmSendAll(s);return}const b=e.target.closest("[data-form]");if(b){e.stopPropagation();openForm(b.dataset.form)}},true);
+$("csBody").addEventListener("click",e=>{const s=e.target.closest("#fmSend");if(s){e.stopPropagation();fmSendAll(s);return}const lb=e.target.closest("[data-lc]");if(lb){e.stopPropagation();openLC();return}const b=e.target.closest("[data-form]");if(b){e.stopPropagation();openForm(b.dataset.form)}},true);
+/* ---------- Load Control اليدوي: Load Sheet + Balance Chart + LIR ----------
+   الثابت (BEW/OPVAR/Pantry/الماء/الحدود/جداول التوازن) يجي تلقائي من مستند أوزان الأسطول (مشفّر forms/lcd.bin)،
+   وموظف الكنترول يدخل المتغيّر بس (الوقود، RTOW، الركاب، العفش). القيم تنحفظ مع الكوردنيتر شيت بمفاتيح lc.* */
+const LSL={"adr":[347,120,333,26,[[348,123,12,22],[363,123,11,22],[377,123,11,22],[391,123,12,22],[406,123,11,22],[420,123,11,22],[434,123,11,22],[464,123,11,22],[478,123,12,22],[493,123,11,22],[507,123,11,22],[521,123,12,22],[536,123,11,22],[550,123,11,22],[579,123,11,22],[593,123,12,22],[608,123,11,22],[622,123,11,22],[636,123,12,22],[651,123,11,22],[665,123,11,22]]],"org":[84,204,104,25,[[78,206,11,22],[92,206,11,22],[106,206,10,22],[119,206,11,22],[133,206,11,22],[147,206,11,22],[161,206,11,22],[175,206,11,22]]],"rch":[200,204,140,25,[[204,206,11,22],[218,206,11,22],[232,206,11,22],[246,206,12,22],[261,206,11,22],[275,206,11,22],[289,206,11,22],[303,206,12,22],[318,206,11,22],[332,206,11,22]]],"ini":[528,204,32,25,[[532,204,14,24],[546,204,14,24]]],"flt":[78,246,168,25,[[78,249,11,21],[92,249,11,21],[106,249,11,21],[120,249,11,21],[134,249,11,21],[148,249,11,21],[162,249,11,21],[176,249,11,21],[190,249,11,21],[204,249,11,21],[218,249,11,21],[232,249,11,21]]],"reg":[256,246,88,25,[[260,249,11,21],[274,249,11,21],[288,249,12,21],[303,249,11,21],[317,249,11,21],[331,249,11,21]]],"ver":[357,246,245,25,[[361,249,12,21],[376,249,11,21],[390,249,11,21],[404,249,11,21],[418,249,12,21],[433,249,11,21],[447,249,11,21],[461,249,11,21],[475,249,11,21],[489,249,12,21],[504,249,11,21],[518,249,11,21],[532,249,11,21],[546,249,12,21],[561,249,11,21],[575,249,11,21],[589,249,11,21]]],"crw":[615,246,101,25,[[618,249,11,21],[632,249,12,21],[647,249,11,21],[661,249,11,21],[675,249,12,21],[690,249,11,21],[704,249,11,21]]],"date":[762,272,168,30],"from":[1057,272,105,30],"bew":[313,310,115,18,[[313,310,21,18],[337,310,20,18],[360,310,21,18],[384,310,20,18],[407,310,21,18]]],"bewi":[478,310,115,18,[[431,310,44,18],[478,310,21,18],[502,310,20,18],[525,310,21,18],[549,310,21,18],[573,310,20,18]]],"opv":[337,331,91,19,[[337,331,20,19],[360,331,21,19],[384,331,20,19],[407,331,21,19]]],"opvi":[478,331,115,19,[[431,331,44,19],[478,331,21,19],[502,331,20,19],[525,331,21,19],[549,331,21,19],[573,331,20,19]]],"pan":[337,353,91,18,[[337,353,20,18],[360,353,21,18],[384,353,20,18],[407,353,21,18]]],"pani":[478,353,115,18,[[431,353,44,18],[478,353,21,18],[502,353,20,18],[525,353,21,18],[549,353,21,18],[573,353,20,18]]],"adl":[337,374,91,18,[[337,374,20,18],[360,374,21,18],[384,374,20,18],[407,374,21,18]]],"adli":[478,374,115,18,[[431,374,44,18],[478,374,21,18],[502,374,20,18],[525,374,21,18],[549,374,21,18],[573,374,20,18]]],"dow":[337,395,91,18,[[337,395,20,18],[360,395,21,18],[384,395,20,18],[407,395,21,18],[431,395,21,18]]],"doi":[478,395,115,18,[[431,395,44,18],[478,395,21,18],[502,395,20,18],[525,395,21,18],[549,395,21,18],[573,395,20,18]]],"tof":[337,438,114,18,[[337,438,20,18],[360,438,21,18],[384,438,20,18],[407,438,21,18],[431,438,20,18]]],"ow":[337,481,114,18,[[337,481,20,18],[360,481,21,18],[384,481,20,18],[407,481,21,18],[431,481,20,18]]],"mzfw":[757,333,133,16,[[757,333,20,16],[780,333,19,16],[802,333,20,16],[825,333,20,16],[848,333,19,16],[870,333,20,16]]],"mlw":[1031,333,131,17,[[1031,333,19,17],[1053,333,19,17],[1075,333,19,17],[1097,333,20,17],[1120,333,19,17],[1142,333,20,17]]],"rtof":[780,352,110,19,[[780,352,19,19],[802,352,20,19],[825,352,20,19],[848,352,19,19],[870,352,20,19]]],"trip":[1053,354,109,17,[[1053,354,19,17],[1075,354,19,17],[1097,354,20,17],[1120,354,19,17],[1142,354,20,17]]],"a":[780,395,110,18,[[780,395,19,18],[802,395,20,18],[825,395,20,18],[848,395,19,18],[870,395,20,18]]],"b":[916,395,111,18,[[893,395,20,18],[916,395,20,18],[939,395,20,18],[962,395,20,18],[985,395,19,18],[1007,395,20,18]]],"c":[1053,395,109,18,[[1031,395,19,18],[1053,395,19,18],[1075,395,19,18],[1097,395,20,18],[1120,395,19,18],[1142,395,20,18]]],"owa":[780,438,110,18,[[780,438,19,18],[802,438,20,18],[825,438,20,18],[848,438,19,18],[870,438,20,18]]],"owb":[893,438,134,18,[[893,438,20,18],[916,438,20,18],[939,438,20,18],[962,438,20,18],[985,438,19,18],[1007,438,20,18]]],"owc":[1031,438,131,18,[[1031,438,19,18],[1053,438,19,18],[1075,438,19,18],[1097,438,20,18],[1120,438,19,18],[1142,438,20,18]]],"atla":[780,481,110,18,[[780,481,19,18],[802,481,20,18],[825,481,20,18],[848,481,19,18],[870,481,20,18]]],"atlb":[893,481,134,18,[[893,481,20,18],[916,481,20,18],[939,481,20,18],[962,481,20,18],[985,481,19,18],[1007,481,20,18]]],"atlc":[1031,481,131,18,[[1031,481,19,18],[1053,481,19,18],[1075,481,19,18],[1097,481,20,18],[1120,481,19,18],[1142,481,20,18]]],"dest":[98,585,60,75],"pm":[164,587,26,83],"pf":[193,587,27,83],"pc":[223,587,26,83],"pi":[252,587,27,83],"cab":[282,587,28,83],"trT":[336,566,115,18,[[313,566,20,18],[336,566,21,18],[360,566,21,18],[384,566,20,18],[407,566,21,18],[431,566,20,18]]],"bT":[336,587,115,19,[[313,587,20,19],[336,587,21,19],[360,587,21,19],[384,587,20,19],[407,587,21,19],[431,587,20,19]]],"cT":[336,609,115,18,[[313,609,20,18],[336,609,21,18],[360,609,21,18],[384,609,20,18],[407,609,21,18],[431,609,20,18]]],"mT":[336,630,115,19,[[313,630,20,19],[336,630,21,19],[360,630,21,19],[384,630,20,19],[407,630,21,19],[431,630,20,19]]],"uT":[336,652,115,18,[[313,652,20,18],[336,652,21,18],[360,652,21,18],[384,652,20,18],[407,652,21,18],[431,652,20,18]]],"tT":[336,674,92,18,[[313,674,20,18],[336,674,21,18],[360,674,21,18],[384,674,20,18],[407,674,21,18]]],"pF":[893,587,42,19],"pJ":[938,587,43,19],"pY":[984,587,43,19],"dF":[1031,587,41,19],"dJ":[1075,587,43,19],"dY":[1121,587,41,19],"tm":[164,1207,26,19],"tf":[193,1207,27,19],"tc":[223,1207,26,19],"ti":[252,1207,27,19],"twt":[313,1207,138,19,[[313,1207,20,19],[336,1207,21,19],[360,1207,21,19],[384,1207,20,19],[407,1207,21,19],[431,1207,20,19]]],"tF":[893,1207,43,19],"tJ":[939,1207,42,19],"tY":[984,1207,43,19],"lpw":[336,1250,115,18,[[336,1250,21,18],[360,1250,21,18],[384,1250,20,18],[407,1250,21,18],[431,1250,20,18]]],"lttl":[336,1292,115,17,[[336,1292,21,17],[360,1292,21,17],[384,1292,20,17],[407,1292,21,17],[431,1292,20,17]]],"ldow":[336,1333,115,18,[[336,1333,21,18],[360,1333,21,18],[384,1333,20,18],[407,1333,21,18],[431,1333,20,18]]],"lzfw":[313,1375,138,18,[[313,1375,20,18],[336,1375,21,18],[360,1375,21,18],[384,1375,20,18],[407,1375,21,18],[431,1375,20,18]]],"lzm":[78,1416,110,18,[[78,1416,17,18],[98,1416,15,18],[116,1416,16,18],[135,1416,16,18],[154,1416,16,18],[173,1416,15,18]]],"ltof":[336,1437,115,18,[[336,1437,21,18],[360,1437,21,18],[384,1437,20,18],[407,1437,21,18],[431,1437,20,18]]],"ltow":[313,1479,138,17,[[313,1479,20,17],[336,1479,21,17],[360,1479,21,17],[384,1479,20,17],[407,1479,21,17],[431,1479,20,17]]],"ltm":[78,1520,110,18,[[78,1520,16,18],[97,1520,16,18],[116,1520,16,18],[135,1520,16,18],[154,1520,15,18],[172,1520,16,18]]],"ltrip":[336,1541,115,18,[[336,1541,21,18],[360,1541,21,18],[384,1541,20,18],[407,1541,21,18],[431,1541,20,18]]],"llaw":[313,1583,138,17,[[313,1583,20,17],[336,1583,21,17],[360,1583,21,17],[384,1583,20,17],[407,1583,21,17],[431,1583,20,17]]],"llm":[78,1624,110,17,[[78,1624,16,17],[97,1624,16,17],[116,1624,16,17],[135,1624,16,17],[154,1624,15,17],[172,1624,16,17]]],"ratl":[833,1250,134,18,[[833,1250,20,18],[856,1250,20,18],[879,1250,19,18],[901,1250,20,18],[924,1250,20,18],[947,1250,20,18]]],"rttl":[856,1292,111,17,[[856,1292,20,17],[879,1292,19,17],[901,1292,20,17],[924,1292,20,17],[947,1292,20,17]]],"rud":[856,1333,111,18,[[856,1333,20,18],[879,1333,19,18],[901,1333,20,18],[924,1333,20,18],[947,1333,20,18]]],"si":[1010,1252,152,66],"notes":[990,1342,172,70],"bal":[989,1437,84,38],"seat":[1076,1437,86,38],"tpob":[989,1500,84,18],"tob":[1076,1500,86,18],"prep":[990,1562,132,26],"tr1":[455,566,69,18],"tr2":[528,566,69,18],"tr3":[601,566,70,18],"tr4":[674,566,69,18],"tr5":[747,566,70,18],"tr0":[820,566,70,18],"b1":[455,587,69,19],"b2":[528,587,69,19],"b3":[601,587,70,19],"b4":[674,587,69,19],"b5":[747,587,70,19],"b0":[820,587,70,19],"c1":[455,609,69,18],"c2":[528,609,69,18],"c3":[601,609,70,18],"c4":[674,609,69,18],"c5":[747,609,70,18],"c0":[820,609,70,18],"m1":[455,630,69,19],"m2":[528,630,69,19],"m3":[601,630,70,19],"m4":[674,630,69,19],"m5":[747,630,70,19],"m0":[820,630,70,19],"u1":[455,652,69,18],"u2":[528,652,69,18],"u3":[601,652,70,18],"u4":[674,652,69,18],"u5":[747,652,70,18],"u0":[820,652,70,18],"t1":[455,1207,69,19],"t2":[528,1207,69,19],"t3":[601,1207,70,19],"t4":[674,1207,69,19],"t5":[747,1207,70,19],"t0":[820,1207,70,19]};
+let LCD=null,LCTAB="in";
+async function lcData(){if(LCD)return LCD;const k=await fmKey();const b=new Uint8Array(await (await fetch("forms/lcd.bin",{cache:"force-cache"})).arrayBuffer());
+  return LCD=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b.slice(0,12)},k,b.slice(12))))}
+const lcV=()=>{const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]||{},o={};for(const k in V)if(k.startsWith("lc."))o[k.slice(3)]=V[k];return o};
+const lcN=v=>{if(v==null||v==="")return null;const n=parseFloat(String(v).replace(/,/g,""));return isFinite(n)?n:null};
+const lcR=(n,d=0)=>n==null?"":(+n).toFixed(d);
+const LCCPT=["1","3","4","5"],LCBC=["BY","BJ","BTD","BTI"];
+const lcDD=d=>{const[y,m,dd]=iso(d).split("-");return{dd,m,y,yy:y.slice(2),mon:["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][+m-1]}};
+let LCPREP="";try{LCPREP=localStorage.getItem("ajf_lc_prep")||""}catch(e){}
+/* القيم التلقائية (اللي ما يحتاج الموظف يكتبها) */
+function lcAuto(V){const{f,date}=csCur,d=csData(f,date),D=LCD,reg=(V.reg||d.reg||"").toUpperCase().replace(/\s/g,"").replace(/^HZ(?!-)/,"HZ-");
+  const R=D&&D.reg[reg],cfgK=V.cfg||(R&&R[0])||"",C=(D&&D.cfg[cfgK])||null,crew=V.crew||"2/5",cb=V.cbag==="1",adl=V.adl||"0",pan=V.pan||"C";
+  const op=C&&C.opv[crew],ad=C&&C.addl[adl],pn=C&&C.pan[pan];const J=lcN(V.J)!=null?lcN(V.J):lcN((d.pd||{}).J),Y=lcN(V.Y)!=null?lcN(V.Y):lcN((d.pd||{}).Y);
+  const dd=lcDD(date);
+  return{reg,cfgK,C,crew,cb,adl,pan,
+    bew:R?R[1]:null,bewi:R?R[2]:null,opv:op?op[cb?2:0]:null,opvi:op?op[cb?3:1]:null,adw:adl==="0"?0:ad?ad[cb?2:0]:null,adi:adl==="0"?0:ad?ad[cb?3:1]:null,
+    pw:pn?pn[0]:null,pi:pn?pn[1]:null,ww:C?C.wat[0]:null,wi:C?C.wat[1]:null,
+    mzfw:C&&C.lim?C.lim[0]:null,mlw:C&&C.lim?C.lim[1]:null,J,Y,
+    zA:J,zB:Y!=null?Math.ceil(Y/2):null,zC:Y!=null?Math.floor(Y/2):null,
+    dest:f.iata,adr:f.iata+"KLSV",org:"AJFKLSV",rch:`SV/${dd.dd}${dd.m}${dd.yy}`,from:f.iata,dens:0.785,aw:85,cw:35,iw:0,prep:LCPREP,lmc:"NIL",notoc:"NO"}}
+const lcG=(V,A,k,ak=k)=>{const v=lcN(V[k]);return v!=null?v:A[ak]};
+function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>lcG(V,A,k,ak),s=k=>V[k]!=null&&V[k]!==""?V[k]:(A[k]!=null?String(A[k]):"");
+  const bew=g("bew"),bewi=g("bewi"),opv=g("opv"),opvi=g("opvi"),pw=g("pw"),pi=g("pi"),ww=g("ww"),wi=g("wi"),adw=g("adw"),adi=g("adi");
+  const opvT=opv!=null&&ww!=null?opv+ww:null,opviT=opvi!=null&&wi!=null?opvi+wi:null;
+  const dow=[bew,opvT,pw,adw].every(x=>x!=null)?bew+opvT+pw+adw:null,doi=[bewi,opviT,pi,adi].every(x=>x!=null)?bewi+opviT+pi+adi:null;
+  const M=lcN(V.M)||0,F=lcN(V.F)||0,Cc=lcN(V.Ch)||0,I=lcN(V.I)||0,J=g("J")||0,Y=g("Y")||0,aw=g("aw"),cw=g("cw"),iw=g("iw");
+  const paxW=(M+F)*aw+Cc*cw+I*iw,seats=M+F+Cc;
+  const cp={};let bag=0,cgo=0,mail=0,pcs=0;const codes={};
+  LCCPT.forEach(c=>{const b=lcN(V["b"+c+"kg"])||0,cg=lcN(V["c"+c])||0,ml=lcN(V["m"+c])||0;let p=0;LCBC.forEach(k=>{const n=lcN(V["b"+c+k])||0;p+=n;codes[k]=(codes[k]||0)+n});
+    if(p&&!b)W.push(`عنبر ${c}: فيه ${p} قطعة بدون وزن`);cp[c]={bag:b,cgo:cg,mail:ml,pcs:p,tot:b+cg+ml};bag+=b;cgo+=cg;mail+=ml;pcs+=p});
+  const ttl=paxW+bag+cgo+mail,zfw=dow!=null?dow+ttl:null,tof=g("tof"),trip=g("trip"),rtow=g("rtow"),mzfw=g("mzfw"),mlw=g("mlw");
+  const tow=zfw!=null&&tof!=null?zfw+tof:null,law=tow!=null&&trip!=null?tow-trip:null,ow=dow!=null&&tof!=null?dow+tof:null;
+  const a=mzfw!=null&&tof!=null?mzfw+tof:null,b=rtow,c=mlw!=null&&trip!=null?mlw+trip:null;
+  const abc=[a,b,c],low=abc.every(x=>x!=null)?abc.indexOf(Math.min(a,b,c)):-1,allow=low>=0?abc[low]:null,atl=allow!=null&&ow!=null?allow-ow:null,ud=atl!=null?atl-ttl:null;
+  if(tof==null)W.push("اكتب Take-off Fuel");if(trip==null)W.push("اكتب Trip Fuel");if(rtow==null)W.push("اكتب RTOW من الكابتن");if(mzfw==null||mlw==null)W.push("اكتب MZFW و MLW");
+  if(dow==null)W.push("القيم الثابتة ناقصة — اختر الطائرة أو اكتب BEW/OPVAR/Pantry");
+  if(ud!=null&&ud<0)W.push(`تجاوز الحمولة بـ ${-ud} كغ (Overload)`);
+  if(zfw!=null&&mzfw!=null&&zfw>mzfw)W.push("ZFW أكبر من MZFW");if(tow!=null&&rtow!=null&&tow>rtow)W.push("TOW أكبر من RTOW");if(law!=null&&mlw!=null&&law>mlw)W.push("LAW أكبر من MLW");
+  if(seats&&J+Y&&seats!==J+Y)W.push(`M+F+C = ${seats} وعدد J+Y = ${J+Y} — غير متطابق`);
+  const zA=g("zA"),zB=g("zB"),zC=g("zC");
+  /* التوازن من الـ Balance Chart (A320 12J/132Y) */
+  let bal=null;const BL=A.C&&A.C.bal;
+  if(BL&&doi!=null){const zs=[zA||0,zB||0,zC||0];if(zs[0]+zs[1]+zs[2]!==J+Y)W.push(`توزيع المناطق A+B+C = ${zs[0]+zs[1]+zs[2]} ≠ ${J+Y}`);
+    const steps=[];let ix=doi;BL.zones.forEach(([n,cap,k],i)=>{if(zs[i]>cap)W.push(`Zone ${n} فيها ${zs[i]} والسعة ${cap}`);const dI=zs[i]*k;steps.push([n,zs[i],dI,ix,ix+dI]);ix+=dI});
+    LCCPT.forEach(c=>{const[k,mx]=BL.cpt[c],w=cp[c].tot;if(w>mx)W.push(`عنبر ${c} وزنه ${w} والحد ${mx}`);const dI=w*k;steps.push([c,w,dI,ix,ix+dI]);ix+=dI});
+    if(cp["3"].tot+cp["4"].tot>BL.c34)W.push(`العنبر 3+4 أكثر من ${BL.c34}`);
+    const fi=fw=>{if(fw==null)return null;const T=BL.fuel,dens=g("dens")||0.785;let col=0;T.d.forEach((x,i)=>{if(Math.abs(x-dens)<Math.abs(T.d[col]-dens))col=i});
+      const r=T.t.reduce((p,q)=>Math.abs(q[0]-fw)<Math.abs(p[0]-fw)?q:p);let v=r[col+1];if(fw>T.t[T.t.length-1][0]+250||v==null)v=T.full[col];return v};
+    const lizfw=ix,ftf=fi(tof),litow=ftf!=null?lizfw+ftf:null,flf=tof!=null&&trip!=null?fi(tof-trip):null,lilaw=flf!=null?lizfw+flf:null;
+    const mac=(I_,w)=>I_==null||!w?null:((I_-50)*39370/w+742.124-BL.lemac)/BL.mac*100;
+    const mz=mac(lizfw,zfw),mt=mac(litow,tow),ml=mac(lilaw,law);let st=mt!=null?(BL.stab[0]-mt)/BL.stab[1]:null;if(st!=null)st=Math.max(-2.5,Math.min(2.5,st));
+    bal={steps,lizfw,litow,lilaw,ftf,mz,mt,ml,st}}
+  return{V,A,s,g,W,bew,bewi,opvT,opviT,pw,pi,adw,adi,dow,doi,M,F,Cc,I,J,Y,seats,paxW,cp,bag,cgo,mail,pcs,codes,ttl,zfw,tof,trip,tow,law,ow,rtow,mzfw,mlw,a,b,c,low,allow,atl,ud,zA,zB,zC,bal,f,date}}
+/* ---------- الواجهة ---------- */
+function lcField(k,lbl,R,o={}){const v=R.V[k]!=null?R.V[k]:"",ph=o.ph!=null?o.ph:(R.A[o.ak||k]!=null?String(R.A[o.ak||k]):"");
+  return`<label class="cs-f"><span>${lbl}</span><input data-l="${k}" value="${escT(v)}" placeholder="${escT(ph)}" ${o.t==="t"?'dir="ltr"':'inputmode="decimal" dir="ltr"'}></label>`}
+function lcSel(k,lbl,opts,cur){return`<label class="cs-f"><span>${lbl}</span><select data-l="${k}">${opts.map(([v,t])=>`<option value="${escT(v)}"${v===cur?" selected":""}>${escT(t)}</option>`).join("")}</select></label>`}
+function lcSum(R){const n=x=>x==null?"—":Math.round(x).toLocaleString("en-US"),lim=["a · MZFW+TOF","b · RTOW","c · MLW+TRIP"];
+  const B=R.bal;return`<div class="cs-card lc-sum"><h5>RESULT · النتيجة</h5>
+  <div class="lc-kv">${[["DOW",n(R.dow)],["DOI",R.doi==null?"—":R.doi.toFixed(2)],["TRAFFIC LOAD",n(R.ttl)],["ZFW",n(R.zfw)],["TOW",n(R.tow)],["LAW",n(R.law)]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>
+  <div class="lc-abc">${[R.a,R.b,R.c].map((x,i)=>`<div class="${R.low===i?"on":"off"}"><span>${lim[i]}</span><b>${n(x)}</b></div>`).join("")}</div>
+  <div class="lc-kv">${[["ALLOWED TRAFFIC",n(R.atl)],["UNDERLOAD",n(R.ud)]].map(([a,b],i)=>`<div class="${i&&R.ud!=null?(R.ud<0?"bad":"ok"):""}"><span>${a}</span><b>${b}</b></div>`).join("")}</div>
+  ${B?`<div class="lc-kv">${[["LIZFW",B.lizfw.toFixed(1)],["LITOW",B.litow==null?"—":B.litow.toFixed(1)],["MAC ZFW",B.mz==null?"—":B.mz.toFixed(1)+"%"],["MAC TOW",B.mt==null?"—":B.mt.toFixed(1)+"%"],["MAC LAW",B.ml==null?"—":B.ml.toFixed(1)+"%"],["STAB",B.st==null?"—":Math.abs(B.st).toFixed(1)+(B.st<0?" DN":" UP")]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>`:`<div class="lc-w i">الـ Balance Chart متوفر لطائرات A320-214 (12J/132Y) فقط</div>`}
+  ${R.W.map(w=>`<div class="lc-w">⚠︎ ${escT(w)}</div>`).join("")}</div>`}
+function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg[k].type+" · "+D.cfg[k].ver]);
+  const crews=C?Object.keys(C.opv):["2/5"],pans=C?Object.keys(C.pan):["C"],nr=A.reg&&!D.reg[A.reg];
+  const cpt=c=>`<div class="lc-cpt"><b>CMPT ${c}</b><div class="lc-g4">${LCBC.map(k=>lcField("b"+c+k,k+" pcs",R,{ph:"0"})).join("")}</div>
+    <div class="cs-g">${lcField("b"+c+"kg","BAG KG",R,{ph:"0"})}${lcField("c"+c,"CARGO KG",R,{ph:"0"})}${lcField("m"+c,"MAIL KG",R,{ph:"0"})}</div></div>`;
+  return lcSum(R)+`
+  <div class="cs-card"><h5>AIRCRAFT · الطائرة</h5>
+    <div class="cs-g two">${lcField("reg","A/C REG",R,{t:"t",ak:"reg",ph:A.reg||"HZ-"})}${lcSel("cfg","TYPE / CONFIG",[["","تلقائي من التسجيل"],...cfgs],R.V.cfg||"")}</div>
+    ${nr?`<div class="lc-w">التسجيل ${escT(A.reg)} مو موجود في مستند الأوزان — اختر النوع واكتب BEW يدوي</div>`:""}
+    <div class="cs-g">${lcSel("crew","CREW",crews.map(c=>[c,c]),A.crew)}${lcSel("adl","ADD'L CREW",[["0","0"],["1","1"],["2","2"]],A.adl)}${lcSel("pan","PANTRY",pans.map(c=>[c,c]),A.pan)}</div>
+    <label class="lc-ck"><input type="checkbox" data-l="cbag" ${A.cb?"checked":""}> مع عفش الطاقم (Crew Bag)</label>
+    <details class="lc-det"><summary>القيم الثابتة من مستند الأوزان — عدّلها لو تغيّرت</summary>
+      <div class="lc-g4">${lcField("bew","BEW",R)}${lcField("bewi","BI",R)}${lcField("opv","CREW KG",R)}${lcField("opvi","CREW IDX",R)}
+      ${lcField("pw","PANTRY KG",R)}${lcField("pi","PANTRY IDX",R)}${lcField("ww","WATER KG",R)}${lcField("wi","WATER IDX",R)}
+      ${lcField("adw","ADD'L KG",R)}${lcField("adi","ADD'L IDX",R)}</div>
+      <div class="lc-w i">المستند قديم (2022–2024): قارن BEW والـ Pantry بآخر Load Sheet من النظام.</div></details></div>
+  <div class="cs-card"><h5>FUEL · LIMITS — الوقود والحدود</h5>
+    <div class="cs-g">${lcField("tof","TAKE-OFF FUEL",R,{ph:""})}${lcField("trip","TRIP FUEL",R,{ph:""})}${lcField("dens","DENSITY",R)}</div>
+    <div class="cs-g">${lcField("rtow","RTOW (الكابتن)",R,{ph:""})}${lcField("mzfw","MZFW",R)}${lcField("mlw","MLW",R)}</div></div>
+  <div class="cs-card"><h5>PASSENGERS · الركاب</h5>
+    <div class="cs-g two">${lcField("J","J",R)}${lcField("Y","Y",R)}</div>
+    <div class="lc-g4">${lcField("M","M",R,{ph:"0"})}${lcField("F","F",R,{ph:"0"})}${lcField("Ch","C (طفل)",R,{ph:"0"})}${lcField("I","I (رضيع)",R,{ph:"0"})}</div>
+    ${R.bal||(C&&C.bal)?`<div class="cs-g">${lcField("zA","ZONE A",R)}${lcField("zB","ZONE B",R)}${lcField("zC","ZONE C",R)}</div>`:""}
+    <details class="lc-det"><summary>الأوزان القياسية</summary><div class="cs-g">${lcField("aw","ADULT",R)}${lcField("cw","CHILD",R)}${lcField("iw","INFANT",R)}</div></details></div>
+  <div class="cs-card"><h5>DEADLOAD · العفش والشحن</h5>${LCCPT.map(cpt).join("")}</div>
+  <div class="cs-card"><h5>INFO · معلومات</h5>
+    <div class="cs-g two">${lcField("dest","DEST",R,{t:"t"})}${lcField("capt","CAPTAIN",R,{t:"t",ph:""})}</div>
+    <div class="cs-g two">${lcField("prep","PREPARED BY (EN)",R,{t:"t"})}${lcField("ini","INITIALS",R,{t:"t",ph:""})}</div>
+    <div class="cs-g two">${lcField("lmc","LMC",R,{t:"t"})}${lcField("notoc","NOTOC",R,{t:"t"})}</div>
+    ${lcField("si","SI (إضافي)",R,{t:"t",ph:""})}${lcField("notes","NOTES (إضافي)",R,{t:"t",ph:""})}
+    <details class="lc-det"><summary>رأس الرسالة</summary><div class="cs-g">${lcField("adr","ADDRESS",R,{t:"t"})}${lcField("org","ORIGINATOR",R,{t:"t"})}${lcField("rch","RECHARGE",R,{t:"t"})}</div>
+      <div class="cs-g two">${lcField("from","FROM",R,{t:"t"})}</div></details></div>`}
+function lcRender(){const B=$("lcBody");document.querySelectorAll("#lc .lc-tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===LCTAB));
+  if(!LCD){B.innerHTML=`<div class="fm-msg">جاري التحميل…</div>`;return}
+  const R=lcCalc();
+  if(LCTAB==="in"){const y=B.scrollTop,op=[...B.querySelectorAll("details")].map(d=>d.open);B.innerHTML=`<div class="cs-body lc-in">${csCan()?"":`<div class="cs-ro">👁️ عرض فقط</div>`}${lcIn(R)}</div>`;
+    B.querySelectorAll("details").forEach((d,i)=>{if(op[i])d.open=true});B.scrollTop=y;if(!csCan())B.querySelectorAll("input,select").forEach(e=>e.disabled=true);return}
+  B.innerHTML=`<div class="fm-msg">جاري تجهيز النموذج…</div>`;
+  lcPage(LCTAB,R).then(cv=>{if(LCTAB==="in")return;cv.className="lc-pv";B.innerHTML="";const w=document.createElement("div");w.className="lc-pvw";
+    if(R.W.length)w.innerHTML=R.W.map(x=>`<div class="lc-w">⚠︎ ${escT(x)}</div>`).join("");w.appendChild(cv);B.appendChild(w)})
+   .catch(e=>{B.innerHTML=`<div class="fm-msg">${e.message==="out"?"سجّل دخولك أول.":"تعذّر فتح النموذج. تأكد من الاتصال."}</div>`})}
+function lcUpd(){if(LCTAB!=="in")return;const s=$("lcBody").querySelector(".lc-sum");if(s)s.outerHTML=lcSum(lcCalc())}
+$("lcBody").addEventListener("change",e=>{const el=e.target.closest("[data-l]");if(!el)return;const k=el.dataset.l;let v=el.type==="checkbox"?(el.checked?"1":""):el.value.trim();
+  if(k==="prep"&&v){LCPREP=v;try{localStorage.setItem("ajf_lc_prep",v)}catch(e){}}
+  if(k==="reg"&&v)v=v.toUpperCase();csSet("lc."+k,v);if(["reg","cfg","crew","pan","adl","cbag"].includes(k))lcRender();else lcUpd()});
+$("lcBody").addEventListener("input",e=>{if(e.target.closest("[data-l]"))clearTimeout(lcUpd.t),lcUpd.t=setTimeout(()=>{const el=e.target;const k=el.dataset.l;
+  const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]=CSV[iso(date)+"_"+f.n]||{};const ov=V["lc."+k];V["lc."+k]=el.value.trim();if(!V["lc."+k])delete V["lc."+k];lcUpd();if(ov!=null)V["lc."+k]=ov;else delete V["lc."+k]},250)});
+document.querySelectorAll("#lc .lc-tabs button").forEach(b=>b.onclick=()=>{LCTAB=b.dataset.t;lcRender()});
+async function openLC(){if(!csCur)return;$("lc").hidden=false;const{f,date}=csCur;$("lcS").textContent=f.n+" AJF→"+f.iata+" · "+fmDate(date);LCTAB="in";
+  $("lcBody").innerHTML=`<div class="fm-msg">جاري التحميل…</div>`;
+  try{await lcData();lcRender()}catch(e){$("lcBody").innerHTML=`<div class="fm-msg">${/404|PGRST202/.test(e.message)?"تحتاج تفعيل النماذج من المشرف.":e.message==="out"?"سجّل دخولك أول.":"تعذّر التحميل. تأكد من الاتصال."}</div>`}}
+$("lcBack").onclick=()=>{$("lc").hidden=true;if(csCur&&!$("cs").hidden)renderCS()};
+/* ---------- رسم النماذج ---------- */
+const LCPG={ls:{f:"lcs-1.bin",W:1241,H:1754,mm:[210,297]},bc:{f:"lcb-1.bin",W:1701,H:2386,mm:[216,303]},lir:{f:"lcl-1.bin",W:2339,H:1653,mm:[297,210]}};
+const LCINK="#14298c";
+function lcCtx(cv){const x=cv.getContext("2d");x.fillStyle=LCINK;x.strokeStyle=LCINK;x.textBaseline="alphabetic";x.direction="ltr";return x}
+const lcFont=(x,px)=>{x.font=`700 ${px}px Helvetica,Arial,sans-serif`};
+function lcFree(x,v,r,pt2px,maxPt=10){const[X,Y,w,h]=r,L=String(v).split("\n");lcFont(x,100);const mw=Math.max(...L.map(l=>x.measureText(l).width))/100||1;
+  let fs=Math.min(h*.72/L.length*(L.length>1?.8:1),(w-6)/mw,maxPt*pt2px);const lh=fs*1.15,top=Y+h/2-lh*L.length/2+fs*.95;lcFont(x,fs);x.textAlign="left";
+  L.forEach((l,i)=>x.fillText(l,X+3,top+i*lh))}
+function lcBoxed(x,v,r,num){const bx=r[4];v=String(v);if(!bx)return false;const ch=[...v].filter(t=>t!=="."),dot=v.indexOf(".");if(ch.length>bx.length)return false;
+  const sel=num?bx.slice(bx.length-ch.length):bx.slice(0,ch.length);x.textAlign="center";
+  ch.forEach((t,i)=>{const[X,Y,w,h]=sel[i],fs=Math.min(h*.7,w*1.1,20.8);lcFont(x,fs);x.fillText(t,X+w/2,Y+h/2+fs*.35)});
+  if(dot>=0){const[X,Y,w,h]=sel[dot];lcFont(x,20);x.fillText(".",X,Y+h-3)}return true}
+function lcPut(x,key,v){if(v==null||v==="")return;const r=LSL[key];if(!r)return;v=String(v);const num=/^-?[\d.]+$/.test(v);
+  if(key==="crw"&&r[4]){const p=v.split(/[\/:]/);[[p[0],r[4][0]],[p[1],r[4][2]]].forEach(([t,b])=>{if(t==null||!b)return;lcFont(x,18);x.textAlign="center";x.fillText(t,b[0]+b[2]/2,b[1]+b[3]/2+6)});return}
+  if(!v.includes("\n")&&lcBoxed(x,v,r,num))return;lcFree(x,v,r,150/72)}
+async function lcBase(P){const src=await fmImg(P.f),img=new Image();img.src=src;await img.decode();const cv=document.createElement("canvas");cv.width=P.W;cv.height=P.H;
+  const x=cv.getContext("2d");x.drawImage(img,0,0,P.W,P.H);return cv}
+async function lcPage(t,R){const P=LCPG[t],cv=await lcBase(P),x=lcCtx(cv);({ls:lcDrawLS,bc:lcDrawBC,lir:lcDrawLIR})[t](x,R);return cv}
+function lcDrawLS(x,R){const s=R.s,{f,date}=R,dd=lcDD(date),r0=v=>v==null?"":String(Math.round(v)),ix=v=>v==null?"":(Math.round(v*100)/100).toFixed(2);
+  const P=(k,v)=>lcPut(x,k,v);
+  P("adr",s("adr"));P("org",s("org"));P("rch",s("rch"));P("ini",s("ini"));P("flt",f.n);P("reg",R.A.reg.replace("-",""));P("ver",R.A.C?R.A.C.ver:"");P("crw",R.A.crew);
+  P("date",`${dd.dd}/${dd.m}/${dd.y}`);P("from",s("from"));
+  P("bew",r0(R.bew));P("bewi",ix(R.bewi));P("opv",r0(R.opvT));P("opvi",ix(R.opviT));P("pan",r0(R.pw));P("pani",ix(R.pi));P("adl",r0(R.adw));P("adli",ix(R.adi));
+  P("dow",r0(R.dow));P("doi",ix(R.doi));P("tof",r0(R.tof));P("ow",r0(R.ow));
+  P("mzfw",r0(R.mzfw));P("mlw",r0(R.mlw));P("rtof",r0(R.tof));P("trip",r0(R.trip));P("a",r0(R.a));P("b",r0(R.b));P("c",r0(R.c));
+  if(R.low>=0){const L="abc"[R.low];P("ow"+L,r0(R.ow));P("atl"+L,r0(R.atl));
+    x.lineWidth=3.3;x.lineCap="round";[[762,418,124,102],[898,418,127,102],[1034,418,126,102]].forEach((q,i)=>{if(i===R.low)return;x.beginPath();x.moveTo(q[0]+3,q[1]+q[3]-3);x.lineTo(q[0]+q[2]-3,q[1]+3);x.stroke()})}
+  P("dest",s("dest"));P("pm",R.M);P("pf",R.F);P("pc",R.Cc);P("pi",R.I);
+  const cpI={"1":"1","3":"3","4":"4","5":"5"};LCCPT.forEach(c=>{const q=R.cp[c];if(q.bag)P("b"+cpI[c],q.bag);if(q.cgo)P("c"+cpI[c],q.cgo);if(q.mail)P("m"+cpI[c],q.mail);P("t"+cpI[c],q.tot||0)});
+  P("bT",r0(R.bag));if(R.cgo)P("cT",r0(R.cgo));if(R.mail)P("mT",r0(R.mail));P("tT",r0(R.bag+R.cgo+R.mail));
+  P("pF","0");P("pJ",R.J);P("pY",R.Y);P("dF","0");P("dJ","0");P("dY","0");
+  P("tm",R.M);P("tf",R.F);P("tc",R.Cc);P("ti",R.I);P("twt",r0(R.bag+R.cgo+R.mail));P("t2","0");P("t0","0");P("tF","0");P("tJ",R.J);P("tY",R.Y);
+  /* سطر المحطة: M/F/C/I + توزيع العنابر */
+  lcFont(x,15.6);x.textAlign="left";const y=684;[[167,R.M],[199,R.F],[231,R.Cc],[261,R.I]].forEach(([X,v])=>x.fillText(String(v),X,y));
+  [[463,R.cp["1"].tot],[536,0],[609,R.cp["3"].tot],[682,R.cp["4"].tot],[756,R.cp["5"].tot],[829,0]].forEach(([X,v])=>x.fillText(String(v),X,y));
+  P("lpw",r0(R.paxW));P("lttl",r0(R.ttl));P("ldow",r0(R.dow));P("lzfw",r0(R.zfw));P("lzm",r0(R.mzfw));P("ltof",r0(R.tof));P("ltow",r0(R.tow));P("ltm",r0(R.rtow));
+  P("ltrip",r0(R.trip));P("llaw",r0(R.law));P("llm",r0(R.mlw));P("ratl",r0(R.atl));P("rttl",r0(R.ttl));P("rud",r0(R.ud));
+  const B=R.bal,cd=Object.entries(R.codes).filter(([,n])=>n).map(([k,n])=>LCCPTC(R,k)).filter(Boolean).join(" ");
+  P("si",[`PANTRY CODE ${R.A.pan}`,R.pcs?`BAG PCS ${s("dest")} ${cd}`:"",s("si")].filter(Boolean).join("\n"));
+  P("notes",[`DOI ${ix(R.doi)}`+(B?`  LIZFW ${B.lizfw.toFixed(1)}  LITOW ${B.litow==null?"-":B.litow.toFixed(1)}`:""),
+    B&&B.mz!=null?`MAC ZFW ${B.mz.toFixed(1)}  TOW ${B.mt==null?"-":B.mt.toFixed(1)}  LAW ${B.ml==null?"-":B.ml.toFixed(1)}`:"",
+    B&&B.st!=null?`STAB ${Math.abs(B.st).toFixed(1)} ${B.st<0?"DOWN":"UP"}`+(R.low===2?"  L=LAW LIMITING":R.low===0?"  Z=ZFW LIMITING":R.low===1?"  T=TOW LIMITING":""):"",s("notes")].filter(Boolean).join("\n"));
+  if(B&&B.mt!=null)P("bal","MAC "+B.mt.toFixed(1));if(R.zA!=null)P("seat",`A${R.zA} B${R.zB} C${R.zC}`);
+  P("tpob",R.M+R.F+R.Cc+R.I);const cr=(R.A.crew||"").split("/").reduce((a,b)=>a+(+b||0),0)+(+R.A.adl||0);P("tob","TOB "+(R.M+R.F+R.Cc+R.I+cr));
+  P("prep",s("prep").toUpperCase());
+  if(/^NIL$/i.test(s("lmc"))){lcFont(x,83);x.textAlign="center";x.fillText("NIL",711,1570)}}
+function LCCPTC(R,code){const out=[];LCCPT.forEach(c=>{const n=lcN(R.V["b"+c+code])||0;if(n)out.push(`${c}/${code.replace(/^B/,"")}/${n}`)});return out.join(" ")}
+function lcDrawBC(x,R){const B=R.bal,{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y,s,pt=11,al="left")=>{lcFont(x,pt*k);x.textAlign=al;x.fillText(s,X,Y)};
+  t(130,362,"AJF",13);t(480,362,`${dd.dd}${dd.mon}${dd.yy}`,13);t(870,362,f.n,13);t(1245,362,R.A.reg,13);t(130,462,R.s("dest"),13);t(480,462,R.s("capt").toUpperCase(),11);
+  t(870,462,R.A.crew,13);t(1245,462,R.A.C?R.A.C.ver.replace("/","/").replace(/^J(\d+)\/Y(\d+)$/,"$1J/$2Y"):"",13);t(105,1975,R.s("prep").toUpperCase(),10);
+  if(!B){t(850,1180,"BALANCE CHART NOT AVAILABLE FOR THIS CONFIGURATION",16,"center");return}
+  const ix=I=>492+(I-30)*15.13,gy=w=>1406+(75-w/1000)*15.6,rows=[[932,981],[982,1033],[1034,1087],[1088,1139],[1140,1190],[1191,1242],[1243,1294]];
+  t(262,900,R.doi.toFixed(2),9);x.lineWidth=3.6;x.lineCap="round";
+  const ln=(a,b,c,d)=>{x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke()},arr=(X,Y,dir)=>{ln(X,Y,X-11*dir,Y-7);ln(X,Y,X-11*dir,Y+7)};
+  ln(ix(R.doi),905,ix(R.doi),932);
+  B.steps.forEach(([n,q,dI,i0,i1],j)=>{const[y0,y1]=rows[j],m=(y0+y1)/2,x0=ix(i0),x1=ix(i1);ln(x0,y0,x0,m);if(Math.abs(dI)>.01){ln(x0,m,x1,m);arr(x1,m,x1>x0?1:-1)}ln(x1,m,x1,y1);t(262,m+6,String(Math.round(q)),10)});
+  if(B.litow!=null){const x0=ix(B.lizfw),x1=ix(B.litow),m=1322;ln(x0,1295,x0,m);if(B.ftf){ln(x0,m,x1,m);arr(x1,m,x1>x0?1:-1)}t(372,1312,(B.ftf>0?"+":"")+B.ftf,9);
+    x.setLineDash([8,6]);ln(x0,1350,x0,gy(R.zfw));ln(x1,m,x1,gy(R.tow));x.setLineDash([]);
+    [[B.lizfw,R.zfw,"ZFW"],[B.litow,R.tow,"TOW"]].forEach(([I_,w,lab])=>{const X=ix(I_),Y=gy(w);x.beginPath();x.arc(X,Y,8,0,7);x.fill();t(X+14,Y-6,lab,8)})}
+  if(B.mt!=null)t(190,1540,`TOW ${B.mt.toFixed(1)} %`,12);if(B.mz!=null)t(190,1565,`ZFW ${B.mz.toFixed(1)} %`,10);
+  if(B.st!=null)t(190,1730,`${Math.abs(B.st).toFixed(1)} ${B.st<0?"DN":"UP"}`,12);t(110,1610,`LIZFW ${B.lizfw.toFixed(1)}  LITOW ${B.litow==null?"-":B.litow.toFixed(1)}`,8)}
+function lcDrawLIR(x,R){const{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y,s,pt=10,w=700)=>{x.font=`${w} ${pt*k}px Helvetica,Arial,sans-serif`;x.textAlign="left";x.fillText(s,X*2,Y*2)};
+  t(470,97,"AJF");t(603,98,f.n.replace(/^SV/,""));t(678,97,`${dd.dd}${dd.mon}${dd.yy}`);t(777,97,R.A.reg);t(912,97,R.s("prep").toUpperCase());
+  const col={"5":285,"4":488,"3":690,"1":892};
+  LCCPT.forEach(c=>{const X=col[c],q=R.cp[c];t(X,250,"NIL");const L=[];LCBC.forEach(k=>{const n=lcN(R.V["b"+c+k])||0;if(n)L.push(`${k}- ${n} PCS`)});
+    if(q.cgo)L.push(`C- ${q.cgo} KG`);if(q.mail)L.push(`M- ${q.mail} KG`);
+    if(!L.length){t(X,325,"NIL");return}t(X,320,R.s("dest"));let y=340;L.forEach(l=>{t(X,y,l);y+=19});if(q.bag)t(X,y+4,`B ${q.bag} KG`,9,400)});
+  const cd=Object.entries(R.codes).filter(([,n])=>n).map(([k,n])=>`${k} ${n}`).join("  ");
+  t(90,738,`TOTAL ${R.s("dest")} ${R.pcs} PCS / ${R.bag} KG${cd?` (${cd})`:""}.  C ${R.cgo}  M ${R.mail}.`,8,400);
+  const BL=R.A.C&&R.A.C.bal;t(90,752,(BL?`CMPT 1 ${R.cp["1"].tot} / ${BL.cpt["1"][1]}   CMPT 3+4 ${R.cp["3"].tot+R.cp["4"].tot} / ${BL.c34}   CMPT 5 ${R.cp["5"].tot} / ${BL.cpt["5"][1]}   `:"")+`NOTOC: ${R.s("notoc")}`,8,400)}
+/* PDF: الثلاثة في ملف واحد */
+let lcReady=null;
+async function lcPDF(){const b=$("lcPdf"),t0="PDF · إرسال الثلاثة",{f,date}=csCur,name=`LoadControl ${f.n} ${iso(date)}.pdf`;
+  const share=async file=>{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}
+    const u=URL.createObjectURL(file),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),6e4)};
+  if(lcReady&&lcReady.name===name){const fl=lcReady;try{await share(fl);lcReady=null;b.textContent=t0}catch(e){}return}
+  b.disabled=true;b.textContent="… جاري التجهيز";
+  try{await csLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");const R=lcCalc();let pdf=null;
+    for(const t of["ls","bc","lir"]){if(t==="lir"&&!(R.A.C&&R.A.C.lir))continue;const P=LCPG[t],cv=await lcPage(t,R),o=P.mm[0]>P.mm[1]?"l":"p";
+      if(!pdf)pdf=new jspdf.jsPDF({orientation:o,unit:"mm",format:P.mm});else pdf.addPage(P.mm,o);pdf.addImage(cv.toDataURL("image/jpeg",.9),"JPEG",0,0,P.mm[0],P.mm[1])}
+    const file=new File([pdf.output("blob")],name,{type:"application/pdf"});b.disabled=false;
+    try{await share(file);b.textContent=t0}catch(e){if(e.name==="AbortError"){b.textContent=t0;return}lcReady=file;b.textContent="✓ جاهز — اضغط للإرسال"}}
+  catch(e){b.disabled=false;b.textContent="تعذّر — جرّب مرة ثانية";setTimeout(()=>b.textContent=t0,2500)}}
+$("lcPdf").onclick=lcPDF;
 
 $("csShare").onclick=async()=>{
   const{f,date}=csCur,d=csData(f,date),X=dlyInfo(f,date),atd=hm(d.atd)?d.atd:X?(X.est?"≈":"")+fmt(X.atd):"-";
