@@ -1,6 +1,33 @@
 {
-  "fetched": "2026-11-07T00:48:18Z",
+  "fetched": "2026-11-07T01:50:49Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-07T01:11:31.787Z",
+      "obsTime": 1794013200,
+      "reportTime": "2026-11-07T01:00:00.000Z",
+      "temp": 18,
+      "dewp": 17,
+      "wdir": 190,
+      "wspd": 11,
+      "visib": "6+",
+      "altim": 1013,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 070100Z 19011KT 9999 FEW040 18/17 Q1013 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "FEW",
+      "clouds": [
+        {
+          "cover": "FEW",
+          "base": 4000
+        }
+      ],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-06T23:16:57.812Z",
@@ -21,38 +48,6 @@
       "name": "Al-Jouf Arpt, AJ, SA",
       "cover": "BKN",
       "clouds": [
-        {
-          "cover": "BKN",
-          "base": 4000
-        }
-      ],
-      "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-06T22:11:31.872Z",
-      "obsTime": 1794002880,
-      "reportTime": "2026-11-06T22:08:00.000Z",
-      "temp": 20,
-      "dewp": 15,
-      "wdir": 130,
-      "wspd": 9,
-      "visib": "6+",
-      "altim": 1013,
-      "qcField": 0,
-      "wxString": "TS",
-      "metarType": "SPECI",
-      "rawOb": "SPECI OESK 062208Z 13009KT 9999 TS FEW030CB BKN040 20/15 Q1013",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "BKN",
-      "clouds": [
-        {
-          "cover": "FEW",
-          "base": 3000
-        },
         {
           "cover": "BKN",
           "base": 4000
