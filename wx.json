@@ -1,5 +1,5 @@
 {
-  "fetched": "2026-11-07T11:15:20Z",
+  "fetched": "2026-11-07T11:55:40Z",
   "metar": [
     {
       "icaoId": "OESK",
@@ -49,12 +49,12 @@
   "taf": [
     {
       "icaoId": "OESK",
-      "dbPopTime": "2026-11-06T23:18:57.002Z",
-      "bulletinTime": "2026-11-06T23:00:00.000Z",
-      "issueTime": "2026-11-06T23:00:00.000Z",
-      "validTimeFrom": 1794009600,
-      "validTimeTo": 1794117600,
-      "rawTAF": "TAF OESK 062300Z 0700/0806 27008KT 7000 SCT030 PROB40 TEMPO 0700/0705 3000 BR FEW030CB BKN040 BECMG 0714/0716 34005KT TEMPO 0722/0806 3000 BR",
+      "dbPopTime": "2026-11-07T11:22:53.092Z",
+      "bulletinTime": "2026-11-07T11:00:00.000Z",
+      "issueTime": "2026-11-07T11:00:00.000Z",
+      "validTimeFrom": 1794052800,
+      "validTimeTo": 1794160800,
+      "rawTAF": "TAF OESK 071100Z 0712/0818 33010KT 7000 FEW040 BECMG 0722/0800 26010KT SCT040 TEMPO 0800/0805 1500 BR",
       "mostRecent": 1,
       "remarks": "",
       "lat": 29.785,
@@ -64,13 +64,13 @@
       "name": "Al-Jouf Arpt",
       "fcsts": [
         {
-          "timeFrom": 1794009600,
-          "timeTo": 1794060000,
+          "timeFrom": 1794052800,
+          "timeTo": 1794088800,
           "timeBec": null,
           "fcstChange": null,
           "probability": null,
-          "wdir": 270,
-          "wspd": 8,
+          "wdir": 330,
+          "wspd": 10,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
@@ -82,39 +82,7 @@
           "notDecoded": null,
           "clouds": [
             {
-              "cover": "SCT",
-              "base": 3000,
-              "type": null
-            }
-          ],
-          "icgTurb": [],
-          "temp": []
-        },
-        {
-          "timeFrom": 1794009600,
-          "timeTo": 1794027600,
-          "timeBec": null,
-          "fcstChange": "TEMPO",
-          "probability": 40,
-          "wdir": null,
-          "wspd": null,
-          "wgst": null,
-          "wshearHgt": null,
-          "wshearDir": null,
-          "wshearSpd": null,
-          "visib": 1.86,
-          "altim": null,
-          "vertVis": null,
-          "wxString": "BR",
-          "notDecoded": null,
-          "clouds": [
-            {
               "cover": "FEW",
-              "base": 3000,
-              "type": "CB"
-            },
-            {
-              "cover": "BKN",
               "base": 4000,
               "type": null
             }
@@ -123,13 +91,13 @@
           "temp": []
         },
         {
-          "timeFrom": 1794060000,
-          "timeTo": 1794117600,
-          "timeBec": 1794067200,
+          "timeFrom": 1794088800,
+          "timeTo": 1794160800,
+          "timeBec": 1794096000,
           "fcstChange": "BECMG",
           "probability": null,
-          "wdir": 340,
-          "wspd": 5,
+          "wdir": 260,
+          "wspd": 10,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
@@ -142,7 +110,7 @@
           "clouds": [
             {
               "cover": "SCT",
-              "base": 3000,
+              "base": 4000,
               "type": null
             }
           ],
@@ -150,8 +118,8 @@
           "temp": []
         },
         {
-          "timeFrom": 1794088800,
-          "timeTo": 1794117600,
+          "timeFrom": 1794096000,
+          "timeTo": 1794114000,
           "timeBec": null,
           "fcstChange": "TEMPO",
           "probability": null,
@@ -161,7 +129,7 @@
           "wshearHgt": null,
           "wshearDir": null,
           "wshearSpd": null,
-          "visib": 1.86,
+          "visib": 0.93,
           "altim": null,
           "vertVis": null,
           "wxString": "BR",
