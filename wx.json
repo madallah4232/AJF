@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-08T19:22:13Z",
+  "fetched": "2026-11-08T20:14:51Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-08T20:02:48.048Z",
+      "obsTime": 1794168000,
+      "reportTime": "2026-11-08T20:00:00.000Z",
+      "temp": 15,
+      "dewp": 7,
+      "wdir": 190,
+      "wspd": 5,
+      "visib": "6+",
+      "altim": 1024,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 082000Z 19005KT CAVOK 15/07 Q1024 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-08T19:02:43.873Z",
