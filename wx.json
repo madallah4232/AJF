@@ -1,34 +1,6 @@
 {
-  "fetched": "2026-11-08T08:43:58Z",
-  "metar": [
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-08T08:12:34.781Z",
-      "obsTime": 1794124800,
-      "reportTime": "2026-11-08T08:00:00.000Z",
-      "temp": 18,
-      "dewp": 10,
-      "wdir": 280,
-      "wspd": 10,
-      "visib": "6+",
-      "altim": 1022,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 080800Z 28010KT 9999 FEW040 18/10 Q1022 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "FEW",
-      "clouds": [
-        {
-          "cover": "FEW",
-          "base": 4000
-        }
-      ],
-      "fltCat": "VFR"
-    }
-  ],
+  "fetched": "2026-11-08T11:16:15Z",
+  "metar": [],
   "taf": [
     {
       "icaoId": "OESK",
