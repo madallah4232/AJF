@@ -8,9 +8,10 @@ const E=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;","
 const isAdm=()=>!!(AUTH.me&&AUTH.me.admin);
 
 /* ---------- توحيد النص ---------- */
-const AN=s=>String(s||"").toLowerCase().replace(/[ً-ْـ]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/ء/g,"")
+const AN=s=>String(s||"").normalize("NFKC").toLowerCase().replace(/[ً-ْـ]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/ء/g,"")
   .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d));
-const NORM=s=>AN(s).replace(/[^\p{L}\p{N}]+/gu," ").replace(/\s+/g," ").trim();
+/* "لا" تنقرأ من بعض ملفات PDF مقلوبة "ال" (حالات ← حاالت) — نوحّدها في النص والبحث */
+const NORM=s=>AN(s).replace(/لا/g,"ال").replace(/[^\p{L}\p{N}]+/gu," ").replace(/\s+/g," ").trim();
 const isAr=w=>/[؀-ۿ]/.test(w);
 const enStem=w=>{if(w.length<=4)return w;return w.replace(/(ations?|ings?|ments?|ness|ies|ied|ers?|ed|es|s)$/,m=>m==="ies"||m==="ied"?"y":"")};
 const arStem=w=>{w=w.replace(/^(وال|بال|فال|كال|لل|ال)/,"");if(w.length>4)w=w.replace(/(ات|ين|ون|ها|هم|يه|يا)$/,"");return w};
@@ -149,7 +150,12 @@ async function pdfText(file,onp){const lib=await pdfLib();const doc=await lib.ge
     const w=await Tesseract.createWorker(["ara","eng"],1,window.TESS_LOCAL||{});
     try{for(let i=1;i<=max;i++){onp&&onp(`قراءة صورة الصفحة ${i}/${max} (ملف مصوّر)`);const pg=await doc.getPage(i),vp=pg.getViewport({scale:2}),cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;
       await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;text+=(await w.recognize(cv)).data.text+"\n\n"}}finally{await w.terminate()}}
-  return{text:text.replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim(),pages:n,ocr}}
+  return{text:fixAr(text.normalize("NFKC")).replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim(),pages:n,ocr}}
+/* بعض ملفات PDF العربية تطلع حروفها مقلوبة (ﺔﻴﺑﺮﻌﻟﺍ ← ةيبرعلا): نكتشفها ونعدلها */
+function fixAr(t){const w=t.match(/[\u0600-\u06FF]{3,}/g)||[];if(w.length<20)return t;
+  const fw=w.filter(x=>/^ال/.test(x)).length,bw=w.filter(x=>/لا$/.test(x)).length;if(bw<=fw*1.5||bw<5)return t;
+  return t.split("\n").map(l=>{const ar=(l.match(/[\u0600-\u06FF]/g)||[]).length;if(ar<l.replace(/\s/g,"").length*.5)return l;
+    return l.split(/(\s+)/).reverse().map(x=>/[\u0600-\u06FF]/.test(x)?[...x].reverse().join(""):x).join("")}).join("\n")}
 const EN_M={january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12,jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
 function guessDate(t,name){const s=String(t).slice(0,4000);let m;const iso=(y,mo,d)=>y>2000&&y<2100&&mo>=1&&mo<=12&&d>=1&&d<=31?`${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`:"";
   if((m=s.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+(\d{1,2}),?\s+(20\d\d)\b/i)))return iso(+m[3],EN_M[m[1].toLowerCase()],+m[2]);
@@ -167,7 +173,7 @@ function mount(el,q){root=el;if(q!=null)S.q=q;paint();loadSyn().then(()=>{if(S.q
 function paint(){if(!root)return;const adm=isAdm();
   root.innerHTML=`<div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cxQ" type="search" placeholder="ابحث بالعربي أو الإنجليزي: كلمة أو كلمتين…" value="${E(S.q)}" autocomplete="off" enterkeyhint="search"></div>
     <div class="bd-h" id="cxHint">${S.q?"":"مثال: <b>إيبولا</b> · <b>كرسي متحرك</b> · <b>أمريكا</b> · <b>بطاريات</b> · <b>تأخير البوردنق</b>"}</div>
-    ${adm?`<div class="cx-adm"><label class="cx-up"><input type="file" id="cxFiles" accept="application/pdf,.pdf" multiple hidden><span>📎 رفع تعاميم PDF</span><small>تقدر تختار أكثر من ملف</small></label><button class="cx-up" id="cxNew"><span>✍︎ تعميم مكتوب</span><small>بدون ملف</small></button></div><div id="cxUp"></div>`:""}
+    ${adm?`<div class="cx-adm"><label class="cx-up"><input type="file" id="cxFiles" accept="application/pdf,.pdf" multiple hidden><span>📎 رفع تعاميم PDF</span><small>تقدر تختار أكثر من ملف</small></label><button class="cx-up" id="cxNew"><span>✍︎ تعميم مكتوب</span><small>بدون ملف</small></button></div><button class="cx-more" id="cxReidx">🔄 إعادة قراءة كل الملفات (بعد أي تحديث للبحث)</button><div id="cxUp"></div>`:""}
     <div id="cxRes"></div>`;paintUp();paintRes()}
 function paintRes(){const el=root&&root.querySelector("#cxRes");if(!el)return;
   if(S.err){el.innerHTML=`<div class="bd-empty">${E(S.err)}</div>`;return}
@@ -189,7 +195,7 @@ async function search(){const q=S.q.trim();if(!q){S.rows=null;recent();return}S.
     const re=rx(groups[0].map(a=>a.n));
     S.rows=(j.rows||[]).map(r=>({...r,miss:r.hit<groups.length,sc:r.hit*10+(re&&re.test(NORM(r.title+" "+r.tags))?5:0)})).sort((a,b)=>b.hit-a.hit||b.sc-a.sc);paintRes()}
   catch(e){S.err=errTxt(e);paintRes()}}
-async function recent(more){S.err="";try{const j=await R("ajf_circ_list",{p_offset:more?S.list.length:0,p_limit:30});S.n=j.n;S.list=more?S.list.concat(j.rows):j.rows;if(!S.q.trim())paintRes();window.CIRC_N=j.n}catch(e){S.err=errTxt(e);S.list=[];paintRes()}}
+async function recent(more){S.err="";try{const j=await R("ajf_circ_list",{p_offset:more?S.list.length:0,p_limit:30});S.n=j.n;try{CIRCN=j.n;if(j.rows[0])CIRCLAST=j.rows[0].id}catch(x){}S.list=more?S.list.concat(j.rows):j.rows;if(!S.q.trim())paintRes();window.CIRC_N=j.n}catch(e){S.err=errTxt(e);S.list=[];paintRes()}}
 
 /* ---------- رفع الملفات (للمشرف) ---------- */
 function paintUp(){const el=root&&root.querySelector("#cxUp");if(!el)return;if(!S.up.length&&!S.usage){el.innerHTML="";return}
@@ -221,6 +227,16 @@ async function uploadAll(){if(S.upBusy)return;S.upBusy=true;paintUp();
     catch(e){x.st="err";x.retry=1;x.msg=/put/.test(e.message)?"تعذّر رفع الملف — جرّب مرة ثانية":errTxt(e)}paintUp()}
   S.upBusy=false;paintUp();recent();F({action:"usage"}).then(j=>{S.usage=j;paintUp()}).catch(()=>{});if(window.hubPaint)try{hubPaint()}catch(e){}}
 
+async function reindex(btn){if(!confirm("إعادة قراءة كل ملفات PDF وتحديث البحث؟ تاخذ دقيقة أو أكثر حسب عدد الملفات."))return;btn.disabled=true;
+  try{let all=[],off=0;for(;;){const j=await R("ajf_circ_list",{p_offset:off,p_limit:100});all=all.concat(j.rows);off+=100;if(off>=j.n)break}
+    const fl=all.filter(r=>r.has_file);let i=0,bad=0;
+    for(const r of fl){i++;btn.textContent=`🔄 ${i}/${fl.length}: ${r.title.slice(0,30)}`;
+      try{const g=(await R("ajf_circ_get",{p_id:r.id})).row,u=await F({action:"get",path:r.id+".pdf"}),blob=await(await fetch(u.url)).blob();
+        const x=await pdfText(blob,m=>{btn.textContent=`🔄 ${i}/${fl.length}: ${m}`});
+        const o={id:r.id,title:g.title,tags:g.tags,body:g.body||"",ftext:x.text,lang:g.lang,cdate:g.cd||"",pages:x.pages};Object.assign(o,indexText(o));await R("ajf_circ_save",{p:o})}catch(e){bad++}}
+    btn.textContent=`✓ تمت إعادة قراءة ${fl.length-bad} ملف${bad?" — تعذّر "+bad:""}`}
+  catch(e){btn.textContent=errTxt(e)}btn.disabled=false;S.q.trim()?search():recent()}
+
 /* ---------- فتح الملف ---------- */
 async function openFile(id,btn){const r=(S.rows||[]).concat(S.list||[],REL||[]).find(x=>x.id===id);
   /* iOS يمنع فتح نافذة بعد انتظار، فنفتحها أول ثم نحط الرابط */
@@ -241,6 +257,7 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(b.dataset.open){openFile(b.dataset.open,b);return}
     if(b.dataset.full){showFull(b.dataset.full,b);return}
     if(b.id==="cxMore"){recent(true);return}
+    if(b.id==="cxReidx"){reindex(b);return}
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
     if(b.dataset.urm!=null){S.up.splice(+b.dataset.urm,1);paintUp();return}
