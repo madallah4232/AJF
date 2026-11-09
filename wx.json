@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-09T22:24:45Z",
+  "fetched": "2026-11-09T23:20:22Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-09T23:00:24.553Z",
+      "obsTime": 1794265200,
+      "reportTime": "2026-11-09T23:00:00.000Z",
+      "temp": 11,
+      "dewp": -4,
+      "wdir": 70,
+      "wspd": 8,
+      "visib": "6+",
+      "altim": 1027,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 092300Z 07008KT CAVOK 11/M04 Q1027 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-09T22:00:32.861Z",
@@ -44,39 +66,17 @@
       "cover": "CAVOK",
       "clouds": [],
       "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-09T20:00:40.148Z",
-      "obsTime": 1794254400,
-      "reportTime": "2026-11-09T20:00:00.000Z",
-      "temp": 13,
-      "dewp": -2,
-      "wdir": 80,
-      "wspd": 12,
-      "visib": "6+",
-      "altim": 1027,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 092000Z 08012KT CAVOK 13/M02 Q1027 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "CAVOK",
-      "clouds": [],
-      "fltCat": "VFR"
     }
   ],
   "taf": [
     {
       "icaoId": "OESK",
-      "dbPopTime": "2026-11-09T11:12:30.218Z",
-      "bulletinTime": "2026-11-09T11:00:00.000Z",
-      "issueTime": "2026-11-09T11:00:00.000Z",
-      "validTimeFrom": 1794225600,
-      "validTimeTo": 1794333600,
-      "rawTAF": "TAF OESK 091100Z 0912/1018 07010KT CAVOK BECMG 0922/1000 VRB03KT 9999 SCT030",
+      "dbPopTime": "2026-11-09T23:11:15.593Z",
+      "bulletinTime": "2026-11-09T23:00:00.000Z",
+      "issueTime": "2026-11-09T23:00:00.000Z",
+      "validTimeFrom": 1794268800,
+      "validTimeTo": 1794376800,
+      "rawTAF": "TAF OESK 092300Z 1000/1106 VRB03KT CAVOK BECMG 1006/1008 09013KT 7000 SCT040 TEMPO 1006/1016 3000 TSRA FEW035CB BKN040",
       "mostRecent": 1,
       "remarks": "",
       "lat": 29.785,
@@ -86,13 +86,13 @@
       "name": "Al-Jouf Arpt",
       "fcsts": [
         {
-          "timeFrom": 1794225600,
-          "timeTo": 1794261600,
+          "timeFrom": 1794268800,
+          "timeTo": 1794290400,
           "timeBec": null,
           "fcstChange": null,
           "probability": null,
-          "wdir": 70,
-          "wspd": 10,
+          "wdir": "VRB",
+          "wspd": 3,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
@@ -113,18 +113,18 @@
           "temp": []
         },
         {
-          "timeFrom": 1794261600,
-          "timeTo": 1794333600,
-          "timeBec": 1794268800,
+          "timeFrom": 1794290400,
+          "timeTo": 1794376800,
+          "timeBec": 1794297600,
           "fcstChange": "BECMG",
           "probability": null,
-          "wdir": "VRB",
-          "wspd": 3,
+          "wdir": 90,
+          "wspd": 13,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
           "wshearSpd": null,
-          "visib": "6+",
+          "visib": 4.35,
           "altim": null,
           "vertVis": null,
           "wxString": "NSW",
@@ -132,7 +132,39 @@
           "clouds": [
             {
               "cover": "SCT",
-              "base": 3000,
+              "base": 4000,
+              "type": null
+            }
+          ],
+          "icgTurb": [],
+          "temp": []
+        },
+        {
+          "timeFrom": 1794290400,
+          "timeTo": 1794326400,
+          "timeBec": null,
+          "fcstChange": "TEMPO",
+          "probability": null,
+          "wdir": null,
+          "wspd": null,
+          "wgst": null,
+          "wshearHgt": null,
+          "wshearDir": null,
+          "wshearSpd": null,
+          "visib": 1.86,
+          "altim": null,
+          "vertVis": null,
+          "wxString": "TSRA",
+          "notDecoded": null,
+          "clouds": [
+            {
+              "cover": "FEW",
+              "base": 3500,
+              "type": "CB"
+            },
+            {
+              "cover": "BKN",
+              "base": 4000,
               "type": null
             }
           ],
