@@ -796,6 +796,29 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .tx-raw{margin-top:8px}.tx-raw summary{font-size:12px;color:var(--muted);cursor:pointer}.tx-raw pre{white-space:pre-wrap;font:500 10.5px/1.5 var(--mono);color:var(--muted);max-height:260px;overflow:auto}
 .tx-note{font-size:11.5px;color:var(--muted);line-height:1.6;margin:12px 2px 0}.tx-err{padding:14px;border-radius:14px;background:color-mix(in oklab,var(--warn) 15%,var(--panel));color:#ffd1ca}.tx-m{color:var(--muted);font-size:12.5px}
 .bd-days.tabs button{font-size:13.5px}
+.cx-root{display:grid;gap:12px;min-width:0}
+.cx-adm{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
+.cx-up{display:grid;gap:2px;justify-items:center;padding:12px;border-radius:14px;background:color-mix(in oklab,var(--c) 18%,var(--panel));border:1.5px dashed color-mix(in oklab,var(--c) 60%,var(--line));color:var(--ink);cursor:pointer;text-align:center}
+.cx-up span{font-weight:700;font-size:14px}.cx-up small{font-size:11px;color:var(--muted)}
+.cx-use{position:relative;height:26px;border-radius:9px;background:var(--panel);overflow:hidden;display:grid;place-items:center;margin-bottom:8px}.cx-use i{position:absolute;inset:0 auto 0 0;background:color-mix(in oklab,var(--c) 35%,transparent)}.cx-use span{position:relative;font-size:11.5px}
+.cx-q{display:grid;gap:8px}.cx-qi{display:grid;gap:6px;padding:12px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+.cx-qi.done{border-color:color-mix(in oklab,var(--go) 50%,var(--line))}.cx-qi.err{border-color:color-mix(in oklab,var(--warn) 50%,var(--line))}
+.cx-qi .h{display:grid;gap:2px}.cx-qi b{font-size:13.5px;word-break:break-all}.cx-qi small{color:var(--muted);font-size:11.5px}
+.cx-qi input{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:15px var(--body);padding:9px 11px}
+.cx-qi .m{margin:0;font-size:12.5px;color:var(--muted)}.cx-qi .m.ok{color:var(--go)}.cx-qi .m.err{color:var(--warn)}
+.cx-qi pre,.cx-full pre{white-space:pre-wrap;font:12.5px/1.7 var(--body);color:#c3cde0;max-height:320px;overflow:auto;margin:6px 0 0;unicode-bidi:plaintext;text-align:start}
+.cx-qi .x{justify-self:start}
+.cx-d{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}.cx-d input{width:auto}
+.cx-more{width:100%;height:42px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-weight:600}
+.ci.cx .h small{display:block;margin-top:2px}.ci.cx.near{opacity:.8}
+.cx-pdf{flex:none;font:700 10.5px var(--mono);padding:3px 7px;border-radius:7px;background:#c23b2e;color:#fff}
+.cx-nw{flex:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:var(--amber);color:#1a1205}
+.cx-tags{display:flex;flex-wrap:wrap;gap:5px}.cx-tags span{font-size:11px;padding:2px 8px;border-radius:8px;background:var(--raise);color:var(--muted)}
+.cx .sn{display:block!important;margin:0;font-size:13px;line-height:1.7;color:#c3cde0;unicode-bidi:plaintext;text-align:start}
+.cx-miss{color:var(--amber);font-size:11px}
+.cx .cact{flex-wrap:wrap}.cx-open{font-size:13px;font-weight:700;padding:6px 12px;border-radius:9px;background:var(--c);color:#0a1120}
+.cx-ed{margin-top:4px}.cx-ed textarea{min-height:140px}
+#txCirc{display:grid;gap:10px;margin-top:12px}
 @media (prefers-reduced-motion:reduce){.hub.in *,.bd.in *,.wrap.in>*{animation:none!important}.hub,.portal,.portal .pi{transition:none!important}}
 </style>
 </head>
@@ -3155,14 +3178,10 @@ let CIRC=[],TIMN="",circAt=0,CQ="";
 try{const c=JSON.parse(localStorage.getItem("ajf_circ_cache")||"null");if(c){CIRC=c.c||[];TIMN=c.t||""}}catch(e){}
 const circSeen=()=>{try{return localStorage.getItem("ajf_circ_seen")||""}catch(e){return""}};
 const cfgGet=async k=>{const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:k});if(j.s==="out"){authOut();throw new Error("out")}return j.v};
+let CIRCN=0,CIRCLAST="";try{const c=JSON.parse(localStorage.getItem("ajf_circ_n")||"null");if(c){CIRCN=c.n;CIRCLAST=c.l}}catch(e){}
 async function circLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-circAt<60e3))return;circAt=Date.now();
-  try{const[ix,tm]=await Promise.all([cfgGet("circ"),cfgGet("tim")]);const L=Array.isArray(ix)?ix:[];
-    const old=new Map(CIRC.map(c=>[c.id+"|"+(c.v||0),c.b]));
-    const out=await Promise.all(L.map(async c=>{const key=c.id+"|"+(c.v||0);if(old.has(key))return{...c,b:old.get(key)};
-      if(c.b!=null)return c;/* صيغة قديمة: النص داخل الفهرس */
-      const parts=await Promise.all(Array.from({length:c.n||1},(_,i)=>cfgGet("ci_"+c.id+"_"+i).catch(()=>null)));return{...c,b:parts.map(p=>p&&p.b||"").join("")}}));
-    CIRC=out;TIMN=tm&&tm.t||"";try{localStorage.setItem("ajf_circ_cache",JSON.stringify({c:CIRC,t:TIMN}))}catch(e){}
-    hubPaint();if(BOARD==="tim")timPaintList()}catch(e){}}
+  try{const j=await rpc("ajf_circ_list",{p_token:AUTH.tok,p_device:AUTH.dev,p_offset:0,p_limit:1});if(j.s==="out"){authOut();return}if(j.s!=="ok")return;
+    CIRCN=j.n||0;CIRCLAST=j.rows&&j.rows[0]?j.rows[0].id:"";try{localStorage.setItem("ajf_circ_n",JSON.stringify({n:CIRCN,l:CIRCLAST}))}catch(e){}hubPaint()}catch(e){}}
 async function circSave(c){/* c={id,t,b,d,by} */const ch=[];for(let i=0;i<c.b.length;i+=7000)ch.push(c.b.slice(i,i+7000));if(!ch.length)ch.push("");
   c.v=Date.now();c.n=ch.length;await Promise.all(ch.map((b,i)=>cfgSet("ci_"+c.id+"_"+i,{b})));
   const nx=[c,...CIRC.filter(x=>x.id!==c.id)];await cfgSet("circ",nx.map(({b,...m})=>m));CIRC=nx;
@@ -3201,8 +3220,8 @@ function hubPaint(){
   $("hubHi").innerHTML=`<small>${DAYS[TODAY.getUTCDay()]} · ${dLabel(TODAY)}</small><h2>${hubGreet()}${first?"، <span>"+escT(first)+"</span>":""}</h2>
     <p>${left?`باقي <b>${left}</b> ${left>2&&left<11?"رحلات":"رحلة"} اليوم. السلامة أولاً، ومناوبة موفقة.`:"ما فيه رحلات متبقية اليوم. يومك سعيد."}</p>
     <div class="hub-st"><div><b>${fl.length}</b><span>رحلات اليوم</span></div><div><b>${nd?nd.f.t:"—"}</b><span>${nd?escT(nd.f.n):"القادمة"}</span></div><div><b>${cd}</b><span>على الإقلاع</span></div></div>`;
-  const sv=fl.filter(f=>/^SV/i.test(f.n)).length,seen=circSeen(),nw=CIRC.length&&CIRC[0].id!==seen;
-  const info={tim:[CIRC.length?CIRC.length+" تعميم":"",nw?"جديد":""],flt:[left+" متبقية",""],trc:[fl.length+" رحلة اليوم",""],lc:[sv+" رحلة سعودية",""]};
+  const sv=fl.filter(f=>/^SV/i.test(f.n)).length,seen=circSeen(),nw=CIRCN&&CIRCLAST&&CIRCLAST!==seen;
+  const info={tim:[CIRCN?CIRCN+" تعميم":"",nw?"جديد":""],flt:[left+" متبقية",""],trc:[fl.length+" رحلة اليوم",""],lc:[sv+" رحلة سعودية",""]};
   const g=$("hubG");if(!g.children.length)g.innerHTML=BOARDS.map(B=>`<button class="hub-c" data-b="${B.id}" style="--c:${B.c}"><div class="ic">${svgI(B.ic,24)}</div><div><b>${B.t}</b><span>${B.s}</span><span class="nf" style="color:${B.c}"></span></div><em></em></button>`).join("");
   BOARDS.forEach(B=>{const c=g.querySelector(`[data-b="${B.id}"]`);c.querySelector(".nf").textContent=info[B.id][0];c.querySelector("em").textContent=info[B.id][1]});
 }
@@ -3244,16 +3263,14 @@ function bdRender(){const B=$("bdB");
   if(BOARD==="tim"&&TIMTAB==="doc"){B.innerHTML=timTabs()+`<div id="txRoot"><div class="bd-empty">جاري التحميل…</div></div>
       <a class="tm-l" href="https://www.iatatravelcentre.com/" target="_blank" rel="noopener"><i>🌐</i><div><b>IATA Travel Centre · Timatic</b><small>للاستعلام السريع بدون أماديوس</small></div></a>`;
     timLoad().then(()=>{const r=$("txRoot");if(r&&window.TIM)TIM.mount(r)}).catch(()=>{const r=$("txRoot");if(r)r.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
-  if(BOARD==="tim"){const adm=!!(AUTH.me&&AUTH.me.admin);
-    B.innerHTML=timTabs()+`<div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cqIn" type="search" placeholder="ابحث في التعاميم: كلمة أو كلمتين…" value="${escT(CQ)}" autocomplete="off" enterkeyhint="search"></div>
-      <div id="cqList"></div>
-      ${adm?`<details class="ci-f" id="ciBox" ${DRAFT.ciT||DRAFT.ciB||DRAFT.ciE?"open":""}><summary><b id="ciHd">${DRAFT.ciE?"تعديل تعميم":"＋ إضافة تعميم"}</b></summary><input id="ciT" placeholder="العنوان (مثال: تعميم تأخير البوردنق)" value="${escT(DRAFT.ciT||"")}"><textarea id="ciB" placeholder="نص التعميم كامل… يمكنك لصق نص طويل">${escT(DRAFT.ciB||"")}</textarea><button id="ciGo">${DRAFT.ciE?"حفظ التعديل":"نشر التعميم للموظفين"}</button>${DRAFT.ciE?'<button id="ciCancel" class="sec">إلغاء التعديل</button>':""}<span class="m" id="ciM">المسودة تنحفظ تلقائياً على جوالك لين تنشرها.</span></details>`:""}
-      ${TIMN||adm?`<div class="ci"><div class="h"><b>ملاحظات تيماتيك</b></div>${adm?`<div class="ci-f" style="padding:0;border:0"><textarea id="timIn" placeholder="ملاحظات للموظفين عن متطلبات السفر…">${escT(DRAFT.tim!=null?DRAFT.tim:TIMN)}</textarea><button id="timGo">حفظ الملاحظات</button><span class="m" id="timM"></span></div>`:`<p>${escT(TIMN)}</p>`}</div>`:""}`;
-    timPaintList();if(CIRC.length)try{localStorage.setItem("ajf_circ_seen",CIRC[0].id)}catch(e){}}
+  if(BOARD==="tim"){B.innerHTML=timTabs()+`<div id="cxRoot" class="cx-root"><div class="bd-empty">جاري التحميل…</div></div>`;
+    if(CIRCLAST)try{localStorage.setItem("ajf_circ_seen",CIRCLAST)}catch(e){}
+    timLoad().then(()=>{const r=$("cxRoot");if(r&&window.CIRCM)CIRCM.mount(r)}).catch(()=>{const r=$("cxRoot");if(r)r.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
 }
 let TIMTAB="doc";
-const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRC.length?" · "+CIRC.length:""}</button></div>`;
-let timP=null;const timLoad=()=>window.TIM?Promise.resolve():timP||(timP=new Promise((ok,no)=>{const s=document.createElement("script");s.src="timatic.js?v=1";s.onload=ok;s.onerror=()=>{timP=null;no()};document.head.appendChild(s)}));
+const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
+const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=2")).then(()=>window.CIRCM||ldJs("circ.js?v=1")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;
   if(!CIRC.length){L.innerHTML=`<div class="bd-empty">ما فيه تعاميم حالياً</div>`;return}

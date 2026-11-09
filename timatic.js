@@ -173,7 +173,7 @@ const SLOTS=[{k:"tim",t:"شاشة TIMATIC",s:"صوّر الشاشة من أما�
 const S={files:{tim:[],pp:[],vs:[],bk:[]},date:"",busy:false,res:null};
 let root=null;
 const todayISO=()=>{const d=new Date(Date.now()+3*3600e3);return d.toISOString().slice(0,10)};
-function mount(el){root=el;if(!S.date)S.date=todayISO();paint()}
+function mount(el){root=el;if(!S.date)S.date=todayISO();paint();if(S.res)relate()}
 function paint(){if(!root)return;
   root.innerHTML=`<div class="tx-intro"><b>فحص وثائق الراكب</b><span>صوّر شاشة TIMATIC ووثائق الراكب، والتطبيق يقرأها ويطلع لك المطلوب بوضوح. الصور تُقرأ على جوالك فقط ولا تُرفع ولا تُحفظ.</span></div>
   <div class="tx-slots">${SLOTS.map(sl=>{const n=S.files[sl.k].length;return`<div class="tx-slot ${n?"on":""}"><label><input type="file" accept="image/*" ${sl.multi?"multiple":""} data-slot="${sl.k}" hidden><i>${sl.ic}</i><b>${sl.t}</b><small>${n?`✓ ${n} صورة`:sl.s}</small></label>${n?`<button class="tx-x" data-clr="${sl.k}" aria-label="حذف">✕</button>`:""}</div>`}).join("")}</div>
@@ -200,10 +200,11 @@ async function run(){if(S.busy)return;S.busy=true;S.res=null;paint();
     const T=lines.length?parseTim(lines):null;
     S.res=report(T,mrz,txt)}
   catch(e){console.error(e);S.res=`<div class="tx-err">تعذّرت القراءة: ${e.message==="lib"?"ما قدرنا نحمّل محرك القراءة — تأكد من الإنترنت.":"جرّب صورة أوضح."}</div>`}
-  S.busy=false;paint();const r=root.querySelector("#txRes");if(r)r.scrollIntoView({behavior:"smooth",block:"start"})}
+  S.busy=false;paint();const r=root.querySelector("#txRes");if(r)r.scrollIntoView({behavior:"smooth",block:"start"});relate()}
+function relate(){const el=root&&root.querySelector("#txCirc");if(el&&S.ctx&&window.CIRCM)CIRCM.related(S.ctx,el)}
 const fD=d=>d?`${String(d.getUTCDate()).padStart(2,"0")}/${String(d.getUTCMonth()+1).padStart(2,"0")}/${d.getUTCFullYear()}`:"—";
 const mBetween=(a,b)=>(b.getUTCFullYear()-a.getUTCFullYear())*12+(b.getUTCMonth()-a.getUTCMonth())-(b.getUTCDate()<a.getUTCDate()?1:0);
-function report(T,M,txt){const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r:3,a:2,i:1,g:0};
+function report(T,M,txt){S.ctx={T,P:M.pp,B:null};const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r:3,a:2,i:1,g:0};
   const ask=(lv,ar)=>chk.push({lv,ar});
   const P=M.pp,nat=P?byA3(P.nat):null;
   /* 1) الجواز */
@@ -226,7 +227,7 @@ function report(T,M,txt){const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r
     if(T.hdr.res&&T.hdr.res.a2==="SA"&&nat&&nat.a2!=="SA")ask("i","مقيم في السعودية: تأكد من <b>تأشيرة خروج وعودة أو خروج نهائي</b> سارية (تتحقق منها الجوازات)")}
   else if(S.files.tim.length)ask("a","ما قدرت أقرأ شاشة تيماتيك بوضوح — صوّرها مستقيمة وقريبة وبدون انعكاس، أو قسّمها على أكثر من صورة");
   /* 3) الحجز */
-  let B=null;if(txt.bk.length){B=parseBooking(txt.bk.join("\n"));
+  let B=null;if(txt.bk.length){B=parseBooking(txt.bk.join("\n"));S.ctx.B=B;
     if(P&&B.names.length){const ok=B.names.some(n=>lev(n.sur,P.sur.replace(/\s/g,""))<=1||P.sur.replace(/\s/g,"").includes(n.sur));if(!ok)ask("a",`الاسم في الحجز (${E(B.names[0].sur)}/${E(B.names[0].giv)}) <b>ما يطابق الجواز</b> (${E(P.sur)}) — تأكد`)}
     if(T&&T.hdr.tr&&B.codes.length<2)ask("i","ما قدرت أقرأ مسار الحجز كامل — تأكد من نقطة الترانزيت ووقت الرحلة التالية");
     const tw=T&&T.secs.some(s=>s.kind==="tr"&&s.items.some(i=>/تذكرة مؤكدة/.test(i.ar)));if(tw)ask("a",`تأكد من الحجز: الرحلة التالية من الترانزيت <b>مؤكدة</b> وضمن المدة المسموحة`)}
@@ -247,11 +248,12 @@ function report(T,M,txt){const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r
   return`<div class="tx-v ${V.c}">${V.t}</div>${trip}
     ${chk.length?`<div class="tx-chk"><h5>انتبه / اطلب من الراكب</h5>${chk.map((c,i)=>`<div class="${c.lv}"><i>${i+1}</i><p>${c.ar}</p></div>`).join("")}</div>`:""}
     ${docP}${docV}${docB}${secs}
+    <div id="txCirc"></div>
     <p class="tx-note">الخلاصة قراءة آلية للمساعدة فقط — القرار النهائي حسب شاشة TIMATIC في أماديوس. لو فيه شك اقرأ النص الإنجليزي تحت كل بند.</p>`}
 function onEv(e){const t=e.target;
   if(t.matches&&t.matches("input[data-slot]")){const k=t.dataset.slot,sl=SLOTS.find(s=>s.k===k);const fs=[...t.files];S.files[k]=sl.multi?S.files[k].concat(fs).slice(0,6):fs.slice(0,1);S.res=null;paint();return}
   if(t.id==="txDate"){S.date=t.value||todayISO();return}}
 function onClick(e){const c=e.target.closest("[data-clr]");if(c){S.files[c.dataset.clr]=[];S.res=null;paint();return}if(e.target.closest("#txGo"))run()}
-window.TIM={mount:el=>{mount(el);if(!el.__tx){el.__tx=1;el.addEventListener("change",onEv);el.addEventListener("click",onClick)}},
+window.TIM={countries:CTRY,mount:el=>{mount(el);if(!el.__tx){el.__tx=1;el.addEventListener("change",onEv);el.addEventListener("click",onClick)}},
   /* للاختبار */_parse:(raw)=>parseTim(cleanLines(raw)),_mrz:parseMRZ,_bk:parseBooking};
 })();
