@@ -829,6 +829,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .cx-en{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .cx-sum{font-size:14px;line-height:1.8;color:#dbe3f2;padding:8px 10px;border-radius:10px;background:color-mix(in oklab,var(--c) 10%,var(--raise))}
 .cx .sn.en{font-size:12px;color:var(--muted);max-height:3.4em;overflow:hidden}
+.dc-lock{display:grid;justify-items:center;gap:8px;text-align:center;padding:34px 18px;border-radius:18px;background:var(--panel);border:1px dashed var(--line)}.dc-lock i{font-style:normal;font-size:40px}.dc-lock b{font:700 18px var(--display)}.dc-lock p{margin:0;color:#c3cde0;font-size:14px;line-height:1.7}.dc-lock small{color:var(--muted);font-size:12px}
 .dcg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .dcg button{display:grid;gap:2px;text-align:start;padding:11px 12px;border-radius:14px;background:color-mix(in oklab,var(--c) 14%,var(--panel));border:1px solid color-mix(in oklab,var(--c) 40%,var(--line));color:var(--ink)}
 .dcg b{font-size:14px}.dcg small{font-size:11px;color:var(--muted)}
@@ -3307,7 +3308,7 @@ function bdRender(){const B=$("bdB");
       (list.length?list.map(f=>{const V=CSV[iso(d)+"_"+f.n]||{},sv=/^SV/i.test(f.n),nl=Object.keys(V).filter(k=>k.startsWith("lc.")).length,ng=fmN(V,"bsd");
         return`<div class="bf"><div class="h"><span class="t">${f.t}</span><div class="n"><b>${escT(f.n)} · ${escT(f.dest)}</b><small>${escT(f.airline||"")}</small></div></div>
           <div class="a"><button class="p" data-ls="${escT(f.n)}" ${sv?"":"disabled"}>⚖︎ Load Sheet<small>${sv?(nl?"✍︎ "+nl+" خانة":"Balance · LIR"):"للسعودية فقط"}</small></button><button data-gaca="${escT(f.n)}">🛄 نموذج GACA<small>${ng?"✍︎ "+ng+" خانة":"Baggage Security"}</small></button></div></div>`}).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`);return}
-  if(BOARD==="tim"&&TIMTAB==="doc"&&!dcOK())TIMTAB="circ";
+  if(BOARD==="tim"&&TIMTAB==="doc"&&!dcOK()){B.innerHTML=timTabs()+`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>فحص وثائق الراكب تحت التجربة حالياً، ومتاح فقط لمن يمنحه المشرف الصلاحية.</p><small>تقدر تستخدم «📢 التعاميم» واسأل المساعد عن أي متطلبات سفر.</small></div>`;return}
   if(BOARD==="tim"&&TIMTAB==="doc"){B.innerHTML=timTabs()+`<div id="txRoot"><div class="bd-empty">جاري التحميل…</div></div>
       <a class="tm-l" href="https://www.iatatravelcentre.com/" target="_blank" rel="noopener"><i>🌐</i><div><b>IATA Travel Centre · Timatic</b><small>للاستعلام السريع بدون أماديوس</small></div></a>`;
     timLoad().then(()=>{const r=$("txRoot");if(r&&window.TIM)TIM.mount(r)}).catch(()=>{const r=$("txRoot");if(r)r.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
@@ -3321,7 +3322,7 @@ var DCP=(()=>{try{return JSON.parse(localStorage.getItem("ajf_dcp")||"[]")}catch
 async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e3))return;dcpAt=Date.now();
   try{const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"dcp"});if(j.s==="ok"){DCP=(j.v&&Array.isArray(j.v.l))?j.v.l:[];try{localStorage.setItem("ajf_dcp",JSON.stringify(DCP))}catch(e){}}}catch(e){}}
 const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
-const timTabs=()=>!dcOK()?"":`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
+const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=2")).then(()=>window.CIRCM||ldJs("circ.js?v=8")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
