@@ -176,11 +176,11 @@ function paint(){if(!root)return;const adm=isAdm();
     <div id="axA">${thHTML()}</div>
     <textarea id="axQ" rows="2" placeholder="${(S.th||[]).length?"اكتب سؤال متابعة أو توضيح…":"مثال: راكب مسافر أمريكا وش يحتاج؟ · الرحلة تأخرت بسبب الطقس وش نسوي؟"}">${E(S.aq||"")}</textarea>
     <button class="tx-go" id="axGo" ${S.abusy?"disabled":""}>${S.abusy?"… يقرأ التعاميم":(S.th||[]).length?"أرسل":"اسأل"}</button></div>
-    <div class="bd-sec"><span>أو ابحث بكلمة</span></div>
+${adm?`    <div class="bd-sec"><span>أو ابحث بكلمة</span></div>
     <div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cxQ" type="search" placeholder="ابحث بالعربي أو الإنجليزي: كلمة أو كلمتين…" value="${E(S.q)}" autocomplete="off" enterkeyhint="search"></div>
     <div class="bd-h" id="cxHint">${S.q?"":"مثال: <b>إيبولا</b> · <b>كرسي متحرك</b> · <b>أمريكا</b> · <b>بطاريات</b> · <b>تأخير البوردنق</b>"}</div>
     ${adm?`<div class="cx-adm"><label class="cx-up"><input type="file" id="cxFiles" accept="application/pdf,.pdf" multiple hidden><span>📎 رفع تعاميم PDF</span><small>تقدر تختار أكثر من ملف</small></label><button class="cx-up" id="cxNew"><span>✍︎ تعميم مكتوب</span><small>بدون ملف</small></button></div><button class="cx-more" id="cxSumAll">🤖 تلخيص التعاميم بالعربي (اللي ما تلخصت)</button><button class="cx-more" id="cxReidx">🔄 إعادة قراءة كل الملفات (بعد أي تحديث للبحث)</button><div id="cxUp"></div>`:""}
-    <div id="cxRes"></div>`;paintUp();paintRes()}
+    <div id="cxRes"></div>`:""}`;paintUp();paintRes()}
 function paintRes(){const el=root&&root.querySelector("#cxRes");if(!el)return;
   if(S.err){el.innerHTML=`<div class="bd-empty">${E(S.err)}</div>`;return}
   const rows=S.q.trim()?S.rows:S.list;if(rows==null){el.innerHTML=`<div class="bd-empty">… جاري البحث</div>`;return}
