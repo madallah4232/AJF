@@ -13,12 +13,12 @@ const out = (b: unknown, st = 200) => new Response(JSON.stringify(b), { status: 
 
 // ---------- المساعد الذكي (Gemini) — المفتاح في Secrets باسم GEMINI_KEY ----------
 const GK = Deno.env.get("GEMINI_KEY") || "";
-const GM = (Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash").split(",");
+const GM = (Deno.env.get("GEMINI_MODEL") || "gemini-flash-lite-latest,gemini-3.5-flash-lite").split(",");
 async function gem(text: string, sys: string, json = false): Promise<string> {
   let last = "";
   for (const m of GM) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.trim()}:generateContent?key=${GK}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.trim()}:generateContent`, {
+      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GK }, signal: AbortSignal.timeout(50000),
       body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text }] }],
         generationConfig: { temperature: 0.2, ...(json ? { responseMimeType: "application/json" } : {}) } }),
     });

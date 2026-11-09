@@ -245,10 +245,12 @@ async function reindex(btn){if(!confirm("إعادة قراءة كل ملفات P
 
 /* ---------- المساعد ---------- */
 function fmtAns(t){let h=E(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ");
-  h=h.replace(/\[(\d{1,2})\]/g,(m,n)=>`<button class="ax-c" data-asrc="${+n-1}">${n}</button>`);return h.replace(/\n/g,"<br>")}
+  h=h.replace(/\[(\d{1,2}(?:\s*[,،]\s*\d{1,2})*)\]/g,(m,ns)=>ns.split(/[,،]/).map(n=>`<button class="ax-c" data-asrc="${+n.trim()-1}">${+n.trim()}</button>`).join(""));return h.replace(/\n/g,"<br>")}
+/* المصادر اللي ذكرها الجواب فقط */
+const cited=t=>{const c=new Set();(String(t).match(/\[(\d{1,2}(?:\s*[,،]\s*\d{1,2})*)\]/g)||[]).forEach(m=>m.replace(/[\[\]]/g,"").split(/[,،]/).forEach(n=>c.add(+n.trim()-1)));return c}
 async function ask(){const q=(S.aq||"").trim();if(q.length<3||S.abusy)return;S.abusy=true;S.ans=`<div class="bd-empty">… المساعد يقرأ التعاميم ويجهز الجواب (عادة 5–15 ثانية)</div>`;paint();
   try{const j=await F({action:"ask",q});S.asrc=j.src||[];
-    S.ans=`<div class="ax-a">${fmtAns(j.answer||"")}</div>`+(S.asrc.length?`<div class="ax-s"><small>المصادر:</small>${S.asrc.map((r,i)=>{const a=AI(r);return`<button class="ax-sr" data-asrc="${i}"><i>${i+1}</i><span>${E(a&&a.t||r.title)}</span>${r.has_file?"<em>📄</em>":""}</button>`}).join("")}</div>`:"")+
+    S.ans=`<div class="ax-a">${fmtAns(j.answer||"")}</div>`+(S.asrc.length?`<div class="ax-s"><small>المصادر:</small>${S.asrc.map((r,i)=>{const cs=cited(j.answer);if(cs.size&&!cs.has(i))return"";const a=AI(r);return`<button class="ax-sr" data-asrc="${i}"><i>${i+1}</i><span>${E(a&&a.t||r.title)}</span>${r.has_file?"<em>📄</em>":""}</button>`}).join("")}</div>`:"")+
       `<p class="tx-note">جواب آلي من التعاميم — تأكد من التعميم الأصلي قبل أي قرار مهم.</p>`}
   catch(e){S.ans=`<div class="bd-empty">${e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":E(errTxt(e))}</div>`}
   S.abusy=false;paint()}
