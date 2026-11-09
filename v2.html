@@ -755,6 +755,15 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .tm-l i{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:color-mix(in oklab,var(--c) 25%,transparent);color:var(--c);font-style:normal;font-size:22px;flex:none}
 .tm-l b{display:block;font-size:15px}.tm-l small{color:var(--muted);font-size:12px}
 .bd-sec{font:700 14px var(--display);color:var(--muted);margin:6px 2px -2px;display:flex;justify-content:space-between;align-items:center}
+.cq{display:flex;align-items:center;gap:10px;height:54px;padding:0 14px;border-radius:16px;background:var(--panel);border:1.5px solid color-mix(in oklab,var(--c) 55%,var(--line));color:var(--c)}
+.cq input{flex:1;min-width:0;height:100%;background:none;border:0;color:var(--ink);font:16px var(--body);outline:none}
+.ci summary{list-style:none;cursor:pointer}.ci summary::-webkit-details-marker{display:none}
+.ci .ch{color:var(--muted);transition:transform .2s}.ci[open] .ch{transform:rotate(180deg)}
+.ci .sn{color:var(--muted);font-size:13px;margin-top:6px}.ci[open] .sn{display:none}
+.ci mark{background:color-mix(in oklab,var(--c) 40%,transparent);color:var(--ink);border-radius:3px;padding:0 1px}
+.ci .cact{display:flex;gap:8px;justify-content:flex-end}.ci summary small{display:block;margin-top:2px}.ci .ed{font-size:12.5px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);color:var(--ink)}
+.ci-f summary{list-style:none;cursor:pointer;color:var(--c)}.ci-f summary::-webkit-details-marker{display:none}
+.ci-f[open]{display:grid;gap:8px}.ci-f button.sec{background:var(--raise);color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.hub.in *,.bd.in *,.wrap.in>*{animation:none!important}.hub,.portal,.portal .pi{transition:none!important}}
 </style>
 </head>
@@ -3109,11 +3118,49 @@ const BOARDS=[
   {id:"lc",t:"Load Control",s:"اللودشيت ونموذج GACA",c:"#5aa9ff",ic:'<path d="M12 3v18M5 7h14"/><path d="M5 7l-3 7a3.5 3.5 0 0 0 6 0zM19 7l-3 7a3.5 3.5 0 0 0 6 0z"/>'}];
 const svgI=(p,s=24)=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const hubDays=()=>[TODAY,addDays(TODAY,-1)];
-let CIRC=[],TIMN="",circAt=0;
+let CIRC=[],TIMN="",circAt=0,CQ="";
+/* التعاميم: فهرس في المفتاح circ، ونص كل تعميم مقسّم على مفاتيح ci_<id>_<n> (حد Supabase 8000 حرف للمفتاح) */
+try{const c=JSON.parse(localStorage.getItem("ajf_circ_cache")||"null");if(c){CIRC=c.c||[];TIMN=c.t||""}}catch(e){}
 const circSeen=()=>{try{return localStorage.getItem("ajf_circ_seen")||""}catch(e){return""}};
+const cfgGet=async k=>{const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:k});if(j.s==="out"){authOut();throw new Error("out")}return j.v};
 async function circLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-circAt<60e3))return;circAt=Date.now();
-  try{const[a,b]=await Promise.all(["circ","tim"].map(k=>rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:k})));
-    if(a.s==="out"){authOut();return}CIRC=Array.isArray(a.v)?a.v:[];TIMN=b&&b.v&&b.v.t||"";hubPaint();if(BOARD==="tim")bdRender()}catch(e){}}
+  try{const[ix,tm]=await Promise.all([cfgGet("circ"),cfgGet("tim")]);const L=Array.isArray(ix)?ix:[];
+    const old=new Map(CIRC.map(c=>[c.id+"|"+(c.v||0),c.b]));
+    const out=await Promise.all(L.map(async c=>{const key=c.id+"|"+(c.v||0);if(old.has(key))return{...c,b:old.get(key)};
+      if(c.b!=null)return c;/* صيغة قديمة: النص داخل الفهرس */
+      const parts=await Promise.all(Array.from({length:c.n||1},(_,i)=>cfgGet("ci_"+c.id+"_"+i).catch(()=>null)));return{...c,b:parts.map(p=>p&&p.b||"").join("")}}));
+    CIRC=out;TIMN=tm&&tm.t||"";try{localStorage.setItem("ajf_circ_cache",JSON.stringify({c:CIRC,t:TIMN}))}catch(e){}
+    hubPaint();if(BOARD==="tim")timPaintList()}catch(e){}}
+async function circSave(c){/* c={id,t,b,d,by} */const ch=[];for(let i=0;i<c.b.length;i+=7000)ch.push(c.b.slice(i,i+7000));if(!ch.length)ch.push("");
+  c.v=Date.now();c.n=ch.length;await Promise.all(ch.map((b,i)=>cfgSet("ci_"+c.id+"_"+i,{b})));
+  const nx=[c,...CIRC.filter(x=>x.id!==c.id)];await cfgSet("circ",nx.map(({b,...m})=>m));CIRC=nx;
+  try{localStorage.setItem("ajf_circ_cache",JSON.stringify({c:CIRC,t:TIMN}))}catch(e){}}
+/* مسودات: اللي تكتبه ينحفظ على الجوال أول بأول ولا يضيع لو طلعت من الصفحة */
+const DRAFT=(()=>{try{return JSON.parse(localStorage.getItem("ajf_drafts")||"{}")}catch(e){return{}}})();
+const draftSet=(k,v)=>{if(v)DRAFT[k]=v;else delete DRAFT[k];try{localStorage.setItem("ajf_drafts",JSON.stringify(DRAFT))}catch(e){}};
+/* البحث في التعاميم: يتجاهل التشكيل والهمزات والتاء المربوطة وال التعريف، ويبحث بالعربي والإنجليزي ومرادفاتها */
+let CSYN=null;
+function csyn(){if(CSYN)return CSYN;CSYN={};try{Object.entries(SYN).forEach(([k,v])=>{const n=stem(arN(k));CSYN[n]=(CSYN[n]?CSYN[n]+" ":"")+v;v.split(" ").forEach(e=>{CSYN[e]=(CSYN[e]?CSYN[e]+" ":"")+n})})}catch(e){}return CSYN}
+const cN=t=>arN(t).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[^\p{L}\p{N}\s]/gu," ");
+/* مجموعات كلمات المطار: أي كلمة منها تجيب الباقي */
+const CGRP=["شنط شنطه حقيبه حقائب عفش امتعه baggage bag bags luggage","كرسي متحرك wchr wheelchair wch معاق","بوابه gate قيت","بوردنق صعود boarding","تاخير تاخر delay dly","الغاء ملغي cancel cancellation","جواز passport جوازات","تاشيره فيزا visa","اقامه iqama residence","راكب ركاب pax passenger passengers","طفل اطفال رضيع infant child minor","وزن اوزان weight","خطر خطره dangerous dgr","حيوان حيوانات pet avih animal","سلاح اسلحه weapon firearm","دواء ادويه medicine","حامل pregnant pregnancy","نسيان مفقود lost","تذكره tickets ticket تكت","كاونتر counter check-in كاونترات"];
+const sk=w=>{w=stem(w);const k=w.replace(/[اويىءئؤأإآ]/g,"").replace(/[هة]$/,"");return k.length>=2?k:w};
+function circSearch(q){const words=cN(q).split(/\s+/).filter(w=>w.length>1&&!AR_STOP.has(w));if(!words.length)return null;const S=csyn();
+  const G=CGRP.map(g=>cN(g).split(" "));
+  const groups=words.map(w=>{const st=stem(w),alt=new Set([w,st]);(S[st]||S[w]||"").split(" ").filter(Boolean).forEach(x=>alt.add(x));
+    G.forEach(g=>{if(g.some(x=>x===w||x===st||sk(x)===sk(w)))g.forEach(x=>alt.add(x))});return[...alt].filter(x=>x.length>1)});
+  const R=CIRC.map(c=>{const T=cN(c.t),B=cN(c.b||""),TW=T.split(/\s+/).map(sk),BW=B.split(/\s+/).map(sk);let sc=0,hit=0;
+    groups.forEach(g=>{let got=0;g.forEach(a=>{let t=T.split(a).length-1,b=B.split(a).length-1;
+        if(!t&&!b){const k=sk(a);if(k.length>=2){const m=x=>x===k||(k.length>=3&&x.startsWith(k));t=TW.filter(m).length;b=BW.filter(m).length}}
+        if(t||b){got=1;sc+=t*5+Math.min(b,5)}});hit+=got});
+    return{c,sc,hit}}).filter(r=>r.hit);
+  const all=R.filter(r=>r.hit===groups.length).sort((a,b)=>b.sc-a.sc),near=R.filter(r=>r.hit<groups.length).sort((a,b)=>b.hit-a.hit||b.sc-a.sc);
+  return{all,near,terms:groups.flat()}}
+function hiLite(txt,terms){let h=escT(txt);if(!terms||!terms.length)return h;
+  /* نعلّم الكلمات في النص الأصلي بمطابقة مرنة للحروف المتشابهة */
+  const fl=t=>t.split("").map(ch=>({"ا":"[اأإآء]","ه":"[هة]","ي":"[يىئ]","و":"[وؤ]"})[ch]||ch.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("[\\u064B-\\u0652\\u0640]*");
+  try{const re=new RegExp("("+terms.filter(t=>t.length>1).sort((a,b)=>b.length-a.length).map(fl).join("|")+")","gi");h=h.replace(re,"<mark>$1</mark>")}catch(e){}return h}
+function snip(b,terms){const N=cN(b);let p=-1;for(const t of terms){p=N.indexOf(t);if(p>=0)break}if(p<0)return b.slice(0,220);const a=Math.max(0,p-80);return(a?"…":"")+b.slice(a,a+260)+(a+260<b.length?"…":"")}
 function hubGreet(){const m=NOW.mins;return m<300?"مساء الخير":m<720?"صباح الخير":"مساء الخير"}
 function hubPaint(){
   const me=AUTH.me||{},first=String(me.name||"").trim().split(/\s+/)[0]||"";
@@ -3162,15 +3209,22 @@ function bdRender(){const B=$("bdB");
       (list.length?list.map(f=>{const V=CSV[iso(d)+"_"+f.n]||{},sv=/^SV/i.test(f.n),nl=Object.keys(V).filter(k=>k.startsWith("lc.")).length,ng=fmN(V,"bsd");
         return`<div class="bf"><div class="h"><span class="t">${f.t}</span><div class="n"><b>${escT(f.n)} · ${escT(f.dest)}</b><small>${escT(f.airline||"")}</small></div></div>
           <div class="a"><button class="p" data-ls="${escT(f.n)}" ${sv?"":"disabled"}>⚖︎ Load Sheet<small>${sv?(nl?"✍︎ "+nl+" خانة":"Balance · LIR"):"للسعودية فقط"}</small></button><button data-gaca="${escT(f.n)}">🛄 نموذج GACA<small>${ng?"✍︎ "+ng+" خانة":"Baggage Security"}</small></button></div></div>`}).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`);return}
-  if(BOARD==="tim"){const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
-    B.innerHTML=`<a class="tm-l" href="https://www.iatatravelcentre.com/" target="_blank" rel="noopener"><i>🛂</i><div><b>IATA Travel Centre · Timatic</b><small>متطلبات الجواز والتأشيرة والصحة حسب الجنسية والوجهة</small></div></a>
-      <div class="bd-h">للتأكيد النهائي عند الكاونتر ارجع لـ TIMATIC من نظام Amadeus.</div>
-      ${TIMN||adm?`<div class="ci"><div class="h"><b>ملاحظات تيماتيك</b></div><p>${escT(TIMN||"—")}</p>${adm?`<div class="ci-f" style="padding:0;border:0"><textarea id="timIn" placeholder="ملاحظات للموظفين عن متطلبات السفر…">${escT(TIMN)}</textarea><button id="timGo">حفظ الملاحظات</button></div>`:""}</div>`:""}
-      <div class="bd-sec"><span>التعاميم</span><small>${CIRC.length}</small></div>
-      ${adm?`<div class="ci-f"><b>تعميم جديد</b><input id="ciT" placeholder="العنوان"><textarea id="ciB" placeholder="نص التعميم…"></textarea><button id="ciGo">نشر التعميم للموظفين</button><span class="m" id="ciM"></span></div>`:""}
-      ${CIRC.length?CIRC.map((c,i)=>`<div class="ci ${i===0&&c.id!==seen?"new":""}"><div class="h"><div><b>${escT(c.t)}</b><small> · ${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div>${adm?`<button class="x" data-cdel="${escT(c.id)}">حذف</button>`:""}</div><p>${escT(c.b)}</p></div>`).join(""):`<div class="bd-empty">ما فيه تعاميم حالياً</div>`}`;
-    if(CIRC.length)try{localStorage.setItem("ajf_circ_seen",CIRC[0].id)}catch(e){}}
+  if(BOARD==="tim"){const adm=!!(AUTH.me&&AUTH.me.admin);
+    B.innerHTML=`<div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cqIn" type="search" placeholder="ابحث في التعاميم: كلمة أو كلمتين…" value="${escT(CQ)}" autocomplete="off" enterkeyhint="search"></div>
+      <div id="cqList"></div>
+      ${adm?`<details class="ci-f" id="ciBox" ${DRAFT.ciT||DRAFT.ciB||DRAFT.ciE?"open":""}><summary><b id="ciHd">${DRAFT.ciE?"تعديل تعميم":"＋ إضافة تعميم"}</b></summary><input id="ciT" placeholder="العنوان (مثال: تعميم تأخير البوردنق)" value="${escT(DRAFT.ciT||"")}"><textarea id="ciB" placeholder="نص التعميم كامل… يمكنك لصق نص طويل">${escT(DRAFT.ciB||"")}</textarea><button id="ciGo">${DRAFT.ciE?"حفظ التعديل":"نشر التعميم للموظفين"}</button>${DRAFT.ciE?'<button id="ciCancel" class="sec">إلغاء التعديل</button>':""}<span class="m" id="ciM">المسودة تنحفظ تلقائياً على جوالك لين تنشرها.</span></details>`:""}
+      <div class="bd-sec"><span>تيماتيك</span></div>
+      <a class="tm-l" href="https://www.iatatravelcentre.com/" target="_blank" rel="noopener"><i>🛂</i><div><b>IATA Travel Centre · Timatic</b><small>متطلبات الجواز والتأشيرة والصحة حسب الجنسية والوجهة</small></div></a>
+      ${TIMN||adm?`<div class="ci"><div class="h"><b>ملاحظات تيماتيك</b></div>${adm?`<div class="ci-f" style="padding:0;border:0"><textarea id="timIn" placeholder="ملاحظات للموظفين عن متطلبات السفر…">${escT(DRAFT.tim!=null?DRAFT.tim:TIMN)}</textarea><button id="timGo">حفظ الملاحظات</button><span class="m" id="timM"></span></div>`:`<p>${escT(TIMN)}</p>`}</div>`:""}`;
+    timPaintList();if(CIRC.length)try{localStorage.setItem("ajf_circ_seen",CIRC[0].id)}catch(e){}}
 }
+function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
+  const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;
+  if(!CIRC.length){L.innerHTML=`<div class="bd-empty">ما فيه تعاميم حالياً</div>`;return}
+  const r=CQ.trim()?circSearch(CQ):null;
+  if(!r){L.innerHTML=`<div class="bd-sec"><span>كل التعاميم</span><small>${CIRC.length}</small></div>`+CIRC.map(c=>card(c,null,false)).join("");return}
+  L.innerHTML=(r.all.length?`<div class="bd-sec"><span>النتائج</span><small>${r.all.length}</small></div>`+r.all.map((x,i)=>card(x.c,r.terms,r.all.length===1)).join(""):`<div class="bd-empty">ما لقيت تعميم فيه كل الكلمات</div>`)+
+    (r.near.length?`<div class="bd-sec"><span>نتائج قريبة</span><small>${r.near.length}</small></div>`+r.near.map(x=>card(x.c,r.terms,false)).join(""):"")}
 async function cfgSet(k,v){const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:k,p_v:v});if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s)}
 $("bdB").addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const{d,list}=bdFlights();const fOf=n=>list.find(f=>f.n===n);
   if(t.dataset.day!=null){bdDay=+t.dataset.day;bdRender();return}
@@ -3178,11 +3232,23 @@ $("bdB").addEventListener("click",async e=>{const t=e.target.closest("button");i
   if(t.dataset.ls){const f=fOf(t.dataset.ls);if(f){csCur={f,date:d};openLC()}return}
   if(t.dataset.gaca){const f=fOf(t.dataset.gaca);if(f){csCur={f,date:d};openForm("bsd")}return}
   if(t.id==="ciGo"){const T=$("ciT").value.trim(),Bd=$("ciB").value.trim();if(!T||!Bd){$("ciM").textContent="اكتب العنوان والنص";return}
-    const nx=[{id:Date.now().toString(36),t:T.slice(0,120),b:Bd,d:fmDate(TODAY)+" "+fmt(NOW.mins),by:(AUTH.me&&AUTH.me.name)||""},...CIRC];
-    if(JSON.stringify(nx).length>7800){$("ciM").textContent="المساحة ممتلئة، احذف تعاميم قديمة أولاً";return}
-    t.disabled=true;try{await cfgSet("circ",nx);CIRC=nx;bdRender();hubPaint()}catch(x){$("ciM").textContent=x.message==="denied"?"النشر للمشرف فقط":"تعذّر النشر، تأكد من الاتصال";t.disabled=false}return}
-  if(t.dataset.cdel){if(!confirm("حذف هذا التعميم؟"))return;const nx=CIRC.filter(c=>c.id!==t.dataset.cdel);try{await cfgSet("circ",nx);CIRC=nx;bdRender();hubPaint()}catch(x){}return}
-  if(t.id==="timGo"){const v=$("timIn").value.trim().slice(0,7000);t.disabled=true;try{await cfgSet("tim",{t:v});TIMN=v;bdRender()}catch(x){t.disabled=false;t.textContent="تعذّر الحفظ"}}});
+    if(Bd.length>60000){$("ciM").textContent="النص طويل جداً، قسّمه على تعميمين";return}
+    const ed=DRAFT.ciE&&CIRC.find(c=>c.id===DRAFT.ciE);
+    t.disabled=true;t.textContent="… جاري النشر";
+    try{await circSave({id:ed?ed.id:Date.now().toString(36),t:T.slice(0,150),b:Bd,d:ed?ed.d:fmDate(TODAY)+" "+fmt(NOW.mins),by:ed?ed.by:(AUTH.me&&AUTH.me.name)||""});
+      ["ciT","ciB","ciE"].forEach(k=>draftSet(k,""));CQ="";bdRender();hubPaint()}
+    catch(x){t.disabled=false;t.textContent=ed?"حفظ التعديل":"نشر التعميم للموظفين";$("ciM").textContent=x.message==="denied"?"النشر للمشرف فقط":"تعذّر النشر — المسودة محفوظة، جرّب مرة ثانية"}return}
+  if(t.id==="ciCancel"){["ciT","ciB","ciE"].forEach(k=>draftSet(k,""));bdRender();return}
+  if(t.dataset.ced){const c=CIRC.find(x=>x.id===t.dataset.ced);if(!c)return;draftSet("ciE",c.id);draftSet("ciT",c.t);draftSet("ciB",c.b||"");bdRender();$("bdB").scrollTop=0;return}
+  if(t.dataset.cdel){if(!confirm("حذف هذا التعميم؟"))return;const nx=CIRC.filter(c=>c.id!==t.dataset.cdel);
+    try{await cfgSet("circ",nx.map(({b,...m})=>m));CIRC=nx;try{localStorage.setItem("ajf_circ_cache",JSON.stringify({c:CIRC,t:TIMN}))}catch(e){}timPaintList();hubPaint()}catch(x){alert("تعذّر الحذف، تأكد من الاتصال")}return}
+  if(t.id==="timGo"){const v=$("timIn").value.trim().slice(0,7000);t.disabled=true;t.textContent="…";
+    try{await cfgSet("tim",{t:v});TIMN=v;draftSet("tim",null);delete DRAFT.tim;$("timM").textContent="✓ انحفظت";t.textContent="حفظ الملاحظات";t.disabled=false}
+    catch(x){t.disabled=false;t.textContent="حفظ الملاحظات";$("timM").textContent="تعذّر الحفظ — النص محفوظ على جوالك، جرّب مرة ثانية"}}});
+$("bdB").addEventListener("input",e=>{const el=e.target;
+  if(el.id==="cqIn"){CQ=el.value;clearTimeout(timPaintList.t);timPaintList.t=setTimeout(timPaintList,150);return}
+  if(el.id==="ciT"||el.id==="ciB")draftSet(el.id,el.value);
+  if(el.id==="timIn"){DRAFT.tim=el.value;try{localStorage.setItem("ajf_drafts",JSON.stringify(DRAFT))}catch(x){}}});
 $("hubG").addEventListener("click",e=>{const c=e.target.closest("[data-b]");if(c)openBoard(c.dataset.b,c)});
 $("hubAcct").onclick=openAcct;$("bdBack").onclick=boardBack;
 $("hubHome").onclick=()=>{BOARD=null;if(!reduce){const w=document.querySelector(".wrap");w.classList.remove("in")}hubShow(true)};
