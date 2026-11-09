@@ -829,6 +829,9 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .cx-en{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .cx-sum{font-size:14px;line-height:1.8;color:#dbe3f2;padding:8px 10px;border-radius:10px;background:color-mix(in oklab,var(--c) 10%,var(--raise))}
 .cx .sn.en{font-size:12px;color:var(--muted);max-height:3.4em;overflow:hidden}
+.dcg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.dcg button{display:grid;gap:2px;text-align:start;padding:11px 12px;border-radius:14px;background:color-mix(in oklab,var(--c) 14%,var(--panel));border:1px solid color-mix(in oklab,var(--c) 40%,var(--line));color:var(--ink)}
+.dcg b{font-size:14px}.dcg small{font-size:11px;color:var(--muted)}
 .cx-root{display:grid;gap:12px;min-width:0}
 .cx-adm{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
 .cx-up{display:grid;gap:2px;justify-items:center;padding:12px;border-radius:14px;background:color-mix(in oklab,var(--c) 18%,var(--panel));border:1.5px dashed color-mix(in oklab,var(--c) 60%,var(--line));color:var(--ink);cursor:pointer;text-align:center}
@@ -1143,18 +1146,19 @@ async function admRender(){const me=AUTH.me||{};let h=`<div class="adm-s"><h3><s
   h+=`<div class="adm-s" id="aPushS"><h3>🔔 تنبيهات وصول الرحلات</h3><div class="amsg" id="aPushM">…</div></div>`;
   if(!me.admin){$("admB").innerHTML=h;admBind();return}
   $("admB").innerHTML=h+'<div class="adm-s"><div class="amsg">جاري التحميل…</div></div>';admBind();
-  try{ADM=await admCall("list");await csSync(true)}catch(e){$("admB").lastChild.innerHTML='<div class="amsg">تعذّر التحميل، تأكد من الاتصال.</div>';return}
+  try{ADM=await admCall("list");await csSync(true);await dcpLoad(true)}catch(e){$("admB").lastChild.innerHTML='<div class="amsg">تعذّر التحميل، تأكد من الاتصال.</div>';return}
   const emps=ADM.emps||[],pend=[];emps.forEach(e=>e.devices.forEach(d=>{if(d.status==="pending")pend.push({e,d})}));acctPaint(pend.length);
   h+=`<div class="adm-s"><h3>طلبات بانتظار موافقتك <span class="chip ${pend.length?"w":""}">${pend.length}</span></h3>${pend.length?pend.map(({e,d})=>`<div class="req"><div><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${d.first?'<span class="chip a">تفعيل حساب جديد</span>':'<span class="chip">جوال إضافي</span>'}<small>${escT(d.label)} · ${fdt(d.created)}</small></div><div class="row"><button class="abtn y" data-dv="${d.id}" data-st="approved">✅ موافقة</button><button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button></div></div>`).join(""):'<div class="amsg">ما فيه طلبات حالياً.</div>'}</div>`;
   {const C=(await mvtMailCfg())||{},L=a=>escT(mailList(a).join("\n"));h+=`<div class="adm-s"><h3>إيميلات برقيات MVT · طيران ناس</h3><div class="amsg">زر «📧 أوت لوك» في الكوردنيتر شيت يفتح مسودة فيها هذي العناوين، والموظف يراجعها ويرسلها من أوت لوك. إيميل واحد في كل سطر.</div>
     <div class="amsg">إلى</div><textarea id="aMvtTo" dir="ltr" placeholder="name@flynas.com">${L(C.to)}</textarea><div class="amsg">نسخة (CC)</div><textarea id="aMvtCc" dir="ltr" style="min-height:60px">${L(C.cc)}</textarea>
     <button class="abtn a" id="aMvtGo">حفظ الإيميلات</button><div class="amsg" id="aMvtMsg"></div></div>`}
   h+=`<div class="adm-s"><h3>إضافة موظفين</h3><div class="amsg">كل سطر: الرقم الوظيفي ثم الاسم. مثال:<br>12345 محمد أحمد</div><textarea id="aAdd" placeholder="12345 محمد أحمد"></textarea><button class="abtn a" id="aAddGo">إضافة</button><div class="amsg" id="aAddMsg"></div></div>`;
-  {const nm=x=>(emps.find(e=>e.emp===x)||{}).name||x;h+=`<div class="adm-s"><h3>صلاحية الكوردنيتر شيت <span class="chip">${CSPERM.length}</span></h3><div class="amsg">الكل يشوف الشيت وأسماء اللي سجّلوا. التسجيل والتعديل (ومنه Push Back) لك ولهؤلاء فقط. تعطي الصلاحية من صفحة الموظف تحت.</div>${CSPERM.map(x=>`<div class="req"><div><b>${escT(nm(x))}</b> <span class="chip">${escT(x)}</span></div><div class="row"><button class="abtn n" data-csp="${escT(x)}" data-v="false">سحب</button></div></div>`).join("")}</div>`}
+  {const nm=x=>(emps.find(e=>e.emp===x)||{}).name||x;h+=`<div class="adm-s"><h3>صلاحية الكوردنيتر شيت <span class="chip">${CSPERM.length}</span></h3><div class="amsg">الكل يشوف الشيت وأسماء اللي سجّلوا. التسجيل والتعديل (ومنه Push Back) لك ولهؤلاء فقط. تعطي الصلاحية من صفحة الموظف تحت.</div>${CSPERM.map(x=>`<div class="req"><div><b>${escT(nm(x))}</b> <span class="chip">${escT(x)}</span></div><div class="row"><button class="abtn n" data-csp="${escT(x)}" data-v="false">سحب</button></div></div>`).join("")}</div>`;
+    h+=`<div class="adm-s"><h3>صلاحية فحص وثائق الراكب <span class="chip">${DCP.length}</span></h3><div class="amsg">تبويب «فحص وثائق الراكب» يظهر لك ولهؤلاء فقط (تحت التجربة). تعطي الصلاحية من صفحة الموظف تحت.</div>${DCP.map(x=>`<div class="req"><div><b>${escT(nm(x))}</b> <span class="chip">${escT(x)}</span></div><div class="row"><button class="abtn n" data-dcp="${escT(x)}" data-v="false">سحب</button></div></div>`).join("")}</div>`}
   const q=norm(admQ),list=emps.filter(e=>!q||norm(e.name+" "+e.emp).includes(q));
   h+=`<div class="adm-s"><h3>الموظفين <span class="chip">${emps.length}</span></h3><input id="aQ" type="search" placeholder="بحث بالاسم أو الرقم" value="${escT(admQ)}">${list.map(e=>{const ap=e.devices.filter(d=>d.status==="approved").length;const st=!e.active?'<span class="chip w">موقوف</span>':e.locked?'<span class="chip w">مقفل مؤقتاً</span>':!e.activated?'<span class="chip">لم يفعّل</span>':ap?'<span class="chip g">فعّال</span>':'<span class="chip w">بدون جوال معتمد</span>';
     const o=admOpen.has(e.emp);return`<div class="emp"><button data-op="${escT(e.emp)}"><span><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${e.admin?'<span class="chip a">مشرف</span>':""}</span><span>${st}</span></button>${o?`<div class="more">${e.devices.length?e.devices.map(d=>`<div class="req"><small>${escT(d.label)} · ${{approved:"✅ معتمد",pending:"⏳ بانتظار",rejected:"⛔ مرفوض"}[d.status]} · آخر دخول ${fdt(d.seen)}</small><div class="row">${d.status!=="approved"?`<button class="abtn y" data-dv="${d.id}" data-st="approved">اعتماد</button>`:""}${d.status!=="rejected"?`<button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button>`:""}<button class="abtn" data-dv="${d.id}" data-st="delete" data-cf="1">حذف الجوال</button></div></div>`).join(""):'<div class="amsg">ما سجّل دخول من أي جوال.</div>'}
-      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">${e.activated?`<button class="abtn" data-ac="reset_pass" data-e="${escT(e.emp)}" data-cf="1">إعادة تعيين الرقم السري</button>`:""}${e.locked?`<button class="abtn" data-ac="unlock" data-e="${escT(e.emp)}">فك القفل</button>`:""}${!e.admin?`<button class="abtn ${CSPERM.includes(e.emp)?"n":"y"}" data-csp="${escT(e.emp)}" data-v="${!CSPERM.includes(e.emp)}">${CSPERM.includes(e.emp)?"سحب صلاحية الكوردنيتر شيت":"إعطاء صلاحية الكوردنيتر شيت"}</button>`:""}${e.emp!==ADM.me?`<button class="abtn ${e.active?"n":"y"}" data-ac="active" data-e="${escT(e.emp)}" data-v="${!e.active}" ${e.active?'data-cf="1"':""}>${e.active?"إيقاف":"تفعيل"}</button><button class="abtn" data-ac="set_admin" data-e="${escT(e.emp)}" data-v="${!e.admin}" data-cf="1">${e.admin?"إلغاء الإشراف":"جعله مشرف"}</button><button class="abtn n" data-ac="delete" data-e="${escT(e.emp)}" data-cf="1">حذف</button>`:""}</div></div>`:""}</div>`}).join("")||'<div class="amsg">ما فيه نتائج.</div>'}</div>`;
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">${e.activated?`<button class="abtn" data-ac="reset_pass" data-e="${escT(e.emp)}" data-cf="1">إعادة تعيين الرقم السري</button>`:""}${e.locked?`<button class="abtn" data-ac="unlock" data-e="${escT(e.emp)}">فك القفل</button>`:""}${!e.admin?`<button class="abtn ${CSPERM.includes(e.emp)?"n":"y"}" data-csp="${escT(e.emp)}" data-v="${!CSPERM.includes(e.emp)}">${CSPERM.includes(e.emp)?"سحب صلاحية الكوردنيتر شيت":"إعطاء صلاحية الكوردنيتر شيت"}</button><button class="abtn ${DCP.includes(e.emp)?"n":"y"}" data-dcp="${escT(e.emp)}" data-v="${!DCP.includes(e.emp)}">${DCP.includes(e.emp)?"سحب صلاحية فحص الوثائق":"إعطاء صلاحية فحص الوثائق"}</button>`:""}${e.emp!==ADM.me?`<button class="abtn ${e.active?"n":"y"}" data-ac="active" data-e="${escT(e.emp)}" data-v="${!e.active}" ${e.active?'data-cf="1"':""}>${e.active?"إيقاف":"تفعيل"}</button><button class="abtn" data-ac="set_admin" data-e="${escT(e.emp)}" data-v="${!e.admin}" data-cf="1">${e.admin?"إلغاء الإشراف":"جعله مشرف"}</button><button class="abtn n" data-ac="delete" data-e="${escT(e.emp)}" data-cf="1">حذف</button>`:""}</div></div>`:""}</div>`}).join("")||'<div class="amsg">ما فيه نتائج.</div>'}</div>`;
   $("admB").innerHTML=h;admBind();
   const aq=$("aQ");if(aq)aq.oninput=()=>{admQ=aq.value;clearTimeout(aq._t);aq._t=setTimeout(()=>{const p=aq.selectionStart;admRender().then(()=>{const n=$("aQ");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(e){}}})},300)}}
 async function pushPaint(){const S=$("aPushS");if(!S)return;const st=await pushState(),M=$("aPushM");if(!M)return;M.textContent=PU_TXT[st];
@@ -1180,7 +1184,9 @@ function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.d
       if(t.id==="aMvtGo"){const v={to:mailList($("aMvtTo").value),cc:mailList($("aMvtCc").value)};const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"mvt_xy",p_v:v});
         if(j.s==="out"){authOut();return}if(j.s!=="ok")throw new Error(j.s);MVT_MAIL=v;try{localStorage.setItem("ajf_mvtmail",JSON.stringify(v))}catch(x){}
         t.disabled=false;$("aMvtMsg").textContent=`✓ انحفظ: ${v.to.length} إلى · ${v.cc.length} نسخة`;return}
-      if(t.dataset.csp){const j=await rpc("ajf_cs_perm_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_emp:t.dataset.csp,p_on:t.dataset.v==="true"});if(j.s==="out"){authOut();return}if(j.s!=="ok")throw new Error(j.s);CSPERM=j.perm||[];csAt=0}
+      if(t.dataset.dcp){const on=t.dataset.v==="true",nx=[...new Set(DCP.filter(x=>x!==t.dataset.dcp).concat(on?[t.dataset.dcp]:[]))];
+        const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"dcp",p_v:{l:nx}});if(j.s==="out"){authOut();return}if(j.s!=="ok")throw new Error(j.s);DCP=nx;try{localStorage.setItem("ajf_dcp",JSON.stringify(nx))}catch(x){}}
+      else if(t.dataset.csp){const j=await rpc("ajf_cs_perm_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_emp:t.dataset.csp,p_on:t.dataset.v==="true"});if(j.s==="out"){authOut();return}if(j.s!=="ok")throw new Error(j.s);CSPERM=j.perm||[];csAt=0}
       else if(t.dataset.dv)await admCall("device",{id:+t.dataset.dv,status:t.dataset.st});
       else if(t.dataset.ac)await admCall(t.dataset.ac,{emp:t.dataset.e,active:t.dataset.v==="true",admin:t.dataset.v==="true"});
       else if(t.id==="aAddGo"){const lines=$("aAdd").value.split(/\n/).map(l=>l.trim()).filter(Boolean);let ok=0,bad=[];
@@ -2598,7 +2604,7 @@ function openSheet(f,date){
   {const X=dlyInfo(f,date);$("shN").textContent=(X?dlyText(X)+" — ":"")+f.note+(f.est?" (* وقت تقديري)":"");}
   $("track").onclick=()=>openTrack(f,date);
   $("csOpen").onclick=()=>openCS(f,date);
-  const da=dcAirOf(f);$("dcOpen").hidden=!da;$("dcOpen").textContent="📋 أكواد التأخير · "+(DC_LONG[da]||"");$("dcOpen").onclick=()=>openDC(null,da);
+  const da=dcAirOf(f);$("dcOpen").hidden=true;$("dcOpen").textContent="📋 أكواد التأخير · "+(DC_LONG[da]||"");$("dcOpen").onclick=()=>openDC(null,da);
   clearInterval(turnTimer);turnEdit=false;renderTurn(f,date);turnTimer=setInterval(()=>{try{renderTurn(f,date)}catch(e){}},1000);
   const ff={...f,t:f.t||f.time},has=hasClip(ff);
   $("listen").hidden=!has;$("listen").onclick=()=>playFlight(ff,$("listen"));
@@ -3282,7 +3288,7 @@ function openBoard(id,card){const B=BOARDS.find(x=>x.id===id);if(!B)return;
     if(id==="flt"){$("bd").hidden=true;scrollTo(0,0);const w=document.querySelector(".wrap");if(!reduce){w.classList.remove("in");void w.offsetWidth;w.classList.add("in")}return}
     const b=$("bd");b.style.setProperty("--c",B.c);b.classList.remove("out");$("bdT").textContent=B.t;$("bdS").textContent=B.s;b.hidden=false;$("bdB").scrollTop=0;bdDay=0;
     bdRender();if(!reduce){b.classList.remove("in");void b.offsetWidth;b.classList.add("in")}
-    if(id==="tim")circLoad(true);else csSync(true).then(()=>{if(BOARD===id)bdRender()})})}
+    if(id==="tim"){circLoad(true);dcpLoad().then(()=>{if(BOARD==="tim")bdRender()})}else csSync(true).then(()=>{if(BOARD===id)bdRender()})})}
 function boardBack(){const b=$("bd");
   const go=()=>{b.hidden=true;b.classList.remove("out");hubShow(true)};
   if(b.hidden||reduce){go();return}b.classList.add("out");setTimeout(go,260)}
@@ -3296,10 +3302,12 @@ function bdRender(){const B=$("bdB");
       (list.length?list.map(f=>{const V=CSV[iso(d)+"_"+f.n]||{},cd=csData(f,d),n=Object.keys(V).length,dn=hm(cd.atd)||(cd.act.push&&hm(cd.act.push.s));
         return`<button class="bf ${dn?"done":""}" data-trc="${escT(f.n)}"><div class="h"><span class="t">${f.t}</span><div class="n"><b>${escT(f.n)} · ${escT(f.dest)}</b><small>${f.ino?escT(f.ino)+" "+f.iata+"→AJF · STA "+(f.ia||"—")+" · ":""}${escT(f.airline||"")}</small></div><span class="st ${dn?"g":""}">${dn?"✓ أقلعت":n?"✍︎ "+n:"جديدة"}</span></div></button>`}).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`);return}
   if(BOARD==="lc"){const{d,list}=bdFlights();
-    B.innerHTML=bdDaysH()+`<div class="bd-h">اللودشيت اليدوي (Load Sheet · Balance · LIR) متاح لرحلات السعودية، ونموذج GACA لكل الرحلات.</div>`+
+    B.innerHTML=`<div class="bd-sec"><span>📋 أكواد التأخير</span></div><div class="dcg">${Object.entries(DC_AIRS).map(([k,v])=>`<button data-dcair="${k}"><b>${escT(v[1])}</b><small>${escT(k)} · ${escT(v[3]||"")}</small></button>`).join("")}</div>
+      <div class="bd-sec"><span>✈️ رحلات اليوم</span></div>`+bdDaysH()+`<div class="bd-h">اللودشيت اليدوي (Load Sheet · Balance · LIR) متاح لرحلات السعودية، ونموذج GACA لكل الرحلات.</div>`+
       (list.length?list.map(f=>{const V=CSV[iso(d)+"_"+f.n]||{},sv=/^SV/i.test(f.n),nl=Object.keys(V).filter(k=>k.startsWith("lc.")).length,ng=fmN(V,"bsd");
         return`<div class="bf"><div class="h"><span class="t">${f.t}</span><div class="n"><b>${escT(f.n)} · ${escT(f.dest)}</b><small>${escT(f.airline||"")}</small></div></div>
           <div class="a"><button class="p" data-ls="${escT(f.n)}" ${sv?"":"disabled"}>⚖︎ Load Sheet<small>${sv?(nl?"✍︎ "+nl+" خانة":"Balance · LIR"):"للسعودية فقط"}</small></button><button data-gaca="${escT(f.n)}">🛄 نموذج GACA<small>${ng?"✍︎ "+ng+" خانة":"Baggage Security"}</small></button></div></div>`}).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`);return}
+  if(BOARD==="tim"&&TIMTAB==="doc"&&!dcOK())TIMTAB="circ";
   if(BOARD==="tim"&&TIMTAB==="doc"){B.innerHTML=timTabs()+`<div id="txRoot"><div class="bd-empty">جاري التحميل…</div></div>
       <a class="tm-l" href="https://www.iatatravelcentre.com/" target="_blank" rel="noopener"><i>🌐</i><div><b>IATA Travel Centre · Timatic</b><small>للاستعلام السريع بدون أماديوس</small></div></a>`;
     timLoad().then(()=>{const r=$("txRoot");if(r&&window.TIM)TIM.mount(r)}).catch(()=>{const r=$("txRoot");if(r)r.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
@@ -3307,8 +3315,13 @@ function bdRender(){const B=$("bdB");
     if(CIRCLAST)try{localStorage.setItem("ajf_circ_seen",CIRCLAST)}catch(e){}
     timLoad().then(()=>{const r=$("cxRoot");if(r&&window.CIRCM)CIRCM.mount(r)}).catch(()=>{const r=$("cxRoot");if(r)r.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
 }
-let TIMTAB="doc";
-const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
+let TIMTAB="circ";
+/* فحص وثائق الراكب تحت التجربة: يظهر للمشرف ومن يعطيه صلاحية فقط (القائمة في ajf_cfg: dcp) */
+var DCP=(()=>{try{return JSON.parse(localStorage.getItem("ajf_dcp")||"[]")}catch(e){return[]}})(),dcpAt=0;
+async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e3))return;dcpAt=Date.now();
+  try{const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"dcp"});if(j.s==="ok"){DCP=(j.v&&Array.isArray(j.v.l))?j.v.l:[];try{localStorage.setItem("ajf_dcp",JSON.stringify(DCP))}catch(e){}}}catch(e){}}
+const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
+const timTabs=()=>!dcOK()?"":`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=2")).then(()=>window.CIRCM||ldJs("circ.js?v=8")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
@@ -3322,6 +3335,7 @@ async function cfgSet(k,v){const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_d
 $("bdB").addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const{d,list}=bdFlights();const fOf=n=>list.find(f=>f.n===n);
   if(t.dataset.day!=null){bdDay=+t.dataset.day;bdRender();return}
   if(t.dataset.ttab){TIMTAB=t.dataset.ttab;bdRender();return}
+  if(t.dataset.dcair){openDC(null,t.dataset.dcair);return}
   if(t.dataset.trc){const f=fOf(t.dataset.trc);if(f)openCS(f,d);return}
   if(t.dataset.ls){const f=fOf(t.dataset.ls);if(f){csCur={f,date:d};openLC()}return}
   if(t.dataset.gaca){const f=fOf(t.dataset.gaca);if(f){csCur={f,date:d};openForm("bsd")}return}
