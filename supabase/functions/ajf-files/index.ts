@@ -36,6 +36,21 @@ const isAr = (w: string) => /[\u0600-\u06FF]/.test(w);
 const enStem = (w: string) => w.length <= 4 ? w : w.replace(/(ations?|ings?|ments?|ness|ies|ied|ers?|ed|es|s)$/, (m) => (m === "ies" || m === "ied" ? "y" : ""));
 const arStem = (w: string) => { w = w.replace(/^(وال|بال|فال|كال|لل|ال)/, ""); if (w.length > 4) w = w.replace(/(ات|ين|ون|ها|هم|يه|يا)$/, ""); return w; };
 const SK = (w: string) => { if (isAr(w)) { const s = arStem(w), k = s.replace(/[اوي]/g, "").replace(/ه$/, ""); return k.length >= 2 ? k : s; } return enStem(w); };
+// تقسيم الملف لأجزاء (~3500 حرف) عند حدود الفقرات/الصفحات — للأدلة الكبيرة
+async function chunkify(sb: any, c: { id: string; body: string; ftext: string }) {
+  const t = (String(c.body || "") + "\n\n" + String(c.ftext || "")).trim();
+  const parts: string[] = []; let cur = "";
+  for (const para of t.split(/\n{2,}/)) {
+    if (cur.length + para.length > 3500 && cur.length > 800) { parts.push(cur); cur = cur.slice(-300); }
+    cur += (cur ? "\n\n" : "") + para;
+    while (cur.length > 5000) { parts.push(cur.slice(0, 3500)); cur = cur.slice(3200); }
+  }
+  if (cur.trim()) parts.push(cur);
+  await sb.from("ajf_circ_chunk").delete().eq("cid", c.id);
+  const rows = parts.map((txt, n) => ({ cid: c.id, n, txt, ntext: " " + NORM(txt) + " " }));
+  for (let i = 0; i < rows.length; i += 200) { const { error } = await sb.from("ajf_circ_chunk").insert(rows.slice(i, i + 200)); if (error) throw new Error(error.message); }
+  return rows.length;
+}
 const SYS_SUM = "أنت مساعد لموظفي الخدمات الأرضية في مطار سعودي. تلخّص التعاميم التشغيلية بالعربي الفصيح المبسط. لا تخترع معلومة غير موجودة في النص.";
 const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (الخدمات الأرضية السعودية) في مطار الجوف AJF: كاونتر، بوابة، تحكم بالحمولة، مشرفين.
 عندك كل التعاميم والملفات المرفوعة للمحطة. اقرأها كاملة وافهمها مثل خبير، ثم جاوب سؤال الموظف بذكاء:
@@ -46,7 +61,7 @@ const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (ال�
 1) **الخلاصة** في سطر: يُقبل / يُقبل بشروط / لا يُقبل / الإجراء المطلوب.
 2) **المطلوب من الراكب** • نقاط.
 3) **تحقق منه أنت** • نقاط (وثائق، أنظمة، مراسلة محطة...).
-بعد كل معلومة من تعميم اكتب رقمه بين قوسين مثل [1] أو [1, 3].
+بعد كل معلومة من تعميم اكتب رقمه بين قوسين مثل [1] أو [1, 3]، وإذا المقتطف فيه رقم صفحة مثل [صفحة 214] اذكره بعد الرقم مثل [2، ص 214] حتى يرجع له الموظف.
 إذا يحتاج الجواب معلومة مو موجودة في التعاميم (مثل تأشيرة دخول دولة لجنسية معينة)، اذكر ما تعرفه بإيجاز تحت عنوان **خارج التعاميم (تأكد من TIMATIC)** ولا تنسبه لتعميم.
 لا تقل "ما لقيت" إذا فيه تعميم ينطبق ولو جزئياً. وإذا فعلاً ما فيه أي تعميم له علاقة قل ذلك بسطر واحد ثم أعط التوجيه العام المفيد تحت "خارج التعاميم".`;
 
@@ -71,26 +86,33 @@ Deno.serve(async (req) => {
     const q = String(a.q || "").slice(0, 600).trim();
     if (q.length < 2) return out({ s: "bad" });
     try {
-      // كل التعاميم للمساعد مثل ما ترفق مستندات لمحادثة؛ وإذا كبرت المكتبة نختار الأقرب بالبحث
-      const { data: all } = await sb.from("ajf_circ").select("id,title,cdate,ai,body,ftext,file_path").order("at", { ascending: false });
-      let docsRows = (all || []) as Record<string, any>[];
-      const size = docsRows.reduce((t, r) => t + (r.body?.length || 0) + (r.ftext?.length || 0), 0);
-      if (size > 600000) {
-        let kw: string[] = [];
-        try { const j = JSON.parse(await gem(`السؤال: ${q}\nأعطني JSON بالشكل {"kw":[...]} فيه من 6 إلى 14 كلمة أو عبارة قصيرة للبحث في تعاميم طيران مكتوبة بالعربي أو الإنجليزي: الكلمات المهمة، مرادفاتها، ترجمتها الإنجليزية، أسماء الدول والمطارات ورموزها. بدون شرح.`, "تستخرج كلمات بحث فقط.", true)); kw = Array.isArray(j.kw) ? j.kw : []; } catch { /* */ }
-        kw = [...new Set([...kw.map(String), ...NORM(q).split(" ").filter((w) => w.length > 2)])].slice(0, 24);
-        const groups = kw.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 1);
-        const { data: sr } = await sb.rpc("ajf_circ_search", { p_token: a.token, p_device: a.device, p_groups: groups, p_limit: 12 });
-        const ids = new Set(((sr && sr.rows) || []).map((r: any) => r.id));
-        docsRows = docsRows.filter((r) => ids.has(r.id));
-        let tot = 0; docsRows = docsRows.filter((r) => (tot += (r.body?.length || 0) + Math.min(r.ftext?.length || 0, 60000)) < 600000);
+      // التعاميم الصغيرة كاملة، والأدلة الكبيرة: الأجزاء الأقرب للسؤال من كامل صفحاتها
+      const { data: meta } = await sb.rpc("ajf_circ_meta");
+      const M = (meta || []) as Record<string, any>[];
+      const small = M.filter((r) => r.n <= 25000 || !r.chunks);
+      const big = M.filter((r) => !(r.n <= 25000 || !r.chunks));
+      const texts = new Map<string, string>();
+      if (small.length) {
+        const { data: st } = await sb.from("ajf_circ").select("id,body,ftext").in("id", small.map((r) => r.id));
+        (st || []).forEach((r: any) => texts.set(r.id, (String(r.body || "") + "\n" + String(r.ftext || "")).slice(0, 60000)));
       }
-      if (!docsRows.length) return out({ s: "ok", answer: "ما فيه تعاميم مرفوعة للحين.", src: [] });
-      const rows = docsRows;
-      const docs = rows.map((r, i) => `[${i + 1}] العنوان: ${r.title}\nالتاريخ: ${r.cdate || ""}\n${r.ai ? "ملخص: " + r.ai + "\n" : ""}النص:\n${(String(r.body || "") + "\n" + String(r.ftext || "")).slice(0, 60000)}`).join("\n\n-----\n\n");
+      const pick = new Map<string, string[]>();
+      if (big.length) {
+        let kw: string[] = [];
+        try { const j = JSON.parse(await gem(`سؤال موظف خدمات أرضية: ${q}\nأعطني JSON بالشكل {"kw":[...]} فيه 10 إلى 20 كلمة أو عبارة قصيرة للبحث في أدلة تشغيل طيران مكتوبة بالإنجليزي غالباً وبعضها عربي: المصطلحات الفنية الإنجليزية المستخدمة في أدلة الخدمات الأرضية (مثل boarding, PRM, WCHR, MAAS, misconnection, deportee, INAD, dangerous goods, load sheet)، ومرادفاتها، وترجمتها العربية، وأسماء الدول والمطارات ورموزها. بدون شرح.`, "تستخرج كلمات بحث فقط.", true)); kw = Array.isArray(j.kw) ? j.kw : []; } catch { /* */ }
+        kw = [...new Set([...kw.map(String), ...NORM(q).split(" ").filter((w) => w.length > 2)])].slice(0, 26);
+        const groups = kw.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 2);
+        const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: 40 });
+        const bigIds = new Set(big.map((r) => r.id)); let tot = 0;
+        for (const c of (ch || []) as any[]) { if (!bigIds.has(c.cid) || tot > 160000) continue; tot += c.txt.length; (pick.get(c.cid) || pick.set(c.cid, []).get(c.cid)!).push(c.txt); }
+      }
+      const rows = M.filter((r) => texts.has(r.id) || pick.has(r.id) || r.ai);
+      if (!rows.length) return out({ s: "ok", answer: "ما فيه تعاميم مرفوعة للحين.", src: [] });
+      const docs = rows.map((r, i) => `[${i + 1}] العنوان: ${r.title}\nالتاريخ: ${r.cd || ""}\n${r.ai ? "ملخص: " + r.ai + "\n" : ""}` +
+        (texts.has(r.id) ? `النص:\n${texts.get(r.id)}` : pick.has(r.id) ? `مقتطفات من أجزاء الدليل الأقرب للسؤال (الدليل كامل ${r.n} حرف):\n${pick.get(r.id)!.join("\n…\n")}` : "(دليل كبير: ما فيه أجزاء مطابقة للسؤال، عندك ملخصه فقط)")).join("\n\n-----\n\n");
       const hist = (Array.isArray(a.h) ? a.h : []).slice(-3).map((t: any) => `سؤال سابق: ${String(t.q || "").slice(0, 400)}\nجوابك: ${String(t.a || "").slice(0, 1500)}`).join("\n\n");
       const ans = await gem(`التعاميم والملفات المرفوعة (${rows.length}):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة:\n" + hist + "\n\n=====\n" : ""}سؤال الموظف الآن: ${q}`, SYS_ASK, false, true);
-      return out({ s: "ok", answer: ans, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cdate, has_file: !!r.file_path, ai: r.ai })) });
+      return out({ s: "ok", answer: ans, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
   if (!admin) return out({ s: "denied" });
@@ -115,8 +137,14 @@ Deno.serve(async (req) => {
       const n = NORM([c.title, c.tags, c.body, c.ftext, j.t, j.s, j.k].join(" "));
       const k = " " + [...new Set(n.split(" "))].map(SK).join(" ") + " ";
       await sb.from("ajf_circ").update({ ai, ntext: n, ktext: k }).eq("id", c.id);
-      return out({ s: "ok", ai });
+      const nc = await chunkify(sb, c);
+      return out({ s: "ok", ai, chunks: nc });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
+  }
+  if (a.action === "chunk") {
+    const { data: c } = await sb.from("ajf_circ").select("id,body,ftext").eq("id", a.id || "").single();
+    if (!c) return out({ s: "bad" });
+    try { return out({ s: "ok", chunks: await chunkify(sb, c) }); } catch (e) { return out({ s: "err", e: String(e).slice(0, 300) }); }
   }
   if (a.action === "usage") {
     // مجموع أحجام الملفات المرفوعة (للتنبيه قبل الوصول لحد 1GB)

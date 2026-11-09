@@ -143,14 +143,14 @@ function pdfLib(){if(window.pdfjsLib)return Promise.resolve(pdfjsLib);return pdf
 async function pdfText(file,onp){const lib=await pdfLib();const doc=await lib.getDocument({data:await file.arrayBuffer()}).promise;const n=doc.numPages,parts=[];let thin=0;
   for(let i=1;i<=n;i++){onp&&onp(`قراءة الصفحة ${i}/${n}`);const pg=await doc.getPage(i),tc=await pg.getTextContent();let s="",lastY=null;
     for(const it of tc.items){const y=it.transform[5];if(lastY!=null&&Math.abs(y-lastY)>4)s+="\n";else if(s&&!s.endsWith(" "))s+=" ";s+=it.str;lastY=y}
-    if(s.replace(/\s/g,"").length<40)thin++;parts.push(s)}
+    if(s.replace(/\s/g,"").length<40)thin++;parts.push(`[صفحة ${i}]\n`+s)}
   let text=parts.join("\n\n"),ocr=false;
   /* ملف مصوّر (سكانر): نقرأ الصور عربي + إنجليزي — أول 12 صفحة */
   if(thin>=Math.ceil(n*.6)){ocr=true;text="";const max=Math.min(n,12);
     if(!window.Tesseract)await new Promise((ok,no)=>{const s=document.createElement("script");s.src=(window.TESS_BASE||"https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/")+"tesseract.min.js";s.onload=ok;s.onerror=()=>no(new Error("lib"));document.head.appendChild(s)});
     const w=await Tesseract.createWorker(["ara","eng"],1,window.TESS_LOCAL||{});
     try{for(let i=1;i<=max;i++){onp&&onp(`قراءة صورة الصفحة ${i}/${max} (ملف مصوّر)`);const pg=await doc.getPage(i),vp=pg.getViewport({scale:2}),cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;
-      await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;text+=(await w.recognize(cv)).data.text+"\n\n"}}finally{await w.terminate()}}
+      await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;text+=`[صفحة ${i}]\n`+(await w.recognize(cv)).data.text+"\n\n"}}finally{await w.terminate()}}
   return{text:fixAr(text.normalize("NFKC")).replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim(),pages:n,ocr}}
 /* بعض ملفات PDF العربية تطلع حروفها مقلوبة (ﺔﻴﺑﺮﻌﻟﺍ ← ةيبرعلا): نكتشفها ونعدلها */
 function fixAr(t){const w=t.match(/[\u0600-\u06FF]{3,}/g)||[];if(w.length<20)return t;
@@ -239,15 +239,16 @@ async function reindex(btn){if(!confirm("إعادة قراءة كل ملفات P
     for(const r of fl){i++;btn.textContent=`🔄 ${i}/${fl.length}: ${r.title.slice(0,30)}`;
       try{const g=(await R("ajf_circ_get",{p_id:r.id})).row,u=await F({action:"get",path:r.id+".pdf"}),blob=await(await fetch(u.url)).blob();
         const x=await pdfText(blob,m=>{btn.textContent=`🔄 ${i}/${fl.length}: ${m}`});
-        const o={id:r.id,title:g.title,tags:g.tags,body:g.body||"",ftext:x.text,lang:g.lang,cdate:g.cd||"",pages:x.pages};Object.assign(o,indexText(o));await R("ajf_circ_save",{p:o})}catch(e){bad++}}
+        const o={id:r.id,title:g.title,tags:g.tags,body:g.body||"",ftext:x.text,lang:g.lang,cdate:g.cd||"",pages:x.pages,ai:g.ai};Object.assign(o,indexText(o));delete o.ai;await R("ajf_circ_save",{p:o});await F({action:"chunk",id:r.id}).catch(()=>{})}catch(e){bad++}}
     btn.textContent=`✓ تمت إعادة قراءة ${fl.length-bad} ملف${bad?" — تعذّر "+bad:""}`}
   catch(e){btn.textContent=errTxt(e)}btn.disabled=false;S.q.trim()?search():recent()}
 
 /* ---------- المساعد ---------- */
 function fmtAns(t){let h=E(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ");
-  h=h.replace(/\[(\d{1,2}(?:\s*[,،]\s*\d{1,2})*)\]/g,(m,ns)=>ns.split(/[,،]/).map(n=>`<button class="ax-c" data-asrc="${+n.trim()-1}">${+n.trim()}</button>`).join(""));return h.replace(/\n/g,"<br>")}
+  h=h.replace(/\[(\d{1,2}[^\[\]<]{0,40})\]/g,(m,ins)=>ins.split(/[,،]/).map(x=>x.trim()).reduce((acc,x)=>{const d=x.match(/^(\d{1,2})$/),p=x.match(/^(?:ص|صفحة|p\.?)\s*(\d{1,4})$/i);
+      if(d)acc.push(`<button class="ax-c" data-asrc="${+d[1]-1}">${d[1]}</button>`);else if(p&&acc.length)acc[acc.length-1]=acc[acc.length-1].replace("</button>",` · ص${p[1]}</button>`);else acc.push(E(x));return acc},[]).join(""));return h.replace(/\n/g,"<br>")}
 /* المصادر اللي ذكرها الجواب فقط */
-const cited=t=>{const c=new Set();(String(t).match(/\[(\d{1,2}(?:\s*[,،]\s*\d{1,2})*)\]/g)||[]).forEach(m=>m.replace(/[\[\]]/g,"").split(/[,،]/).forEach(n=>c.add(+n.trim()-1)));return c}
+const cited=t=>{const c=new Set();(String(t).match(/\[(\d{1,2}[^\[\]]{0,40})\]/g)||[]).forEach(m=>m.replace(/[\[\]]/g,"").split(/[,،]/).forEach(n=>{n=n.trim();if(/^\d{1,2}$/.test(n))c.add(+n-1)}));return c}
 async function ask(){const q=(S.aq||"").trim();if(q.length<3||S.abusy)return;S.abusy=true;S.ans=`<div class="bd-empty">… المساعد يقرأ التعاميم ويجهز الجواب (عادة 5–15 ثانية)</div>`;paint();
   try{const j=await F({action:"ask",q,h:S.hist||[]});S.asrc=j.src||[];S.hist=(S.hist||[]).concat([{q,a:j.answer||""}]).slice(-3);
     S.ans=`<div class="ax-a">${fmtAns(j.answer||"")}</div>`+(S.asrc.length?`<div class="ax-s"><small>المصادر:</small>${S.asrc.map((r,i)=>{const cs=cited(j.answer);if(cs.size&&!cs.has(i))return"";const a=AI(r);return`<button class="ax-sr" data-asrc="${i}"><i>${i+1}</i><span>${E(a&&a.t||r.title)}</span>${r.has_file?"<em>📄</em>":""}</button>`}).join("")}</div>`:"")+
@@ -299,7 +300,7 @@ function bind(el){if(el.__cx)return;el.__cx=1;
       try{let ftext;if(!isNew&&old.has_file){const g=await R("ajf_circ_get",{p_id:old.id});ftext=g.row.ftext}
         const o={id:isNew?newId():old.id,title:v("title"),tags:v("tags"),body:old.has_file?"":v("body"),cdate:v("cd"),lang:old.lang||""};if(ftext!=null)o.ftext=ftext;
         const ix=indexText(Object.assign({},o,{ftext:ftext||""}));o.ntext=ix.ntext;o.ktext=ix.ktext;
-        await R("ajf_circ_save",{p:o});if(isNew){try{localStorage.removeItem("ajf_cx_draft")}catch(x){}box.parentElement.remove()}S.edit=null;S.q="";const qi=root.querySelector("#cxQ");if(qi)qi.value="";recent()}
+        await R("ajf_circ_save",{p:o});F({action:isNew||!AI(old)?"sum":"chunk",id:o.id}).catch(()=>{});if(isNew){try{localStorage.removeItem("ajf_cx_draft")}catch(x){}box.parentElement.remove()}S.edit=null;S.q="";const qi=root.querySelector("#cxQ");if(qi)qi.value="";recent()}
       catch(x){b.disabled=false;b.textContent="حفظ";box.querySelector(".m").textContent=errTxt(x)}return}
     if(b.dataset.del){if(!confirm("حذف هذا التعميم نهائياً؟"))return;try{const j=await R("ajf_circ_del",{p_id:b.dataset.del});if(j.file_path)await F({action:"del",path:j.file_path}).catch(()=>{});
       S.rows=S.rows&&S.rows.filter(x=>x.id!==b.dataset.del);S.list=S.list&&S.list.filter(x=>x.id!==b.dataset.del);S.n=Math.max(0,S.n-1);paintRes()}catch(x){alert(errTxt(x))}}});
@@ -328,5 +329,5 @@ const MO={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC
 function parseTd(s){const m=String(s).replace(/O/g,"0").match(/^(\d{2})([A-Z0]{3})(\d{2})$/);if(!m)return null;const mo=MO[m[2].replace(/0/g,"O")];return mo==null?null:new Date(Date.UTC(2000+ +m[3],mo,+m[1]))}
 
 window.CIRCM={mount:(el,q)=>{bind(el);mount(el,q)},related,count:async()=>{const j=await R("ajf_circ_list",{p_offset:0,p_limit:1});return{n:j.n,last:j.rows[0]&&j.rows[0].id}},
-  _t:{qGroups,indexText,NORM,SK,guessDate,pdfText}};
+  _t:{qGroups,indexText,NORM,SK,guessDate,pdfText,fmtAns,cited}};
 })();
