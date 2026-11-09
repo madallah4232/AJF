@@ -63,6 +63,7 @@ const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (ال�
 3) **تحقق منه أنت** • نقاط (وثائق، أنظمة، مراسلة محطة...).
 بعد كل معلومة من تعميم اكتب رقمه بين قوسين مثل [1] أو [1, 3]، وإذا المقتطف فيه رقم صفحة مثل [صفحة 214] اذكره بعد الرقم مثل [2، ص 214] حتى يرجع له الموظف.
 إذا يحتاج الجواب معلومة مو موجودة في التعاميم (مثل تأشيرة دخول دولة لجنسية معينة)، اذكر ما تعرفه بإيجاز تحت عنوان **خارج التعاميم (تأكد من TIMATIC)** ولا تنسبه لتعميم.
+هذي محادثة متصلة: إذا رسالة الموظف توضيح أو تصحيح أو تكملة لسؤال سابق، اربطها بما قبلها وجاوب السؤال الأصلي بعد التوضيح، ولا تبدأ موضوع جديد ولا تكرر جواب سابق بدون داعي. إذا ما فهمت قصده اسأله سؤال توضيحي واحد قصير.
 لا تقل "ما لقيت" إذا فيه تعميم ينطبق ولو جزئياً. وإذا فعلاً ما فيه أي تعميم له علاقة قل ذلك بسطر واحد ثم أعط التوجيه العام المفيد تحت "خارج التعاميم".`;
 
 Deno.serve(async (req) => {
@@ -86,6 +87,12 @@ Deno.serve(async (req) => {
     const q = String(a.q || "").slice(0, 600).trim();
     if (q.length < 2) return out({ s: "bad" });
     try {
+      const H = (Array.isArray(a.h) ? a.h : []).slice(-6).map((t: any) => ({ q: String(t.q || "").slice(0, 600), a: String(t.a || "").slice(0, 2500) }));
+      // سؤال متابعة/توضيح: نكتبه كسؤال كامل يجمع تفاصيل المحادثة، ونبحث ونجاوب على أساسه
+      let full = q;
+      if (H.length) {
+        try { full = (await gem(`المحادثة السابقة:\n${H.map((t, i) => `(${i + 1}) الموظف: ${t.q}\nالمساعد: ${t.a.slice(0, 800)}`).join("\n\n")}\n\nرسالة الموظف الجديدة: ${q}\n\nإذا الرسالة الجديدة تكملة أو توضيح أو تصحيح أو سؤال متابعة لما قبلها، أعد كتابتها كسؤال واحد كامل مستقل يجمع كل التفاصيل المهمة (الراكب، الجنسية، المسار، الحالة...) مع التوضيح الجديد. وإذا موضوعها جديد تماماً أعدها كما هي. اكتب السؤال فقط.`, "تعيد صياغة سؤال المتابعة كسؤال كامل. سطر واحد.")).trim().slice(0, 800) || q; } catch { full = q; }
+      }
       // التعاميم الصغيرة كاملة، والأدلة الكبيرة: الأجزاء الأقرب للسؤال من كامل صفحاتها
       const { data: meta } = await sb.rpc("ajf_circ_meta");
       const M = (meta || []) as Record<string, any>[];
@@ -99,8 +106,8 @@ Deno.serve(async (req) => {
       const pick = new Map<string, string[]>();
       if (big.length) {
         let kw: string[] = [];
-        try { const j = JSON.parse(await gem(`سؤال موظف خدمات أرضية: ${q}\nأعطني JSON بالشكل {"kw":[...]} فيه 10 إلى 20 كلمة أو عبارة قصيرة للبحث في أدلة تشغيل طيران مكتوبة بالإنجليزي غالباً وبعضها عربي: المصطلحات الفنية الإنجليزية المستخدمة في أدلة الخدمات الأرضية (مثل boarding, PRM, WCHR, MAAS, misconnection, deportee, INAD, dangerous goods, load sheet)، ومرادفاتها، وترجمتها العربية، وأسماء الدول والمطارات ورموزها. بدون شرح.`, "تستخرج كلمات بحث فقط.", true)); kw = Array.isArray(j.kw) ? j.kw : []; } catch { /* */ }
-        kw = [...new Set([...kw.map(String), ...NORM(q).split(" ").filter((w) => w.length > 2)])].slice(0, 26);
+        try { const j = JSON.parse(await gem(`سؤال موظف خدمات أرضية: ${full}\nأعطني JSON بالشكل {"kw":[...]} فيه 10 إلى 20 كلمة أو عبارة قصيرة للبحث في أدلة تشغيل طيران مكتوبة بالإنجليزي غالباً وبعضها عربي: المصطلحات الفنية الإنجليزية المستخدمة في أدلة الخدمات الأرضية (مثل boarding, PRM, WCHR, MAAS, misconnection, deportee, INAD, dangerous goods, load sheet)، ومرادفاتها، وترجمتها العربية، وأسماء الدول والمطارات ورموزها. بدون شرح.`, "تستخرج كلمات بحث فقط.", true)); kw = Array.isArray(j.kw) ? j.kw : []; } catch { /* */ }
+        kw = [...new Set([...kw.map(String), ...NORM(full).split(" ").filter((w) => w.length > 2)])].slice(0, 26);
         const groups = kw.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 2);
         const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: 40 });
         const bigIds = new Set(big.map((r) => r.id)); let tot = 0;
@@ -110,8 +117,8 @@ Deno.serve(async (req) => {
       if (!rows.length) return out({ s: "ok", answer: "ما فيه تعاميم مرفوعة للحين.", src: [] });
       const docs = rows.map((r, i) => `[${i + 1}] العنوان: ${r.title}\nالتاريخ: ${r.cd || ""}\n${r.ai ? "ملخص: " + r.ai + "\n" : ""}` +
         (texts.has(r.id) ? `النص:\n${texts.get(r.id)}` : pick.has(r.id) ? `مقتطفات من أجزاء الدليل الأقرب للسؤال (الدليل كامل ${r.n} حرف):\n${pick.get(r.id)!.join("\n…\n")}` : "(دليل كبير: ما فيه أجزاء مطابقة للسؤال، عندك ملخصه فقط)")).join("\n\n-----\n\n");
-      const hist = (Array.isArray(a.h) ? a.h : []).slice(-3).map((t: any) => `سؤال سابق: ${String(t.q || "").slice(0, 400)}\nجوابك: ${String(t.a || "").slice(0, 1500)}`).join("\n\n");
-      const ans = await gem(`التعاميم والملفات المرفوعة (${rows.length}):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة:\n" + hist + "\n\n=====\n" : ""}سؤال الموظف الآن: ${q}`, SYS_ASK, false, true);
+      const hist = H.map((t) => `الموظف: ${t.q}\nأنت: ${t.a}`).join("\n\n");
+      const ans = await gem(`التعاميم والملفات المرفوعة (${rows.length}):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`, SYS_ASK, false, true);
       return out({ s: "ok", answer: ans, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }

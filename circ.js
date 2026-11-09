@@ -168,13 +168,14 @@ const cleanName=n=>String(n).replace(/\.pdf$/i,"").replace(/[_\-]+/g," ").replac
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 /* ---------- الحالة والواجهة ---------- */
-const S={aq:(()=>{try{return localStorage.getItem("ajf_ax_q")||""}catch(e){return""}})(),ans:"",abusy:false,asrc:[],q:"",rows:null,list:null,n:0,busy:false,up:[],upBusy:false,usage:null,edit:null,err:""};
+const S={th:(()=>{try{return JSON.parse(localStorage.getItem("ajf_ax_th")||"[]")}catch(e){return[]}})(),aq:(()=>{try{return localStorage.getItem("ajf_ax_q")||""}catch(e){return""}})(),ans:"",abusy:false,asrc:[],q:"",rows:null,list:null,n:0,busy:false,up:[],upBusy:false,usage:null,edit:null,err:""};
 let root=null,qT=null;
 function mount(el,q){root=el;if(q!=null)S.q=q;paint();loadSyn().then(()=>{if(S.q)search();else recent()});if(isAdm())F({action:"usage"}).then(j=>{S.usage=j;paintUp()}).catch(()=>{})}
 function paint(){if(!root)return;const adm=isAdm();
   root.innerHTML=`<div class="ax"><div class="ax-h"><i>🤖</i><div><b>اسأل المساعد</b><small>اكتب سؤالك بالعربي، ويجاوبك من التعاميم المرفوعة</small></div></div>
-    <textarea id="axQ" rows="2" placeholder="مثال: راكب مسافر أمريكا وش يحتاج؟ · الرحلة تأخرت بسبب الطقس وش نسوي؟">${E(S.aq||"")}</textarea>
-    <button class="tx-go" id="axGo" ${S.abusy?"disabled":""}>${S.abusy?"… يقرأ التعاميم":"اسأل"}</button><div id="axA">${S.ans||""}</div></div>
+    <div id="axA">${thHTML()}</div>
+    <textarea id="axQ" rows="2" placeholder="${(S.th||[]).length?"اكتب سؤال متابعة أو توضيح…":"مثال: راكب مسافر أمريكا وش يحتاج؟ · الرحلة تأخرت بسبب الطقس وش نسوي؟"}">${E(S.aq||"")}</textarea>
+    <button class="tx-go" id="axGo" ${S.abusy?"disabled":""}>${S.abusy?"… يقرأ التعاميم":(S.th||[]).length?"أرسل":"اسأل"}</button></div>
     <div class="bd-sec"><span>أو ابحث بكلمة</span></div>
     <div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cxQ" type="search" placeholder="ابحث بالعربي أو الإنجليزي: كلمة أو كلمتين…" value="${E(S.q)}" autocomplete="off" enterkeyhint="search"></div>
     <div class="bd-h" id="cxHint">${S.q?"":"مثال: <b>إيبولا</b> · <b>كرسي متحرك</b> · <b>أمريكا</b> · <b>بطاريات</b> · <b>تأخير البوردنق</b>"}</div>
@@ -249,11 +250,19 @@ function fmtAns(t){let h=E(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s
       if(d)acc.push(`<button class="ax-c" data-asrc="${+d[1]-1}">${d[1]}</button>`);else if(p&&acc.length)acc[acc.length-1]=acc[acc.length-1].replace("</button>",` · ص${p[1]}</button>`);else acc.push(E(x));return acc},[]).join(""));return h.replace(/\n/g,"<br>")}
 /* المصادر اللي ذكرها الجواب فقط */
 const cited=t=>{const c=new Set();(String(t).match(/\[(\d{1,2}[^\[\]]{0,40})\]/g)||[]).forEach(m=>m.replace(/[\[\]]/g,"").split(/[,،]/).forEach(n=>{n=n.trim();if(/^\d{1,2}$/.test(n))c.add(+n-1)}));return c}
-async function ask(){const q=(S.aq||"").trim();if(q.length<3||S.abusy)return;S.abusy=true;S.ans=`<div class="bd-empty">… المساعد يقرأ التعاميم ويجهز الجواب (عادة 5–15 ثانية)</div>`;paint();
-  try{const j=await F({action:"ask",q,h:S.hist||[]});S.asrc=j.src||[];S.hist=(S.hist||[]).concat([{q,a:j.answer||""}]).slice(-3);
-    S.ans=`<div class="ax-a">${fmtAns(j.answer||"")}</div>`+(S.asrc.length?`<div class="ax-s"><small>المصادر:</small>${S.asrc.map((r,i)=>{const cs=cited(j.answer);if(cs.size&&!cs.has(i))return"";const a=AI(r);return`<button class="ax-sr" data-asrc="${i}"><i>${i+1}</i><span>${E(a&&a.t||r.title)}</span>${r.has_file?"<em>📄</em>":""}</button>`}).join("")}</div>`:"")+
-      `<p class="tx-note">جواب آلي من التعاميم — تأكد من التعميم الأصلي قبل أي قرار مهم. تقدر تكمل بسؤال متابعة، أو <button class="ax-new" id="axNew">ابدأ سؤال جديد</button></p>`}
-  catch(e){S.ans=`<div class="bd-empty">${e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":E(errTxt(e))}</div>`}
+/* المحادثة: كل الأسئلة والأجوبة مربوطة ببعض لين يضغط "محادثة جديدة" — وتنحفظ على الجوال */
+function thSave(){try{localStorage.setItem("ajf_ax_th",JSON.stringify((S.th||[]).slice(-8)))}catch(e){}}
+function thHTML(){const T=S.th||[];if(!T.length&&!S.abusy&&!S.aerr)return"";
+  return`<div class="ax-th">${T.length?`<div class="ax-top"><small>المحادثة (${T.length})</small><button class="ax-new" id="axNew">＋ محادثة جديدة</button></div>`:""}`+T.map((t,ti)=>{const cs=cited(t.a);
+    return`<div class="ax-q">${E(t.q)}</div><div class="ax-a">${fmtAns(t.a).replace(/data-asrc="(\d+)"/g,`data-asrc="${ti}:$1"`)}</div>`+
+      ((t.src||[]).some((r,i)=>!cs.size||cs.has(i))?`<div class="ax-s"><small>المصادر:</small>${(t.src||[]).map((r,i)=>{if(cs.size&&!cs.has(i))return"";const a=AI(r);return`<button class="ax-sr" data-asrc="${ti}:${i}"><i>${i+1}</i><span>${E(a&&a.t||r.title)}</span>${r.has_file?"<em>📄</em>":""}</button>`}).join("")}</div>`:"")}).join("")+
+    (S.abusy?`<div class="ax-q">${E(S.pending||"")}</div><div class="bd-empty">… المساعد يقرأ التعاميم ويجهز الجواب (عادة 10–25 ثانية)</div>`:"")+
+    (S.aerr?`<div class="bd-empty">${S.aerr}</div>`:"")+
+    (T.length?`<p class="tx-note">جواب آلي من التعاميم — تأكد من المصدر قبل أي قرار مهم. اكتب تحت سؤال متابعة أو توضيح وبيربطه بما قبله.</p>`:"")+`</div>`}
+async function ask(){const q=(S.aq||"").trim();if(q.length<2||S.abusy)return;S.abusy=true;S.aerr="";S.pending=q;S.aq="";try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();
+  try{const h=(S.th||[]).slice(-6).map(t=>({q:t.q,a:t.a}));const j=await F({action:"ask",q,h});
+    S.th=(S.th||[]).concat([{q,a:j.answer||"",src:j.src||[]}]);thSave()}
+  catch(e){S.aq=q;S.aerr=e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":E(errTxt(e))}
   S.abusy=false;paint()}
 async function sumAll(btn){btn.disabled=true;try{let all=[],off=0;for(;;){const j=await R("ajf_circ_list",{p_offset:off,p_limit:100});all=all.concat(j.rows);off+=100;if(off>=j.n)break}
     const todo=all.filter(r=>!AI(r));let i=0,bad=0;for(const r of todo){i++;btn.textContent=`🤖 ${i}/${todo.length}: ${r.title.slice(0,30)}`;
@@ -261,7 +270,7 @@ async function sumAll(btn){btn.disabled=true;try{let all=[],off=0;for(;;){const 
     btn.textContent=`✓ تلخّص ${todo.length-bad} تعميم${bad?" — تعذّر "+bad+" (جرّب مرة ثانية)":""}`}catch(e){btn.textContent=errTxt(e)}btn.disabled=false;S.q.trim()?search():recent()}
 
 /* ---------- فتح الملف ---------- */
-async function openFile(id,btn){const r=(S.rows||[]).concat(S.list||[],REL||[]).find(x=>x.id===id);
+async function openFile(id,btn){
   /* iOS يمنع فتح نافذة بعد انتظار، فنفتحها أول ثم نحط الرابط */
   const w=window.open("","_blank");if(w)w.document.write('<p style="font:16px system-ui;text-align:center;margin-top:40vh">… جاري فتح الملف</p>');btn&&(btn.textContent="…");
   try{const j=await F({action:"get",path:id+".pdf"});if(w)w.location.href=j.url;else location.href=j.url}
@@ -283,8 +292,8 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(b.id==="cxReidx"){reindex(b);return}
     if(b.id==="cxSumAll"){sumAll(b);return}
     if(b.id==="axGo"){ask();return}
-    if(b.id==="axNew"){S.hist=[];S.ans="";S.aq="";try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();return}
-    if(b.dataset.asrc){const r=(S.asrc||[])[+b.dataset.asrc];if(r&&r.has_file)openFile(r.id,b);return}
+    if(b.id==="axNew"){S.th=[];S.aerr="";S.aq="";thSave();try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();return}
+    if(b.dataset.asrc){const[ti,i]=b.dataset.asrc.split(":").map(Number);const r=((S.th||[])[ti]||{}).src;const x=r&&r[i];if(x&&x.has_file)openFile(x.id,b);return}
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
     if(b.dataset.urm!=null){S.up.splice(+b.dataset.urm,1);paintUp();return}
