@@ -764,6 +764,38 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .ci .cact{display:flex;gap:8px;justify-content:flex-end}.ci summary small{display:block;margin-top:2px}.ci .ed{font-size:12.5px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);color:var(--ink)}
 .ci-f summary{list-style:none;cursor:pointer;color:var(--c)}.ci-f summary::-webkit-details-marker{display:none}
 .ci-f[open]{display:grid;gap:8px}.ci-f button.sec{background:var(--raise);color:var(--muted)}
+#txRoot{display:grid;gap:12px;min-width:0}#txRes:empty{display:none}.tx-intro{display:grid;gap:4px;padding:2px}.tx-intro b{font:700 16px var(--display)}.tx-intro span{font-size:12.5px;color:var(--muted);line-height:1.6}
+.tx-slots{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tx-slot{position:relative}.tx-slot label{display:grid;gap:4px;justify-items:center;text-align:center;padding:14px 10px;border-radius:16px;background:var(--panel);border:1.5px dashed color-mix(in oklab,var(--c) 45%,var(--line));min-height:120px;align-content:center;cursor:pointer}
+.tx-slot.on label{border-style:solid;border-color:var(--go);background:color-mix(in oklab,var(--go) 10%,var(--panel))}
+.tx-slot i{font-style:normal;font-size:26px}.tx-slot b{font-size:14px}.tx-slot small{font-size:11px;color:var(--muted);line-height:1.5}.tx-slot.on small{color:var(--go);font-weight:700;font-size:12.5px}
+.tx-x{position:absolute;top:6px;left:6px;width:28px;height:28px;border-radius:14px;background:var(--raise);border:1px solid var(--line);color:var(--warn);font-size:13px}
+.tx-date{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);font-size:14px}
+.tx-date input{background:var(--raise);border:1px solid var(--line);border-radius:10px;color:var(--ink);height:38px;padding:0 10px;font:600 15px var(--mono)}
+.tx-go{height:54px;border-radius:16px;background:var(--c);color:#0a1120;font:700 17px var(--body)}.tx-go:disabled{opacity:.5}
+.tx-prog{position:relative;height:30px;border-radius:10px;background:var(--panel);overflow:hidden;display:grid;place-items:center}.tx-prog[hidden]{display:none}
+.tx-prog i{position:absolute;inset:0 auto 0 0;width:0;background:color-mix(in oklab,var(--c) 40%,transparent);transition:width .4s}.tx-prog span{position:relative;font-size:12px}
+.tx-v{padding:16px;border-radius:16px;font:700 17px/1.5 var(--display);text-align:center}
+.tx-v.r{background:color-mix(in oklab,var(--warn) 22%,var(--panel));border:2px solid var(--warn);color:#ffd1ca}
+.tx-v.a{background:color-mix(in oklab,var(--amber) 18%,var(--panel));border:2px solid var(--amber);color:#ffe2b0}
+.tx-v.g{background:color-mix(in oklab,var(--go) 16%,var(--panel));border:2px solid var(--go);color:#c7f5e3}
+.tx-trip{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.tx-trip span{font-size:12px;padding:4px 10px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}.tx-trip b{color:var(--ink)}
+.tx-chk{display:grid;gap:8px;margin-top:12px}.tx-chk h5{margin:0;font:700 15px var(--display)}
+.tx-chk>div{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);border-inline-start:5px solid var(--muted)}
+.tx-chk>div.r{border-inline-start-color:var(--warn);background:color-mix(in oklab,var(--warn) 10%,var(--panel))}.tx-chk>div.a{border-inline-start-color:var(--amber)}.tx-chk>div.g{border-inline-start-color:var(--go)}
+.tx-chk i{flex:none;width:24px;height:24px;border-radius:12px;display:grid;place-items:center;font:700 12px var(--mono);font-style:normal;background:var(--raise)}
+.tx-chk .r i{background:var(--warn);color:#fff}.tx-chk .a i{background:var(--amber);color:#1a1205}.tx-chk .g i{background:var(--go);color:#062417}
+.tx-chk p{margin:0;font-size:14.5px;line-height:1.65}.tx-chk p b{color:#fff}
+.tx-doc{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}.tx-doc h6{margin:0 0 8px;font:700 14px var(--display);display:flex;gap:8px;align-items:center}
+.tx-doc em{font-style:normal;font-size:11px;padding:2px 8px;border-radius:8px}.tx-doc em.g{background:color-mix(in oklab,var(--go) 25%,transparent);color:var(--go)}.tx-doc em.a{background:color-mix(in oklab,var(--amber) 25%,transparent);color:var(--amber)}
+.tx-doc .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px}.tx-doc .kv span{color:var(--muted)}.tx-doc .kv b{font-family:var(--mono);font-size:13px;text-align:end;word-break:break-word}.tx-doc .kv b.r{color:var(--warn)}
+.tx-doc p{margin:0;font-size:13px;line-height:1.7;color:#c3cde0}
+.tx-sec{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}.tx-sec>summary{cursor:pointer;font-size:14.5px;list-style:none}.tx-sec>summary::-webkit-details-marker{display:none}
+.tx-it{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--raise);border-inline-start:4px solid var(--muted)}.tx-it.r{border-color:var(--warn)}.tx-it.a{border-color:var(--amber)}.tx-it.g{border-color:var(--go)}
+.tx-it p{margin:0;font-size:13.5px;line-height:1.6}.tx-it small{display:block;margin-top:4px;font:500 10.5px/1.5 var(--mono);color:var(--muted);text-align:left}
+.tx-raw{margin-top:8px}.tx-raw summary{font-size:12px;color:var(--muted);cursor:pointer}.tx-raw pre{white-space:pre-wrap;font:500 10.5px/1.5 var(--mono);color:var(--muted);max-height:260px;overflow:auto}
+.tx-note{font-size:11.5px;color:var(--muted);line-height:1.6;margin:12px 2px 0}.tx-err{padding:14px;border-radius:14px;background:color-mix(in oklab,var(--warn) 15%,var(--panel));color:#ffd1ca}.tx-m{color:var(--muted);font-size:12.5px}
+.bd-days.tabs button{font-size:13.5px}
 @media (prefers-reduced-motion:reduce){.hub.in *,.bd.in *,.wrap.in>*{animation:none!important}.hub,.portal,.portal .pi{transition:none!important}}
 </style>
 </head>
@@ -3209,15 +3241,19 @@ function bdRender(){const B=$("bdB");
       (list.length?list.map(f=>{const V=CSV[iso(d)+"_"+f.n]||{},sv=/^SV/i.test(f.n),nl=Object.keys(V).filter(k=>k.startsWith("lc.")).length,ng=fmN(V,"bsd");
         return`<div class="bf"><div class="h"><span class="t">${f.t}</span><div class="n"><b>${escT(f.n)} · ${escT(f.dest)}</b><small>${escT(f.airline||"")}</small></div></div>
           <div class="a"><button class="p" data-ls="${escT(f.n)}" ${sv?"":"disabled"}>⚖︎ Load Sheet<small>${sv?(nl?"✍︎ "+nl+" خانة":"Balance · LIR"):"للسعودية فقط"}</small></button><button data-gaca="${escT(f.n)}">🛄 نموذج GACA<small>${ng?"✍︎ "+ng+" خانة":"Baggage Security"}</small></button></div></div>`}).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`);return}
+  if(BOARD==="tim"&&TIMTAB==="doc"){B.innerHTML=timTabs()+`<div id="txRoot"><div class="bd-empty">جاري التحميل…</div></div>
+      <a class="tm-l" href="https://www.iatatravelcentre.com/" target="_blank" rel="noopener"><i>🌐</i><div><b>IATA Travel Centre · Timatic</b><small>للاستعلام السريع بدون أماديوس</small></div></a>`;
+    timLoad().then(()=>{const r=$("txRoot");if(r&&window.TIM)TIM.mount(r)}).catch(()=>{const r=$("txRoot");if(r)r.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
   if(BOARD==="tim"){const adm=!!(AUTH.me&&AUTH.me.admin);
-    B.innerHTML=`<div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cqIn" type="search" placeholder="ابحث في التعاميم: كلمة أو كلمتين…" value="${escT(CQ)}" autocomplete="off" enterkeyhint="search"></div>
+    B.innerHTML=timTabs()+`<div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cqIn" type="search" placeholder="ابحث في التعاميم: كلمة أو كلمتين…" value="${escT(CQ)}" autocomplete="off" enterkeyhint="search"></div>
       <div id="cqList"></div>
       ${adm?`<details class="ci-f" id="ciBox" ${DRAFT.ciT||DRAFT.ciB||DRAFT.ciE?"open":""}><summary><b id="ciHd">${DRAFT.ciE?"تعديل تعميم":"＋ إضافة تعميم"}</b></summary><input id="ciT" placeholder="العنوان (مثال: تعميم تأخير البوردنق)" value="${escT(DRAFT.ciT||"")}"><textarea id="ciB" placeholder="نص التعميم كامل… يمكنك لصق نص طويل">${escT(DRAFT.ciB||"")}</textarea><button id="ciGo">${DRAFT.ciE?"حفظ التعديل":"نشر التعميم للموظفين"}</button>${DRAFT.ciE?'<button id="ciCancel" class="sec">إلغاء التعديل</button>':""}<span class="m" id="ciM">المسودة تنحفظ تلقائياً على جوالك لين تنشرها.</span></details>`:""}
-      <div class="bd-sec"><span>تيماتيك</span></div>
-      <a class="tm-l" href="https://www.iatatravelcentre.com/" target="_blank" rel="noopener"><i>🛂</i><div><b>IATA Travel Centre · Timatic</b><small>متطلبات الجواز والتأشيرة والصحة حسب الجنسية والوجهة</small></div></a>
       ${TIMN||adm?`<div class="ci"><div class="h"><b>ملاحظات تيماتيك</b></div>${adm?`<div class="ci-f" style="padding:0;border:0"><textarea id="timIn" placeholder="ملاحظات للموظفين عن متطلبات السفر…">${escT(DRAFT.tim!=null?DRAFT.tim:TIMN)}</textarea><button id="timGo">حفظ الملاحظات</button><span class="m" id="timM"></span></div>`:`<p>${escT(TIMN)}</p>`}</div>`:""}`;
     timPaintList();if(CIRC.length)try{localStorage.setItem("ajf_circ_seen",CIRC[0].id)}catch(e){}}
 }
+let TIMTAB="doc";
+const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRC.length?" · "+CIRC.length:""}</button></div>`;
+let timP=null;const timLoad=()=>window.TIM?Promise.resolve():timP||(timP=new Promise((ok,no)=>{const s=document.createElement("script");s.src="timatic.js?v=1";s.onload=ok;s.onerror=()=>{timP=null;no()};document.head.appendChild(s)}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;
   if(!CIRC.length){L.innerHTML=`<div class="bd-empty">ما فيه تعاميم حالياً</div>`;return}
@@ -3228,6 +3264,7 @@ function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&A
 async function cfgSet(k,v){const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:k,p_v:v});if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s)}
 $("bdB").addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const{d,list}=bdFlights();const fOf=n=>list.find(f=>f.n===n);
   if(t.dataset.day!=null){bdDay=+t.dataset.day;bdRender();return}
+  if(t.dataset.ttab){TIMTAB=t.dataset.ttab;bdRender();return}
   if(t.dataset.trc){const f=fOf(t.dataset.trc);if(f)openCS(f,d);return}
   if(t.dataset.ls){const f=fOf(t.dataset.ls);if(f){csCur={f,date:d};openLC()}return}
   if(t.dataset.gaca){const f=fOf(t.dataset.gaca);if(f){csCur={f,date:d};openForm("bsd")}return}
