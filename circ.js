@@ -117,7 +117,8 @@ function qGroups(q){const words=NORM(q).split(" ").filter(w=>w.length>1&&!STOP.h
     const arr=[...alt].slice(0,30).map(n=>({n,k:SK(n)}));out.push(arr);arr.forEach(a=>terms.push(a.n))}
   return{groups:out,terms}}
 /* نص البحث المخزّن مع كل تعميم */
-function indexText(o){const n=NORM([o.title,o.tags,o.body,o.ftext].join(" "));const k=" "+[...new Set(n.split(" "))].map(SK).join(" ")+" ";return{ntext:n,ktext:k}}
+const AI=r=>{try{const j=typeof r.ai==="string"&&r.ai?JSON.parse(r.ai):null;return j&&(j.t||j.s)?j:null}catch(e){return null}};
+function indexText(o){const a=AI(o);const n=NORM([o.title,o.tags,o.body,o.ftext,a?a.t+" "+a.s+" "+a.k:""].join(" "));const k=" "+[...new Set(n.split(" "))].map(SK).join(" ")+" ";return{ntext:n,ktext:k}}
 
 /* ---------- تمييز الكلمات والمقتطف ---------- */
 function rx(terms){const fl=t=>t.split("").map(ch=>({"ا":"[اأإآٱء]","ه":"[هة]","ي":"[يىئ]","و":"[وؤ]"})[ch]||ch.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("[\\u064B-\\u0652\\u0640]*");
@@ -167,13 +168,17 @@ const cleanName=n=>String(n).replace(/\.pdf$/i,"").replace(/[_\-]+/g," ").replac
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 /* ---------- الحالة والواجهة ---------- */
-const S={q:"",rows:null,list:null,n:0,busy:false,up:[],upBusy:false,usage:null,edit:null,err:""};
+const S={aq:(()=>{try{return localStorage.getItem("ajf_ax_q")||""}catch(e){return""}})(),ans:"",abusy:false,asrc:[],q:"",rows:null,list:null,n:0,busy:false,up:[],upBusy:false,usage:null,edit:null,err:""};
 let root=null,qT=null;
 function mount(el,q){root=el;if(q!=null)S.q=q;paint();loadSyn().then(()=>{if(S.q)search();else recent()});if(isAdm())F({action:"usage"}).then(j=>{S.usage=j;paintUp()}).catch(()=>{})}
 function paint(){if(!root)return;const adm=isAdm();
-  root.innerHTML=`<div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cxQ" type="search" placeholder="ابحث بالعربي أو الإنجليزي: كلمة أو كلمتين…" value="${E(S.q)}" autocomplete="off" enterkeyhint="search"></div>
+  root.innerHTML=`<div class="ax"><div class="ax-h"><i>🤖</i><div><b>اسأل المساعد</b><small>اكتب سؤالك بالعربي، ويجاوبك من التعاميم المرفوعة</small></div></div>
+    <textarea id="axQ" rows="2" placeholder="مثال: راكب مسافر أمريكا وش يحتاج؟ · الرحلة تأخرت بسبب الطقس وش نسوي؟">${E(S.aq||"")}</textarea>
+    <button class="tx-go" id="axGo" ${S.abusy?"disabled":""}>${S.abusy?"… يقرأ التعاميم":"اسأل"}</button><div id="axA">${S.ans||""}</div></div>
+    <div class="bd-sec"><span>أو ابحث بكلمة</span></div>
+    <div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cxQ" type="search" placeholder="ابحث بالعربي أو الإنجليزي: كلمة أو كلمتين…" value="${E(S.q)}" autocomplete="off" enterkeyhint="search"></div>
     <div class="bd-h" id="cxHint">${S.q?"":"مثال: <b>إيبولا</b> · <b>كرسي متحرك</b> · <b>أمريكا</b> · <b>بطاريات</b> · <b>تأخير البوردنق</b>"}</div>
-    ${adm?`<div class="cx-adm"><label class="cx-up"><input type="file" id="cxFiles" accept="application/pdf,.pdf" multiple hidden><span>📎 رفع تعاميم PDF</span><small>تقدر تختار أكثر من ملف</small></label><button class="cx-up" id="cxNew"><span>✍︎ تعميم مكتوب</span><small>بدون ملف</small></button></div><button class="cx-more" id="cxReidx">🔄 إعادة قراءة كل الملفات (بعد أي تحديث للبحث)</button><div id="cxUp"></div>`:""}
+    ${adm?`<div class="cx-adm"><label class="cx-up"><input type="file" id="cxFiles" accept="application/pdf,.pdf" multiple hidden><span>📎 رفع تعاميم PDF</span><small>تقدر تختار أكثر من ملف</small></label><button class="cx-up" id="cxNew"><span>✍︎ تعميم مكتوب</span><small>بدون ملف</small></button></div><button class="cx-more" id="cxSumAll">🤖 تلخيص التعاميم بالعربي (اللي ما تلخصت)</button><button class="cx-more" id="cxReidx">🔄 إعادة قراءة كل الملفات (بعد أي تحديث للبحث)</button><div id="cxUp"></div>`:""}
     <div id="cxRes"></div>`;paintUp();paintRes()}
 function paintRes(){const el=root&&root.querySelector("#cxRes");if(!el)return;
   if(S.err){el.innerHTML=`<div class="bd-empty">${E(S.err)}</div>`;return}
@@ -183,9 +188,10 @@ function paintRes(){const el=root&&root.querySelector("#cxRes");if(!el)return;
   el.innerHTML=`<div class="bd-sec"><span>${S.q.trim()?"النتائج":"آخر التعاميم"}</span><small>${S.q.trim()?rows.length:S.n}</small></div>`+rows.map(r=>card(r,re,S.q.trim()&&r.full)).join("")+
     (!S.q.trim()&&S.list.length<S.n?`<button class="cx-more" id="cxMore">عرض المزيد</button>`:"")}
 function card(r,re,partial){const ed=S.edit===r.id;
-  return`<div class="ci cx ${r.miss?"near":""}" data-id="${E(r.id)}"><div class="h"><div><b>${hl(r.title,re)}</b><small>${r.cd?fDate(r.cd):fDate(r.at)}${r.lang==="en"?" · English":""}${r.pages?" · "+r.pages+" ص":""}${r.by_name?" · "+E(r.by_name):""}</small></div>${r.has_file?'<span class="cx-pdf">PDF</span>':""}</div>
+  const a=AI(r);
+  return`<div class="ci cx ${r.miss?"near":""}" data-id="${E(r.id)}"><div class="h"><div>${a&&a.t?`<b>${hl(a.t,re)}</b><small class="cx-en" dir="auto">${hl(r.title,re)}</small>`:`<b>${hl(r.title,re)}</b>`}<small>${r.cd?fDate(r.cd):fDate(r.at)}${r.lang==="en"?" · English":""}${r.pages?" · "+r.pages+" ص":""}${r.by_name?" · "+E(r.by_name):""}</small></div>${r.has_file?'<span class="cx-pdf">PDF</span>':""}</div>
     ${r.tags?`<div class="cx-tags">${r.tags.split(/[،,]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span>${hl(x,re)}</span>`).join("")}</div>`:""}
-    <p class="sn">${hl(snip(r.txt,re),re)}</p>${r.miss?`<small class="cx-miss">فيه بعض كلماتك فقط</small>`:""}
+    ${a&&a.s?`<div class="cx-sum">${hl(a.s,re).replace(/\n/g,"<br>")}</div>`:""}<p class="sn ${a&&a.s?"en":""}">${hl(snip(r.txt,re),re)}</p>${r.miss?`<small class="cx-miss">فيه بعض كلماتك فقط</small>`:""}
     <div class="cact">${r.has_file?`<button class="cx-open" data-open="${E(r.id)}">📄 فتح الملف</button>`:""}<button class="ed" data-full="${E(r.id)}">النص كامل</button>${isAdm()?`<button class="ed" data-edit="${E(r.id)}">تعديل</button><button class="x" data-del="${E(r.id)}">حذف</button>`:""}</div>
     ${ed?editForm(r):""}<div class="cx-full" id="full_${E(r.id)}" hidden></div></div>`}
 function editForm(r){return`<div class="ci-f cx-ed"><input data-f="title" value="${E(r.title)}" placeholder="العنوان"><input data-f="tags" value="${E(r.tags||"")}" placeholder="وسوم: كلمات بحث مفصولة بفاصلة"><input data-f="cd" type="date" value="${E((r.cd||"").slice(0,10))}">${r.has_file?"":`<textarea data-f="body" placeholder="نص التعميم">${E(r.body||"")}</textarea>`}<button data-save="${E(r.id)}">حفظ</button><span class="m" id="edM"></span></div>`}
@@ -223,7 +229,7 @@ async function uploadAll(){if(S.upBusy)return;S.upBusy=true;paintUp();
     try{const id=newId(),path=id+".pdf";const u=await F({action:"upload",path});x.msg="رفع الملف…";paintUp();
       const put=await fetch(u.url,{method:"PUT",headers:{"Content-Type":"application/pdf","x-upsert":"true",apikey:SB_KEY},body:x.file});if(!put.ok)throw new Error("put"+put.status);
       x.msg="حفظ للبحث…";paintUp();const o={id,title:x.title.trim()||cleanName(x.file.name),tags:x.tags.trim(),body:"",ftext:x.text||"",lang:x.lang,cdate:x.cd,file_path:path,file_name:x.file.name,file_size:x.file.size,pages:x.pages};
-      Object.assign(o,indexText(o));await R("ajf_circ_save",{p:o});x.st="done"}
+      Object.assign(o,indexText(o));await R("ajf_circ_save",{p:o});x.msg="تلخيص بالعربي…";paintUp();await F({action:"sum",id}).catch(()=>{});x.st="done"}
     catch(e){x.st="err";x.retry=1;x.msg=/put/.test(e.message)?"تعذّر رفع الملف — جرّب مرة ثانية":errTxt(e)}paintUp()}
   S.upBusy=false;paintUp();recent();F({action:"usage"}).then(j=>{S.usage=j;paintUp()}).catch(()=>{});if(window.hubPaint)try{hubPaint()}catch(e){}}
 
@@ -236,6 +242,20 @@ async function reindex(btn){if(!confirm("إعادة قراءة كل ملفات P
         const o={id:r.id,title:g.title,tags:g.tags,body:g.body||"",ftext:x.text,lang:g.lang,cdate:g.cd||"",pages:x.pages};Object.assign(o,indexText(o));await R("ajf_circ_save",{p:o})}catch(e){bad++}}
     btn.textContent=`✓ تمت إعادة قراءة ${fl.length-bad} ملف${bad?" — تعذّر "+bad:""}`}
   catch(e){btn.textContent=errTxt(e)}btn.disabled=false;S.q.trim()?search():recent()}
+
+/* ---------- المساعد ---------- */
+function fmtAns(t){let h=E(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ");
+  h=h.replace(/\[(\d{1,2})\]/g,(m,n)=>`<button class="ax-c" data-asrc="${+n-1}">${n}</button>`);return h.replace(/\n/g,"<br>")}
+async function ask(){const q=(S.aq||"").trim();if(q.length<3||S.abusy)return;S.abusy=true;S.ans=`<div class="bd-empty">… المساعد يقرأ التعاميم ويجهز الجواب (عادة 5–15 ثانية)</div>`;paint();
+  try{const j=await F({action:"ask",q});S.asrc=j.src||[];
+    S.ans=`<div class="ax-a">${fmtAns(j.answer||"")}</div>`+(S.asrc.length?`<div class="ax-s"><small>المصادر:</small>${S.asrc.map((r,i)=>{const a=AI(r);return`<button class="ax-sr" data-asrc="${i}"><i>${i+1}</i><span>${E(a&&a.t||r.title)}</span>${r.has_file?"<em>📄</em>":""}</button>`}).join("")}</div>`:"")+
+      `<p class="tx-note">جواب آلي من التعاميم — تأكد من التعميم الأصلي قبل أي قرار مهم.</p>`}
+  catch(e){S.ans=`<div class="bd-empty">${e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":E(errTxt(e))}</div>`}
+  S.abusy=false;paint()}
+async function sumAll(btn){btn.disabled=true;try{let all=[],off=0;for(;;){const j=await R("ajf_circ_list",{p_offset:off,p_limit:100});all=all.concat(j.rows);off+=100;if(off>=j.n)break}
+    const todo=all.filter(r=>!AI(r));let i=0,bad=0;for(const r of todo){i++;btn.textContent=`🤖 ${i}/${todo.length}: ${r.title.slice(0,30)}`;
+      try{await F({action:"sum",id:r.id})}catch(e){bad++;if(e.message==="nokey"){btn.textContent="مفتاح Gemini ناقص";btn.disabled=false;return}await new Promise(o=>setTimeout(o,4000))}}
+    btn.textContent=`✓ تلخّص ${todo.length-bad} تعميم${bad?" — تعذّر "+bad+" (جرّب مرة ثانية)":""}`}catch(e){btn.textContent=errTxt(e)}btn.disabled=false;S.q.trim()?search():recent()}
 
 /* ---------- فتح الملف ---------- */
 async function openFile(id,btn){const r=(S.rows||[]).concat(S.list||[],REL||[]).find(x=>x.id===id);
@@ -250,7 +270,7 @@ async function showFull(id,btn){const el=document.getElementById("full_"+id);if(
 
 /* ---------- الأحداث ---------- */
 function bind(el){if(el.__cx)return;el.__cx=1;
-  el.addEventListener("input",e=>{const t=e.target;if(t.id==="cxQ"){S.q=t.value;const h=root.querySelector("#cxHint");if(h)h.style.display=S.q?"none":"";clearTimeout(qT);qT=setTimeout(search,350);return}
+  el.addEventListener("input",e=>{const t=e.target;if(t.id==="axQ"){S.aq=t.value;try{localStorage.setItem("ajf_ax_q",t.value)}catch(x){}return}if(t.id==="cxQ"){S.q=t.value;const h=root.querySelector("#cxHint");if(h)h.style.display=S.q?"none":"";clearTimeout(qT);qT=setTimeout(search,350);return}
     if(t.dataset.u!=null){S.up[+t.dataset.u][t.dataset.k]=t.value}});
   el.addEventListener("change",e=>{const t=e.target;if(t.id==="cxFiles"){addFiles([...t.files]);t.value=""}if(t.dataset.u!=null)S.up[+t.dataset.u][t.dataset.k]=t.value});
   el.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;e.stopPropagation();
@@ -258,6 +278,9 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(b.dataset.full){showFull(b.dataset.full,b);return}
     if(b.id==="cxMore"){recent(true);return}
     if(b.id==="cxReidx"){reindex(b);return}
+    if(b.id==="cxSumAll"){sumAll(b);return}
+    if(b.id==="axGo"){ask();return}
+    if(b.dataset.asrc){const r=(S.asrc||[])[+b.dataset.asrc];if(r&&r.has_file)openFile(r.id,b);return}
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
     if(b.dataset.urm!=null){S.up.splice(+b.dataset.urm,1);paintUp();return}
@@ -294,7 +317,7 @@ async function related(ctx,el){if(!el||!AUTH.tok)return;el.innerHTML=`<div class
   try{const j=await R("ajf_circ_search",{p_groups:grp,p_limit:8});REL=j.rows||[];
     const td=T&&T.hdr.date?parseTd(T.hdr.date):null,re=rx(grp[0].map(a=>a.n));
     el.innerHTML=`<div class="bd-sec"><span>📢 تعاميم تخص هذا الراكب</span><small>${REL.length}</small></div>`+(REL.length?REL.map(r=>{const nw=td&&r.cd&&new Date(r.cd+"T00:00:00Z")>=td;
-      return`<div class="ci cx ${nw?"new":""}"><div class="h"><div><b>${hl(r.title,re)}</b><small>${fDate(r.cd||r.at)}</small></div>${nw?'<span class="cx-nw">أحدث من تيماتيك ⚠️</span>':r.has_file?'<span class="cx-pdf">PDF</span>':""}</div><p class="sn">${hl(snip(r.txt,re,220),re)}</p>
+      const a=AI(r);return`<div class="ci cx ${nw?"new":""}"><div class="h"><div><b>${hl(a&&a.t||r.title,re)}</b><small>${fDate(r.cd||r.at)}</small></div>${nw?'<span class="cx-nw">أحدث من تيماتيك ⚠️</span>':r.has_file?'<span class="cx-pdf">PDF</span>':""}</div>${a&&a.s?`<div class="cx-sum">${E(a.s).replace(/\n/g,"<br>")}</div>`:`<p class="sn">${hl(snip(r.txt,re,220),re)}</p>`}
         <div class="cact">${r.has_file?`<button class="cx-open" data-ropen="${E(r.id)}">📄 فتح الملف</button>`:""}</div></div>`}).join(""):`<div class="bd-empty">ما فيه تعاميم مرفوعة تخص ${[...cs.values()].map(c=>c.ar).join(" / ")}</div>`);
     if(!el.__r){el.__r=1;el.addEventListener("click",e=>{const b=e.target.closest("[data-ropen]");if(b){e.stopPropagation();openFile(b.dataset.ropen,b)}})}}
   catch(e){el.innerHTML=`<div class="bd-sec"><span>📢 التعاميم</span></div><div class="bd-empty">${E(errTxt(e))}</div>`}}

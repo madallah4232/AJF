@@ -796,6 +796,17 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .tx-raw{margin-top:8px}.tx-raw summary{font-size:12px;color:var(--muted);cursor:pointer}.tx-raw pre{white-space:pre-wrap;font:500 10.5px/1.5 var(--mono);color:var(--muted);max-height:260px;overflow:auto}
 .tx-note{font-size:11.5px;color:var(--muted);line-height:1.6;margin:12px 2px 0}.tx-err{padding:14px;border-radius:14px;background:color-mix(in oklab,var(--warn) 15%,var(--panel));color:#ffd1ca}.tx-m{color:var(--muted);font-size:12.5px}
 .bd-days.tabs button{font-size:13.5px}
+.ax{display:grid;gap:10px;padding:14px;border-radius:18px;background:linear-gradient(150deg,color-mix(in oklab,var(--c) 22%,var(--panel)),var(--panel));border:1px solid color-mix(in oklab,var(--c) 45%,var(--line))}
+.ax-h{display:flex;gap:10px;align-items:center}.ax-h i{font-style:normal;font-size:26px}.ax-h b{display:block;font:700 16px var(--display)}.ax-h small{color:var(--muted);font-size:12px}
+.ax textarea{width:100%;border-radius:12px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:16px/1.6 var(--body);padding:10px 12px;resize:vertical}
+.ax-a{padding:12px 14px;border-radius:14px;background:var(--night);border:1px solid var(--line);font-size:15px;line-height:1.85}
+.ax-c{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 4px;margin:0 2px;border-radius:6px;background:var(--c);color:#0a1120;font:700 11px var(--mono);vertical-align:middle}
+.ax-s{display:grid;gap:6px}.ax-s small{color:var(--muted);font-size:12px}
+.ax-sr{display:flex;align-items:center;gap:8px;text-align:start;padding:8px 10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font-size:13.5px}
+.ax-sr i{flex:none;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:var(--c);color:#0a1120;font:700 11px var(--mono);font-style:normal}.ax-sr span{flex:1}.ax-sr em{font-style:normal}
+.cx-en{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.cx-sum{font-size:14px;line-height:1.8;color:#dbe3f2;padding:8px 10px;border-radius:10px;background:color-mix(in oklab,var(--c) 10%,var(--raise))}
+.cx .sn.en{font-size:12px;color:var(--muted);max-height:3.4em;overflow:hidden}
 .cx-root{display:grid;gap:12px;min-width:0}
 .cx-adm{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
 .cx-up{display:grid;gap:2px;justify-items:center;padding:12px;border-radius:14px;background:color-mix(in oklab,var(--c) 18%,var(--panel));border:1.5px dashed color-mix(in oklab,var(--c) 60%,var(--line));color:var(--ink);cursor:pointer;text-align:center}
@@ -3270,7 +3281,7 @@ function bdRender(){const B=$("bdB");
 let TIMTAB="doc";
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
-let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=2")).then(()=>window.CIRCM||ldJs("circ.js?v=2")).catch(e=>{timP=null;throw e}));
+let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=2")).then(()=>window.CIRCM||ldJs("circ.js?v=3")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;
   if(!CIRC.length){L.innerHTML=`<div class="bd-empty">ما فيه تعاميم حالياً</div>`;return}
