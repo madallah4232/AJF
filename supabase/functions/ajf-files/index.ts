@@ -14,9 +14,10 @@ const out = (b: unknown, st = 200) => new Response(JSON.stringify(b), { status: 
 // ---------- المساعد الذكي (Gemini) — المفتاح في Secrets باسم GEMINI_KEY ----------
 const GK = Deno.env.get("GEMINI_KEY") || "";
 const GM = (Deno.env.get("GEMINI_MODEL") || "gemini-flash-lite-latest,gemini-3.5-flash-lite").split(",");
-async function gem(text: string, sys: string, json = false): Promise<string> {
+const GM_STRONG = (Deno.env.get("GEMINI_MODEL_ASK") || "gemini-3.5-flash,gemini-flash-lite-latest").split(",");
+async function gem(text: string, sys: string, json = false, strong = false): Promise<string> {
   let last = "";
-  for (const m of GM) {
+  for (const m of (strong ? GM_STRONG : GM)) {
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.trim()}:generateContent`, {
       method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GK }, signal: AbortSignal.timeout(50000),
       body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text }] }],
@@ -24,7 +25,6 @@ async function gem(text: string, sys: string, json = false): Promise<string> {
     });
     if (r.ok) { const j = await r.json(); return (j.candidates?.[0]?.content?.parts || []).map((x: { text?: string }) => x.text || "").join(""); }
     last = r.status + " " + (await r.text()).slice(0, 200);
-    if (r.status !== 429 && r.status !== 404 && r.status < 500) break;
   }
   throw new Error("gemini " + last);
 }
@@ -37,9 +37,18 @@ const enStem = (w: string) => w.length <= 4 ? w : w.replace(/(ations?|ings?|ment
 const arStem = (w: string) => { w = w.replace(/^(وال|بال|فال|كال|لل|ال)/, ""); if (w.length > 4) w = w.replace(/(ات|ين|ون|ها|هم|يه|يا)$/, ""); return w; };
 const SK = (w: string) => { if (isAr(w)) { const s = arStem(w), k = s.replace(/[اوي]/g, "").replace(/ه$/, ""); return k.length >= 2 ? k : s; } return enStem(w); };
 const SYS_SUM = "أنت مساعد لموظفي الخدمات الأرضية في مطار سعودي. تلخّص التعاميم التشغيلية بالعربي الفصيح المبسط. لا تخترع معلومة غير موجودة في النص.";
-const SYS_ASK = "أنت مساعد عمليات لموظفي الخدمات الأرضية (كاونتر، بوابة، تحكم بالحمولة) في مطار الجوف - SGS. تجاوب بالعربي المبسط والعملي، فقط من التعاميم المرفقة. " +
-  "ابدأ بالجواب المباشر، ثم خطوات أو نقاط قصيرة (• ) بما يلزم الموظف يسويه أو يطلبه من الراكب، واذكر الأرقام والتواريخ والمطارات كما هي. " +
-  "بعد كل معلومة اذكر رقم التعميم بين قوسين مثل [1]. إذا المعلومة غير موجودة في التعاميم قل بوضوح: \"ما لقيت هذا في التعاميم المرفوعة\" ولا تخمّن، ويمكنك اقتراح الرجوع للمشرف أو TIMATIC.";
+const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (الخدمات الأرضية السعودية) في مطار الجوف AJF: كاونتر، بوابة، تحكم بالحمولة، مشرفين.
+عندك كل التعاميم والملفات المرفوعة للمحطة. اقرأها كاملة وافهمها مثل خبير، ثم جاوب سؤال الموظف بذكاء:
+- افهم وضع الراكب من السؤال: الجنسية، المسار ومحطات الترانزيت (مثلاً: الجوف → القصيم → أبوظبي)، شركة الطيران، نوع الحجز، أي مشكلة.
+- طبّق التعاميم على حالته حتى لو التعميم ما ذكر جنسيته أو حالته بالحرف: إذا التعميم عن الترانزيت في أبوظبي والراكب مواصل عبر أبوظبي فهو ينطبق عليه.
+- اربط الأسماء بالرموز: أبوظبي=AUH، الجوف=AJF، القصيم=ELQ، الرياض=RUH، جدة=JED، دبي=DXB، أمريكا=USA... والعربي بالإنجليزي.
+شكل الجواب (عربي مبسط، مختصر وعملي):
+1) **الخلاصة** في سطر: يُقبل / يُقبل بشروط / لا يُقبل / الإجراء المطلوب.
+2) **المطلوب من الراكب** • نقاط.
+3) **تحقق منه أنت** • نقاط (وثائق، أنظمة، مراسلة محطة...).
+بعد كل معلومة من تعميم اكتب رقمه بين قوسين مثل [1] أو [1, 3].
+إذا يحتاج الجواب معلومة مو موجودة في التعاميم (مثل تأشيرة دخول دولة لجنسية معينة)، اذكر ما تعرفه بإيجاز تحت عنوان **خارج التعاميم (تأكد من TIMATIC)** ولا تنسبه لتعميم.
+لا تقل "ما لقيت" إذا فيه تعميم ينطبق ولو جزئياً. وإذا فعلاً ما فيه أي تعميم له علاقة قل ذلك بسطر واحد ثم أعط التوجيه العام المفيد تحت "خارج التعاميم".`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -62,17 +71,26 @@ Deno.serve(async (req) => {
     const q = String(a.q || "").slice(0, 600).trim();
     if (q.length < 2) return out({ s: "bad" });
     try {
-      // 1) كلمات بحث بالعربي والإنجليزي من سؤال الموظف
-      let kw: string[] = [];
-      try { const j = JSON.parse(await gem(`السؤال: ${q}\nأعطني JSON بالشكل {"kw":[...]} فيه من 6 إلى 14 كلمة أو عبارة قصيرة للبحث في تعاميم طيران مكتوبة بالعربي أو الإنجليزي: الكلمات المهمة من السؤال، ومرادفاتها، وترجمتها الإنجليزية، وأسماء الدول والمطارات ورموزها (مثل USA, JFK). بدون شرح.`, "تستخرج كلمات بحث فقط.", true)); kw = Array.isArray(j.kw) ? j.kw : []; } catch { /* نكمل بكلمات السؤال */ }
-      kw = [...new Set([...kw.map(String), ...NORM(q).split(" ").filter((w) => w.length > 2)])].slice(0, 24);
-      const groups = kw.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 1);
-      const { data: sr } = await sb.rpc("ajf_circ_search", { p_token: a.token, p_device: a.device, p_groups: groups, p_limit: 6 });
-      const rows = (sr && sr.rows) || [];
-      if (!rows.length) return out({ s: "ok", answer: "ما لقيت تعميم مرفوع يتكلم عن هذا الموضوع. جرّب صياغة ثانية، أو ارجع للمشرف.", src: [] });
-      const docs = rows.map((r: Record<string, unknown>, i: number) => `[${i + 1}] العنوان: ${r.title}\nالتاريخ: ${r.cd || ""}\n${r.ai ? "ملخص: " + r.ai + "\n" : ""}النص:\n${String(r.txt || "").slice(0, 9000)}`).join("\n\n-----\n\n");
-      const ans = await gem(`التعاميم:\n\n${docs}\n\n=====\nسؤال الموظف: ${q}`, SYS_ASK);
-      return out({ s: "ok", answer: ans, src: rows.map((r: Record<string, unknown>) => ({ id: r.id, title: r.title, cd: r.cd, has_file: r.has_file, ai: r.ai })) });
+      // كل التعاميم للمساعد مثل ما ترفق مستندات لمحادثة؛ وإذا كبرت المكتبة نختار الأقرب بالبحث
+      const { data: all } = await sb.from("ajf_circ").select("id,title,cdate,ai,body,ftext,file_path").order("at", { ascending: false });
+      let docsRows = (all || []) as Record<string, any>[];
+      const size = docsRows.reduce((t, r) => t + (r.body?.length || 0) + (r.ftext?.length || 0), 0);
+      if (size > 600000) {
+        let kw: string[] = [];
+        try { const j = JSON.parse(await gem(`السؤال: ${q}\nأعطني JSON بالشكل {"kw":[...]} فيه من 6 إلى 14 كلمة أو عبارة قصيرة للبحث في تعاميم طيران مكتوبة بالعربي أو الإنجليزي: الكلمات المهمة، مرادفاتها، ترجمتها الإنجليزية، أسماء الدول والمطارات ورموزها. بدون شرح.`, "تستخرج كلمات بحث فقط.", true)); kw = Array.isArray(j.kw) ? j.kw : []; } catch { /* */ }
+        kw = [...new Set([...kw.map(String), ...NORM(q).split(" ").filter((w) => w.length > 2)])].slice(0, 24);
+        const groups = kw.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 1);
+        const { data: sr } = await sb.rpc("ajf_circ_search", { p_token: a.token, p_device: a.device, p_groups: groups, p_limit: 12 });
+        const ids = new Set(((sr && sr.rows) || []).map((r: any) => r.id));
+        docsRows = docsRows.filter((r) => ids.has(r.id));
+        let tot = 0; docsRows = docsRows.filter((r) => (tot += (r.body?.length || 0) + Math.min(r.ftext?.length || 0, 60000)) < 600000);
+      }
+      if (!docsRows.length) return out({ s: "ok", answer: "ما فيه تعاميم مرفوعة للحين.", src: [] });
+      const rows = docsRows;
+      const docs = rows.map((r, i) => `[${i + 1}] العنوان: ${r.title}\nالتاريخ: ${r.cdate || ""}\n${r.ai ? "ملخص: " + r.ai + "\n" : ""}النص:\n${(String(r.body || "") + "\n" + String(r.ftext || "")).slice(0, 60000)}`).join("\n\n-----\n\n");
+      const hist = (Array.isArray(a.h) ? a.h : []).slice(-3).map((t: any) => `سؤال سابق: ${String(t.q || "").slice(0, 400)}\nجوابك: ${String(t.a || "").slice(0, 1500)}`).join("\n\n");
+      const ans = await gem(`التعاميم والملفات المرفوعة (${rows.length}):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة:\n" + hist + "\n\n=====\n" : ""}سؤال الموظف الآن: ${q}`, SYS_ASK, false, true);
+      return out({ s: "ok", answer: ans, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cdate, has_file: !!r.file_path, ai: r.ai })) });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
   if (!admin) return out({ s: "denied" });

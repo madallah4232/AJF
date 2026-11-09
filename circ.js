@@ -249,9 +249,9 @@ function fmtAns(t){let h=E(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s
 /* المصادر اللي ذكرها الجواب فقط */
 const cited=t=>{const c=new Set();(String(t).match(/\[(\d{1,2}(?:\s*[,،]\s*\d{1,2})*)\]/g)||[]).forEach(m=>m.replace(/[\[\]]/g,"").split(/[,،]/).forEach(n=>c.add(+n.trim()-1)));return c}
 async function ask(){const q=(S.aq||"").trim();if(q.length<3||S.abusy)return;S.abusy=true;S.ans=`<div class="bd-empty">… المساعد يقرأ التعاميم ويجهز الجواب (عادة 5–15 ثانية)</div>`;paint();
-  try{const j=await F({action:"ask",q});S.asrc=j.src||[];
+  try{const j=await F({action:"ask",q,h:S.hist||[]});S.asrc=j.src||[];S.hist=(S.hist||[]).concat([{q,a:j.answer||""}]).slice(-3);
     S.ans=`<div class="ax-a">${fmtAns(j.answer||"")}</div>`+(S.asrc.length?`<div class="ax-s"><small>المصادر:</small>${S.asrc.map((r,i)=>{const cs=cited(j.answer);if(cs.size&&!cs.has(i))return"";const a=AI(r);return`<button class="ax-sr" data-asrc="${i}"><i>${i+1}</i><span>${E(a&&a.t||r.title)}</span>${r.has_file?"<em>📄</em>":""}</button>`}).join("")}</div>`:"")+
-      `<p class="tx-note">جواب آلي من التعاميم — تأكد من التعميم الأصلي قبل أي قرار مهم.</p>`}
+      `<p class="tx-note">جواب آلي من التعاميم — تأكد من التعميم الأصلي قبل أي قرار مهم. تقدر تكمل بسؤال متابعة، أو <button class="ax-new" id="axNew">ابدأ سؤال جديد</button></p>`}
   catch(e){S.ans=`<div class="bd-empty">${e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":E(errTxt(e))}</div>`}
   S.abusy=false;paint()}
 async function sumAll(btn){btn.disabled=true;try{let all=[],off=0;for(;;){const j=await R("ajf_circ_list",{p_offset:off,p_limit:100});all=all.concat(j.rows);off+=100;if(off>=j.n)break}
@@ -282,6 +282,7 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(b.id==="cxReidx"){reindex(b);return}
     if(b.id==="cxSumAll"){sumAll(b);return}
     if(b.id==="axGo"){ask();return}
+    if(b.id==="axNew"){S.hist=[];S.ans="";S.aq="";try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();return}
     if(b.dataset.asrc){const r=(S.asrc||[])[+b.dataset.asrc];if(r&&r.has_file)openFile(r.id,b);return}
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
