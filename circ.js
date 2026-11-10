@@ -133,7 +133,7 @@ const kb=n=>n>=1048576?(n/1048576).toFixed(1)+"MB":Math.max(1,Math.round(n/1024)
 /* ---------- الخادم ---------- */
 async function R(fn,a){const j=await rpc(fn,Object.assign({p_token:AUTH.tok||"",p_device:AUTH.dev},a||{}));if(j&&j.s==="out"){authOut();throw new Error("out")}if(!j||j.s!=="ok")throw new Error(j&&j.s||"err");return j}
 async function F(a){const r=await fetch(FN,{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify(Object.assign({token:AUTH.tok||"",device:AUTH.dev},a))});
-  if(!r.ok)throw new Error(r.status===404?"nofn":"fn"+r.status);const j=await r.json();if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s);return j}
+  if(!r.ok)throw new Error(r.status===404?"nofn":"fn"+r.status);const j=await r.json();if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok"){const x=new Error(j.s);x.d=j.e||"";throw x}return j}
 const errTxt=e=>/PGRST202|404|nofn/.test(e.message)?"تحتاج تشغيل إعداد التعاميم في Supabase (circ.sql ودالة ajf-files) — راجع المشرف.":e.message==="denied"?"للمشرف فقط":e.message==="out"?"سجّل دخولك أول":"تعذّر الاتصال، تأكد من الإنترنت";
 
 /* ---------- قراءة ملفات PDF ---------- */
@@ -262,7 +262,7 @@ function thHTML(){const T=S.th||[];if(!T.length&&!S.abusy&&!S.aerr)return"";
 async function ask(){const q=(S.aq||"").trim();if(q.length<2||S.abusy)return;S.abusy=true;S.aerr="";S.pending=q;S.aq="";try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();
   try{const h=(S.th||[]).slice(-6).map(t=>({q:t.q,a:t.a}));const j=await F({action:"ask",q,h});
     S.th=(S.th||[]).concat([{q,a:j.answer||"",src:j.src||[]}]);thSave()}
-  catch(e){S.aq=q;S.aerr=e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":E(errTxt(e))}
+  catch(e){S.aq=q;S.aerr=e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي."+(AUTH.me&&AUTH.me.admin&&e.d?`<br><small dir="ltr" style="opacity:.7;word-break:break-all">${E(e.d)}</small>`:""):E(errTxt(e))}
   S.abusy=false;paint()}
 async function sumAll(btn){btn.disabled=true;try{let all=[],off=0;for(;;){const j=await R("ajf_circ_list",{p_offset:off,p_limit:100});all=all.concat(j.rows);off+=100;if(off>=j.n)break}
     const todo=all.filter(r=>!AI(r));let i=0,bad=0;for(const r of todo){i++;btn.textContent=`🤖 ${i}/${todo.length}: ${r.title.slice(0,30)}`;
