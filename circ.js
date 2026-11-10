@@ -179,11 +179,11 @@ function paint(){if(!root)return;const adm=isAdm();
 ${adm?`    <div class="bd-sec"><span>أو ابحث بكلمة</span></div>
     <div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cxQ" type="search" placeholder="ابحث بالعربي أو الإنجليزي: كلمة أو كلمتين…" value="${E(S.q)}" autocomplete="off" enterkeyhint="search"></div>
     <div class="bd-h" id="cxHint">${S.q?"":"مثال: <b>إيبولا</b> · <b>كرسي متحرك</b> · <b>أمريكا</b> · <b>بطاريات</b> · <b>تأخير البوردنق</b>"}</div>
-    ${adm?`<div class="cx-adm"><label class="cx-up"><input type="file" id="cxFiles" accept="application/pdf,.pdf" multiple hidden><span>📎 رفع تعاميم PDF</span><small>تقدر تختار أكثر من ملف</small></label><button class="cx-up" id="cxNew"><span>✍︎ تعميم مكتوب</span><small>بدون ملف</small></button><button class="cx-up cx-paste" id="cxPaste"><span>📋 لصق تعميم</span><small>انسخه من أي مكان واضغط هنا — صورة أو نص</small></button><button class="cx-up cx-paste" id="cxSCb"><span>📲 اختصار المشاركة للـ PDF</span><small>ارفع من واتساب أو الإيميل مباشرة بزر «مشاركة»</small></button></div><button class="cx-more" id="cxSumAll">🤖 تلخيص التعاميم بالعربي (اللي ما تلخصت)</button><button class="cx-more" id="cxReidx">🔄 إعادة قراءة كل الملفات (بعد أي تحديث للبحث)</button><div id="cxUp"></div>`:""}
+    ${adm?`<div class="cx-adm"><label class="cx-up"><input type="file" id="cxFiles" accept="application/pdf,.pdf" multiple hidden><span>📎 رفع تعاميم PDF</span><small>تقدر تختار أكثر من ملف</small></label><button class="cx-up" id="cxNew"><span>✍︎ تعميم مكتوب</span><small>بدون ملف</small></button><button class="cx-up cx-paste" id="cxPaste"><span>📋 لصق تعميم</span><small>انسخه من أي مكان واضغط هنا — PDF أو صورة أو نص</small></button></div><button class="cx-more" id="cxSumAll">🤖 تلخيص التعاميم بالعربي (اللي ما تلخصت)</button><button class="cx-more" id="cxReidx">🔄 إعادة قراءة كل الملفات (بعد أي تحديث للبحث)</button><div id="cxUp"></div>`:""}
     <div id="cxRes"></div>`:""}`;paintUp();paintRes()}
 function paintRes(){const el=root&&root.querySelector("#cxRes");if(!el)return;
   if(S.err){el.innerHTML=`<div class="bd-empty">${E(S.err)}</div>`;return}
-  let rows=S.q.trim()?S.rows:S.list;if(rows)rows=rows.filter(r=>!/^in-/.test(r.id));if(rows==null){el.innerHTML=`<div class="bd-empty">… جاري البحث</div>`;return}
+  const rows=S.q.trim()?S.rows:S.list;if(rows==null){el.innerHTML=`<div class="bd-empty">… جاري البحث</div>`;return}
   const t=S.q.trim()?qGroups(S.q).terms:[],re=rx(t);
   if(!rows.length){el.innerHTML=S.q.trim()?`<div class="bd-empty">ما لقيت تعميم بهالكلمات. جرّب كلمة ثانية أو بالإنجليزي.</div>`:`<div class="bd-empty">ما فيه تعاميم مرفوعة${isAdm()?" — ارفعها من الزر فوق":""}</div>`;return}
   el.innerHTML=`<div class="bd-sec"><span>${S.q.trim()?"النتائج":"آخر التعاميم"}</span><small>${S.q.trim()?rows.length:S.n}</small></div>`+rows.map(r=>card(r,re,S.q.trim()&&r.full)).join("")+
@@ -202,7 +202,7 @@ async function search(){const q=S.q.trim();if(!q){S.rows=null;recent();return}S.
     const re=rx(groups[0].map(a=>a.n));
     S.rows=(j.rows||[]).map(r=>({...r,miss:r.hit<groups.length,sc:r.hit*10+(re&&re.test(NORM(r.title+" "+r.tags))?5:0)})).sort((a,b)=>b.hit-a.hit||b.sc-a.sc);paintRes()}
   catch(e){S.err=errTxt(e);paintRes()}}
-async function recent(more){S.err="";try{const j=await R("ajf_circ_list",{p_offset:more?S.list.length:0,p_limit:30});S.n=j.n;try{CIRCN=j.n;if(j.rows[0])CIRCLAST=j.rows[0].id}catch(x){}S.list=more?S.list.concat(j.rows):j.rows;inboxPull(j.rows);if(!S.q.trim())paintRes();window.CIRC_N=j.n}catch(e){S.err=errTxt(e);S.list=[];paintRes()}}
+async function recent(more){S.err="";try{const j=await R("ajf_circ_list",{p_offset:more?S.list.length:0,p_limit:30});S.n=j.n;try{CIRCN=j.n;if(j.rows[0])CIRCLAST=j.rows[0].id}catch(x){}S.list=more?S.list.concat(j.rows):j.rows;if(!S.q.trim())paintRes();window.CIRC_N=j.n}catch(e){S.err=errTxt(e);S.list=[];paintRes()}}
 
 /* ---------- رفع الملفات (للمشرف) ---------- */
 function paintUp(){const el=root&&root.querySelector("#cxUp");if(!el)return;if(!S.up.length&&!S.usage){el.innerHTML="";return}
@@ -259,35 +259,8 @@ async function pasteClip(btn){if(!navigator.clipboard||!navigator.clipboard.read
     if(!(await pasteFiles(files,txt)))pasteBox(all)}
   catch(e){if(e&&e.name==="NotAllowedError")alert("ما تم السماح باللصق — اضغط «لصق» في الفقاعة اللي تطلع.");else pasteBox(all)}
   btn.disabled=false}
-/* ---------- الوارد من اختصار المشاركة في الآيفون: ينرفع كـ in-xxxx، والتطبيق يدخله قائمة المراجعة ---------- */
-const INB=new Set();
-async function inboxPull(rows){if(!isAdm())return;for(const r of rows||[]){if(!/^in-/.test(r.id)||INB.has(r.id))continue;INB.add(r.id);
-    try{const u=await F({action:"get",path:r.id+".pdf"}),b=await(await fetch(u.url)).blob();if(!b.size)throw 0;
-      const nm=(r.file_name&&/\.pdf$/i.test(r.file_name)?r.file_name:"تعميم وارد "+r.id.slice(3)+".pdf");
-      addFiles([new File([b],nm,{type:"application/pdf"})],{inbox:r.id})}
-    catch(e){INB.delete(r.id)}}}
-async function inboxDrop(id){try{await R("ajf_circ_del",{p_id:id});await F({action:"del",path:id+".pdf"})}catch(e){}recent()}
-function scPanel(){const u=root.querySelector("#cxUp");if(!u)return;const old=root.querySelector("#cxSC");if(old){old.remove();return}
-  const ts=Date.now().toString(36);
-  const V=[["رابط ١ (طلب الرفع)",FN],["رابط ٣ (الحفظ)",SB_URL+"/rest/v1/rpc/ajf_circ_save"],["apikey",SB_KEY],["token",AUTH.tok||""],["device",AUTH.dev||""]];
-  const cp=(l,v,i)=>`<div class="sc-v"><small>${E(l)}</small><code dir="ltr">${E(v.length>46?v.slice(0,22)+"…"+v.slice(-14):v)}</code><button data-sccp="${i}">نسخ</button></div>`;
-  u.insertAdjacentHTML("afterbegin",`<div class="cx-pb sc" id="cxSC"><b>📲 اختصار «رفع تعميم AJF»</b>
-  <p>مرة وحدة: افتح تطبيق <b>الاختصارات</b> ← <b>＋</b> ← سمّه «رفع تعميم AJF» ← من ⓘ فعّل <b>إظهار في قائمة المشاركة</b> واختر نوع الاستقبال <b>ملفات PDF</b>. بعدين أضف هذي الإجراءات بالترتيب:</p>
-  <ol>
-   <li><b>تنسيق التاريخ</b>: التاريخ الحالي ← تنسيق مخصّص <code dir="ltr">yyyyMMddHHmmss</code></li>
-   <li><b>الحصول على محتويات الرابط</b>: الرابط = <b>رابط ١</b> · الطريقة <b>POST</b> · الرؤوس: <code dir="ltr">apikey</code> = apikey · الجسم <b>JSON</b>:<br><code dir="ltr">token</code> = token · <code dir="ltr">device</code> = device · <code dir="ltr">action</code> = <code dir="ltr">upload</code> · <code dir="ltr">path</code> = <code dir="ltr">in-</code>[التاريخ المنسّق]<code dir="ltr">.pdf</code></li>
-   <li><b>الحصول على قيمة القاموس</b>: المفتاح <code dir="ltr">url</code></li>
-   <li><b>الحصول على محتويات الرابط</b>: الرابط = [قيمة القاموس] · الطريقة <b>PUT</b> · الرؤوس: <code dir="ltr">apikey</code> = apikey و <code dir="ltr">Content-Type</code> = <code dir="ltr">application/pdf</code> و <code dir="ltr">x-upsert</code> = <code dir="ltr">true</code> · الجسم <b>ملف</b> = [مُدخل الاختصار]</li>
-   <li><b>الحصول على محتويات الرابط</b>: الرابط = <b>رابط ٣</b> · <b>POST</b> · الرؤوس: <code dir="ltr">apikey</code> = apikey · الجسم <b>JSON</b>: <code dir="ltr">p_token</code> = token · <code dir="ltr">p_device</code> = device · <code dir="ltr">p</code> نوعه <b>قاموس</b> وفيه: <code dir="ltr">id</code> = <code dir="ltr">in-</code>[التاريخ المنسّق] · <code dir="ltr">title</code> = <code dir="ltr">تعميم وارد</code> · <code dir="ltr">file_path</code> = <code dir="ltr">in-</code>[التاريخ المنسّق]<code dir="ltr">.pdf</code> · <code dir="ltr">file_name</code> = [مُدخل الاختصار ← الاسم]</li>
-   <li><b>إظهار إشعار</b>: «✓ انرفع التعميم — راجعه في التطبيق»</li>
-  </ol>
-  <p class="m">القيم (انسخها والصقها في أماكنها):</p>${V.map((x,i)=>cp(x[0],x[1],i)).join("")}
-  <small>⚠️ الـ token خاص فيك لا ترسله لأحد. لو طلعت من التطبيق وسجّلت دخول من جديد، حدّث قيمة token في الاختصار.</small>
-  <p>الاستخدام: افتح التعميم في واتساب أو الإيميل ← <b>مشاركة</b> ← «رفع تعميم AJF». بعدها افتح لوحة التعاميم وبيطلع لك في قائمة الرفع تراجع عنوانه وتاريخه وتضغط «رفع».</p>
-  <button class="x" id="cxSCx">إغلاق</button></div>`);
-  const P=root.querySelector("#cxSC");P.__v=V;P.scrollIntoView({block:"start",behavior:"smooth"})}
-async function addFiles(files,extra){const big=[];for(const f of files){if(!/\.pdf$/i.test(f.name)&&f.type!=="application/pdf")continue;if(f.size>50*1048576){big.push(f.name);continue}
-    S.up.push(Object.assign({file:f,st:"wait",title:cleanName(f.name),tags:"",cd:"",text:null},extra||{}))}
+async function addFiles(files){const big=[];for(const f of files){if(!/\.pdf$/i.test(f.name)&&f.type!=="application/pdf")continue;if(f.size>50*1048576){big.push(f.name);continue}
+    S.up.push({file:f,st:"wait",title:cleanName(f.name),tags:"",cd:"",text:null})}
   if(big.length)alert("أكبر من 50MB وما ينرفع: "+big.join("، "));paintUp();
   for(const x of S.up.filter(x=>x.st==="wait")){x.st="read";paintUp();
     try{const r=await pdfText(x.file,m=>{x.msg=m;paintUp()});x.text=r.text;x.pages=r.pages;x.ocr=r.ocr;
@@ -302,7 +275,7 @@ async function uploadAll(){if(S.upBusy)return;S.upBusy=true;paintUp();
     try{const id=newId(),path=id+".pdf";const u=await F({action:"upload",path});x.msg="رفع الملف…";paintUp();
       const put=await fetch(u.url,{method:"PUT",headers:{"Content-Type":"application/pdf","x-upsert":"true",apikey:SB_KEY},body:x.file});if(!put.ok)throw new Error("put"+put.status);
       x.msg="حفظ للبحث…";paintUp();const o={id,title:x.title.trim()||cleanName(x.file.name),tags:x.tags.trim(),body:"",ftext:x.text||"",lang:x.lang,cdate:x.cd,file_path:path,file_name:x.file.name,file_size:x.file.size,pages:x.pages};
-      Object.assign(o,indexText(o));await R("ajf_circ_save",{p:o});x.msg="تلخيص بالعربي…";paintUp();await F({action:"sum",id}).catch(()=>{});x.st="done";if(x.inbox)inboxDrop(x.inbox)}
+      Object.assign(o,indexText(o));await R("ajf_circ_save",{p:o});x.msg="تلخيص بالعربي…";paintUp();await F({action:"sum",id}).catch(()=>{});x.st="done"}
     catch(e){x.st="err";x.retry=1;x.msg=/put/.test(e.message)?"تعذّر رفع الملف — جرّب مرة ثانية":errTxt(e)}paintUp()}
   S.upBusy=false;paintUp();recent();F({action:"usage"}).then(j=>{S.usage=j;paintUp()}).catch(()=>{});if(window.hubPaint)try{hubPaint()}catch(e){}}
 
@@ -371,11 +344,8 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(b.dataset.asrc){const[ti,i]=b.dataset.asrc.split(":").map(Number);const r=((S.th||[])[ti]||{}).src;const x=r&&r[i];if(x&&x.has_file)openFile(x.id,b);return}
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
-    if(b.dataset.urm!=null){const x=S.up[+b.dataset.urm];if(x&&x.inbox){if(!confirm("حذف هذا التعميم الوارد نهائياً؟"))return;inboxDrop(x.inbox)}S.up.splice(+b.dataset.urm,1);paintUp();return}
+    if(b.dataset.urm!=null){S.up.splice(+b.dataset.urm,1);paintUp();return}
     if(b.id==="cxPaste"){pasteClip(b);return}
-    if(b.id==="cxSCb"){scPanel();return}
-    if(b.id==="cxSCx"){root.querySelector("#cxSC").remove();return}
-    if(b.dataset.sccp!=null){const v=root.querySelector("#cxSC").__v[+b.dataset.sccp][1];try{await navigator.clipboard.writeText(v);b.textContent="✓ نُسخ";setTimeout(()=>b.textContent="نسخ",1500)}catch(x){prompt("انسخ:",v)}return}
     if(b.id==="cxNew"){S.edit="__new";const el2=root.querySelector("#cxUp");const nw={id:"__new",title:"",tags:"",cd:new Date(Date.now()+108e5).toISOString().slice(0,10),has_file:false,body:""};
       try{const d=JSON.parse(localStorage.getItem("ajf_cx_draft")||"null");if(d)Object.assign(nw,d)}catch(x){}
       el2.insertAdjacentHTML("afterbegin",`<div class="ci">${editForm(nw)}</div>`);return}
