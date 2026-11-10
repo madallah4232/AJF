@@ -179,7 +179,7 @@ function paint(){if(!root)return;const adm=isAdm();
 ${adm?`    <div class="bd-sec"><span>أو ابحث بكلمة</span></div>
     <div class="cq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cxQ" type="search" placeholder="ابحث بالعربي أو الإنجليزي: كلمة أو كلمتين…" value="${E(S.q)}" autocomplete="off" enterkeyhint="search"></div>
     <div class="bd-h" id="cxHint">${S.q?"":"مثال: <b>إيبولا</b> · <b>كرسي متحرك</b> · <b>أمريكا</b> · <b>بطاريات</b> · <b>تأخير البوردنق</b>"}</div>
-    ${adm?`<div class="cx-adm"><label class="cx-up"><input type="file" id="cxFiles" accept="application/pdf,.pdf" multiple hidden><span>📎 رفع تعاميم PDF</span><small>تقدر تختار أكثر من ملف</small></label><button class="cx-up" id="cxNew"><span>✍︎ تعميم مكتوب</span><small>بدون ملف</small></button><button class="cx-up cx-paste" id="cxPaste"><span>📋 لصق تعميم</span><small>انسخه من أي مكان واضغط هنا — PDF أو صورة أو نص</small></button></div><button class="cx-more" id="cxSumAll">🤖 تلخيص التعاميم بالعربي (اللي ما تلخصت)</button><button class="cx-more" id="cxReidx">🔄 إعادة قراءة كل الملفات (بعد أي تحديث للبحث)</button><div id="cxUp"></div>`:""}
+    ${adm?`<div class="cx-adm"><label class="cx-up"><input type="file" id="cxFiles" accept="application/pdf,.pdf" multiple hidden><span>📎 رفع تعاميم PDF</span><small>تقدر تختار أكثر من ملف</small></label><button class="cx-up" id="cxNew"><span>✍︎ تعميم مكتوب</span><small>بدون ملف</small></button></div><button class="cx-more" id="cxSumAll">🤖 تلخيص التعاميم بالعربي (اللي ما تلخصت)</button><button class="cx-more" id="cxReidx">🔄 إعادة قراءة كل الملفات (بعد أي تحديث للبحث)</button><div id="cxUp"></div>`:""}
     <div id="cxRes"></div>`:""}`;paintUp();paintRes()}
 function paintRes(){const el=root&&root.querySelector("#cxRes");if(!el)return;
   if(S.err){el.innerHTML=`<div class="bd-empty">${E(S.err)}</div>`;return}
@@ -214,39 +214,6 @@ function paintUp(){const el=root&&root.querySelector("#cxUp");if(!el)return;if(!
       ${x.st==="ready"||x.st==="err"&&x.text!=null?`<input data-u="${i}" data-k="title" value="${E(x.title)}" placeholder="العنوان (يفضّل عربي)"><input data-u="${i}" data-k="tags" value="${E(x.tags)}" placeholder="وسوم: كلمات بحث مثل إيبولا، أمريكا، إقرار"><label class="cx-d"><span>تاريخ التعميم</span><input data-u="${i}" data-k="cd" type="date" value="${E(x.cd)}"></label>
         ${x.text?`<details><summary>النص المقروء (${x.text.length} حرف)</summary><pre>${E(x.text.slice(0,1500))}${x.text.length>1500?"…":""}</pre></details>`:`<p class="m err">ما انقرأ نص من الملف — اكتب العنوان والوسوم عشان يطلع بالبحث</p>`}<button class="x" data-urm="${i}">إزالة</button>`:""}</div>`).join("")}</div>
     ${ready?`<button class="tx-go" id="cxUpGo" ${S.upBusy?"disabled":""}>⬆︎ رفع ${ready} ${ready>2&&ready<11?"ملفات":"ملف"}</button>`:""}${S.up.every(x=>x.st==="done")?`<button class="cx-more" id="cxUpClr">تم — إخفاء القائمة</button>`:""}`}
-/* ---------- لصق من الحافظة: PDF ينرفع مباشرة، الصور تتحول لملف PDF، والنص يفتح تعميم مكتوب ---------- */
-function imgToPdf(blobs){return Promise.all(blobs.map(b=>new Promise((ok,no)=>{const u=URL.createObjectURL(b),im=new Image();
-    im.onload=()=>{const W=Math.min(im.naturalWidth,2000),H=Math.round(im.naturalHeight*W/im.naturalWidth),c=document.createElement("canvas");c.width=W;c.height=H;
-      const g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,W,H);g.drawImage(im,0,0,W,H);URL.revokeObjectURL(u);
-      c.toBlob(j=>j?j.arrayBuffer().then(a=>ok({W,H,d:new Uint8Array(a)})):no(new Error("img")),"image/jpeg",.88)};
-    im.onerror=()=>{URL.revokeObjectURL(u);no(new Error("img"))};im.src=u}))).then(P=>{
-  const enc=new TextEncoder(),parts=[],offs=[];let len=0;const put=x=>{const b=typeof x==="string"?enc.encode(x):x;parts.push(b);len+=b.length};
-  const obj=(n,body)=>{offs[n]=len;put(n+" 0 obj\n");body();put("\nendobj\n")};const n=P.length,kids=P.map((_,i)=>(3+i*3)+" 0 R").join(" ");
-  put("%PDF-1.4\n");obj(1,()=>put("<< /Type /Catalog /Pages 2 0 R >>"));obj(2,()=>put(`<< /Type /Pages /Kids [${kids}] /Count ${n} >>`));
-  P.forEach((p,i)=>{const pw=595,ph=Math.round(p.H*pw/p.W),o=3+i*3,cs=`q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
-    obj(o,()=>put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 ${o+1} 0 R >> >> /Contents ${o+2} 0 R >>`));
-    obj(o+1,()=>{put(`<< /Type /XObject /Subtype /Image /Width ${p.W} /Height ${p.H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.d.length} >>\nstream\n`);put(p.d);put("\nendstream")});
-    obj(o+2,()=>put(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`))});
-  const N=2+n*3,x=len;put(`xref\n0 ${N+1}\n0000000000 65535 f \n`);for(let i=1;i<=N;i++)put(String(offs[i]).padStart(10,"0")+" 00000 n \n");
-  put(`trailer\n<< /Size ${N+1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF`);return new Blob(parts,{type:"application/pdf"})})}
-const stamp=()=>{const d=new Date(Date.now()+108e5);return d.toISOString().slice(0,16).replace("T"," ").replace(":","-")};
-function pasteText(t){t=String(t||"").trim();if(!t)return false;S.edit="__new";const el2=root.querySelector("#cxUp");if(!el2)return true;
-  const ttl=(t.split("\n").map(x=>x.trim()).find(x=>x.length>=4)||"").slice(0,120);
-  const nw={id:"__new",title:ttl,tags:"",cd:new Date(Date.now()+108e5).toISOString().slice(0,10),has_file:false,body:t};
-  el2.insertAdjacentHTML("afterbegin",`<div class="ci">${editForm(nw)}</div>`);el2.scrollIntoView({block:"start",behavior:"smooth"});return true}
-async function pasteFiles(files,txt){const pdf=files.filter(f=>f.type==="application/pdf"||/\.pdf$/i.test(f.name||"")),img=files.filter(f=>/^image\//.test(f.type));
-  if(pdf.length)addFiles(pdf.map((f,i)=>f.name&&/\.pdf$/i.test(f.name)?f:new File([f],"تعميم ملصوق "+stamp()+(i?" ("+(i+1)+")":"")+".pdf",{type:"application/pdf"})));
-  if(img.length){try{const b=await imgToPdf(img);addFiles([new File([b],"تعميم مصوّر "+stamp()+".pdf",{type:"application/pdf"})])}catch(e){alert("تعذّر تحويل الصورة — جرّب مرة ثانية")}}
-  if(pdf.length||img.length){const u=root.querySelector("#cxUp");if(u)u.scrollIntoView({block:"start",behavior:"smooth"});return true}
-  return pasteText(txt)}
-async function pasteClip(btn){if(!navigator.clipboard||!navigator.clipboard.read){alert("المتصفح ما يدعم اللصق المباشر — حدّث الجوال أو استخدم «رفع تعاميم PDF»");return}
-  btn.disabled=true;try{const items=await navigator.clipboard.read(),files=[];let txt="";
-    for(const it of items){const ty=it.types;const pick=ty.find(t=>t==="application/pdf"||t==="com.adobe.pdf")||ty.find(t=>/^image\//.test(t));
-      if(pick){const b=await it.getType(pick);files.push(new File([b],pick.includes("pdf")?"":"img",{type:pick.includes("pdf")?"application/pdf":b.type||pick}))}
-      else if(ty.includes("text/plain"))txt+=(txt?"\n":"")+await(await it.getType("text/plain")).text()}
-    if(!(await pasteFiles(files,txt)))alert("الحافظة فاضية أو فيها شي غير مدعوم. انسخ التعميم (ملف PDF أو صورة أو نص) وارجع اضغط «لصق».")}
-  catch(e){if(e&&e.name==="NotAllowedError")alert("ما تم السماح باللصق — اضغط «لصق» في الفقاعة اللي تطلع.");else alert("تعذّر قراءة الحافظة. لو كان ملف PDF، بعض الجوالات ما تسمح بلصقه — استخدم «رفع تعاميم PDF».")}
-  btn.disabled=false}
 async function addFiles(files){const big=[];for(const f of files){if(!/\.pdf$/i.test(f.name)&&f.type!=="application/pdf")continue;if(f.size>50*1048576){big.push(f.name);continue}
     S.up.push({file:f,st:"wait",title:cleanName(f.name),tags:"",cd:"",text:null})}
   if(big.length)alert("أكبر من 50MB وما ينرفع: "+big.join("، "));paintUp();
@@ -317,9 +284,6 @@ async function showFull(id,btn){const el=document.getElementById("full_"+id);if(
 function bind(el){if(el.__cx)return;el.__cx=1;
   el.addEventListener("input",e=>{const t=e.target;if(t.id==="axQ"){S.aq=t.value;try{localStorage.setItem("ajf_ax_q",t.value)}catch(x){}return}if(t.id==="cxQ"){S.q=t.value;const h=root.querySelector("#cxHint");if(h)h.style.display=S.q?"none":"";clearTimeout(qT);qT=setTimeout(search,350);return}
     if(t.dataset.u!=null){S.up[+t.dataset.u][t.dataset.k]=t.value}});
-  document.addEventListener("paste",e=>{if(!isAdm()||!root||!root.isConnected)return;const fs=[...(e.clipboardData&&e.clipboardData.files||[])];
-    const t=e.target,typing=t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable);if(!fs.length&&typing)return;
-    if(fs.length){e.preventDefault();pasteFiles(fs,"")}else if(!typing){const x=e.clipboardData&&e.clipboardData.getData("text/plain");if(x){e.preventDefault();pasteText(x)}}});
   el.addEventListener("change",e=>{const t=e.target;if(t.id==="cxFiles"){addFiles([...t.files]);t.value=""}if(t.dataset.u!=null)S.up[+t.dataset.u][t.dataset.k]=t.value});
   el.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;e.stopPropagation();
     if(b.dataset.open){openFile(b.dataset.open,b);return}
@@ -333,7 +297,6 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
     if(b.dataset.urm!=null){S.up.splice(+b.dataset.urm,1);paintUp();return}
-    if(b.id==="cxPaste"){pasteClip(b);return}
     if(b.id==="cxNew"){S.edit="__new";const el2=root.querySelector("#cxUp");const nw={id:"__new",title:"",tags:"",cd:new Date(Date.now()+108e5).toISOString().slice(0,10),has_file:false,body:""};
       try{const d=JSON.parse(localStorage.getItem("ajf_cx_draft")||"null");if(d)Object.assign(nw,d)}catch(x){}
       el2.insertAdjacentHTML("afterbegin",`<div class="ci">${editForm(nw)}</div>`);return}
