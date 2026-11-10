@@ -1,6 +1,60 @@
 {
-  "fetched": "2026-11-10T12:52:20Z",
+  "fetched": "2026-11-10T14:02:44Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-10T14:00:32.133Z",
+      "obsTime": 1794319200,
+      "reportTime": "2026-11-10T14:00:00.000Z",
+      "temp": 17,
+      "dewp": -2,
+      "wdir": 120,
+      "wspd": 12,
+      "visib": "6+",
+      "altim": 1024,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 101400Z 12012KT 9999 BKN040 17/M02 Q1024 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "BKN",
+      "clouds": [
+        {
+          "cover": "BKN",
+          "base": 4000
+        }
+      ],
+      "fltCat": "VFR"
+    },
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-10T13:00:18.351Z",
+      "obsTime": 1794315600,
+      "reportTime": "2026-11-10T13:00:00.000Z",
+      "temp": 17,
+      "dewp": -2,
+      "wdir": 120,
+      "wspd": 13,
+      "visib": "6+",
+      "altim": 1024,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 101300Z 12013KT 9999 BKN040 17/M02 Q1024 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "BKN",
+      "clouds": [
+        {
+          "cover": "BKN",
+          "base": 4000
+        }
+      ],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-10T12:00:22.946Z",
@@ -15,60 +69,6 @@
       "qcField": 16,
       "metarType": "METAR",
       "rawOb": "METAR OESK 101200Z 12014KT 9999 SCT040 18/M03 Q1024 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "SCT",
-      "clouds": [
-        {
-          "cover": "SCT",
-          "base": 4000
-        }
-      ],
-      "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-10T11:00:24.075Z",
-      "obsTime": 1794308400,
-      "reportTime": "2026-11-10T11:00:00.000Z",
-      "temp": 18,
-      "dewp": -5,
-      "wdir": 120,
-      "wspd": 14,
-      "visib": "6+",
-      "altim": 1025,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 101100Z 12014KT 9999 SCT040 18/M05 Q1025 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "SCT",
-      "clouds": [
-        {
-          "cover": "SCT",
-          "base": 4000
-        }
-      ],
-      "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-10T10:00:23.282Z",
-      "obsTime": 1794304800,
-      "reportTime": "2026-11-10T10:00:00.000Z",
-      "temp": 17,
-      "dewp": -6,
-      "wdir": 100,
-      "wspd": 13,
-      "visib": "6+",
-      "altim": 1025,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 101000Z 10013KT 9999 SCT040 17/M06 Q1025 NOSIG",
       "lat": 29.785,
       "lon": 40.1,
       "elev": 671,
