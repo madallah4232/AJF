@@ -2754,14 +2754,18 @@ $("csBody").addEventListener("click",e=>{
 });
 /* ---------- delay codes (Saudia booklet) ---------- */
 /* أدلة أكواد التأخير: كل شركة لها دليلها المستقل (delay-xx.json في قاعدة البيانات المحمية) — لإضافة شركة: ملف + سطر هنا */
-const DC_AIRS={SV:["السعودية","السعودية","السعودية · Saudia Delay Codes","مسؤولية SGS فقط"],XY:["ناس","طيران ناس","طيران ناس · flynas Delay Codes","على المناولة فقط"],SM:["إير كايرو","إير كايرو","إير كايرو · Air Cairo Delay Codes","على المحطة أو المناولة"],F3:["فلاي أديل","فلاي أديل","فلاي أديل · flyadeal Delay Codes","على الخدمات الأرضية GS فقط"]};
+const DC_AIRS={SV:["السعودية","السعودية","السعودية · Saudia Delay Codes","مسؤولية SGS فقط"],XY:["ناس","طيران ناس","طيران ناس · flynas Delay Codes","على المناولة فقط"],SM:["إير كايرو","إير كايرو","إير كايرو · Air Cairo Delay Codes","على المحطة أو المناولة"],F3:["فلاي أديل","فلاي أديل","فلاي أديل · flyadeal Delay Codes","على الخدمات الأرضية GS فقط"],FZ:["فلاي دبي","فلاي دبي","فلاي دبي · flydubai Delay Codes","مجموعات المناولة 11-19 · 31-39"],NP:["النيل","طيران النيل","طيران النيل · Nile Air Delay Codes (IATA)","مجموعات المناولة 11-19 · 31-39"]};
+/* أدلة تنحفظ في جدول ajf_dcg (supabase/delay_guides.sql) بدل ملفات delay-xx.json */
+const DC_DB=new Set(["FZ","NP"]);
 const DC_SHORT=Object.fromEntries(Object.entries(DC_AIRS).map(([k,v])=>[k,v[0]])),DC_LONG=Object.fromEntries(Object.entries(DC_AIRS).map(([k,v])=>[k,v[1]])),DC_NAME=Object.fromEntries(Object.entries(DC_AIRS).map(([k,v])=>[k,v[2]]));
 const DCS={};let DC=null,dcAir="SV",dcCb=null,dcT=false,dcSgs=false;
 const dcAirOf=f=>{const p=String(f.n||"").slice(0,2).toUpperCase();return DC_AIRS[p]?p:""};
 /* G = دليل عام (أي شركة غير السعودية وناس): الكود = رئيسي + فرعي (مثل 34e)، subs=[فرعي, وصف, المسؤول, على المحطة/المناولة 1/0, كود صريح اختياري]
    react: الدليل فيه أكواد تبعية (r) — c.rs = الصفوف اللي لها كود تبعي */
 const dcG=()=>dcAir!=="SV"&&dcAir!=="XY";const dcR=()=>dcG()&&dcT&&!!(DC&&DC.react);const dcRok=(c,x)=>!dcR()||(c.rs||[]).includes(x[0]);
-function loadDC(air){air=air||dcAir;return DCS[air]?Promise.resolve(DC=DCS[air]):getDoc("delay-"+air.toLowerCase()+".json").then(b=>JSON.parse(new TextDecoder().decode(b))).then(j=>DC=DCS[air]=j)}
+function loadDC(air){air=air||dcAir;if(DCS[air])return Promise.resolve(DC=DCS[air]);
+  const g=DC_DB.has(air)?rpc("ajf_dcg_get",{p_token:AUTH.tok||"",p_device:AUTH.dev,p_k:air.toLowerCase()}).then(j=>{if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok"||!j.v)throw new Error(j.s||"none");return j.v}):getDoc("delay-"+air.toLowerCase()+".json").then(b=>JSON.parse(new TextDecoder().decode(b)));
+  return g.then(j=>DC=DCS[air]=j)}
 /* بحث ذكي: يفهم الوصف بالعربي العامي ويرتّب الأكواد حسب التطابق */
 const dcDn=t=>String(t||"").toLowerCase().replace(/[ً-ْـ]/g,"").replace(/[إأآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/[^؀-ۿa-z0-9\s-]/g," ");
 const dcStem=w=>{w=w.replace(/^(وال|بال|فال|كال|لل|ال)(?=..)/,"");if(w.length>4)w=w.replace(/^[وب](?=...)/,"");if(w.length>4)w=w.replace(/(ات|ين|ون|يه|ها)$/,"");return w};
@@ -2813,7 +2817,7 @@ const dcHit=(toks,t)=>t.length>1&&toks.some(k=>k.startsWith(t));
 const DC_AR={"عفش":"BAGG","شنط":"BAGG","حقائب":"BAGG","صعود":"BOARD","بوابه":"GAT","كاونتر":"CHECK-IN","تنظيف":"CLEAN","وقود":"FUEL","تموين":"CATER","كرسي":"WHEEL","طاقم":"CREW","مضيف":"CABIN","طيار":"FLIGHT DECK","عطل":"DEFECT","صيانه":"MAINT","طقس":"WEATHER","امن":"SECUR","جوازات":"IMMG","تحميل":"LOAD","معدات":"EQUIP","نظام":"SYSTEM","راكب":"PASSENGER","مريض":"SICK","وزن":"WEIGHT","شحن":"CARGO","باص":"BUS"};
 const dcKey=(c,x)=>dcG()?(x[4]||c.c+x[0])+(dcR()?"r":""):dcAir==="XY"?c.c+x[0]:c.c+"-"+x[0]+(dcT?"T":"");
 const dcHay=(c,x)=>{const k="_h"+x[0];return c[k]||(c[k]=dcNorm([c.ar,(c.sa||{})[x[0]]||"",c.en,x[1],dcAir==="XY"||dcG()?c.a:"",dcG()?x[2]:""].join(" ")))};
-function dcRow(c,x){const k=dcKey(c,x),XY=dcAir==="XY",ar=(c.sa||{})[x[0]]||"",meta=dcG()?` · المسؤول: ${escT(x[2])}${dcR()?" · REACTIONARY (تبعي)":""}`:XY?` · ${x[5]||c.a} · ${x[2]==="C"?"Controllable":"Uncontrollable"}${x[3]==="YES"?" · Airline resp.":""}`:dcT?" · EQUIPMENT TURN-AROUND, CONSEQUENTIAL":"";
+function dcRow(c,x){const k=dcKey(c,x),XY=dcAir==="XY",ar=(c.sa||{})[x[0]]||"",meta=dcG()?`${x[2]?" · المسؤول: "+escT(x[2]):""}${dcR()?" · REACTIONARY (تبعي)":""}`:XY?` · ${x[5]||c.a} · ${x[2]==="C"?"Controllable":"Uncontrollable"}${x[3]==="YES"?" · Airline resp.":""}`:dcT?" · EQUIPMENT TURN-AROUND, CONSEQUENTIAL":"";
   return`<button class="dc-s" data-k="${k}" data-d="${escT(x[1])}"><b>${k}</b><span>${ar?`<span style="display:block;direction:rtl;text-align:right;font-weight:600">${escT(ar)}</span>`:""}<span style="color:var(--muted);font-size:12px">${escT(x[1])}${meta}</span></span></button>`}
 function dcBadge(c){const XY=dcAir==="XY";if(dcG()){const m=c.subs.filter(x=>x[3]).length;const t=escT(DC.tag||"على المناولة");return m===c.subs.length?`<em class="sgs">${t}</em>`:m?`<em class="sgs">بعضها ${t}</em>`:""}return XY?(c.cat==="GOPS"?'<em class="sgs">على المناولة</em>':`<em class="oth">${escT(DC.cats[c.cat]||c.cat)}</em>`):(c.sec===1?'<em class="sgs">على SGS</em>':c.sec===2?'<em class="oth">وكيل دولي</em>':"")}
 const dcMine=(c,x)=>dcG()?x[3]===1:dcAir==="XY"?(x[4]||c.cat)==="GOPS":c.sec===1;
@@ -2841,7 +2845,7 @@ function renderDC(){
 }
 function openDC(cb,air){dcCb=cb||null;dcAir=air||"SV";$("dcS").textContent=cb?"اختر الكود لإضافته لسبب التأخير":DC_NAME[dcAir];
   $("dcSgs").textContent=DC_AIRS[dcAir][3];$("dcT2").hidden=true;$("dcT2").textContent=dcAir==="SV"?"تأخير تبعي (T)":"تأخير تبعي (r)";if(dcT&&dcAir!==openDC.last){dcT=false;$("dcT2").setAttribute("aria-pressed",false)}openDC.last=dcAir;
-  $("dc").hidden=false;$("dcB").innerHTML='<div class="tu-n" style="text-align:center">…</div>';loadDC(dcAir).then(()=>{$("dcT2").hidden=!(dcAir==="SV"||dcG()&&DC.react);renderDC()}).catch(()=>{$("dcB").innerHTML='<div class="tu-n">تعذّر تحميل الأكواد، تأكد من الاتصال.</div>'})}
+  $("dc").hidden=false;$("dcB").innerHTML='<div class="tu-n" style="text-align:center">…</div>';loadDC(dcAir).then(()=>{$("dcT2").hidden=!(dcAir==="SV"||dcG()&&DC.react);renderDC()}).catch(e=>{$("dcB").innerHTML=DC_DB.has(dcAir)&&/rpc 404|none/.test(String(e&&e.message))?'<div class="tu-n">دليل '+escT(DC_LONG[dcAir])+' ما تفعّل للحين. يتفعّل بعد ما يشغّل المشرف ملف delay_guides.sql في Supabase.</div>':'<div class="tu-n">تعذّر تحميل الأكواد، تأكد من الاتصال.</div>'})}
 $("dcBack").onclick=()=>{$("dc").hidden=true};
 $("dcQ").addEventListener("input",()=>DC&&renderDC());
 $("dcSgs").onclick=e=>{dcSgs=!dcSgs;e.currentTarget.setAttribute("aria-pressed",dcSgs);DC&&renderDC()};
@@ -3295,7 +3299,8 @@ function boardBack(){const b=$("bd");
   if(b.hidden||reduce){go();return}b.classList.add("out");setTimeout(go,260)}
 let bdDay=0;
 function bdFlights(){const d=hubDays()[bdDay];return{d,list:flightsOn(d).filter(f=>!f.off)}}
-const bdDaysH=()=>`<div class="bd-days">${["اليوم","أمس"].map((l,i)=>`<button data-day="${i}" class="${i===bdDay?"on":""}">${l} · ${dLabel(hubDays()[i])}</button>`).join("")}</div>`;
+/* أمس يمين واليوم يسار (ترتيب زمني من اليمين) — data-day: 0 اليوم، 1 أمس */
+const bdDaysH=()=>`<div class="bd-days">${[1,0].map(i=>`<button data-day="${i}" class="${i===bdDay?"on":""}">${["اليوم","أمس"][i]} · ${dLabel(hubDays()[i])}</button>`).join("")}</div>`;
 const fmN=(V,id)=>Object.keys(V).filter(k=>k.startsWith("f."+id+".")).length;
 function bdRender(){const B=$("bdB");
   if(BOARD==="trc"){const{d,list}=bdFlights();
