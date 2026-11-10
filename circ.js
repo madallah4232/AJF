@@ -239,13 +239,25 @@ async function pasteFiles(files,txt){const pdf=files.filter(f=>f.type==="applica
   if(img.length){try{const b=await imgToPdf(img);addFiles([new File([b],"تعميم مصوّر "+stamp()+".pdf",{type:"application/pdf"})])}catch(e){alert("تعذّر تحويل الصورة — جرّب مرة ثانية")}}
   if(pdf.length||img.length){const u=root.querySelector("#cxUp");if(u)u.scrollIntoView({block:"start",behavior:"smooth"});return true}
   return pasteText(txt)}
-async function pasteClip(btn){if(!navigator.clipboard||!navigator.clipboard.read){alert("المتصفح ما يدعم اللصق المباشر — حدّث الجوال أو استخدم «رفع تعاميم PDF»");return}
-  btn.disabled=true;try{const items=await navigator.clipboard.read(),files=[];let txt="";
-    for(const it of items){const ty=it.types;const pick=ty.find(t=>t==="application/pdf"||t==="com.adobe.pdf")||ty.find(t=>/^image\//.test(t));
-      if(pick){const b=await it.getType(pick);files.push(new File([b],pick.includes("pdf")?"":"img",{type:pick.includes("pdf")?"application/pdf":b.type||pick}))}
-      else if(ty.includes("text/plain"))txt+=(txt?"\n":"")+await(await it.getType("text/plain")).text()}
-    if(!(await pasteFiles(files,txt)))alert("الحافظة فاضية أو فيها شي غير مدعوم. انسخ التعميم (ملف PDF أو صورة أو نص) وارجع اضغط «لصق».")}
-  catch(e){if(e&&e.name==="NotAllowedError")alert("ما تم السماح باللصق — اضغط «لصق» في الفقاعة اللي تطلع.");else alert("تعذّر قراءة الحافظة. لو كان ملف PDF، بعض الجوالات ما تسمح بلصقه — استخدم «رفع تعاميم PDF».")}
+const sniff=async b=>{const h=new Uint8Array(await b.slice(0,8).arrayBuffer());const t=String.fromCharCode(...h);
+  return t.startsWith("%PDF")?"application/pdf":h[0]===0xFF&&h[1]===0xD8?"image/jpeg":h[0]===0x89&&t.slice(1,4)==="PNG"?"image/png":/ftyp(heic|heix|mif1)/.test(String.fromCharCode(...new Uint8Array(await b.slice(0,16).arrayBuffer())))?"image/heic":""};
+/* مربع لصق احتياطي: الضغط المطوّل ← «لصق» يعطينا الملف عن طريق حدث paste حتى لو الزر ما قدر يقرأه */
+function pasteBox(types){const u=root.querySelector("#cxUp");if(!u)return;const old=root.querySelector("#cxPB");if(old)old.remove();
+  u.insertAdjacentHTML("afterbegin",`<div class="cx-pb" id="cxPB"><b>اضغط مطوّلاً داخل المربع واختر «لصق»</b><div class="z" contenteditable="true" inputmode="none" aria-label="مربع اللصق"></div><small>${types&&types.length?"نوع المنسوخ: "+E(types.join(", ")):"الجوال ما أعطى الزر محتوى الحافظة"}</small><button class="x" id="cxPBx">إلغاء</button></div>`);
+  const z=root.querySelector("#cxPB .z");z.addEventListener("paste",async e=>{e.preventDefault();e.stopPropagation();const cd=e.clipboardData;const fs=[...(cd&&cd.files||[])];
+    if(!fs.length&&cd&&cd.items)for(const it of cd.items){if(it.kind==="file"){const f=it.getAsFile();if(f)fs.push(f)}}
+    for(let i=0;i<fs.length;i++)if(!fs[i].type||fs[i].type==="application/octet-stream"){const ty=await sniff(fs[i]);if(ty)fs[i]=new File([fs[i]],fs[i].name||"",{type:ty})}
+    const ok=await pasteFiles(fs,cd&&cd.getData("text/plain"));const pb=root.querySelector("#cxPB");
+    if(ok){if(pb)pb.remove()}else{const sm=pb&&pb.querySelector("small");if(sm)sm.textContent="ما وصل ملف من اللصق ("+([...(cd&&cd.types||[])].join(", ")||"فاضي")+"). انسخ الملف نفسه مو رابطه، أو ارفعه من «رفع تعاميم PDF»."}});
+  root.querySelector("#cxPBx").onclick=()=>root.querySelector("#cxPB").remove();setTimeout(()=>{z.focus();z.scrollIntoView({block:"center",behavior:"smooth"})},50)}
+async function pasteClip(btn){if(!navigator.clipboard||!navigator.clipboard.read){pasteBox([]);return}
+  btn.disabled=true;let all=[];try{const items=await navigator.clipboard.read(),files=[];let txt="";
+    for(const it of items){const ty=[...it.types];all=all.concat(ty);let got=false;
+      for(const t of ty){if(/^text\//.test(t))continue;try{const b=await it.getType(t);const k=t.includes("pdf")?"application/pdf":/^image\//.test(t)?b.type||t:await sniff(b);
+        if(k){files.push(new File([b],"",{type:k}));got=true;break}}catch(x){}}
+      if(!got&&ty.includes("text/plain"))txt+=(txt?"\n":"")+await(await it.getType("text/plain")).text()}
+    if(!(await pasteFiles(files,txt)))pasteBox(all)}
+  catch(e){if(e&&e.name==="NotAllowedError")alert("ما تم السماح باللصق — اضغط «لصق» في الفقاعة اللي تطلع.");else pasteBox(all)}
   btn.disabled=false}
 async function addFiles(files){const big=[];for(const f of files){if(!/\.pdf$/i.test(f.name)&&f.type!=="application/pdf")continue;if(f.size>50*1048576){big.push(f.name);continue}
     S.up.push({file:f,st:"wait",title:cleanName(f.name),tags:"",cd:"",text:null})}
