@@ -210,6 +210,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .dc-q input:focus{outline:2px solid var(--amber);outline-offset:-1px}
 .dc-tg{display:flex;gap:6px;flex-wrap:wrap}
 .dc-tg button{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--line);background:var(--raise);color:var(--muted);font:600 12.5px var(--body)}
+.dcai{--c:var(--amber);margin:12px}.dcai .ax-q{justify-self:start}.dcai-k{display:inline-block;margin:0 2px;padding:1px 8px;border-radius:8px;background:var(--amber);color:#0a1120;font:700 13px var(--mono);direction:ltr;vertical-align:baseline}
 .dc-tg button[aria-pressed=true]{background:color-mix(in oklab,var(--amber) 22%,var(--raise));color:var(--amber);border-color:color-mix(in oklab,var(--amber) 50%,var(--line))}
 .dc-b{overflow-y:auto;overscroll-behavior:contain;padding:10px 14px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;min-height:0;max-width:680px;width:100%;margin:0 auto}
 .dc-sec{font:600 12px var(--display);color:var(--muted);margin:8px 2px 0}
@@ -1022,7 +1023,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
     <button class="trk-back" id="dcBack" aria-label="رجوع"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
     <div><b id="dcT">أكواد التأخير</b><span id="dcS">السعودية · Saudia Delay Codes</span></div>
   </div>
-  <div class="dc-q"><input id="dcQ" type="search" placeholder="اكتب وش صار… مثل: تأخر سيارة الوقود، أو رقم الكود 15" autocomplete="off"><div class="dc-tg"><button id="dcSgs" aria-pressed="false">مسؤولية SGS فقط</button><button id="dcT2" aria-pressed="false">تأخير تبعي (T)</button></div></div>
+  <div class="dc-q"><input id="dcQ" type="search" placeholder="اكتب وش صار… مثل: تأخر سيارة الوقود، أو رقم الكود 15" autocomplete="off"><div class="dc-tg"><button id="dcSgs" aria-pressed="false">مسؤولية SGS فقط</button><button id="dcT2" aria-pressed="false">تأخير تبعي (T)</button><button id="dcAI" aria-pressed="false">🤖 المساعد الذكي</button></div></div>
   <div class="dc-b" id="dcB"></div>
 </div>
 <div class="trk" id="trk" role="dialog" aria-modal="true" aria-labelledby="trkT" hidden>
@@ -2821,7 +2822,35 @@ function dcRow(c,x){const k=dcKey(c,x),XY=dcAir==="XY",ar=(c.sa||{})[x[0]]||"",m
   return`<button class="dc-s" data-k="${k}" data-d="${escT(x[1])}"><b>${k}</b><span>${ar?`<span style="display:block;direction:rtl;text-align:right;font-weight:600">${escT(ar)}</span>`:""}<span style="color:var(--muted);font-size:12px">${escT(x[1])}${meta}</span></span></button>`}
 function dcBadge(c){const XY=dcAir==="XY";if(dcG()){const m=c.subs.filter(x=>x[3]).length;const t=escT(DC.tag||"على المناولة");return m===c.subs.length?`<em class="sgs">${t}</em>`:m?`<em class="sgs">بعضها ${t}</em>`:""}return XY?(c.cat==="GOPS"?'<em class="sgs">على المناولة</em>':`<em class="oth">${escT(DC.cats[c.cat]||c.cat)}</em>`):(c.sec===1?'<em class="sgs">على SGS</em>':c.sec===2?'<em class="oth">وكيل دولي</em>':"")}
 const dcMine=(c,x)=>dcG()?x[3]===1:dcAir==="XY"?(x[4]||c.cat)==="GOPS":c.sec===1;
+/* ---------- المساعد الذكي لأكواد التأخير: يقرأ دليل الشركة المفتوحة فقط ويقترح الكود (دالة ajf-dc + Gemini المجاني) ---------- */
+let dcAi=false;const DCAI={},DCAI_BUSY={},DCAI_ERR={};
+const DC_RULE={SV:"قاعدة السعودية: التأخير الموروث من رحلة قادمة متأخرة يأخذ نفس كود تأخير المحطة السابقة مع حرف T في آخره (مثل 41-A يصير 41-AT) وليس 93. الأكواد اللي قسمها «على SGS» هي مسؤولية المناولة.",
+  F3:"قاعدة فلاي أديل: التأخير التبعي من رحلة سابقة يُكتب بنفس الكود مع r في آخره (مثل 36b يصير 36br)، فقط للأكواد المسموح لها تبعي."};
+const dcaiLoad=a=>{if(!DCAI[a])try{DCAI[a]=JSON.parse(localStorage.getItem("ajf_dcai_"+a)||"[]")}catch(e){DCAI[a]=[]}return DCAI[a]};
+const dcaiSave=a=>{try{localStorage.setItem("ajf_dcai_"+a,JSON.stringify(DCAI[a].slice(-8)))}catch(e){}};
+function dcGuideTxt(){const t0=dcT;dcT=false;const L=[];
+  if(DC_RULE[dcAir])L.push(DC_RULE[dcAir]);if(DC.note)L.push(DC.note);if(DC_AIRS[dcAir][3])L.push("الفلتر في التطبيق: "+DC_AIRS[dcAir][3]);L.push("");
+  for(const c of DC.codes){const sec=DC.secs&&DC.secs[c.sec]?DC.secs[c.sec].ar:"";
+    for(const x of c.subs){const ar=(c.sa||{})[x[0]]||c.ar||"",n=dcG()?[x[2]?"المسؤول: "+x[2]:"",x[3]?(DC.tag||"على المناولة"):"",(c.rs||[]).includes(x[0])?"يقبل تبعي r":""]:dcAir==="XY"?[c.cat,x[2]==="C"?"Controllable":"Uncontrollable",x[3]==="YES"?"Airline resp.":""]:[sec];
+      L.push([dcKey(c,x),c.a?c.a+" · "+ar:ar,x[1]||c.en,n.filter(Boolean).join(" · ")].join(" | "))}}
+  dcT=t0;return L.join("\n")}
+function dcFind(k){const t0=dcT;let r=null;for(const T of [false,true]){dcT=T;for(const c of DC.codes)for(const x of c.subs)if(!r&&dcKey(c,x).toUpperCase()===k.toUpperCase())r={k:dcKey(c,x),d:x[1]};}dcT=t0;return r}
+function dcaiFmt(t){return escT(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ").replace(/\[([0-9]{1,2}[-A-Za-z]{0,4}|00-05)\]/g,(m,k)=>dcFind(k)?`<button class="dcai-k" data-aik="${escT(k)}">${escT(k)}</button>`:m).replace(/\n/g,"<br>")}
+function renderDCAI(){const a=dcAir,T=dcaiLoad(a),busy=DCAI_BUSY[a],err=DCAI_ERR[a]||"";const ta=$("dcaiQ"),keep=ta?ta.value:"";
+  $("dcB").innerHTML=`<div class="ax dcai"><div class="ax-h"><i>🤖</i><div><b>مساعد أكواد التأخير · ${escT(DC_LONG[a])}</b><small>اكتب وش صار للرحلة بكلامك، ويقترح لك الكود من دليل ${escT(DC_LONG[a])} فقط</small></div></div>
+  ${T.length||busy||err?`<div class="ax-th">${T.length?`<div class="ax-top"><small>المحادثة (${T.length})</small><button class="ax-new" id="dcaiNew">＋ محادثة جديدة</button></div>`:""}${T.map(t=>`<div class="ax-q">${escT(t.q)}</div><div class="ax-a">${dcaiFmt(t.a)}</div>`).join("")}${busy?`<div class="ax-q">${escT(busy)}</div><div class="bd-empty">… المساعد يقرأ الدليل ويختار الكود (عادة 5–20 ثانية)</div>`:""}${err?`<div class="bd-empty">${err}</div>`:""}</div>`:""}
+  <textarea id="dcaiQ" rows="3" placeholder="${T.length?"اكتب توضيح أو سؤال متابعة…":"مثال: سيارة الدفع تعطلت وجبنا غيرها وتأخرنا 15 دقيقة"}"></textarea>
+  <button class="tx-go" id="dcaiGo" ${busy?"disabled":""}>${busy?"… يفكر":T.length?"أرسل":"اقترح الكود"}</button>
+  ${T.length?`<p class="tx-note">اقتراح آلي من دليل الشركة — اضغط على الكود عشان ${dcCb?"تختاره":"تشوف تفاصيله"}، وتأكد منه قبل الإرسال.</p>`:""}</div>`;
+  const n=$("dcaiQ");n.value=busy?"":keep;}
+async function dcaiAsk(){const a=dcAir,q=($("dcaiQ").value||"").trim();if(q.length<2||DCAI_BUSY[a])return;DCAI_BUSY[a]=q;DCAI_ERR[a]="";$("dcaiQ").value="";renderDCAI();
+  try{const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,air:DC_NAME[a],q,guide:dcGuideTxt(),h:dcaiLoad(a).slice(-6).map(t=>({q:t.q,a:t.a}))})});
+    if(r.status===404)throw new Error("nofn");const j=await r.json();if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s||"err");
+    DCAI[a]=dcaiLoad(a).concat([{q,a:j.answer||""}]);dcaiSave(a)}
+  catch(e){const m=e.message;DCAI_ERR[a]=m==="nofn"?"المساعد ما تفعّل للحين — المشرف يرفع دالة ajf-dc في Supabase.":m==="nokey"?"مفتاح Gemini ناقص في Supabase.":m==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":m==="out"?"سجّل دخولك أول.":"تعذّر الاتصال، جرّب مرة ثانية.";if(m!=="out")setTimeout(()=>{const t=$("dcaiQ");if(t&&!t.value)t.value=q},0)}
+  DCAI_BUSY[a]="";if(dcAi&&dcAir===a)renderDCAI()}
 function renderDC(){
+  if(dcAi)return renderDCAI();
   const raw=$("dcQ").value.trim(),XY=dcAir==="XY",G=dcG();let h="",last=null;
   const codeQ=raw.toUpperCase().replace(/[\s.]/g,"").replace(/^(\d{1,2}[A-Z]?)R$/,(m,a)=>G&&DC.react?a:m).match(/^(\d{1,2})-?([A-Z]{0,2})$/);
   if(raw&&!codeQ){/* بحث بالوصف: نتائج مرتبة */
@@ -2849,6 +2878,11 @@ function openDC(cb,air){dcCb=cb||null;dcAir=air||"SV";$("dcS").textContent=cb?"�
 $("dcBack").onclick=()=>{$("dc").hidden=true};
 $("dcQ").addEventListener("input",()=>DC&&renderDC());
 $("dcSgs").onclick=e=>{dcSgs=!dcSgs;e.currentTarget.setAttribute("aria-pressed",dcSgs);DC&&renderDC()};
+$("dcAI").onclick=e=>{dcAi=!dcAi;e.currentTarget.setAttribute("aria-pressed",dcAi);$("dcQ").hidden=dcAi;DC&&renderDC()};
+$("dcB").addEventListener("click",e=>{const g=e.target.closest("#dcaiGo,#dcaiNew,[data-aik]");if(!g)return;e.stopPropagation();
+  if(g.id==="dcaiGo")return dcaiAsk();if(g.id==="dcaiNew"){DCAI[dcAir]=[];DCAI_ERR[dcAir]="";dcaiSave(dcAir);return renderDCAI()}
+  const f=dcFind(g.dataset.aik);if(!f)return;if(dcCb){dcCb(f.k+" "+f.d.replace(/\.$/,""));$("dc").hidden=true;return}
+  dcAi=false;$("dcAI").setAttribute("aria-pressed",false);$("dcQ").hidden=false;$("dcQ").value=g.dataset.aik;renderDC()});
 $("dcT2").onclick=e=>{dcT=!dcT;e.currentTarget.setAttribute("aria-pressed",dcT);DC&&renderDC()};
 $("dcB").addEventListener("click",e=>{const b=e.target.closest(".dc-s");if(!b)return;
   if(dcCb){dcCb(b.dataset.k+" "+b.dataset.d.replace(/&amp;/g,"&").replace(/&#39;/g,"'").replace(/\.$/,""));$("dc").hidden=true}
