@@ -654,6 +654,10 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .emp .more{display:grid;gap:8px}
 .amsg{font-size:13px;color:var(--muted)}
 .pu-ban{position:fixed;z-index:55;inset:auto 12px calc(84px + env(safe-area-inset-bottom));padding:14px;border-radius:16px;background:var(--panel);border:1px solid var(--amber);display:grid;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.jr-ban{position:fixed;z-index:70;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top));padding:14px;border-radius:16px;background:var(--panel);border:1.5px solid var(--amber);display:flex;gap:12px;align-items:center;box-shadow:0 20px 50px rgba(0,0,0,.55);animation:jrIn .35s cubic-bezier(.2,.9,.3,1.2)}
+.jr-ban i{font-style:normal;font-size:26px}.jr-ban div{flex:1;min-width:0}.jr-ban b{display:block;font-size:15px}.jr-ban small{color:var(--muted);font-size:12.5px}
+.jr-ban .go{background:var(--amber);color:#111;border:0;border-radius:11px;padding:10px 14px;font-weight:700;font-size:14px}.jr-ban .x{background:none;border:0;color:var(--muted);font-size:20px;padding:4px 6px}
+@keyframes jrIn{from{transform:translateY(-130%);opacity:0}to{transform:none;opacity:1}}
 .pu-ban b{font-size:15px}.pu-ban p{margin:0;font-size:13px;color:var(--muted)}.pu-ban .row{display:flex;gap:8px;background:none;border:0;padding:0;box-shadow:none}.pu-ban .abtn.a{flex:1}
 
 /* حركة الدخول: لوحة مطار تتقلب حروفها A J F ثم تنفتح على الرئيسية */
@@ -1064,10 +1068,20 @@ function devLabel(){const u=navigator.userAgent;const m=/iPhone|iPad|Android|Win
 function authSave(){try{AUTH.tok?localStorage.setItem("ajf_tok",AUTH.tok):localStorage.removeItem("ajf_tok");localStorage.setItem("ajf_me",JSON.stringify(AUTH.me))}catch(e){}}
 function authOut(msg){pushOff();const pb=$("puBan");if(pb)pb.remove();AUTH.tok=null;AUTH.me=null;authSave();for(const k in DOCC)delete DOCC[k];try{KB=null}catch(e){}
   $("acctBtn").hidden=true;$("adm").hidden=true;gateShow(msg||"")}
-function acctPaint(n){$("acctBtn").hidden=!AUTH.tok;const i=$("acctN");if(AUTH.me&&AUTH.me.admin&&n>0){i.hidden=false;i.textContent=n}else i.hidden=true}
+/* تنبيه على الشاشة للمشرف: أول ما يزيد عدد طلبات الدخول المعلّقة */
+let JRN=(()=>{try{return +localStorage.getItem("ajf_jr_seen")||0}catch(e){return 0}})();
+function joinAlert(n){if(!(AUTH.me&&AUTH.me.admin))return;n=+n||0;
+  if(n<JRN){JRN=n;try{localStorage.setItem("ajf_jr_seen",n)}catch(e){}}
+  const old=$("jrBan");if(n===0){if(old)old.remove();return}if(n<=JRN)return;
+  JRN=n;try{localStorage.setItem("ajf_jr_seen",n)}catch(e){}if(old)old.remove();
+  const d=document.createElement("div");d.className="jr-ban";d.id="jrBan";d.setAttribute("role","alert");
+  d.innerHTML=`<i>👤</i><div><b>${n===1?"طلب انضمام جديد":n+" طلبات انضمام"}</b><small>${n===1?"موظف بانتظار موافقتك على الدخول":"موظفين بانتظار موافقتك على الدخول"}</small></div><button class="go">مراجعة</button><button class="x" aria-label="إغلاق">✕</button>`;
+  d.querySelector(".go").onclick=()=>{d.remove();openAcct()};d.querySelector(".x").onclick=()=>d.remove();
+  document.body.appendChild(d);try{navigator.vibrate&&navigator.vibrate([120,80,120])}catch(e){}}
+function acctPaint(n){if(n>0||n===0&&arguments.length>1)joinAlert(n);$("acctBtn").hidden=!AUTH.tok;const i=$("acctN");if(AUTH.me&&AUTH.me.admin&&n>0){i.hidden=false;i.textContent=n}else i.hidden=true}
 async function authCheck(){if(!AUTH.tok)return;try{const j=await rpc("ajf_me",{p_token:AUTH.tok,p_device:AUTH.dev});
   if(j.s==="out"){authOut("انتهت الجلسة أو أُلغي اعتماد هذا الجوال. سجّل دخولك مرة ثانية.");return}
-  AUTH.me={emp:j.emp,name:j.name,admin:j.admin};authSave();acctPaint(j.pending);pushResync()}catch(e){/* بدون اتصال: نكمل بالجلسة المحفوظة */}}
+  AUTH.me={emp:j.emp,name:j.name,admin:j.admin};authSave();acctPaint(j.pending||0,1);pushResync()}catch(e){/* بدون اتصال: نكمل بالجلسة المحفوظة */}}
 /* ---------- تنبيهات وصول الرحلات على الجوال (Web Push) ----------
    الخادم (وسيط ADS-B) يرسل: قبل الوصول بـ10 دقائق ← قبل 5 دقائق ← هبطت. الآيفون يحتاج فتح التطبيق من الشاشة الرئيسية. */
 const VAPID_PUB="BMomC-1J0x_63i0lye7d6qV8aAH5loPmXSaC_xGo7ktQWBpgdcuSsBTwjRb62gbG1VUQIHWTaScBS0QpvooTufI";
@@ -1149,7 +1163,7 @@ async function admRender(){const me=AUTH.me||{};let h=`<div class="adm-s"><h3><s
   if(!me.admin){$("admB").innerHTML=h;admBind();return}
   $("admB").innerHTML=h+'<div class="adm-s"><div class="amsg">جاري التحميل…</div></div>';admBind();
   try{ADM=await admCall("list");await csSync(true);await dcpLoad(true)}catch(e){$("admB").lastChild.innerHTML='<div class="amsg">تعذّر التحميل، تأكد من الاتصال.</div>';return}
-  const emps=ADM.emps||[],pend=[];emps.forEach(e=>e.devices.forEach(d=>{if(d.status==="pending")pend.push({e,d})}));acctPaint(pend.length);
+  const emps=ADM.emps||[],pend=[];emps.forEach(e=>e.devices.forEach(d=>{if(d.status==="pending")pend.push({e,d})}));acctPaint(pend.length,1);
   h+=`<div class="adm-s"><h3>طلبات بانتظار موافقتك <span class="chip ${pend.length?"w":""}">${pend.length}</span></h3>${pend.length?pend.map(({e,d})=>`<div class="req"><div><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${d.first?'<span class="chip a">تفعيل حساب جديد</span>':'<span class="chip">جوال إضافي</span>'}<small>${escT(d.label)} · ${fdt(d.created)}</small></div><div class="row"><button class="abtn y" data-dv="${d.id}" data-st="approved">✅ موافقة</button><button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button></div></div>`).join(""):'<div class="amsg">ما فيه طلبات حالياً.</div>'}</div>`;
   {const C=(await mvtMailCfg())||{},L=a=>escT(mailList(a).join("\n"));h+=`<div class="adm-s"><h3>إيميلات برقيات MVT · طيران ناس</h3><div class="amsg">زر «📧 أوت لوك» في الكوردنيتر شيت يفتح مسودة فيها هذي العناوين، والموظف يراجعها ويرسلها من أوت لوك. إيميل واحد في كل سطر.</div>
     <div class="amsg">إلى</div><textarea id="aMvtTo" dir="ltr" placeholder="name@flynas.com">${L(C.to)}</textarea><div class="amsg">نسخة (CC)</div><textarea id="aMvtCc" dir="ltr" style="min-height:60px">${L(C.cc)}</textarea>
@@ -1199,7 +1213,7 @@ function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.d
 /* التشغيل بعد تحميل باقي السكربتات (تحتاج $ و escT) */
 addEventListener("DOMContentLoaded",()=>{$("acctBtn").onclick=openAcct;$("admBack").onclick=()=>{$("adm").hidden=true};
   if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{acctPaint(0);authCheck();setTimeout(pushOffer,4000);if(/[?&]acct/.test(location.search))openAcct()}
-  setInterval(()=>{if(!document.hidden)authCheck()},3*60e3);document.addEventListener("visibilitychange",()=>{if(!document.hidden)authCheck()})});
+  let acT=0;setInterval(()=>{if(document.hidden)return;const adm=AUTH.me&&AUTH.me.admin;if(adm||Date.now()-acT>3*60e3){acT=Date.now();authCheck()}},45e3);document.addEventListener("visibilitychange",()=>{if(!document.hidden)authCheck()})});
 </script>
 <script>
 const DAYS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
