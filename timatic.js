@@ -61,7 +61,9 @@ const VOC=("VISA VISAS REQUIRED NOT EXCEPT PASSPORT PASSPORTS PASSENGER PASSENGE
 const VSET=new Set(VOC);CTRY.forEach(c=>c.en.split(" ").forEach(w=>{if(w.length>3){VSET.add(w);VOC.push(w)}}));
 function fixWord(w){if(w.length<4||VSET.has(w)||!/^[A-Z]+$/.test(w))return w;const lim=w.length>=7?2:1;let best=w,bd=lim+1;
   for(const v of VOC){if(Math.abs(v.length-w.length)>lim)continue;const d=lev(w,v);if(d<bd){bd=d;best=v}}return best}
-function cleanLines(raw){return raw.split(/\n/).map(l=>{
+function cleanLines(raw){const lw=(raw.match(/[a-z]/g)||[]).length,up=(raw.match(/[A-Z]/g)||[]).length,soft=lw>up;
+  if(soft)return raw.split(/\n/).map(l=>l.replace(/[|‘’“”`~_¥»«•●]/g," ").replace(/\s+/g," ").trim().toUpperCase().replace(/\b[A-Z]+\b/g,fixWord)).filter(l=>l.length>2);
+  return raw.split(/\n/).map(l=>{
     /* ضجيج الحواف: كلمات قصيرة بحروف صغيرة قبل نص تيماتيك (تيماتيك كله حروف كبيرة) */
     let t=l.replace(/[|‘’“”`~_¥»«]/g," ").replace(/\s+/g," ").trim();const tk=t.split(" ");let i=0;
     while(i<tk.length&&i<4&&(/[a-z]/.test(tk[i])&&tk[i].length<=5||/^[^A-Za-z0-9\-(]+$/.test(tk[i])))i++;
@@ -91,7 +93,7 @@ function parseVisaText(raw,skip){const T=String(raw||"").toUpperCase().replace(/
   return{type:isRes&&!isVisa?"res":"visa",kind,raw:T,ocr:true,state:c?c.a3:"",c,num:vn?vn[1]:"",pass:pn?pn[1]:"",sur:nm?nm[1]:"",giv:"",exp,dates:all,lines:["",""]}}
 
 /* ---------- تحليل نص تيماتيك ---------- */
-function parseTim(lines){
+function parseTim(lines,ov){
   const T={hdr:{},secs:[],raw:lines.join("\n")};const all=lines.join("\n");
   const g=(re)=>{const m=all.match(re);return m?m[1].trim():""};
   T.hdr.nat=cFind(g(/N?ATIONAL\s+([A-Z ]{3,30}?)\s*[([{]/))||cFind(g(/NATIONAL[I1]?TY:?\s*([A-Z]+(?: [A-Z]+)?)\s/));
@@ -99,6 +101,8 @@ function parseTim(lines){
   T.hdr.emb=cFind(g(/BARKATION\s+([A-Z ]{3,30}?)\s*[([{]/));
   T.hdr.tr=cFind(g(/^\s*\W?\s*T?RANS[I1]T\s+([A-Z ]{3,30}?)\s*[([{]/m));
   T.hdr.dst=cFind(g(/^\s*\W?\s*D?ESTINATION\s+([A-Z ]{3,30}?)\s*[([{]/m))||cFind(g(/DESTINATION:?\s*([A-Z ]{3,30})/));
+  /* من جسر IATA: اللي ما انقرأ من الشاشة نكمله من اختيار الموظف */
+  if(ov)["nat","dst","tr","res"].forEach(k=>{if(!T.hdr[k]&&ov[k])T.hdr[k]=ov[k]});
   const dm=all.match(/T[I1]MAT[I1]C-?\d?\s*\/\s*(\d{2}[A-Z0O]{3}\d{2})/);T.hdr.date=dm?dm[1]:"";
   /* أقسام: VISA TRANSIT X · VISA DESTINATION X · HEALTH ... */
   let cur=null;
@@ -213,15 +217,31 @@ function parseBooking(txt){const T=txt.toUpperCase();const r={codes:[],flights:[
   const now=Date.now();r.dates=datesIn(T).map(x=>x.d).filter(d=>d-now>-400*864e5&&d-now<730*864e5);return r}
 
 /* ---------- الحالة والواجهة ---------- */
-const SLOTS=[{k:"tim",t:"شاشة TIMATIC",s:"صوّر الشاشة من أماديوس — صورة أو أكثر لو النص طويل",ic:"🖥️",multi:true},{k:"pp",t:"الجواز",s:"صفحة البيانات كاملة مع الشريط السفلي <<<",ic:"🛂"},
+const SLOTS=[{k:"tim",t:"شاشة TIMATIC",s:"من أماديوس أو موقع IATA — صورة أو أكثر لو النص طويل",ic:"🖥️",multi:true},{k:"pp",t:"الجواز",s:"صفحة البيانات كاملة مع الشريط السفلي <<<",ic:"🛂"},
   {k:"vs",t:"الفيزا / الإقامة",s:"تأشيرة الوجهة أو الإقامة أو تأشيرة الخروج والعودة",ic:"🪪",multi:true},{k:"bk",t:"الحجز / التذكرة",s:"شاشة الحجز أو التذكرة الإلكترونية",ic:"🎫",multi:true}];
 const S={files:{tim:[],pp:[],vs:[],bk:[]},date:"",busy:false,res:null};
 let root=null;
 const todayISO=()=>{const d=new Date(Date.now()+3*3600e3);return d.toISOString().slice(0,10)};
 function mount(el){root=el;if(S.note==null)try{S.note=localStorage.getItem("ajf_tx_note")||""}catch(x){S.note=""}if(!S.date)S.date=todayISO();paint();if(S.res)relate()}
+/* ---------- جسر IATA Travel Centre: الموظف يعبّي الموقع بنفسه، والتطبيق يعطيه الكلمات الإنجليزية ---------- */
+const IATA_URL="https://www.iatatravelcentre.com/";
+const BRF=[{k:"nat",t:"جنسية الراكب",en:"Nationality"},{k:"from",t:"من",en:"From"},{k:"dst",t:"إلى (الوجهة)",en:"To"},{k:"tr",t:"ترانزيت (إن وجد)",en:"Transit / Multicity",opt:1},{k:"res",t:"مقيم في (إن وجد)",en:"Residence",opt:1}];
+const tCase=s=>String(s||"").toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase()).replace(/\bAnd\b/g,"and").replace(/\bOf\b/g,"of");
+let CSORT=null;const cOpts=v=>{if(!CSORT)CSORT=CTRY.slice().sort((a,b)=>a.ar.localeCompare(b.ar,"ar"));return`<option value="">—</option>`+CSORT.map(c=>`<option value="${c.a2}" ${c.a2===v?"selected":""}>${E(c.ar)}</option>`).join("")};
+function brOv(){const b=S.br||{};const o={};["nat","dst","tr","res"].forEach(k=>{if(b[k])o[k]=byA2(b[k])});return Object.keys(o).length?o:null}
+function brHTML(){const b=S.br||(S.br={from:"SA"});const any=BRF.some(f=>b[f.k]&&f.k!=="from");
+  return`<details class="tx-br" ${S.brOpen?"open":""}><summary>🌐 ما عندك أماديوس؟ استعلم من موقع IATA بالعربي</summary>
+    <p class="tx-br-s"><b>1</b> اختر بيانات الرحلة هنا بالعربي:</p>
+    <div class="tx-br-g">${BRF.map(f=>`<label><span>${f.t}</span><select data-br="${f.k}">${cOpts(b[f.k])}</select></label>`).join("")}</div>
+    <p class="tx-br-s"><b>2</b> افتح الموقع واختر في كل خانة الكلمة الإنجليزية اللي تحت (اضغطها تنسخ، والصقها في خانة البحث):</p>
+    <div class="tx-br-l">${any?BRF.filter(f=>b[f.k]).map(f=>{const c=byA2(b[f.k]);return`<button class="tx-br-c" data-cp="${E(tCase(c.en))}"><small>${f.en}</small><b dir="ltr">${E(tCase(c.en))}</b><i>${E(c.ar)}</i></button>`}).join("")+
+      `<div class="tx-br-c st"><small>Duration of stay</small><b>اختر مدة بقاء الراكب الفعلية</b></div>`+(b.tr?`<div class="tx-br-c st"><small>ترانزيت</small><b>اختر Multicity وأضف مدينة الترانزيت</b></div>`:""):`<div class="bd-empty">اختر الجنسية والوجهة أول</div>`}</div>
+    <a class="tx-br-go" href="${IATA_URL}" target="_blank" rel="noopener">افتح موقع IATA ↗</a>
+    <p class="tx-br-s"><b>3</b> صوّر صفحة النتيجة كاملة (أكثر من صورة لو طويلة) وارفعها في خانة «شاشة TIMATIC» تحت، ثم اضغط «اقرأ وحلّل». التطبيق يقرأها ويطلع الخلاصة بالعربي.</p>
+    <p class="tx-note">موقع IATA مجاني ومصدره تيماتيك نفسه، لكن أماديوس أدق وأشمل — استخدمه إذا متاح.</p></details>`}
 function paint(){if(!root)return;
   root.innerHTML=`<div class="tx-intro"><b>فحص وثائق الراكب</b><span>صوّر شاشة TIMATIC ووثائق الراكب، والتطبيق يقرأها ويطلع لك المطلوب بوضوح. الصور تُقرأ على جوالك فقط ولا تُرفع ولا تُحفظ.</span></div>
-  <div class="tx-slots">${SLOTS.map(sl=>{const n=S.files[sl.k].length;return`<div class="tx-slot ${n?"on":""}"><label><input type="file" accept="image/*" ${sl.multi?"multiple":""} data-slot="${sl.k}" hidden><i>${sl.ic}</i><b>${sl.t}</b><small>${n?`✓ ${n} صورة`:sl.s}</small></label>${n?`<button class="tx-x" data-clr="${sl.k}" aria-label="حذف">✕</button>`:""}</div>`}).join("")}</div>
+  ${brHTML()}<div class="tx-slots">${SLOTS.map(sl=>{const n=S.files[sl.k].length;return`<div class="tx-slot ${n?"on":""}"><label><input type="file" accept="image/*" ${sl.multi?"multiple":""} data-slot="${sl.k}" hidden><i>${sl.ic}</i><b>${sl.t}</b><small>${n?`✓ ${n} صورة`:sl.s}</small></label>${n?`<button class="tx-x" data-clr="${sl.k}" aria-label="حذف">✕</button>`:""}</div>`}).join("")}</div>
   <label class="tx-note-in"><span>📝 معلومات إضافية <small>(اختياري)</small></span><textarea id="txNote" rows="2" placeholder="مثال: معه تأشيرة عمل للإمارات، أو مقيم في قطر، أو مرافق لراكب — بدون الاسم ورقم الجواز">${E(S.note||"")}</textarea></label>
   <label class="tx-date"><span>تاريخ السفر</span><input type="date" id="txDate" value="${S.date}"></label>
   <button class="tx-go" id="txGo" ${S.busy||!S.files.tim.length&&!S.files.pp.length?"disabled":""}>${S.busy?"… جاري القراءة":"🔍 اقرأ وحلّل"}</button>
@@ -247,7 +267,7 @@ async function run(){if(S.busy)return;S.busy=true;S.res=null;S.ctx=null;S.aictx=
     prog(1,"تحليل…");
     /* دمج صور تيماتيك وحذف الأسطر المكررة بين الصور */
     const seen=new Set(),lines=[];txt.tim.forEach(t=>cleanLines(t).forEach(l=>{const k=l.replace(/[^A-Z]/g,"");if(k.length>8&&seen.has(k))return;seen.add(k);lines.push(l)}));
-    const T=lines.length?parseTim(lines):null;
+    const T=lines.length?parseTim(lines,brOv()):null;
     S.res=report(T,mrz,txt)}
   catch(e){console.error(e);S.res=`<div class="tx-err">تعذّرت القراءة: ${e.message==="lib"?"ما قدرنا نحمّل محرك القراءة — تأكد من الإنترنت.":"جرّب صورة أوضح."}</div>`}
   S.busy=false;paint();const r=root.querySelector("#txRes");if(r)r.scrollIntoView({behavior:"smooth",block:"start"});relate();
@@ -357,9 +377,13 @@ async function askAI(){const q=(S.aq||"").trim();if(q.length<2||S.abusy)return;S
   S.abusy=false;paintAI();const a=root&&root.querySelectorAll("#txAI .ax-a");if(a&&a.length)a[a.length-1].scrollIntoView({behavior:"smooth",block:"start"})}
 function onEv(e){const t=e.target;if(t.id==="txAQ"){S.aq=t.value;return}
   if(t.matches&&t.matches("input[data-slot]")){const k=t.dataset.slot,sl=SLOTS.find(s=>s.k===k);const fs=[...t.files];S.files[k]=sl.multi?S.files[k].concat(fs).slice(0,6):fs.slice(0,1);S.res=null;paint();return}
+  if(t.dataset&&t.dataset.br){S.br=S.br||{};S.br[t.dataset.br]=t.value;S.brOpen=true;paint();return}
   if(t.id==="txNote"){S.note=t.value;try{localStorage.setItem("ajf_tx_note",t.value)}catch(x){}return}
   if(t.id==="txDate"){S.date=t.value||todayISO();return}}
-function onClick(e){if(e.target.closest("#txAsk")){const ta=root.querySelector("#txAQ");if(ta)S.aq=ta.value;askAI();return}if(e.target.closest("#txAINew")){S.ai=[];S.aerr="";paintAI();return}
+function onClick(e){const cp=e.target.closest("[data-cp]");if(cp){const v=cp.dataset.cp;const done=()=>{const b=cp.querySelector("i");if(b){const o=b.textContent;b.textContent="✓ نُسخ";setTimeout(()=>b.textContent=o,1200)}};
+    if(navigator.clipboard)navigator.clipboard.writeText(v).then(done,()=>{});return}
+  const sm=e.target.closest(".tx-br>summary");if(sm){setTimeout(()=>{const d=sm.parentElement;S.brOpen=d.open},0)}
+if(e.target.closest("#txAsk")){const ta=root.querySelector("#txAQ");if(ta)S.aq=ta.value;askAI();return}if(e.target.closest("#txAINew")){S.ai=[];S.aerr="";paintAI();return}
   const c=e.target.closest("[data-clr]");if(c){S.files[c.dataset.clr]=[];S.res=null;paint();return}if(e.target.closest("#txGo"))run()}
 window.TIM={countries:CTRY,mount:el=>{mount(el);if(!el.__tx){el.__tx=1;el.addEventListener("change",onEv);el.addEventListener("input",onEv);el.addEventListener("click",onClick)}},
   /* للاختبار */_parse:(raw)=>parseTim(cleanLines(raw)),_mrz:parseMRZ,_bk:parseBooking,_vt:parseVisaText,_rep:(T,M,txt,f)=>{if(f)S.files=f;if(!S.date)S.date=todayISO();return report(T,M,txt)}};
