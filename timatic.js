@@ -31,6 +31,13 @@ function prep(im,mode){const W0=im.naturalWidth,H0=im.naturalHeight,target=mode=
   const sc=255/Math.max(1,hi-lo);
   for(let i=0,j=0;i<p.length;i+=4,j++){let v=(g[j]-lo)*sc;v=v<0?0:v>255?255:v;if(mode==="screen")v=v>150?255:0;p[i]=p[i+1]=p[i+2]=v}
   x.putImageData(d,0,0);return cv}
+/* قصّ أسفل الصورة (منطقة الشريط) مع تكبير وتباين — bin: أبيض/أسود بعتبة محلية */
+function prepMRZ(im,fr,target,bin){const W0=im.naturalWidth,H0=im.naturalHeight,s=Math.min(3,target/Math.max(W0,1)),W=Math.round(W0*s),H=Math.round(H0*fr*s);
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d",{willReadFrequently:true});x.drawImage(im,0,H0*(1-fr),W0,H0*fr,0,0,W,H);
+  const d=x.getImageData(0,0,W,H),p=d.data,g=new Float32Array(W*H);for(let i=0,j=0;i<p.length;i+=4,j++)g[j]=p[i]*.299+p[i+1]*.587+p[i+2]*.114;
+  let lo=255,hi=0;for(let j=0;j<g.length;j+=7){if(g[j]<lo)lo=g[j];if(g[j]>hi)hi=g[j]}const sc=255/Math.max(1,hi-lo);
+  let bg=null;if(bin){bg=Float32Array.from(g);blur(bg,W,H,Math.max(8,Math.round(W/60)))}
+  for(let i=0,j=0;i<p.length;i+=4,j++){let v=bin?(g[j]<bg[j]-12?0:255):(g[j]-lo)*sc;v=v<0?0:v>255?255:v;p[i]=p[i+1]=p[i+2]=v}x.putImageData(d,0,0);return cv}
 function blur(g,W,H,r){const t=new Float32Array(g.length),n=2*r+1;
   for(let y=0;y<H;y++){let s=0;const o=y*W;for(let k=-r;k<=r;k++)s+=g[o+Math.min(W-1,Math.max(0,k))];for(let x=0;x<W;x++){t[o+x]=s/n;s+=g[o+Math.min(W-1,x+r+1)]-g[o+Math.max(0,x-r)]}}
   for(let x=0;x<W;x++){let s=0;for(let k=-r;k<=r;k++)s+=t[Math.min(H-1,Math.max(0,k))*W+x];for(let y=0;y<H;y++){g[y*W+x]=s/n;s+=t[Math.min(H-1,y+r+1)*W+x]-t[Math.max(0,y-r)*W+x]}}}
@@ -71,7 +78,8 @@ function guessC(txt,skip){const T=String(txt||"").toUpperCase();for(const[re,a2]
   const best=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];return best?byA2(best[0]):null}
 /* ---------- فيزا بدون شريط مقروء (تأشيرة إلكترونية مطبوعة / إذن دخول / إقامة) ---------- */
 function parseVisaText(raw,skip){const T=String(raw||"").toUpperCase().replace(/[|]/g," ");
-  const isRes=/RESIDEN(?:CE|T) (?:PERMIT|VISA|CARD)|\bIQAMA\b|EMIRATES ID|IDENTITY CARD/.test(T),isVisa=/\bV[I1]SA\b|E-?V[I1]SA|ENTRY PERMIT|VISIT VISA|TOURIST|ENTRY VISA|PERMIT NO/.test(T);
+  const isRes=/RESIDEN(?:CE|T) (?:PERMIT|VISA|CARD)|\bIQAMA\b|EMIRATES ID|IDENTITY CARD/.test(T),isVisa=/\bV[I1]SA\b|E-?V[I1]SA|ENTRY PERMIT|VISIT VISA|TOURIST|ENTRY VISA|PERMIT NO|EMPLOYMENT|WORK (?:VISA|PERMIT)|LABOU?R|PROFESSION|SPONSOR|EMPLOYER/.test(T);
+  const kind=/EMPLOYMENT|WORK (?:VISA|PERMIT)|LABOU?R|PROFESSION|EMPLOYER|SPONSOR/.test(T)?"عمل":/TOURIS/.test(T)?"سياحة":/VISIT/.test(T)?"زيارة":/TRANSIT/.test(T)?"ترانزيت":isRes?"إقامة":"";
   if(!isRes&&!isVisa&&T.replace(/[^A-Z]/g,"").length<40)return null;
   const c=guessC(T,skip);
   const all=datesIn(T).filter(x=>x.d.getUTCFullYear()>=2015&&x.d.getUTCFullYear()<=new Date().getUTCFullYear()+12);
@@ -80,7 +88,7 @@ function parseVisaText(raw,skip){const T=String(raw||"").toUpperCase().replace(/
   if(!exp&&all.length)exp=all.map(x=>x.d).sort((a,b)=>b-a)[0];
   const pn=T.match(/PASSPORT\s*(?:NO|NUMBER|#)?\.?\s*:?\s*([A-Z]{0,2}\d{6,9})/),vn=T.match(/(?:VISA|PERMIT|ENTRY PERMIT|FILE)\s*(?:NO|NUMBER|#)\.?\s*:?\s*([0-9\/]{6,20})/);
   const nm=T.match(/(?:FULL NAME|NAME)\s*:?\s*([A-Z]{2,}(?: [A-Z]{2,}){1,4})/);
-  return{type:isRes&&!isVisa?"res":"visa",ocr:true,state:c?c.a3:"",c,num:vn?vn[1]:"",pass:pn?pn[1]:"",sur:nm?nm[1]:"",giv:"",exp,dates:all,lines:["",""]}}
+  return{type:isRes&&!isVisa?"res":"visa",kind,raw:T,ocr:true,state:c?c.a3:"",c,num:vn?vn[1]:"",pass:pn?pn[1]:"",sur:nm?nm[1]:"",giv:"",exp,dates:all,lines:["",""]}}
 
 /* ---------- تحليل نص تيماتيك ---------- */
 function parseTim(lines){
@@ -130,7 +138,7 @@ function rules(s,T){const t=s.txt,out=[],cn=cAr(s.c),add=(lv,ar,src,sh)=>out.pus
   /* ممنوع الترانزيت لوجهات معيّنة */
   for(const m of t.matchAll(/NOT ALLOWED TO TRANSIT THROUGH [A-Z =•]+? WHEN T?\s?RAVEL+ING TO ([A-Z ]+?)[.•]/g)){const c=cFind(m[1]),hit=c&&T.hdr.dst&&c.a2===T.hdr.dst.a2;
     add(hit?"r":"i",`ممنوع الترانزيت عبر ${cn} إذا الوجهة <b>${cAr(c)||E(m[1])}</b>${hit?" — <b>وهي وجهة هذا الراكب!</b>":""}`,m[0])}
-  if(/NOT ALLOWED TO ENTER/.test(t))add("r","يوجد <b>منع دخول</b> لفئة من الركاب — اقرأ النص",near(/NOT ALLOWED TO ENTER/,220));
+  if(/NOT ALLOWED TO ENTER/.test(t))add("a","فيه <b>منع دخول لفئة معيّنة</b> من الركاب — تأكد إن الراكب مو منها (اقرأ النص تحت)",near(/NOT ALLOWED TO ENTER/,220));
   if(/RETURN OR ONWARD|RETURN\/ONWARD|ONWARD OR RETURN|RETURN TICKET/.test(t)&&!/CONFIRMED ONWARD/.test(t))add("a","لازم <b>تذكرة عودة أو مغادرة</b> مؤكدة",near(/RETURN OR ONWARD|RETURN\/ONWARD|ONWARD OR RETURN|RETURN TICKET/),"تذكرة عودة أو مغادرة مؤكدة");
   if(/HOTEL (?:BOOKING|RESERVATION)/.test(t)){const h=t.match(/TRANSIT TIME IS MORE THAN (\d+) HOURS/);add("a",`<b>حجز فندق</b>${h?` إذا الترانزيت أكثر من ${h[1]} ساعة`:""}`,near(/HOTEL (?:BOOKING|RESERVATION)/,160),"حجز فندق"+(h?` (لو الترانزيت أكثر من ${h[1]} ساعة)`:""))}
   if(/SUFFICIENT FUNDS/.test(t))add("a","قد يُطلب <b>ما يثبت كفاية المال</b>",near(/SUFFICIENT FUNDS/),"ما يثبت كفاية المال");
@@ -154,11 +162,26 @@ const toDig=s=>s.replace(/[A-Z]/g,c=>DIG[c]||c);
 const cd=s=>{const w=[7,3,1];let t=0;for(let i=0;i<s.length;i++){const c=s[i];const v=c==="<"?0:/\d/.test(c)?+c:c.charCodeAt(0)-55;t+=v*w[i%3]}return String(t%10)};
 const ymd=(s,fut)=>{if(!/^\d{6}$/.test(s))return null;let y=+s.slice(0,2);const m=+s.slice(2,4),d=+s.slice(4,6);if(m<1||m>12||d<1||d>31)return null;
   const now=new Date().getUTCFullYear()%100;y+=fut?2000:(y>now?1900:2000);return new Date(Date.UTC(y,m-1,d))};
-function mrzLines(txt){return txt.toUpperCase().split(/\n/).map(l=>l.replace(/\s+/g,"").replace(/[«‹(\[{]/g,"<").replace(/[^A-Z0-9<]/g,"")).filter(l=>l.length>=28&&(l.match(/</g)||[]).length>=2)}
-function parseMRZ(txt){const L=mrzLines(txt);
+function mrzLines(txt){return txt.toUpperCase().split(/\n/).map(l=>l.replace(/\s+/g,"").replace(/(?<=<)K(?=<)/g,"<").replace(/[«‹(\[{]/g,"<").replace(/[^A-Z0-9<]/g,"")).filter(l=>l.length>=28&&(l.match(/</g)||[]).length>=2)}
+/* تصحيح خانة بالرقم الضابط: نجرب تبديل حرف واحد لين يطابق */
+const okD=(g,k)=>{const d=ymd(g,k==="e");if(!d)return false;const y=d.getUTCFullYear(),n=new Date().getUTCFullYear();return k==="e"?y>=n-2&&y<=n+11:y<=n&&y>=n-100};
+const CONF={"0":"8696","1":"74","2":"7","3":"85","4":"1","5":"63","6":"508","7":"12","8":"3069","9":"0"};
+function fixCD(f,c,isDate){if(cd(f)===c)return f;const cands=[];
+  for(let i=0;i<f.length;i++)for(const d of CONF[f[i]]||""){if(d===f[i])continue;const g=f.slice(0,i)+d+f.slice(i+1);if(cd(g)===c&&(!isDate||okD(g,isDate)))cands.push(g)}
+  return cands.length===1?cands[0]:f}
+function l2Only(L){let best=null;
+  for(const l of L)for(let i=0;i+28<=l.length;i++){const x=l.slice(i,i+28),nat=x.slice(10,13).replace(/[0-9]/g,c=>({"0":"O","1":"I","5":"S","8":"B","2":"Z"})[c]);
+    if(!/^[A-Z<]{3}$/.test(nat)||!byA3(nat.replace(/</g,"")))continue;const dob=toDig(x.slice(13,19)),exp=toDig(x.slice(21,27));if(!/^\d{6}$/.test(dob)||!/^\d{6}$/.test(exp)||!/[MF<]/.test(x[20]))continue;
+    const ok={num:cd(x.slice(0,9))===toDig(x[9]),dob:cd(dob)===toDig(x[19]),exp:cd(exp)===toDig(x[27])},sc=Object.values(ok).filter(Boolean).length;
+    if(sc>=2&&(!best||sc>best.sc))best={sc,x,nat,dob,exp,ok}}
+  if(!best)return null;const x=best.x;
+  return{type:"passport",state:best.nat,sur:"",giv:"",num:x.slice(0,9).replace(/<+$/,""),nat:best.nat,dob:ymd(best.dob),sex:x[20]==="<"?"":x[20],exp:ymd(best.exp,true),ok:best.ok,lines:["",x]}}
+function parseMRZ(txt){const r=parseMRZ0(txt);if(r)return r;return l2Only(mrzLines(txt).map(l=>l.length>=28?l:"").filter(Boolean))}
+function parseMRZ0(txt){const L=mrzLines(txt);
   for(let i=0;i<L.length-1;i++){const a=L[i],b=L[i+1];
     if(/^[PV]/.test(a)&&a.length>=40&&b.length>=36){const l1=(a+"<".repeat(44)).slice(0,44),l2=(b+"<".repeat(44)).slice(0,44);
-      const num=l2.slice(0,9).replace(/<+$/,""),nat=l2.slice(10,13).replace(/[0-9]/g,c=>({"0":"O","1":"I","5":"S","8":"B","2":"Z"})[c]),dob=toDig(l2.slice(13,19)),sex=l2[20],exp=toDig(l2.slice(21,27));
+      const nat=l2.slice(10,13).replace(/[0-9]/g,c=>({"0":"O","1":"I","5":"S","8":"B","2":"Z"})[c]),sex=l2[20];
+      const dob=fixCD(toDig(l2.slice(13,19)),toDig(l2[19]),"d"),exp=fixCD(toDig(l2.slice(21,27)),toDig(l2[27]),"e"),num=l2.slice(0,9).replace(/<+$/,"");
       const nm=l1.slice(5).split("<<"),sur=nm[0].replace(/</g," ").trim(),giv=(nm.slice(1).join(" ")).replace(/</g," ").replace(/\s+/g," ").trim().split(" ").filter((w,i)=>i===0||w.length>1&&!/^[CLKE]{3,}$/.test(w)).join(" ");
       const ok={num:cd(l2.slice(0,9))===toDig(l2[9]),dob:cd(dob)===toDig(l2[19]),exp:cd(exp)===toDig(l2[27])};
       return{type:a[0]==="V"?"visa":"passport",state:l1.slice(2,5).replace(/</g,""),sur,giv,num,nat,dob:ymd(dob),sex:sex==="<"?"":sex,exp:ymd(exp,true),ok,lines:[l1,l2]}}
@@ -202,9 +225,9 @@ function paint(){if(!root)return;
   <label class="tx-date"><span>تاريخ السفر</span><input type="date" id="txDate" value="${S.date}"></label>
   <button class="tx-go" id="txGo" ${S.busy||!S.files.tim.length&&!S.files.pp.length?"disabled":""}>${S.busy?"… جاري القراءة":"🔍 اقرأ وحلّل"}</button>
   <div class="tx-prog" id="txProg" ${S.busy?"":"hidden"}><i id="txBar"></i><span id="txPT"></span></div>
-  <div id="txRes">${S.res?S.res:""}</div>`}
+  <div id="txRes">${S.res?S.res:""}</div>`;paintAI()}
 function prog(p,t){const b=root&&root.querySelector("#txBar"),s=root&&root.querySelector("#txPT");if(b)b.style.width=Math.round(p*100)+"%";if(s)s.textContent=t}
-async function run(){if(S.busy)return;S.busy=true;S.res=null;paint();
+async function run(){if(S.busy)return;S.busy=true;S.res=null;S.ai=[];S.aerr="";S.aq="";paint();
   const jobs=[];SLOTS.forEach(sl=>S.files[sl.k].forEach((f,i)=>jobs.push({k:sl.k,f,i})));const txt={tim:[],pp:[],vs:[],bk:[]},mrz={pp:null,vs:[]};
   try{prog(.02,"تحميل محرك القراءة… (أول مرة فقط ~4MB)");await getWorker(m=>{if(m.status==="loading language traineddata")prog(.05,"تحميل لغة القراءة…")});
     for(let j=0;j<jobs.length;j++){const J=jobs[j],lbl=SLOTS.find(s=>s.k===J.k).t;prog((j+.1)/jobs.length,`قراءة ${lbl} (${j+1}/${jobs.length})…`);
@@ -212,9 +235,12 @@ async function run(){if(S.busy)return;S.busy=true;S.res=null;paint();
       if(J.k==="tim"){txt.tim.push(await ocr(prep(im,"screen"),6))}
       else{const t1=await ocr(prep(im,"doc"),J.k==="bk"?4:3);txt[J.k].push(t1);
         if(J.k==="pp"||J.k==="vs"){let m=parseMRZ(t1);
-          if(!m||!m.ok.exp){/* محاولة ثانية على الثلث السفلي فقط بحروف الشريط */const cv=prep(im,"doc"),h=Math.round(cv.height*.38),c2=document.createElement("canvas");c2.width=cv.width;c2.height=h;c2.getContext("2d").drawImage(cv,0,cv.height-h,cv.width,h,0,0,cv.width,h);
-            const w=await getWorker();await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<",tessedit_pageseg_mode:"6"});const t2=(await w.recognize(c2)).data.text||"";await w.setParameters({tessedit_char_whitelist:""});
-            const m2=parseMRZ(t2);if(m2&&(!m||Object.values(m2.ok).filter(Boolean).length>Object.values(m.ok).filter(Boolean).length))m=m2}
+          const good=m=>m&&Object.values(m.ok).every(Boolean),score=m=>m?Object.values(m.ok).filter(Boolean).length:-1;
+          /* محاولات إضافية على أسفل الصورة بحروف الشريط فقط، بقصّات ودقة وعتبات مختلفة لين تطابق الأرقام الضابطة */
+          const tries=[[.38,"doc",0],[.28,"hi",0],[.5,"hi",1],[.22,"hi",1]];
+          for(let k=0;k<tries.length&&!good(m);k++){const[fr,md,bin]=tries[k];prog((j+.3+k*.15)/jobs.length,`قراءة ${lbl} — محاولة ${k+2}…`);
+            const cv=prepMRZ(im,fr,md==="hi"?3000:2000,bin);const w=await getWorker();await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<",tessedit_pageseg_mode:"6"});
+            const t2=(await w.recognize(cv)).data.text||"";await w.setParameters({tessedit_char_whitelist:""});const m2=parseMRZ(t2);if(score(m2)>score(m)){if(m&&m2&&!m2.sur&&m.sur){m2.sur=m.sur;m2.giv=m.giv}m=m2}}
           if(m){if(J.k==="pp"&&m.type!=="visa"&&!mrz.pp)mrz.pp=m;else mrz.vs.push(m)}
           else if(J.k==="vs"){const v=parseVisaText(t1,mrz.pp?byA3(mrz.pp.nat):null);if(v)mrz.vs.push(v)}}}}
     prog(1,"تحليل…");
@@ -230,13 +256,14 @@ const mBetween=(a,b)=>(b.getUTCFullYear()-a.getUTCFullYear())*12+(b.getUTCMonth(
 function report(T,M,txt){S.ctx={T,P:M.pp,B:null};const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r:3,a:2,i:1,g:0};
   const SM={pp:null,vs:null,bk:null,tim:null,block:[],cond:[],look:[]},st=(k,m,t)=>{SM[k]={m,t}},cond=x=>{if(!SM.cond.includes(x))SM.cond.push(x)};
   const ask=(lv,ar)=>chk.push({lv,ar});
-  const P=M.pp,nat=P?byA3(P.nat):null;
+  const P=M.pp,nat=P?byA3(P.nat):null,natC=nat||(T&&T.hdr.nat)||null;
+  M.vs.forEach(v=>{if(v.ocr&&natC&&v.c&&v.c.a2===natC.a2){v.c=guessC(v.raw,natC);v.state=v.c?v.c.a3:""}});
   /* 1) الجواز */
   if(P){if(P.exp&&P.exp<travel){ask("r",`<b>الجواز منتهي</b> (${fD(P.exp)}) — لا يُقبل للسفر`);st("pp","✗",`منتهي (${fD(P.exp)})`);SM.block.push("الجواز منتهي")}
     else if(P.exp)st("pp",P.ok.exp?"✓":"⚠️",`ساري لين ${fD(P.exp)} · باقي ${mBetween(travel,P.exp)} شهر${P.ok.exp?"":" — تأكد من التاريخ بعينك"}`);else st("pp","⚠️","تاريخ الانتهاء ما انقرأ — تأكد بعينك");
     if(!P.ok.exp||!P.ok.num)SM.look.push("رقم الجواز وتاريخ انتهائه");
     if(!P.ok.exp||!P.ok.num)ask("a","قراءة الشريط السفلي للجواز <b>غير مؤكدة</b> — طابق رقم الجواز وتاريخ الانتهاء بعينك");
-    if(T&&T.hdr.nat&&nat&&T.hdr.nat.a2!==nat.a2)ask("r",`<b>الجنسية في شاشة تيماتيك (${T.hdr.nat.ar}) غير جنسية الجواز (${nat.ar})</b> — أعد الاستعلام بالجنسية الصحيحة`);SM.block.push("جنسية الاستعلام في تيماتيك غير جنسية الجواز — أعد الاستعلام")}
+    if(T&&T.hdr.nat&&nat&&T.hdr.nat.a2!==nat.a2){ask("r",`<b>الجنسية في شاشة تيماتيك (${T.hdr.nat.ar}) غير جنسية الجواز (${nat.ar})</b> — أعد الاستعلام بالجنسية الصحيحة`);SM.block.push("جنسية الاستعلام في تيماتيك غير جنسية الجواز — أعد الاستعلام")}}
   else if(S.files.pp.length){ask("a","ما قدرت أقرأ الشريط السفلي للجواز — صوّر صفحة البيانات كاملة ومستقيمة بدون لمعة");st("pp","⚠️","مرفق لكن ما انقرأ — تأكد من الصلاحية بعينك");cond("جواز ساري (تأكد بعينك)")}
   else{st("pp","—","لم يُرفق");cond("جواز ساري")}
   /* 2) شروط تيماتيك */
@@ -249,7 +276,7 @@ function report(T,M,txt){S.ctx={T,P:M.pp,B:null};const travel=new Date(S.date+"T
       if(vn&&!vr){st("vs","✓",`غير مطلوبة لدخول ${cn}`);return}if(!vr&&!vx)return;
       const v=vsOf(s.c);
       if(v){if(v.exp&&v.exp<travel){ask("r",`تأشيرة ${cn} <b>منتهية</b> (${fD(v.exp)})`);st("vs","✗",`تأشيرة ${cn} منتهية (${fD(v.exp)})`);SM.block.push(`تأشيرة ${cn} منتهية`)}
-        else if(v.exp){ask("g",`تأشيرة ${cn} موجودة وسارية لين ${fD(v.exp)} ✓`);st("vs",v.ocr?"✓":"✓",`تأشيرة ${cn} سارية لين ${fD(v.exp)}${v.ocr?" (قراءة نصية — طابقها بعينك)":""}`);if(v.ocr)SM.look.push("تاريخ التأشيرة واسم الراكب فيها")}
+        else if(v.exp){ask("g",`تأشيرة ${cn} موجودة وسارية لين ${fD(v.exp)} ✓`);st("vs","✓",`تأشيرة ${v.kind?v.kind+" ":""}${cn} سارية لين ${fD(v.exp)}${v.ocr?" (قراءة نصية — طابقها بعينك)":""}`);if(v.ocr)SM.look.push("تاريخ التأشيرة واسم الراكب فيها")}
         else{ask("a",`تأشيرة ${cn} <b>مرفقة</b> لكن تاريخ انتهائها ما انقرأ — تأكد بعينك`);st("vs","⚠️",`تأشيرة ${cn} مرفقة — تأكد من تاريخ الانتهاء بعينك`);SM.look.push(`تاريخ انتهاء تأشيرة ${cn}`)}
         const vp=v.ocr?v.pass:v.num;if(P&&vp&&P.num&&vp!==P.num&&!(v.lines[1]||"").includes(P.num)){ask("a","رقم الجواز في التأشيرة <b>ما يطابق</b> الجواز — تأكد إنها على الجواز الحالي");SM.look.push("رقم الجواز في التأشيرة")}}
       else if(vx){st("vs","⚠️",`تأشيرة ${cn} مطلوبة إلا بشروط — ما فيه تأشيرة مرفقة`)}
@@ -258,6 +285,7 @@ function report(T,M,txt){S.ctx={T,P:M.pp,B:null};const travel=new Date(S.date+"T
         st("vs","✗",other?`المرفقة ${other.c?"لـ"+other.c.ar:"غير واضحة"} — تأشيرة ${cn} غير مؤكدة`:`تأشيرة ${cn} مطلوبة — ${S.files.vs.length?"الصورة ما انقرأت":"غير مرفقة"}`);cond(`تأشيرة ${cn} سارية`)}});
     allIt.filter(i=>i.lv==="r"&&!/تأشيرة .* مطلوبة/.test(i.ar)).forEach(i=>ask("r",i.ar));
     allIt.filter(i=>i.lv==="r"&&!/تأشيرة .* مطلوبة/.test(i.ar)).forEach(i=>SM.block.push(i.ar.replace(/<[^>]+>/g,"")));
+    if(allIt.some(i=>/منع دخول لفئة/.test(i.ar)))SM.look.push("إن الراكب مو من الفئة الممنوعة من الدخول");
     allIt.filter(i=>i.lv==="a"&&!/الجواز لازم يكون/.test(i.ar)).forEach(i=>{ask("a",i.ar);if(i.sh&&!(/تأشيرة/.test(i.sh)&&SM.vs&&(SM.vs.m==="✓"||SM.cond.some(c=>/تأشيرة/.test(c)))))cond(i.sh)});
     st("tim","✓",`مقروءة${T.hdr.dst?" — الوجهة "+T.hdr.dst.ar:""}${T.hdr.tr?" · ترانزيت "+T.hdr.tr.ar:""}`);
     if(T.hdr.res&&T.hdr.res.a2==="SA"&&nat&&nat.a2!=="SA")ask("i","مقيم في السعودية: تأكد من <b>تأشيرة خروج وعودة أو خروج نهائي</b> سارية (تتحقق منها الجوازات)")}
@@ -286,22 +314,50 @@ function report(T,M,txt){S.ctx={T,P:M.pp,B:null};const travel=new Date(S.date+"T
   const docP=P?`<div class="tx-doc"><h6>🛂 الجواز ${P.ok.exp&&P.ok.num?'<em class="g">مقروء ✓</em>':'<em class="a">تأكد بعينك</em>'}</h6><div class="kv">
     <span>الاسم</span><b dir="ltr">${E(P.sur)} / ${E(P.giv)}</b><span>رقم الجواز</span><b dir="ltr">${E(P.num)}</b><span>الجنسية</span><b>${nat?nat.ar:E(P.nat)}</b><span>الميلاد</span><b dir="ltr">${fD(P.dob)}</b>
     <span>الانتهاء</span><b dir="ltr" class="${P.exp&&P.exp<travel?"r":""}">${fD(P.exp)}${P.exp&&P.exp>=travel?` · باقي ${mBetween(travel,P.exp)} شهر`:""}</b></div></div>`:"";
-  const docV=M.vs.filter(v=>v.type!=="passport").map(v=>`<div class="tx-doc"><h6>🪪 ${v.type==="visa"?"تأشيرة "+cAr(byA3(v.state)):"بطاقة / إقامة "+cAr(byA3(v.state))}${v.ocr?' <em class="a">قراءة نصية — طابق بعينك</em>':""}</h6><div class="kv">${v.sur?`<span>الاسم</span><b dir="ltr">${E(v.sur)}${v.giv?" / "+E(v.giv):""}</b>`:""}${v.num?`<span>رقم الوثيقة</span><b dir="ltr">${E(v.num)}</b>`:""}${v.pass?`<span>رقم الجواز</span><b dir="ltr">${E(v.pass)}</b>`:""}<span>الانتهاء</span><b dir="ltr" class="${v.exp&&v.exp<travel?"r":""}">${fD(v.exp)}</b></div></div>`).join("")+
+  const docV=M.vs.filter(v=>v.type!=="passport").map(v=>`<div class="tx-doc"><h6>🪪 ${v.type==="visa"?"تأشيرة "+(v.kind?v.kind+" ":"")+cAr(byA3(v.state)):"بطاقة / إقامة "+cAr(byA3(v.state))}${v.ocr?' <em class="a">قراءة نصية — طابق بعينك</em>':""}</h6><div class="kv">${v.sur?`<span>الاسم</span><b dir="ltr">${E(v.sur)}${v.giv?" / "+E(v.giv):""}</b>`:""}${v.num?`<span>رقم الوثيقة</span><b dir="ltr">${E(v.num)}</b>`:""}${v.pass?`<span>رقم الجواز</span><b dir="ltr">${E(v.pass)}</b>`:""}<span>الانتهاء</span><b dir="ltr" class="${v.exp&&v.exp<travel?"r":""}">${fD(v.exp)}</b></div></div>`).join("")+
     (txt.vs.length&&!M.vs.length?`<div class="tx-doc"><h6>🪪 الفيزا / الإقامة</h6><p>ما فيها شريط مقروء آلياً. التواريخ اللي قدرت أقرأها: ${datesIn(txt.vs.join("\n")).map(x=>`<b dir="ltr">${fD(x.d)}</b>${x.h?` (${x.h})`:""}`).join(" · ")||"—"} — تأكد من تاريخ الانتهاء بعينك.</p></div>`:"");
   const docB=B?`<div class="tx-doc"><h6>🎫 الحجز${B.pnr?` <em dir="ltr">${E(B.pnr)}</em>`:""}</h6><div class="kv">${B.names[0]?`<span>الاسم</span><b dir="ltr">${E(B.names[0].sur)} / ${E(B.names[0].giv)}</b>`:""}<span>المسار</span><b dir="ltr">${B.codes.join(" → ")||"—"}</b><span>الرحلات</span><b dir="ltr">${B.flights.slice(0,6).join(" · ")||"—"}</b>${B.dates.length?`<span>التواريخ</span><b dir="ltr">${B.dates.slice(0,4).map(fD).join(" · ")}</b>`:""}</div></div>`:"";
   const secs=T?T.secs.map(s=>`<details class="tx-sec" ${s.kind==="dst"?"open":""}><summary>${s.health?"🩺 الصحة":s.kind==="tr"?"🔁 ترانزيت":"🎯 الوجهة"} · <b>${cAr(s.c)}</b></summary>
     ${s.items.length?s.items.map(i=>`<div class="tx-it ${i.lv}"><p>${i.ar}</p>${i.src?`<small dir="ltr">${E(i.src)}</small>`:""}</div>`).join(""):`<p class="tx-m">ما طلعت بنود واضحة — راجع النص.</p>`}
     <details class="tx-raw"><summary>النص المقروء</summary><pre dir="ltr">${E(s.lines.join("\n"))}</pre></details></details>`).join(""):"";
+  const strip=h=>String(h).replace(/<[^>]+>/g,"").replace(/&[a-z#0-9]+;/g," ");
+  S.aictx=["تاريخ السفر: "+fD(travel),
+    T?`من شاشة TIMATIC: الجنسية ${cAr(T.hdr.nat)} · الإقامة ${cAr(T.hdr.res)} · من ${cAr(T.hdr.emb)} · ترانزيت ${cAr(T.hdr.tr)} · الوجهة ${cAr(T.hdr.dst)}`:"ما فيه شاشة TIMATIC مقروءة",
+    P?`الجواز (قراءة آلية): جنسية ${nat?nat.ar:P.nat} · ينتهي ${fD(P.exp)}${P.ok.exp?"":" (غير مؤكد)"}`:"الجواز: "+(S.files.pp.length?"مرفق لكن ما انقرأ":"لم يُرفق"),
+    M.vs.filter(v=>v.type!=="passport").map(v=>`${v.type==="res"?"إقامة":"تأشيرة"} ${v.kind||""} (قراءة آلية): دولة ${v.c?v.c.ar:cAr(byA3(v.state))} · تنتهي ${fD(v.exp)}`).join("\n")||("التأشيرة/الإقامة: "+(S.files.vs.length?"مرفقة لكن ما انقرأت":"لم تُرفق")),
+    B?`الحجز: المسار ${B.codes.join("-")||"؟"} · الرحلات ${B.flights.slice(0,4).join(" ")||"؟"}`:"الحجز: لم يُرفق",
+    "ملاحظات التحليل الآلي:\n"+chk.map(c=>"- "+strip(c.ar)).join("\n"),
+    "حكم التحليل الآلي: "+strip(FV.t+" "+FV.d),
+    T?"نص شاشة TIMATIC:\n"+T.secs.map(s=>`[${s.health?"HEALTH":s.kind==="tr"?"TRANSIT":"DESTINATION"} ${s.c?s.c.en:""}]\n`+s.lines.join("\n")).join("\n\n"):""].filter(Boolean).join("\n");
   return`<div class="tx-v ${V.c}">${V.t}</div>${trip}
     ${chk.length?`<div class="tx-chk"><h5>انتبه / اطلب من الراكب</h5>${chk.map((c,i)=>`<div class="${c.lv}"><i>${i+1}</i><p>${c.ar}</p></div>`).join("")}</div>`:""}
     ${docP}${docV}${docB}${secs}
     <div id="txCirc"></div>
     ${sumH}
+    <div id="txAI"></div>
     <p class="tx-note">الخلاصة قراءة آلية للمساعدة فقط — القرار النهائي حسب شاشة TIMATIC في أماديوس. لو فيه شك اقرأ النص الإنجليزي تحت كل بند.</p>`}
-function onEv(e){const t=e.target;
+/* ---------- المساعد الذكي: يكمل التحليل بكلام الموظف (Gemini عبر دالة ajf-dc) — بدون أسماء أو أرقام وثائق ---------- */
+const fmtA=t=>E(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ").replace(/\n/g,"<br>");
+function paintAI(){const el=root&&root.querySelector("#txAI");if(!el||!S.res)return;const T=S.ai||[];
+  el.innerHTML=`<div class="tx-ai"><h5>🤖 المساعد الذكي <small>اكتب له الناقص أو الصحيح وبيكمل التحليل</small></h5>
+    ${T.map(t=>`<div class="ax-q">${E(t.q)}</div><div class="ax-a">${fmtA(t.a)}</div>`).join("")}
+    ${S.abusy?`<div class="ax-q">${E(S.pending||"")}</div><div class="bd-empty">… المساعد يراجع شاشة تيماتيك ووثائق الراكب (10–25 ثانية)</div>`:""}
+    ${S.aerr?`<div class="bd-empty">${S.aerr}</div>`:""}
+    <textarea id="txAQ" rows="3" placeholder="مثال: الراكبة معها تأشيرة عمل للإمارات سارية لين 20/03/2027، وجوازها ساري لين 05/2030">${E(S.aq||"")}</textarea>
+    <div class="tx-ai-b"><button class="tx-ai-go" id="txAsk" ${S.abusy?"disabled":""}>إرسال</button>${T.length?`<button class="tx-ai-new" id="txAINew">＋ محادثة جديدة</button>`:""}</div>
+    <p class="tx-note">ما يُرسل للمساعد اسم الراكب ولا أرقام وثائقه — فقط الجنسية والوجهة والتواريخ ونص تيماتيك. لا تكتب له الاسم أو رقم الجواز.</p></div>`}
+async function askAI(){const q=(S.aq||"").trim();if(q.length<2||S.abusy)return;S.abusy=true;S.aerr="";S.pending=q;S.aq="";paintAI();
+  try{const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},
+      body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"tim",q,ctx:S.aictx||"",h:(S.ai||[]).slice(-6)})});
+    if(!r.ok)throw new Error(r.status===404?"nofn":"fn");const j=await r.json();if(j.s!=="ok")throw new Error(j.s||"err");
+    if(!j.answer||/^(bad)$/.test(j.s))throw new Error("old");S.ai=(S.ai||[]).concat([{q,a:j.answer}])}
+  catch(e){S.aq=q;const m=e.message;S.aerr=m==="nofn"?"دالة ajf-dc غير موجودة في Supabase.":m==="bad"||m==="old"?"المساعد يحتاج تحديث دالة ajf-dc في Supabase (المشرف).":m==="nokey"?"مفتاح Gemini ناقص في Supabase.":m==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":m==="out"?"سجّل دخولك أول.":"تعذّر الاتصال، تأكد من الإنترنت."}
+  S.abusy=false;paintAI();const a=root&&root.querySelectorAll("#txAI .ax-a");if(a&&a.length)a[a.length-1].scrollIntoView({behavior:"smooth",block:"start"})}
+function onEv(e){const t=e.target;if(t.id==="txAQ"){S.aq=t.value;return}
   if(t.matches&&t.matches("input[data-slot]")){const k=t.dataset.slot,sl=SLOTS.find(s=>s.k===k);const fs=[...t.files];S.files[k]=sl.multi?S.files[k].concat(fs).slice(0,6):fs.slice(0,1);S.res=null;paint();return}
   if(t.id==="txDate"){S.date=t.value||todayISO();return}}
-function onClick(e){const c=e.target.closest("[data-clr]");if(c){S.files[c.dataset.clr]=[];S.res=null;paint();return}if(e.target.closest("#txGo"))run()}
-window.TIM={countries:CTRY,mount:el=>{mount(el);if(!el.__tx){el.__tx=1;el.addEventListener("change",onEv);el.addEventListener("click",onClick)}},
+function onClick(e){if(e.target.closest("#txAsk")){const ta=root.querySelector("#txAQ");if(ta)S.aq=ta.value;askAI();return}if(e.target.closest("#txAINew")){S.ai=[];S.aerr="";paintAI();return}
+  const c=e.target.closest("[data-clr]");if(c){S.files[c.dataset.clr]=[];S.res=null;paint();return}if(e.target.closest("#txGo"))run()}
+window.TIM={countries:CTRY,mount:el=>{mount(el);if(!el.__tx){el.__tx=1;el.addEventListener("change",onEv);el.addEventListener("input",onEv);el.addEventListener("click",onClick)}},
   /* للاختبار */_parse:(raw)=>parseTim(cleanLines(raw)),_mrz:parseMRZ,_bk:parseBooking,_vt:parseVisaText,_rep:(T,M,txt,f)=>{if(f)S.files=f;if(!S.date)S.date=todayISO();return report(T,M,txt)}};
 })();
