@@ -253,7 +253,7 @@ async function run(){if(S.busy)return;S.busy=true;S.res=null;S.ai=[];S.aerr="";S
 function relate(){const el=root&&root.querySelector("#txCirc");if(el&&S.ctx&&window.CIRCM)CIRCM.related(S.ctx,el)}
 const fD=d=>d?`${String(d.getUTCDate()).padStart(2,"0")}/${String(d.getUTCMonth()+1).padStart(2,"0")}/${d.getUTCFullYear()}`:"—";
 const mBetween=(a,b)=>(b.getUTCFullYear()-a.getUTCFullYear())*12+(b.getUTCMonth()-a.getUTCMonth())-(b.getUTCDate()<a.getUTCDate()?1:0);
-function report(T,M,txt){S.ctx={T,P:M.pp,B:null};const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r:3,a:2,i:1,g:0};
+function report(T,M,txt){S.ctx={T,P:M.pp,B:null,V:M.vs,date:S.date};const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r:3,a:2,i:1,g:0};
   const SM={pp:null,vs:null,bk:null,tim:null,block:[],cond:[],look:[]},st=(k,m,t)=>{SM[k]={m,t}},cond=x=>{if(!SM.cond.includes(x))SM.cond.push(x)};
   const ask=(lv,ar)=>chk.push({lv,ar});
   const P=M.pp,nat=P?byA3(P.nat):null,natC=nat||(T&&T.hdr.nat)||null;

@@ -317,23 +317,27 @@ function bind(el){if(el.__cx)return;el.__cx=1;
   el.addEventListener("input",e=>{const box=e.target.closest(".cx-ed");if(!box||!box.querySelector('[data-save="__new"]'))return;const o={};box.querySelectorAll("[data-f]").forEach(i=>o[i.dataset.f]=i.value);try{localStorage.setItem("ajf_cx_draft",JSON.stringify(o))}catch(x){}})}
 
 /* ---------- ربط مع فحص وثائق الراكب ---------- */
-let REL=null;
-async function related(ctx,el){if(!el||!AUTH.tok)return;el.innerHTML=`<div class="bd-sec"><span>📢 تعاميم تخص هذا الراكب</span></div><div class="bd-empty">… جاري البحث في التعاميم</div>`;
-  const T=ctx.T,B=ctx.B,P=ctx.P,cs=new Map();const addC=c=>{if(c&&c.a2)cs.set(c.a2,c)};
-  if(T){["nat","tr","dst","emb"].forEach(k=>{if(k!=="emb"||!T.hdr.dst)addC(T.hdr[k])});T.secs.forEach(s=>addC(s.c))}
-  if(P&&window.TIM){addC(TIM.countries.find(c=>c.a3===P.nat))}
-  cs.delete("SA");/* المغادرة من السعودية: ما نبحث بكلمة السعودية لأنها في كل التعاميم */
-  const words=[];cs.forEach(c=>{words.push(c.ar,c.en,c.a3)});if(B){B.codes.filter(x=>!["AJF","RUH","JED","DMM","MED","ELQ"].includes(x)).forEach(x=>words.push(x))}
-  if(!words.length){el.innerHTML="";return}
-  await loadSyn();const G=groupsBase(),alt=new Set();words.forEach(w=>{const n=NORM(w);if(!n)return;alt.add(n);G.forEach(g=>{if(g.has(n)||n.split(" ").every(p=>g.has(p)))g.forEach(x=>alt.add(x))})});
-  const grp=[[...alt].filter(n=>n.length>2).slice(0,60).map(n=>({n,k:SK(n)}))];
-  try{const j=await R("ajf_circ_search",{p_groups:grp,p_limit:8});REL=j.rows||[];
-    const td=T&&T.hdr.date?parseTd(T.hdr.date):null,re=rx(grp[0].map(a=>a.n));
-    el.innerHTML=`<div class="bd-sec"><span>📢 تعاميم تخص هذا الراكب</span><small>${REL.length}</small></div>`+(REL.length?REL.map(r=>{const nw=td&&r.cd&&new Date(r.cd+"T00:00:00Z")>=td;
-      const a=AI(r);return`<div class="ci cx ${nw?"new":""}"><div class="h"><div><b>${hl(a&&a.t||r.title,re)}</b><small>${fDate(r.cd||r.at)}</small></div>${nw?'<span class="cx-nw">أحدث من تيماتيك ⚠️</span>':r.has_file?'<span class="cx-pdf">PDF</span>':""}</div>${a&&a.s?`<div class="cx-sum">${E(a.s).replace(/\n/g,"<br>")}</div>`:`<p class="sn">${hl(snip(r.txt,re,220),re)}</p>`}
-        <div class="cact">${r.has_file?`<button class="cx-open" data-ropen="${E(r.id)}">📄 فتح الملف</button>`:""}</div></div>`}).join(""):`<div class="bd-empty">ما فيه تعاميم مرفوعة تخص ${[...cs.values()].map(c=>c.ar).join(" / ")}</div>`);
-    if(!el.__r){el.__r=1;el.addEventListener("click",e=>{const b=e.target.closest("[data-ropen]");if(b){e.stopPropagation();openFile(b.dataset.ropen,b)}})}}
-  catch(e){el.innerHTML=`<div class="bd-sec"><span>📢 التعاميم</span></div><div class="bd-empty">${E(errTxt(e))}</div>`}}
+let REL=null;const RELC=new Map();
+/* بدل عرض التعاميم: نسأل المساعد عن حالة الراكب ونعرض الخلاصة فقط */
+async function related(ctx,el){if(!el||!AUTH.tok)return;
+  const T=ctx.T,B=ctx.B,P=ctx.P,nm=c=>c&&(c.ar||c.en)||"";const cs=new Map();const addC=c=>{if(c&&c.a2)cs.set(c.a2,c)};
+  const nat=(P&&window.TIM&&TIM.countries.find(c=>c.a3===P.nat))||(T&&T.hdr.nat)||null;
+  if(T){["nat","tr","dst","emb"].forEach(k=>{if(k!=="emb"||!T.hdr.dst)addC(T.hdr[k])});T.secs.forEach(s=>addC(s.c))}addC(nat);
+  const vs=(ctx.V||[]).filter(v=>v.type!=="passport").map(v=>`${v.type==="res"?"إقامة":"تأشيرة"}${v.kind?" "+v.kind:""} ${nm(v.c)}`.trim());
+  const parts=[];if(nat)parts.push("الجنسية "+nm(nat));if(T&&T.hdr.dst)parts.push("الوجهة "+nm(T.hdr.dst));if(T&&T.hdr.tr)parts.push("ترانزيت "+nm(T.hdr.tr));
+  if(T&&T.hdr.res)parts.push("مقيم في "+nm(T.hdr.res));if(vs.length)parts.push("معه "+vs.join(" و"));
+  if(B&&B.codes.length)parts.push("المسار "+B.codes.slice(0,6).join("-"));if(ctx.date)parts.push("تاريخ السفر "+ctx.date);
+  if(!cs.size&&!parts.length){el.innerHTML="";return}
+  const head=`<div class="bd-sec"><span>📢 خلاصة التعاميم لهذا الراكب</span></div>`;
+  const q=`راكب مسافر من مطار الجوف: ${parts.join("، ")}. هل فيه تعميم مرفوع ينطبق على هذا الراكب تحديداً (جنسيته أو وجهته أو الترانزيت أو نوع تأشيرته)؟ اعتمد فقط التعاميم الخاصة بحالته وتجاهل الأدلة والتعاميم العامة اللي ما تخصه. إذا ما فيه تعميم يخصه قل بسطر واحد: لا يوجد تعميم يخص هذا الراكب. لا تكتب قسم خارج التعاميم ولا تنقل نص التعميم، فقط الخلاصة والمطلوب باختصار.`.slice(0,600);
+  if(RELC.has(q)){el.innerHTML=RELC.get(q);return}
+  el.innerHTML=head+`<div class="bd-empty">… جاري البحث في التعاميم (عادة 10–25 ثانية)</div>`;
+  try{const j=await F({action:"ask",q});
+    const t=String(j.answer||"").replace(/\s*\[[^\[\]]{1,40}\]/g,"").replace(/\*\*خارج التعاميم[\s\S]*$/,"").trim()||"لا يوجد تعميم يخص هذا الراكب.";
+    const none=/لا يوجد تعميم|ما فيه تعميم|ما فيه تعاميم/.test(t)&&t.length<160;
+    const h=head+`<div class="ci cx"><div class="cx-sum">${none?"✓ لا يوجد تعميم يخص هذا الراكب":fmtAns(t)}</div><p class="tx-note">خلاصة آلية من التعاميم — للتفاصيل اسأل مساعد التعاميم.</p></div>`;
+    RELC.set(q,h);if(el.isConnected)el.innerHTML=h}
+  catch(e){el.innerHTML=head+`<div class="bd-empty">${e.message==="nokey"?"مساعد التعاميم غير مفعّل":e.message==="aierr"?"المساعد مشغول — أعد التحليل بعد شوي":E(errTxt(e))}</div>`}}
 const MO={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
 function parseTd(s){const m=String(s).replace(/O/g,"0").match(/^(\d{2})([A-Z0]{3})(\d{2})$/);if(!m)return null;const mo=MO[m[2].replace(/0/g,"O")];return mo==null?null:new Date(Date.UTC(2000+ +m[3],mo,+m[1]))}
 
