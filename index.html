@@ -823,6 +823,10 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .tx-sr i{grid-row:span 2;font:700 12px var(--body);font-style:normal;min-width:44px;text-align:center;padding:6px 4px;border-radius:9px;background:var(--line)}
 .tx-sr b{font-size:14px}.tx-sr span{font-size:13px;color:#c3cde0;line-height:1.55}
 .tx-sr.g{border-color:var(--go)}.tx-sr.g i{background:var(--go);color:#062417}.tx-sr.r{border-color:var(--warn)}.tx-sr.r i{background:var(--warn);color:#fff}.tx-sr.a{border-color:var(--amber)}.tx-sr.a i{background:var(--amber);color:#1a1205}
+.tx-sr i{font-size:22px;line-height:1;min-width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.tx-sr.g i{background:rgba(52,211,153,.15);color:var(--go);border:2px solid var(--go)}.tx-sr.r i{background:rgba(239,68,68,.15);color:var(--warn);border:2px solid var(--warn)}.tx-sr.a i{background:rgba(245,158,11,.15);color:var(--amber);border:2px solid var(--amber)}
+.tx-note-in{display:block;margin:10px 0}.tx-note-in span{display:block;font-size:14px;font-weight:700;margin-bottom:6px}.tx-note-in small{font-weight:400;opacity:.7}
+.tx-note-in textarea{width:100%;box-sizing:border-box;background:var(--raise);color:inherit;border:1px solid var(--line);border-radius:12px;padding:10px;font:15px var(--body);resize:vertical}
 .tx-look{margin:2px;font-size:12.5px;color:var(--amber);line-height:1.6}
 .tx-fv{padding:14px;border-radius:14px;text-align:center}.tx-fv b{font:700 18px/1.5 var(--display)}.tx-fv p{margin:6px 0 0;font-size:14.5px;line-height:1.8}
 .tx-fv.r{background:color-mix(in oklab,var(--warn) 22%,var(--panel));border:2px solid var(--warn);color:#ffd1ca}.tx-fv.a{background:color-mix(in oklab,var(--amber) 18%,var(--panel));border:2px solid var(--amber);color:#ffe2b0}.tx-fv.g{background:color-mix(in oklab,var(--go) 16%,var(--panel));border:2px solid var(--go);color:#c7f5e3}
@@ -3395,7 +3399,7 @@ async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e
 const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
-let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=5")).then(()=>window.CIRCM||ldJs("circ.js?v=14")).catch(e=>{timP=null;throw e}));
+let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=6")).then(()=>window.CIRCM||ldJs("circ.js?v=15")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;
   if(!CIRC.length){L.innerHTML=`<div class="bd-empty">ما فيه تعاميم حالياً</div>`;return}

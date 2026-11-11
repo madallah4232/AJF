@@ -326,7 +326,7 @@ async function related(ctx,el){if(!el||!AUTH.tok)return;
   const vs=(ctx.V||[]).filter(v=>v.type!=="passport").map(v=>`${v.type==="res"?"إقامة":"تأشيرة"}${v.kind?" "+v.kind:""} ${nm(v.c)}`.trim());
   const parts=[];if(nat)parts.push("الجنسية "+nm(nat));if(T&&T.hdr.dst)parts.push("الوجهة "+nm(T.hdr.dst));if(T&&T.hdr.tr)parts.push("ترانزيت "+nm(T.hdr.tr));
   if(T&&T.hdr.res)parts.push("مقيم في "+nm(T.hdr.res));if(vs.length)parts.push("معه "+vs.join(" و"));
-  if(B&&B.codes.length)parts.push("المسار "+B.codes.slice(0,6).join("-"));if(ctx.date)parts.push("تاريخ السفر "+ctx.date);
+  if(B&&B.codes.length)parts.push("المسار "+B.codes.slice(0,6).join("-"));if(ctx.date)parts.push("تاريخ السفر "+ctx.date);if(ctx.note)parts.push("ملاحظة الموظف: "+ctx.note);
   if(!cs.size&&!parts.length){el.innerHTML="";return}
   const head=`<div class="bd-sec"><span>📢 خلاصة التعاميم لهذا الراكب</span></div>`;
   const q=`راكب مسافر من مطار الجوف: ${parts.join("، ")}. هل فيه تعميم مرفوع ينطبق على هذا الراكب تحديداً (جنسيته أو وجهته أو الترانزيت أو نوع تأشيرته)؟ اعتمد فقط التعاميم الخاصة بحالته وتجاهل الأدلة والتعاميم العامة اللي ما تخصه. إذا ما فيه تعميم يخصه قل بسطر واحد: لا يوجد تعميم يخص هذا الراكب. لا تكتب قسم خارج التعاميم ولا تنقل نص التعميم، فقط الخلاصة والمطلوب باختصار.`.slice(0,600);

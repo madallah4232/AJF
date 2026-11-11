@@ -218,16 +218,17 @@ const SLOTS=[{k:"tim",t:"شاشة TIMATIC",s:"صوّر الشاشة من أما�
 const S={files:{tim:[],pp:[],vs:[],bk:[]},date:"",busy:false,res:null};
 let root=null;
 const todayISO=()=>{const d=new Date(Date.now()+3*3600e3);return d.toISOString().slice(0,10)};
-function mount(el){root=el;if(!S.date)S.date=todayISO();paint();if(S.res)relate()}
+function mount(el){root=el;if(S.note==null)try{S.note=localStorage.getItem("ajf_tx_note")||""}catch(x){S.note=""}if(!S.date)S.date=todayISO();paint();if(S.res)relate()}
 function paint(){if(!root)return;
   root.innerHTML=`<div class="tx-intro"><b>فحص وثائق الراكب</b><span>صوّر شاشة TIMATIC ووثائق الراكب، والتطبيق يقرأها ويطلع لك المطلوب بوضوح. الصور تُقرأ على جوالك فقط ولا تُرفع ولا تُحفظ.</span></div>
   <div class="tx-slots">${SLOTS.map(sl=>{const n=S.files[sl.k].length;return`<div class="tx-slot ${n?"on":""}"><label><input type="file" accept="image/*" ${sl.multi?"multiple":""} data-slot="${sl.k}" hidden><i>${sl.ic}</i><b>${sl.t}</b><small>${n?`✓ ${n} صورة`:sl.s}</small></label>${n?`<button class="tx-x" data-clr="${sl.k}" aria-label="حذف">✕</button>`:""}</div>`}).join("")}</div>
+  <label class="tx-note-in"><span>📝 معلومات إضافية <small>(اختياري)</small></span><textarea id="txNote" rows="2" placeholder="مثال: معه تأشيرة عمل للإمارات، أو مقيم في قطر، أو مرافق لراكب — بدون الاسم ورقم الجواز">${E(S.note||"")}</textarea></label>
   <label class="tx-date"><span>تاريخ السفر</span><input type="date" id="txDate" value="${S.date}"></label>
   <button class="tx-go" id="txGo" ${S.busy||!S.files.tim.length&&!S.files.pp.length?"disabled":""}>${S.busy?"… جاري القراءة":"🔍 اقرأ وحلّل"}</button>
   <div class="tx-prog" id="txProg" ${S.busy?"":"hidden"}><i id="txBar"></i><span id="txPT"></span></div>
   <div id="txRes">${S.res?S.res:""}</div>`;paintAI()}
 function prog(p,t){const b=root&&root.querySelector("#txBar"),s=root&&root.querySelector("#txPT");if(b)b.style.width=Math.round(p*100)+"%";if(s)s.textContent=t}
-async function run(){if(S.busy)return;S.busy=true;S.res=null;S.ai=[];S.aerr="";S.aq="";paint();
+async function run(){if(S.busy)return;S.busy=true;S.res=null;S.ctx=null;S.aictx=undefined;S.ai=[];S.aerr="";S.aq="";paint();
   const jobs=[];SLOTS.forEach(sl=>S.files[sl.k].forEach((f,i)=>jobs.push({k:sl.k,f,i})));const txt={tim:[],pp:[],vs:[],bk:[]},mrz={pp:null,vs:[]};
   try{prog(.02,"تحميل محرك القراءة… (أول مرة فقط ~4MB)");await getWorker(m=>{if(m.status==="loading language traineddata")prog(.05,"تحميل لغة القراءة…")});
     for(let j=0;j<jobs.length;j++){const J=jobs[j],lbl=SLOTS.find(s=>s.k===J.k).t;prog((j+.1)/jobs.length,`قراءة ${lbl} (${j+1}/${jobs.length})…`);
@@ -249,11 +250,12 @@ async function run(){if(S.busy)return;S.busy=true;S.res=null;S.ai=[];S.aerr="";S
     const T=lines.length?parseTim(lines):null;
     S.res=report(T,mrz,txt)}
   catch(e){console.error(e);S.res=`<div class="tx-err">تعذّرت القراءة: ${e.message==="lib"?"ما قدرنا نحمّل محرك القراءة — تأكد من الإنترنت.":"جرّب صورة أوضح."}</div>`}
-  S.busy=false;paint();const r=root.querySelector("#txRes");if(r)r.scrollIntoView({behavior:"smooth",block:"start"});relate()}
+  S.busy=false;paint();const r=root.querySelector("#txRes");if(r)r.scrollIntoView({behavior:"smooth",block:"start"});relate();
+  const nt=(S.note||"").trim();if(S.ctx&&nt.length>1&&S.aictx!==undefined){S.aq=nt;askAI()}}
 function relate(){const el=root&&root.querySelector("#txCirc");if(el&&S.ctx&&window.CIRCM)CIRCM.related(S.ctx,el)}
 const fD=d=>d?`${String(d.getUTCDate()).padStart(2,"0")}/${String(d.getUTCMonth()+1).padStart(2,"0")}/${d.getUTCFullYear()}`:"—";
 const mBetween=(a,b)=>(b.getUTCFullYear()-a.getUTCFullYear())*12+(b.getUTCMonth()-a.getUTCMonth())-(b.getUTCDate()<a.getUTCDate()?1:0);
-function report(T,M,txt){S.ctx={T,P:M.pp,B:null,V:M.vs,date:S.date};const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r:3,a:2,i:1,g:0};
+function report(T,M,txt){S.ctx={T,P:M.pp,B:null,V:M.vs,date:S.date,note:(S.note||"").trim().slice(0,160)};const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r:3,a:2,i:1,g:0};
   const SM={pp:null,vs:null,bk:null,tim:null,block:[],cond:[],look:[]},st=(k,m,t)=>{SM[k]={m,t}},cond=x=>{if(!SM.cond.includes(x))SM.cond.push(x)};
   const ask=(lv,ar)=>chk.push({lv,ar});
   const P=M.pp,nat=P?byA3(P.nat):null,natC=nat||(T&&T.hdr.nat)||null;
@@ -306,7 +308,7 @@ function report(T,M,txt){S.ctx={T,P:M.pp,B:null,V:M.vs,date:S.date};const travel
   const V={c:FV.c,t:FV.c==="r"?"⛔ لا يُسمح له بالسفر — شف الخلاصة تحت":FV.c==="a"?"⚠️ يُسمح له بالسفر بشروط — شف الخلاصة تحت":"✅ يُسمح له بالسفر"};
   const SUMR=[["🛂","الجواز",SM.pp],["🪪","التأشيرة / الإقامة",SM.vs],["🎫","الحجز",SM.bk],["🖥️","شاشة تيماتيك",SM.tim]].filter(r=>r[2]);
   const mk=m=>m==="✓"?"g":m==="✗"?"r":m==="⚠️"?"a":"n";
-  const sumH=`<div class="tx-sum"><h5>📋 الخلاصة</h5>${SUMR.map(r=>`<div class="tx-sr ${mk(r[2].m)}"><i>${r[2].m==="✓"?"صح":r[2].m==="✗"?"خطأ":r[2].m==="⚠️"?"تأكد":"—"}</i><b>${r[0]} ${r[1]}</b><span>${r[2].t}</span></div>`).join("")}
+  const sumH=`<div class="tx-sum"><h5>📋 الخلاصة</h5>${SUMR.map(r=>`<div class="tx-sr ${mk(r[2].m)}"><i>${r[2].m==="✓"?"✓":r[2].m==="✗"?"✕":r[2].m==="⚠️"?"!":"—"}</i><b>${r[0]} ${r[1]}</b><span>${r[2].t}</span></div>`).join("")}
     ${SM.look.length?`<p class="tx-look">👁️ طابق بعينك: ${[...new Set(SM.look)].map(E).join(" · ")}</p>`:""}
     <div class="tx-fv ${FV.c}"><b>${FV.t}</b><p>${FV.d}</p></div></div>`;
   const ord=c=>-LV[c.lv];chk.sort((a,b)=>ord(a)-ord(b));
@@ -355,6 +357,7 @@ async function askAI(){const q=(S.aq||"").trim();if(q.length<2||S.abusy)return;S
   S.abusy=false;paintAI();const a=root&&root.querySelectorAll("#txAI .ax-a");if(a&&a.length)a[a.length-1].scrollIntoView({behavior:"smooth",block:"start"})}
 function onEv(e){const t=e.target;if(t.id==="txAQ"){S.aq=t.value;return}
   if(t.matches&&t.matches("input[data-slot]")){const k=t.dataset.slot,sl=SLOTS.find(s=>s.k===k);const fs=[...t.files];S.files[k]=sl.multi?S.files[k].concat(fs).slice(0,6):fs.slice(0,1);S.res=null;paint();return}
+  if(t.id==="txNote"){S.note=t.value;try{localStorage.setItem("ajf_tx_note",t.value)}catch(x){}return}
   if(t.id==="txDate"){S.date=t.value||todayISO();return}}
 function onClick(e){if(e.target.closest("#txAsk")){const ta=root.querySelector("#txAQ");if(ta)S.aq=ta.value;askAI();return}if(e.target.closest("#txAINew")){S.ai=[];S.aerr="";paintAI();return}
   const c=e.target.closest("[data-clr]");if(c){S.files[c.dataset.clr]=[];S.res=null;paint();return}if(e.target.closest("#txGo"))run()}
