@@ -329,15 +329,16 @@ async function related(ctx,el){if(!el||!AUTH.tok)return;
   if(B&&B.codes.length)parts.push("المسار "+B.codes.slice(0,6).join("-"));if(ctx.date)parts.push("تاريخ السفر "+ctx.date);if(ctx.note)parts.push("ملاحظة الموظف: "+ctx.note);
   if(!cs.size&&!parts.length){el.innerHTML="";return}
   const head=`<div class="bd-sec"><span>📢 خلاصة التعاميم لهذا الراكب</span></div>`;
-  const q=`راكب مسافر من مطار الجوف: ${parts.join("، ")}. هل فيه تعميم مرفوع ينطبق على هذا الراكب تحديداً (جنسيته أو وجهته أو الترانزيت أو نوع تأشيرته)؟ اعتمد فقط التعاميم الخاصة بحالته وتجاهل الأدلة والتعاميم العامة اللي ما تخصه. إذا ما فيه تعميم يخصه قل بسطر واحد: لا يوجد تعميم يخص هذا الراكب. لا تكتب قسم خارج التعاميم ولا تنقل نص التعميم، فقط الخلاصة والمطلوب باختصار.`.slice(0,600);
-  if(RELC.has(q)){el.innerHTML=RELC.get(q);return}
+  const q=`راكب مسافر من مطار الجوف: ${parts.join("، ")}. هل فيه تعميم ينطبق عليه (جنسيته أو وجهته أو مطار/دولة الترانزيت أو نوع تأشيرته) مثل منع قبول أو اشتراط تأشيرة دخول لدولة الترانزيت؟ تجاهل التعاميم اللي ما تخصه. إذا فيه: ابدأ بسطر **الخلاصة:** يُقبل أو يُقبل بشرط كذا أو لا يُقبل، ثم المطلوب باختصار. إذا ما فيه قل بسطر واحد: لا يوجد تعميم يخص هذا الراكب. بدون قسم خارج التعاميم وبدون نقل نص التعميم.`.slice(0,600);
+  if(RELC.has(q)){const c=RELC.get(q);el.innerHTML=c.h;return c.r}
   el.innerHTML=head+`<div class="bd-empty">… جاري البحث في التعاميم (عادة 10–25 ثانية)</div>`;
   try{const j=await F({action:"ask",q});
     const t=String(j.answer||"").replace(/\s*\[[^\[\]]{1,40}\]/g,"").replace(/\*\*خارج التعاميم[\s\S]*$/,"").trim()||"لا يوجد تعميم يخص هذا الراكب.";
     const none=/لا يوجد تعميم|ما فيه تعميم|ما فيه تعاميم/.test(t)&&t.length<160;
     const h=head+`<div class="ci cx"><div class="cx-sum">${none?"✓ لا يوجد تعميم يخص هذا الراكب":fmtAns(t)}</div><p class="tx-note">خلاصة آلية من التعاميم — للتفاصيل اسأل مساعد التعاميم.</p></div>`;
-    RELC.set(q,h);if(el.isConnected)el.innerHTML=h}
-  catch(e){el.innerHTML=head+`<div class="bd-empty">${e.message==="nokey"?"مساعد التعاميم غير مفعّل":e.message==="aierr"?"المساعد مشغول — أعد التحليل بعد شوي":E(errTxt(e))}</div>`}}
+    /* r: نص الخلاصة للمساعد الذكي تحت التحليل (يُبنى عليه الحكم) — none: ما فيه تعميم يخصه */
+    const res={none,t,q};RELC.set(q,{h,r:res});if(el.isConnected)el.innerHTML=h;return res}
+  catch(e){el.innerHTML=head+`<div class="bd-empty">${e.message==="nokey"?"مساعد التعاميم غير مفعّل":e.message==="aierr"?"المساعد مشغول — أعد التحليل بعد شوي":E(errTxt(e))}</div>`;return null}}
 const MO={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
 function parseTd(s){const m=String(s).replace(/O/g,"0").match(/^(\d{2})([A-Z0]{3})(\d{2})$/);if(!m)return null;const mo=MO[m[2].replace(/0/g,"O")];return mo==null?null:new Date(Date.UTC(2000+ +m[3],mo,+m[1]))}
 

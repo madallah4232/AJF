@@ -246,9 +246,10 @@ function paint(){if(!root)return;
   <label class="tx-date"><span>تاريخ السفر</span><input type="date" id="txDate" value="${S.date}"></label>
   <button class="tx-go" id="txGo" ${S.busy||!S.files.tim.length&&!S.files.pp.length?"disabled":""}>${S.busy?"… جاري القراءة":"🔍 اقرأ وحلّل"}</button>
   <div class="tx-prog" id="txProg" ${S.busy?"":"hidden"}><i id="txBar"></i><span id="txPT"></span></div>
-  <div id="txRes">${S.res?S.res:""}</div>`;paintAI()}
+  <div id="txRes">${S.res?S.res:""}</div>`;paintAI();
+  if(S.res&&S.circ&&window.CIRCM){const el=root.querySelector("#txCirc");if(el)Promise.resolve(CIRCM.related(S.ctx,el)).then(()=>circFlag(),()=>{})}}
 function prog(p,t){const b=root&&root.querySelector("#txBar"),s=root&&root.querySelector("#txPT");if(b)b.style.width=Math.round(p*100)+"%";if(s)s.textContent=t}
-async function run(){if(S.busy)return;S.busy=true;S.res=null;S.ctx=null;S.aictx=undefined;S.ai=[];S.aerr="";S.aq="";paint();
+async function run(){if(S.busy)return;S.busy=true;S.run=(S.run||0)+1;S.res=null;S.ctx=null;S.aictx=undefined;S.ai=[];S.aerr="";S.aq="";paint();
   const jobs=[];SLOTS.forEach(sl=>S.files[sl.k].forEach((f,i)=>jobs.push({k:sl.k,f,i})));const txt={tim:[],pp:[],vs:[],bk:[]},mrz={pp:null,vs:[]};
   try{prog(.02,"تحميل محرك القراءة… (أول مرة فقط ~4MB)");await getWorker(m=>{if(m.status==="loading language traineddata")prog(.05,"تحميل لغة القراءة…")});
     for(let j=0;j<jobs.length;j++){const J=jobs[j],lbl=SLOTS.find(s=>s.k===J.k).t;prog((j+.1)/jobs.length,`قراءة ${lbl} (${j+1}/${jobs.length})…`);
@@ -272,7 +273,14 @@ async function run(){if(S.busy)return;S.busy=true;S.res=null;S.ctx=null;S.aictx=
   catch(e){console.error(e);S.res=`<div class="tx-err">تعذّرت القراءة: ${e.message==="lib"?"ما قدرنا نحمّل محرك القراءة — تأكد من الإنترنت.":"جرّب صورة أوضح."}</div>`}
   S.busy=false;paint();const r=root.querySelector("#txRes");if(r)r.scrollIntoView({behavior:"smooth",block:"start"});relate();
   const nt=(S.note||"").trim();if(S.ctx&&nt.length>1&&S.aictx!==undefined){S.aq=nt;askAI()}}
-function relate(){const el=root&&root.querySelector("#txCirc");if(el&&S.ctx&&window.CIRCM)CIRCM.related(S.ctx,el)}
+/* التعاميم: نبحث فيها مع التحليل، ونحفظ الخلاصة عشان المساعد الذكي يبني حكمه عليها مع تيماتيك */
+function relate(){const el=root&&root.querySelector("#txCirc");S.circ=null;S.circP=null;if(!(el&&S.ctx&&window.CIRCM))return;
+  const run=S.run;S.circP=Promise.resolve(CIRCM.related(S.ctx,el)).catch(()=>null).then(r=>{if(run!==S.run)return null;S.circ=r||null;circFlag();return S.circ});return S.circP}
+/* فيه تعميم يخص الراكب: تنبيه فوق الحكم الآلي (لأن الحكم الآلي من تيماتيك فقط) */
+function circFlag(){const v=root&&root.querySelector(".tx-v"),f=root&&root.querySelector(".tx-fv");if(!S.circ||S.circ.none||!v)return;
+  const no=/لا\s*يُ?قبل|ممنوع|منع|غير مسموح|لا يُسمح/.test(S.circ.t);
+  const h=`<div class="tx-cw ${no?"r":"a"}">📢 <b>${no?"تعميم المحطة يمنع/يقيّد قبول هذا الراكب":"فيه تعميم يخص هذا الراكب"}</b> — الحكم أعلاه من تيماتيك فقط، <b>التعميم يُقدَّم عليه</b>. شف «خلاصة التعاميم» تحت.</div>`;
+  root.querySelectorAll(".tx-cw").forEach(x=>x.remove());v.insertAdjacentHTML("afterend",h);if(f)f.insertAdjacentHTML("afterend",h)}
 const fD=d=>d?`${String(d.getUTCDate()).padStart(2,"0")}/${String(d.getUTCMonth()+1).padStart(2,"0")}/${d.getUTCFullYear()}`:"—";
 const mBetween=(a,b)=>(b.getUTCFullYear()-a.getUTCFullYear())*12+(b.getUTCMonth()-a.getUTCMonth())-(b.getUTCDate()<a.getUTCDate()?1:0);
 function report(T,M,txt){S.ctx={T,P:M.pp,B:null,V:M.vs,date:S.date,note:(S.note||"").trim().slice(0,160)};const travel=new Date(S.date+"T00:00:00Z"),chk=[],LV={r:3,a:2,i:1,g:0};
@@ -363,14 +371,19 @@ const fmtA=t=>E(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm
 function paintAI(){const el=root&&root.querySelector("#txAI");if(!el||!S.res)return;const T=S.ai||[];
   el.innerHTML=`<div class="tx-ai"><h5>🤖 المساعد الذكي <small>اكتب له الناقص أو الصحيح وبيكمل التحليل</small></h5>
     ${T.map(t=>`<div class="ax-q">${E(t.q)}</div><div class="ax-a">${fmtA(t.a)}</div>`).join("")}
-    ${S.abusy?`<div class="ax-q">${E(S.pending||"")}</div><div class="bd-empty">… المساعد يراجع شاشة تيماتيك ووثائق الراكب (10–25 ثانية)</div>`:""}
+    ${S.abusy?`<div class="ax-q">${E(S.pending||"")}</div><div class="bd-empty">… المساعد يراجع شاشة تيماتيك ووثائق الراكب والتعاميم (10–30 ثانية)</div>`:""}
     ${S.aerr?`<div class="bd-empty">${S.aerr}</div>`:""}
     <textarea id="txAQ" rows="3" placeholder="مثال: الراكبة معها تأشيرة عمل للإمارات سارية لين 20/03/2027، وجوازها ساري لين 05/2030">${E(S.aq||"")}</textarea>
     <div class="tx-ai-b"><button class="tx-ai-go" id="txAsk" ${S.abusy?"disabled":""}>إرسال</button>${T.length?`<button class="tx-ai-new" id="txAINew">＋ محادثة جديدة</button>`:""}</div>
     <p class="tx-note">ما يُرسل للمساعد اسم الراكب ولا أرقام وثائقه — فقط الجنسية والوجهة والتواريخ ونص تيماتيك. لا تكتب له الاسم أو رقم الجواز.</p></div>`}
 async function askAI(){const q=(S.aq||"").trim();if(q.length<2||S.abusy)return;S.abusy=true;S.aerr="";S.pending=q;S.aq="";paintAI();
-  try{const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},
-      body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"tim",q,ctx:S.aictx||"",h:(S.ai||[]).slice(-6)})});
+  try{/* ننتظر بحث التعاميم (لو ما خلص) — الحكم لازم يجمع تيماتيك + التعاميم */
+    if(S.circP&&!S.circ)await Promise.race([S.circP,new Promise(r=>setTimeout(r,40000))]);
+    const c=S.circ,cb=c?(c.none?"خلاصة تعاميم المحطة لهذا الراكب: لا يوجد تعميم يخصه (حسب بيانات التحليل؛ إذا الموظف أضاف مسار أو ترانزيت جديد تحقق من التعاميم المرفقة).":
+      "خلاصة تعاميم المحطة لهذا الراكب (ملزمة — تُقدَّم على TIMATIC إذا كانت أشد):\n"+c.t):"تعاميم المحطة: ما توفرت خلاصتها — نبّه الموظف يتأكد من التعاميم.";
+    const ctx=(S.aictx||"")+"\n\n=====\n"+cb;
+    const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},
+      body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"tim",circ:1,q,ctx,h:(S.ai||[]).slice(-6)})});
     if(!r.ok)throw new Error(r.status===404?"nofn":"fn");const j=await r.json();if(j.s!=="ok")throw new Error(j.s||"err");
     if(!j.answer||/^(bad)$/.test(j.s))throw new Error("old");S.ai=(S.ai||[]).concat([{q,a:j.answer}])}
   catch(e){S.aq=q;const m=e.message;S.aerr=m==="nofn"?"دالة ajf-dc غير موجودة في Supabase.":m==="bad"||m==="old"?"المساعد يحتاج تحديث دالة ajf-dc في Supabase (المشرف).":m==="nokey"?"مفتاح Gemini ناقص في Supabase.":m==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":m==="out"?"سجّل دخولك أول.":"تعذّر الاتصال، تأكد من الإنترنت."}

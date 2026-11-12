@@ -46,16 +46,56 @@ const SYS_TIM = `أنت خبير متطلبات وثائق السفر (TIMATIC) 
 الموظف يكمل لك البيانات الناقصة أو يصحح الغلط بكلامه (مثلاً: معه تأشيرة عمل للإمارات سارية لين كذا، جوازه ساري لين كذا).
 قواعد:
 - كلام الموظف عن الوثائق اللي بيده هو الأصح؛ يقدَّم على قراءة التطبيق الآلية إذا تعارضت.
-- ابنِ الحكم على نص TIMATIC المعطى فقط. لا تخترع شروط مو موجودة فيه. إذا النص ما يغطي الحالة (مثلاً نوع التأشيرة) قل ذلك بوضوح واطلب التأكد من أماديوس.
+- مصادر الحكم: نص TIMATIC المعطى + تعاميم المحطة المرفقة تحت (تعاميم SGS/شركات الطيران في مطار الجوف). لا تخترع شروط مو موجودة فيهما. إذا ما يغطيان الحالة قل ذلك بوضوح واطلب التأكد من أماديوس.
+- تعاميم المحطة ملزمة وتُقدَّم على TIMATIC إذا كانت أشد: مثلاً إذا TIMATIC يسمح بالترانزيت بدون تأشيرة والتعميم يمنع قبول المواصلين عبر أبوظبي بدون تأشيرة دخول للإمارات، فالحكم حسب التعميم.
+- طبّق التعميم على الراكب بالمعنى حتى لو ما ذكر جنسيته بالحرف، واربط المطارات بدولها والعربي بالإنجليزي: أبوظبي=AUH ودبي=DXB والشارقة=SHJ (الإمارات)، الدوحة=DOH، القاهرة=CAI، إسطنبول=IST، الجوف=AJF، الرياض=RUH، جدة=JED، القصيم=ELQ.
+- راجع التعاميم في كل رسالة: إذا الموظف أضاف معلومة جديدة (مسار، ترانزيت، نوع تأشيرة) شوف هل فيه تعميم ينطبق بعدها.
+- إذا بنيت الحكم أو شرط على تعميم اكتب سطر 📢 التعميم: عنوانه وش يقول باختصار.
 - قارن صلاحية الجواز بالمدة المطلوبة في النص وبتاريخ السفر، واحسب الأشهر المتبقية.
 - إذا "منع دخول لفئة" في النص، وضّح وش الفئة ولا تعتبرها مانع إلا إذا الراكب منها.
 - عربي مبسط ومختصر بدون مقدمات.
 شكل الجواب:
 لكل مستند سطر: ✓ صح أو ✗ خطأ أو ⚠️ تأكد — ثم الشرح القصير. (🛂 الجواز · 🪪 التأشيرة/الإقامة · 🎫 الحجز · وأي شرط إضافي مثل التأمين أو تذكرة العودة)
+ثم سطر 📢 التعاميم: التعميم اللي ينطبق وأثره على الحكم، أو "لا يوجد تعميم يخص هذا الراكب".
 ثم آخر سطر لازم يبدأ بـ **الخلاصة:** وواحد من ثلاثة فقط:
 "✅ يُسمح له بالسفر" أو "⚠️ يُسمح له بالسفر إذا معه: ..." أو "⛔ لا يُسمح له بالسفر: السبب".
 - إذا ناقصك معلومة تغيّر الحكم، اسأل سؤال واحد قصير قبل الخلاصة.
 - هذي محادثة متصلة: إذا رسالة الموظف توضيح أو تصحيح، عدّل الحكم.`;
+
+
+// ---------- تعاميم المحطة لمساعد فحص الوثائق (نفس طريقة ajf-files) ----------
+const AN = (s: string) => String(s || "").normalize("NFKC").toLowerCase().replace(/[\u064B-\u0652\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/ؤ/g, "و").replace(/ئ/g, "ي").replace(/ء/g, "")
+  .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+const NORM = (s: string) => AN(s).replace(/لا/g, "ال").replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim();
+const isAr = (w: string) => /[\u0600-\u06FF]/.test(w);
+const enStem = (w: string) => w.length <= 4 ? w : w.replace(/(ations?|ings?|ments?|ness|ies|ied|ers?|ed|es|s)$/, (m) => (m === "ies" || m === "ied" ? "y" : ""));
+const arStem = (w: string) => { w = w.replace(/^(وال|بال|فال|كال|لل|ال)/, ""); if (w.length > 4) w = w.replace(/(ات|ين|ون|ها|هم|يه|يا)$/, ""); return w; };
+const SK = (w: string) => { if (isAr(w)) { const s = arStem(w), k = s.replace(/[اوي]/g, "").replace(/ه$/, ""); return k.length >= 2 ? k : s; } return enStem(w); };
+const BASEKW = ["transit", "transfer", "ترانزيت", "مواصل", "visa", "تاشيره", "entry", "دخول", "منع", "not allowed", "passport", "جواز", "timatic", "INAD", "deport", "AUH", "ابوظبي", "abu dhabi", "الامارات", "UAE", "DXB", "دبي"];
+async function circDocs(sb: any, ctx: string, q: string): Promise<string> {
+  const { data: meta } = await sb.rpc("ajf_circ_meta");
+  const M = (meta || []) as Record<string, any>[];
+  if (!M.length) return "";
+  const small = M.filter((r) => r.n <= 25000 || !r.chunks), big = M.filter((r) => !(r.n <= 25000 || !r.chunks));
+  const texts = new Map<string, string>();
+  if (small.length) {
+    const { data: st } = await sb.from("ajf_circ").select("id,body,ftext").in("id", small.map((r) => r.id));
+    (st || []).forEach((r: any) => texts.set(r.id, (String(r.body || "") + "\n" + String(r.ftext || "")).slice(0, 40000)));
+  }
+  const pick = new Map<string, string[]>();
+  if (big.length) {
+    // كلمات البحث: رأس السياق (الجنسية/الترانزيت/الوجهة/التأشيرة) + رسالة الموظف + كلمات ثابتة للترانزيت والتأشيرات
+    const head = ctx.split("نص شاشة TIMATIC")[0].slice(0, 3000);
+    const kw = [...new Set([...BASEKW, ...NORM(head + " " + q).split(" ").filter((w) => w.length > 2)])].slice(0, 40);
+    const groups = kw.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 2);
+    const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: 30 });
+    const bigIds = new Set(big.map((r) => r.id)); let tot = 0;
+    for (const c of (ch || []) as any[]) { if (!bigIds.has(c.cid) || tot > 90000) continue; tot += c.txt.length; (pick.get(c.cid) || pick.set(c.cid, []).get(c.cid)!).push(c.txt); }
+  }
+  const rows = M.filter((r) => texts.has(r.id) || pick.has(r.id) || r.ai);
+  return rows.map((r, i) => `[ت${i + 1}] ${r.title} (${r.cd || ""})\n${r.ai ? "ملخص: " + r.ai + "\n" : ""}` +
+    (texts.has(r.id) ? texts.get(r.id) : pick.has(r.id) ? "مقتطفات:\n" + pick.get(r.id)!.join("\n…\n") : "")).join("\n\n-----\n\n");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -67,11 +107,12 @@ Deno.serve(async (req) => {
   if (!me || !me.emp || me.s === "out") return out({ s: "out" });
   if (!GK) return out({ s: "nokey" });
   if (a.kind === "tim") {
-    const q = String(a.q || "").slice(0, 1500).trim(), ctx = String(a.ctx || "").slice(0, 30000);
+    const q = String(a.q || "").slice(0, 1500).trim(), ctx = String(a.ctx || "").slice(0, 40000);
     if (q.length < 2) return out({ s: "bad" });
     const H = (Array.isArray(a.h) ? a.h : []).slice(-6).map((t: any) => `الموظف: ${String(t.q || "").slice(0, 1500)}\nأنت: ${String(t.a || "").slice(0, 3000)}`).join("\n\n");
     try {
-      const ans = await gem(`${ctx}\n\n=====\n${H ? "المحادثة السابقة:\n" + H + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}`, SYS_TIM);
+      let cd = ""; try { cd = await circDocs(sb, ctx, q); } catch { cd = ""; }
+      const ans = await gem(`${ctx}\n\n=====\n${cd ? "تعاميم المحطة المرفوعة (ملزمة):\n\n" + cd + "\n\n=====\n" : ""}${H ? "المحادثة السابقة:\n" + H + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}`, SYS_TIM);
       return out({ s: "ok", answer: ans });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
