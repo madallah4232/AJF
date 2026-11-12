@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-12T08:29:44Z",
+  "fetched": "2026-11-12T09:33:57Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-12T09:00:30.101Z",
+      "obsTime": 1794474000,
+      "reportTime": "2026-11-12T09:00:00.000Z",
+      "temp": 16,
+      "dewp": 11,
+      "wdir": 70,
+      "wspd": 3,
+      "visib": "6+",
+      "altim": 1027,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 120900Z 07003KT CAVOK 16/11 Q1027 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-12T08:00:22.102Z",
@@ -49,57 +71,6 @@
         }
       ],
       "fltCat": "MVFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-12T06:29:16.466Z",
-      "obsTime": 1794464580,
-      "reportTime": "2026-11-12T06:23:00.000Z",
-      "temp": 10,
-      "dewp": 9,
-      "wdir": 140,
-      "wspd": 3,
-      "visib": 1.86,
-      "altim": 1027,
-      "qcField": 0,
-      "wxString": "BR",
-      "metarType": "SPECI",
-      "rawOb": "SPECI OESK 120623Z 14003KT 3000 BR BKN010 10/09 Q1027",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "BKN",
-      "clouds": [
-        {
-          "cover": "BKN",
-          "base": 1000
-        }
-      ],
-      "fltCat": "IFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-12T06:00:32.624Z",
-      "obsTime": 1794463200,
-      "reportTime": "2026-11-12T06:00:00.000Z",
-      "temp": 9,
-      "dewp": 9,
-      "wdir": "VRB",
-      "wspd": 2,
-      "visib": 0.43,
-      "altim": 1027,
-      "qcField": 16,
-      "wxString": "FG",
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 120600Z VRB02KT 0700 FG VV/// 09/09 Q1027 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "OVX",
-      "clouds": [],
-      "fltCat": "LIFR"
     }
   ],
   "taf": [
