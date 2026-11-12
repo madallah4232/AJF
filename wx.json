@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-12T09:33:57Z",
+  "fetched": "2026-11-12T10:38:08Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-12T10:00:39.885Z",
+      "obsTime": 1794477600,
+      "reportTime": "2026-11-12T10:00:00.000Z",
+      "temp": 18,
+      "dewp": 12,
+      "wdir": 120,
+      "wspd": 3,
+      "visib": "6+",
+      "altim": 1026,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 121000Z 12003KT CAVOK 18/12 Q1026 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-12T09:00:30.101Z",
@@ -44,33 +66,6 @@
       "cover": "CAVOK",
       "clouds": [],
       "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-12T07:06:09.842Z",
-      "obsTime": 1794466800,
-      "reportTime": "2026-11-12T07:00:00.000Z",
-      "temp": 12,
-      "dewp": 10,
-      "wdir": 150,
-      "wspd": 2,
-      "visib": 3.73,
-      "altim": 1027,
-      "qcField": 0,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 120700Z 15002KT 6000 SCT020 12/10 Q1027 BECMG 8000",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "SCT",
-      "clouds": [
-        {
-          "cover": "SCT",
-          "base": 2000
-        }
-      ],
-      "fltCat": "MVFR"
     }
   ],
   "taf": [
