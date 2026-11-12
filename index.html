@@ -756,7 +756,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .bf .n b{display:block;font-size:15px}
 .bf .n small{display:block;color:var(--muted);font-size:12px;direction:ltr;text-align:right;unicode-bidi:plaintext}
 .bf .st{flex:none;font-size:11.5px;padding:3px 9px;border-radius:9px;background:var(--raise);color:var(--muted)}
-.bf .st.g{color:var(--go)}
+.bf .st.g{color:var(--go)}.bf .st.x{color:var(--warn)}
 .bf .a{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .bf .a button{height:44px;border-radius:12px;background:var(--raise);border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:13.5px;padding:0 8px}
 .bf .a button.p{background:color-mix(in oklab,var(--c) 22%,var(--raise));border-color:color-mix(in oklab,var(--c) 50%,var(--line))}
@@ -1248,6 +1248,8 @@ const DAYS=["الأحد","الاثنين","الثلاثاء","الأربعاء",
 const SHORT=["أحد","اثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"];
 const MONTHS=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 const C={sv:"#2fbf8f",f3:"#ff5c8a",xy:"#2bc4d8",np:"#5b8cff",sm:"#c9a227",g9:"#ff6b4a"};
+/* رحلة تجريبية مؤقتة لاختبار MVT ناس (ملغاة) — تظهر في يومها فقط. احذف هذا السطر بعد الاختبار */
+const TEST_DAY="2026-11-12",TEST_FL={airline:"طيران ناس",no:"XY150",inNo:"XY149",inArr:"20:05",dest:"الرياض",iata:"RUH",time:"20:45",dur:95,days:[4],c:C.xy,note:"رحلة تجريبية لاختبار MVT"};
 /* days: 0=Sun..6=Sat · start/until: ISO dates · est: time not confirmed */
 const FLIGHTS=[
  {airline:"إير كايرو",no:"SM322",inNo:"SM321",inArr:"08:00",inAlt:{2:"09:15"},dest:"القاهرة",iata:"CAI",time:"09:00",dur:105,days:[2,4,6],c:C.sm,alt:{2:"10:15"},note:"الثلاثاء الإقلاع 10:15، الخميس والسبت 09:00. رحلات 27 و29 أكتوبر طارت فعلياً."},
@@ -1288,7 +1290,8 @@ function validSched(j){
 function useSched(s){FLIGHTS.splice(0,FLIGHTS.length,...s.flights);if(s.rev)window.REV=s.rev;buildCxl()}
 /* إلغاء يوم محدد من الجدول (حقل cxl: ["YYYY-MM-DD"]) — يُطبَّق على رحلة المغادرة والقادمة لذاك اليوم */
 var CXL={};
-function buildCxl(){const o={};FLIGHTS.forEach(f=>(f.cxl||[]).forEach(d=>{const w=new Date(d+"T00:00:00Z").getUTCDay();if(!f.days.includes(w))return;const m=o[d]=o[d]||{};m[f.altNo&&f.altNo[w]||f.no]=1;m[f.inAltNo&&f.inAltNo[w]||f.inNo]=1}));CXL=o}
+function buildCxl(){const o={};FLIGHTS.forEach(f=>(f.cxl||[]).forEach(d=>{const w=new Date(d+"T00:00:00Z").getUTCDay();if(!f.days.includes(w))return;const m=o[d]=o[d]||{};m[f.altNo&&f.altNo[w]||f.no]=1;m[f.inAltNo&&f.inAltNo[w]||f.inNo]=1}));{const m=o[TEST_DAY]=o[TEST_DAY]||{};m[TEST_FL.no]=1;m[TEST_FL.inNo]=1}CXL=o}
+buildCxl();
 try{const s=validSched(JSON.parse(localStorage.getItem("ajf_sched")||"null"));if(s)useSched(s)}catch(e){}
 
 const $=id=>document.getElementById(id);
@@ -1324,8 +1327,8 @@ const TODAY=NOW.date;
 
 /* what flies on a given date */
 function flightsOn(date,{all=false}={}){
-  const dow=date.getUTCDay(),k=iso(date);
-  return FLIGHTS.filter(f=>f.days.includes(dow)&&(!f.until||k<=f.until)&&(all||!f.start||k>=f.start))
+  const dow=date.getUTCDay(),k=iso(date),src=k===TEST_DAY?[...FLIGHTS.filter(f=>f.no!==TEST_FL.no),TEST_FL]:FLIGHTS;
+  return src.filter(f=>f.days.includes(dow)&&(!f.until||k<=f.until)&&(all||!f.start||k>=f.start))
     .map(f=>({...f,t:f.alt&&f.alt[dow]||f.time,n:f.altNo&&f.altNo[dow]||f.no,ia:f.inAlt&&f.inAlt[dow]||f.inArr,ino:f.inAltNo&&f.inAltNo[dow]||f.inNo,off:!!(f.start&&k<f.start)}))
     .sort((a,b)=>a.t.localeCompare(b.t));
 }
@@ -3382,7 +3385,7 @@ function bdRender(){const B=$("bdB");
   if(BOARD==="trc"){const{d,list}=bdFlights();
     B.innerHTML=bdDaysH()+`<div class="bd-h">اختر الرحلة لفتح الـ Coordination Sheet ونماذجها: Loading Officer · TRC Turnaround · هندمة المقصورة · Ramp &amp; Load Control.</div>`+
       (list.length?list.map(f=>{const V=CSV[iso(d)+"_"+f.n]||{},cd=csData(f,d),n=Object.keys(V).length,dn=hm(cd.atd)||(cd.act.push&&hm(cd.act.push.s));
-        return`<button class="bf ${dn?"done":""}" data-trc="${escT(f.n)}"><div class="h"><span class="t">${f.t}</span><div class="n"><b>${escT(f.n)} · ${escT(f.dest)}</b><small>${f.ino?escT(f.ino)+" "+f.iata+"→AJF · STA "+(f.ia||"—")+" · ":""}${escT(f.airline||"")}</small></div><span class="st ${dn?"g":""}">${dn?"✓ أقلعت":n?"✍︎ "+n:"جديدة"}</span></div></button>`}).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`);return}
+        return`<button class="bf ${dn?"done":""}" data-trc="${escT(f.n)}"><div class="h"><span class="t">${f.t}</span><div class="n"><b>${escT(f.n)} · ${escT(f.dest)}</b><small>${f.ino?escT(f.ino)+" "+f.iata+"→AJF · STA "+(f.ia||"—")+" · ":""}${escT(f.airline||"")}</small></div>${(LV(d).flights[f.n]||{}).s==="canceled"&&!dn?`<span class="st x">✕ ملغاة</span>`:`<span class="st ${dn?"g":""}">${dn?"✓ أقلعت":n?"✍︎ "+n:"جديدة"}</span>`}</div></button>`}).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`);return}
   if(BOARD==="lc"){const{d,list}=bdFlights();
     B.innerHTML=`<div class="bd-sec"><span>📋 أكواد التأخير</span></div><div class="dcg">${Object.entries(DC_AIRS).map(([k,v])=>`<button data-dcair="${k}"><b>${escT(v[1])}</b><small>${escT(k)} · ${escT(v[3]||"")}</small></button>`).join("")}</div>
       <div class="bd-sec"><span>✈️ رحلات اليوم</span></div>`+bdDaysH()+`<div class="bd-h">اللودشيت اليدوي (Load Sheet · Balance · LIR) متاح لرحلات السعودية، ونموذج GACA لكل الرحلات.</div>`+
