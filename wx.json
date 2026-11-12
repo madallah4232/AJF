@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-12T22:26:32Z",
+  "fetched": "2026-11-12T23:20:41Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-12T23:00:32.400Z",
+      "obsTime": 1794524400,
+      "reportTime": "2026-11-12T23:00:00.000Z",
+      "temp": 11,
+      "dewp": 10,
+      "wdir": 90,
+      "wspd": 7,
+      "visib": "6+",
+      "altim": 1027,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 122300Z 09007KT CAVOK 11/10 Q1027 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-12T22:00:26.327Z",
@@ -44,39 +66,17 @@
       "cover": "CAVOK",
       "clouds": [],
       "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-12T20:00:28.170Z",
-      "obsTime": 1794513600,
-      "reportTime": "2026-11-12T20:00:00.000Z",
-      "temp": 13,
-      "dewp": 8,
-      "wdir": 90,
-      "wspd": 5,
-      "visib": "6+",
-      "altim": 1028,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 122000Z 09005KT CAVOK 13/08 Q1028 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "CAVOK",
-      "clouds": [],
-      "fltCat": "VFR"
     }
   ],
   "taf": [
     {
       "icaoId": "OESK",
-      "dbPopTime": "2026-11-12T11:13:32.940Z",
-      "bulletinTime": "2026-11-12T11:00:00.000Z",
-      "issueTime": "2026-11-12T11:00:00.000Z",
-      "validTimeFrom": 1794484800,
-      "validTimeTo": 1794592800,
-      "rawTAF": "TAF OESK 121100Z 1212/1318 10010KT CAVOK BECMG 1218/1220 09008KT 7000 NSC TEMPO 1218/1305 0800 BR",
+      "dbPopTime": "2026-11-12T23:14:42.751Z",
+      "bulletinTime": "2026-11-12T23:00:00.000Z",
+      "issueTime": "2026-11-12T23:00:00.000Z",
+      "validTimeFrom": 1794528000,
+      "validTimeTo": 1794636000,
+      "rawTAF": "TAF OESK 122300Z 1300/1406 09010KT 7000 NSC",
       "mostRecent": 1,
       "remarks": "",
       "lat": 29.785,
@@ -86,40 +86,13 @@
       "name": "Al-Jouf Arpt",
       "fcsts": [
         {
-          "timeFrom": 1794484800,
-          "timeTo": 1794506400,
+          "timeFrom": 1794528000,
+          "timeTo": 1794636000,
           "timeBec": null,
           "fcstChange": null,
           "probability": null,
-          "wdir": 100,
-          "wspd": 10,
-          "wgst": null,
-          "wshearHgt": null,
-          "wshearDir": null,
-          "wshearSpd": null,
-          "visib": "6+",
-          "altim": null,
-          "vertVis": null,
-          "wxString": "NSW",
-          "notDecoded": null,
-          "clouds": [
-            {
-              "cover": "NSC",
-              "base": null,
-              "type": null
-            }
-          ],
-          "icgTurb": [],
-          "temp": []
-        },
-        {
-          "timeFrom": 1794506400,
-          "timeTo": 1794592800,
-          "timeBec": 1794513600,
-          "fcstChange": "BECMG",
-          "probability": null,
           "wdir": 90,
-          "wspd": 8,
+          "wspd": 10,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
@@ -127,7 +100,7 @@
           "visib": 4.35,
           "altim": null,
           "vertVis": null,
-          "wxString": "NSW",
+          "wxString": null,
           "notDecoded": null,
           "clouds": [
             {
@@ -136,27 +109,6 @@
               "type": null
             }
           ],
-          "icgTurb": [],
-          "temp": []
-        },
-        {
-          "timeFrom": 1794506400,
-          "timeTo": 1794546000,
-          "timeBec": null,
-          "fcstChange": "TEMPO",
-          "probability": null,
-          "wdir": null,
-          "wspd": null,
-          "wgst": null,
-          "wshearHgt": null,
-          "wshearDir": null,
-          "wshearSpd": null,
-          "visib": 0.5,
-          "altim": null,
-          "vertVis": null,
-          "wxString": "BR",
-          "notDecoded": null,
-          "clouds": [],
           "icgTurb": [],
           "temp": []
         }
