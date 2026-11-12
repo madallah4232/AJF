@@ -2771,7 +2771,9 @@ function mvtCard(f,date,d){
      <div class="dm-q">${XYQ.map(q=>`<button data-xyq="${q[0]}" aria-pressed="${lc===q[0]}">${q[1]}<small>${q[0]}</small></button>`).join("")}<button data-xypick aria-pressed="${!!lc&&!XYQ.some(q=>q[0]===lc)}">غير ذلك · بحث في الدليل<small>${lc&&!XYQ.some(q=>q[0]===lc)?escT(lc):"…"}</small></button></div>`:""}
    <div class="cs-g">${fl("PAX","pax",String(["F","J","Y"].reduce((a,k)=>a+(+(d.pd||{})[k]||0),0)||"0"))}${fl("INF","inf","0")}${fl("WCHR","wch","0")}</div>
    ${B.W.length?`<div class="dm-w">⚠︎ ${B.W.join(" · ")}</div>`:""}
-   ${out("mvtDep",B.dep,"برقية المغادرة")}</div>`;
+   ${out("mvtDep",B.dep,"برقية المغادرة")}
+   <div class="dm-h" style="margin-top:6px">إيميلات برقيات ناس</div>
+   <div class="mvt-row"><button class="dc-pick" data-mvtem="to" style="border-style:solid">📋 نسخ إيميلات To</button><button class="dc-pick" data-mvtem="cc" style="border-style:solid">📋 نسخ إيميلات CC</button></div></div>`;
 }
 /* إيميل البرقية: يفتح مسودة في أوت لوك (المستلمين والعنوان والنص جاهزة) — ما ينرسل شي إلا من أوت لوك بعد المراجعة */
 const MVT_COR={};let MVT_MAIL=null;try{MVT_MAIL=JSON.parse(localStorage.getItem("ajf_mvtmail")||"null")}catch(e){}
@@ -2790,8 +2792,13 @@ async function mvtMail(id,ty,btn){
   mvtGo(ol);/* ما فيه أوت لوك بالجوال؟ نفتح تطبيق البريد الأساسي */
   setTimeout(()=>{document.removeEventListener("visibilitychange",vis);if(!gone&&!document.hidden)mvtGo(ml)},1600)}
 function mvtGo(u){location.href=u}
+/* نسخ إيميلات ناس (To أو CC) مفصولة بـ ; للصقها في أي بريد */
+async function mvtEmCopy(b){const lab=b.textContent,k=b.dataset.mvtem;b.textContent="…";const C=(await mvtMailCfg())||{},L=mailList(C[k]);
+  if(!L.length){b.textContent=lab;csErr(AUTH.me&&AUTH.me.admin?"أضف إيميلات برقيات ناس من صفحة الحساب ← إيميلات برقيات MVT.":"إيميلات "+k.toUpperCase()+" لناس ما انضافت بعد. راجع المشرف.",null,"ما فيه إيميلات");return}
+  const t=L.join("; ");try{await navigator.clipboard.writeText(t);b.textContent="✓ انسخت ("+L.length+")"}catch(x){b.textContent=lab;prompt("انسخ الإيميلات:",t);return}setTimeout(()=>b.textContent=lab,1800)}
 $("csBody").addEventListener("click",e=>{
   const ml=e.target.closest("[data-mvtmail]");if(ml){mvtMail(ml.dataset.mvtmail,ml.dataset.ty,ml);return}
+  const em=e.target.closest("[data-mvtem]");if(em){mvtEmCopy(em);return}
   const cr=e.target.closest("[data-mvtcor]");if(cr){const{f,date}=csCur,k=iso(date)+"_"+f.n+cr.dataset.mvtcor;MVT_COR[k]=!MVT_COR[k];renderCS();return}
   const q=e.target.closest("[data-xyq]"),pk=e.target.closest("[data-xypick]"),cp=e.target.closest("[data-mvtcopy]");if(!q&&!pk&&!cp)return;
   if(q){csSet("dm.xloc",q.dataset.xyq);renderCS()}
