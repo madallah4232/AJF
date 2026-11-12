@@ -76,6 +76,22 @@ async function adminTick(N) {
     catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await rpc("ajf_push_drop", { p_endpoint: x.endpoint }).catch(() => {}); else console.log("push: admin send", e.statusCode || e.message); }
   }
 }
+// 📻 تنبيهات المشرف المكتوبة (من صفحة الراديو في التطبيق) ← كل الموظفين المشتركين، حتى والجوال مقفل
+async function bcTick(N) {
+  let rows; try { rows = await rpc("ajf_bc_due"); } catch (e) { if (!/404|PGRST202/.test(e.message)) console.log("push: bc", e.message); return; }
+  for (const x of rows || []) {
+    if (!(await rpc("ajf_push_claim", { p_day: N.iso, p_flight: "BC", p_stage: String(x.id) }).catch(() => false))) continue;
+    const body = String(x.body || "").slice(0, 300);
+    const msg = JSON.stringify({ title: (x.urgent ? "🚨 عاجل · " : "📢 ") + (x.name || "المشرف"), body, tag: "ajf-bc-" + x.id, url: "./?bc", ri: !!x.urgent });
+    const subs = await rpc("ajf_push_targets");
+    let ok = 0;
+    await Promise.all(subs.map(async (s) => {
+      try { await wp.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, msg, { TTL: 6 * 3600, urgency: "high", topic: ("bc" + x.id).slice(0, 32) }); ok++; }
+      catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await rpc("ajf_push_drop", { p_endpoint: s.endpoint }).catch(() => {}); else console.log("push: bc send", e.statusCode || e.message); }
+    }));
+    console.log(`push: BC ${x.id} → ${ok}/${subs.length}`);
+  }
+}
 let busy = false;
 export async function pushTick(state, N, fallbackFlights) {
   if (busy) return; busy = true;
@@ -83,6 +99,7 @@ export async function pushTick(state, N, fallbackFlights) {
     if (ready === null) ready = await init();
     if (!ready) return;
     await adminTick(N).catch((e) => console.log("push: admin", e.message));
+    await bcTick(N).catch((e) => console.log("push: bc", e.message));
     const F = await loadSched(fallbackFlights);
     // وقت الهبوط اللي اعتمده موظف من التطبيق يتقدّم على الرصد التلقائي
     const man = await rpc("ajf_ata_day", { p_day: N.iso }).catch(() => null);
