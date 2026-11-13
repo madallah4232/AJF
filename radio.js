@@ -29,7 +29,7 @@ const css=document.createElement("style");css.textContent=`
 .rd-air.need{cursor:pointer;border-width:2px;animation:rdNeed 1.4s ease-in-out 6}
 @keyframes rdNeed{50%{box-shadow:0 0 0 6px color-mix(in oklab,var(--go) 30%,transparent),0 20px 50px rgba(0,0,0,.55)}}
 .rd-stt{font-size:12.5px;color:var(--muted)}.rd-it p.v{border-inline-start:3px solid var(--go);padding-inline-start:8px}
-.rd-air .go{background:var(--go);color:#062417;border:0;border-radius:11px;padding:10px 14px;font-weight:700;font-size:14px}
+.rd-air .go{background:var(--go);color:#1c2410;border:0;border-radius:11px;padding:10px 14px;font-weight:700;font-size:14px}
 .rd-wave{display:flex;gap:3px;align-items:center;height:28px}.rd-wave span{width:4px;height:6px;border-radius:2px;background:var(--go);transition:height .07s linear}
 .rd-wave.idle span{animation:rdW .9s ease-in-out infinite}
 .rd-wave span:nth-child(2){animation-delay:.15s}.rd-wave span:nth-child(3){animation-delay:.3s}.rd-wave span:nth-child(4){animation-delay:.45s}
@@ -223,7 +223,7 @@ function txAnim(){if(TX.raf)return;let last=0;const f=ts=>{TX.raf=0;const b=$("r
     if(TX.on||TX.want||TX.lvl>.01)TX.raf=requestAnimationFrame(f);else{TX.hist=[];if(cv)drawCv(cv)}};TX.raf=requestAnimationFrame(f)}
 let CVC=null;function drawCv(cv){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w)return;
   if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}const g=cv.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
-  if(!CVC){const cs=getComputedStyle(document.documentElement);CVC={w:cs.getPropertyValue("--warn").trim()||"#ff7a66",a:cs.getPropertyValue("--amber").trim()||"#ffb340",m:cs.getPropertyValue("--line").trim()||"#2a3550"}}
+  if(!CVC){const cs=getComputedStyle(document.documentElement);CVC={w:cs.getPropertyValue("--warn").trim()||"#ef5b4b",a:cs.getPropertyValue("--amber").trim()||"#e89a55",m:cs.getPropertyValue("--line").trim()||"#2a3550"}}
   const bw=3,gap=2.5,n=Math.floor(w/(bw+gap)),H=TX.hist,mid=h/2;
   /* الأحدث على اليسار والموجة تمشي لليمين (اتجاه الوقت بالعربي) */
   for(let i=0;i<n;i++){const v=H[H.length-1-i],xx=i*(bw+gap);if(v==null||v<.02){g.fillStyle=CVC.m;g.fillRect(xx,mid-1,bw,2);continue}
