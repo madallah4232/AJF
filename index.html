@@ -685,6 +685,9 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .hub-home:active{transform:scale(.94)}
 .hub{position:fixed;inset:0;z-index:18;overflow:auto;overscroll-behavior:contain;background:radial-gradient(120% 60% at 100% 0%,#1a2747 0%,transparent 55%),radial-gradient(90% 50% at 0% 100%,#132a2a 0%,transparent 60%),var(--night);transition:opacity .38s var(--ease),transform .38s var(--ease),filter .38s var(--ease)}
 .hub[hidden]{display:none}
+/* الصفحة الرئيسية فوق لوحة الرحلات: نوقف تمرير اللوحة اللي تحتها عشان ما يطلع مؤشر تمرير جانبي بدون صفحات */
+html:has(#hub:not([hidden])),body:has(#hub:not([hidden])){overflow:hidden}
+.hub{scrollbar-width:none}.hub::-webkit-scrollbar{display:none}
 .hub.away{opacity:0;transform:scale(.94);filter:blur(4px);pointer-events:none}
 .hub-in{max-width:560px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));display:grid;gap:16px}
 .hub-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
