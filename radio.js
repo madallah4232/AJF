@@ -26,7 +26,7 @@ const css=document.createElement("style");css.textContent=`
 @keyframes rdPulse{50%{box-shadow:0 0 0 8px color-mix(in oklab,var(--go) 25%,transparent),0 10px 28px rgba(0,0,0,.45)}}
 .rd-air{position:fixed;z-index:72;left:12px;right:12px;bottom:calc(150px + env(safe-area-inset-bottom));padding:12px 14px;border-radius:16px;background:var(--panel);border:1.5px solid var(--go);display:flex;gap:12px;align-items:center;box-shadow:0 20px 50px rgba(0,0,0,.55)}
 .rd-air[hidden]{display:none}.rd-air div{flex:1;min-width:0}.rd-air b{display:block;font-size:15px}.rd-air small{color:var(--muted);font-size:12.5px}
-.rd-air.need{cursor:pointer;border-width:2px;animation:rdNeed 1.4s ease-in-out infinite}
+.rd-air.need{cursor:pointer;border-width:2px;animation:rdNeed 1.4s ease-in-out 6}
 @keyframes rdNeed{50%{box-shadow:0 0 0 6px color-mix(in oklab,var(--go) 30%,transparent),0 20px 50px rgba(0,0,0,.55)}}
 .rd-stt{font-size:12.5px;color:var(--muted)}.rd-it p.v{border-inline-start:3px solid var(--go);padding-inline-start:8px}
 .rd-air .go{background:var(--go);color:#062417;border:0;border-radius:11px;padding:10px 14px;font-weight:700;font-size:14px}

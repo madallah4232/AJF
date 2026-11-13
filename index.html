@@ -51,7 +51,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
 /* top bar */
 .top{position:sticky;top:0;z-index:5;margin:0 -16px;padding:calc(env(safe-area-inset-top) + 14px) 16px 12px;
-  background:color-mix(in oklab,var(--night) 82%,transparent);backdrop-filter:saturate(160%) blur(18px);-webkit-backdrop-filter:saturate(160%) blur(18px);
+  background:color-mix(in oklab,var(--night) 97%,transparent);backdrop-filter:saturate(160%) blur(18px);-webkit-backdrop-filter:saturate(160%) blur(18px);
   border-bottom:1px solid transparent;transition:border-color .2s}
 .top.scrolled{border-color:var(--line)}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -468,7 +468,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .intro .cap{position:absolute;z-index:1;inset:auto 0 calc(40px + env(safe-area-inset-bottom));text-align:center;font:600 22px var(--display);text-shadow:0 2px 18px rgba(0,0,0,.8);opacity:0;transition:opacity 1s var(--ease)}
 .intro .cap small{display:block;font:500 13px var(--mono);letter-spacing:.3em;color:#cdbfff;margin-top:6px}
 .intro.cap-on .cap{opacity:1}
-.intro .nx{background:color-mix(in oklab,var(--panel) 75%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.intro .nx{background:color-mix(in oklab,var(--panel) 96%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .intro.out{opacity:0;transform:scale(1.04);pointer-events:none}
 .intro-in{width:100%;max-width:420px;display:grid;gap:22px;justify-items:center;text-align:center}
 .intro .flap{display:flex;gap:6px;direction:ltr}
@@ -485,7 +485,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 #say,#listen,#introSkip,#introGo .eq{display:none!important}
 .intro .x{display:none!important}
 .intro.cine .x{display:flex!important}
-.intro .x{position:absolute;z-index:2;top:calc(14px + env(safe-area-inset-top));left:14px;display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:19px;background:rgba(10,17,32,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);color:#fff;font-size:14px;font-weight:600}
+.intro .x{position:absolute;z-index:2;top:calc(14px + env(safe-area-inset-top));left:14px;display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:19px;background:rgba(10,17,32,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);color:#fff;font-size:14px;font-weight:600}
 .eq{display:inline-flex;gap:3px;align-items:flex-end;height:16px}
 .eq i{width:3px;height:6px;background:currentColor;border-radius:2px}
 .speaking .eq i{animation:eq .9s ease-in-out infinite}
@@ -565,7 +565,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .wx-dial svg{width:132px;height:132px;overflow:visible;display:block}
 .wx-sock{transform-origin:0 0;animation:wxFlut var(--fl,1.6s) ease-in-out infinite alternate}
 @keyframes wxFlut{from{transform:rotate(var(--r)) scaleY(1)}to{transform:rotate(calc(var(--r) + var(--sw,3deg))) scaleY(.92)}}
-.wx-lv{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:rgba(10,17,32,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line)}
+.wx-lv{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:rgba(10,17,32,.9);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line)}
 .wx-lv i{flex:none;width:12px;height:12px;border-radius:50%;background:var(--go);box-shadow:0 0 0 4px color-mix(in oklab,var(--go) 25%,transparent)}
 .wx-lv[data-lv="1"] i{background:#e8c547;box-shadow:0 0 0 4px #e8c54740}
 .wx-lv[data-lv="2"] i{background:var(--amber);box-shadow:0 0 0 4px #ffb34040;animation:wxPulse 1.6s infinite}
@@ -890,6 +890,12 @@ html:has(#hub:not([hidden])),body:has(#hub:not([hidden])){overflow:hidden}
 .cx-ed{margin-top:4px}.cx-ed textarea{min-height:140px}
 #txCirc{display:grid;gap:10px;margin-top:12px}
 @media (prefers-reduced-motion:reduce){.hub.in *,.bd.in *,.wrap.in>*{animation:none!important}.hub,.portal,.portal .pi{transition:none!important}}
+
+/* ===== توفير البطارية ===== */
+*,*::before,*::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.cs .trk-top{background:var(--night)}
+.pulse i,.beacon::before,.beacon::after,.tu-ph li.now i,.wx-sock,.wx-lv i,.ms-bar em.nx{animation-iteration-count:3!important}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -1662,7 +1668,7 @@ async function openTrack(f,date){
   };
   /* حماية: أي خطأ في مصدر خارجي ما يوقف الشاشة — يرجع للموقع التقديري ويحاول مرة ثانية بعد 15 ثانية */
   const safe=async()=>{try{await update()}catch(e){try{draw(null,0,"ground",{pct:0,kv:[["الإقلاع المجدول",leg.std],["الوصول المجدول",leg.sta],["رقم النداء",callsign(leg.no)]],note:"تعذّر تحديث التتبع الآن، يحاول تلقائياً."})}catch(x){$("trkNote").textContent="تعذّر تحديث التتبع الآن، يحاول تلقائياً."}}};
-  clearInterval(trkTimer);await safe();trkTimer=setInterval(safe,15000);
+  clearInterval(trkTimer);await safe();trkTimer=setInterval(()=>{if(!document.hidden)safe()},30000);
 }
 /* ---------- sync indicator ---------- */
 function ago(min){if(min<1)return"الآن";if(min<60)return"قبل "+min+" د";const h=Math.floor(min/60);return h<24?"قبل "+h+" س":"قبل "+Math.floor(h/24)+" يوم"}
@@ -1888,6 +1894,8 @@ const watchSafe=()=>watchInbound().catch(()=>{});/* تحديث أسرع لما �
 function relayFast(){try{return flightsOn(TODAY).some(f=>{if(!f.ino||!f.ia)return false;const k=ataKey(f,TODAY),L=LV(TODAY).flights[f.ino];
   if(L&&["landed","canceled"].includes(L.s)||manAt(k)||(ATA[k]&&!String(ATA[k]).startsWith("~")))return false;
   const a=LIVE_ETA[f.ino]!=null?LIVE_ETA[f.ino]:L&&L.s==="departed"&&L.t&&!isNaN(tm(L.t))?tm(L.t):toMin(f.ia);return NOW.mins>=a-25&&NOW.mins<=a+20})}catch(e){return false}}
+/* توفير البطارية: فيه رحلة وصول خلال ساعة ونص الجاية أو آخر ساعة؟ وإلا نخفف التحديث لكل 45 ثانية */
+function relayNear(){try{return flightsOn(TODAY).some(f=>{const a=LIVE_ETA[f.ino]!=null?LIVE_ETA[f.ino]:toMin(f.ia);return f.ia&&NOW.mins>=a-90&&NOW.mins<=a+60})}catch(e){return true}}
 /* الكوردنيتر شيت المشترك (التخزين والمزامنة) — قبل حلقة التحديث لأنها تناديه */
 const CS_KEY=DEMO?"ajf_cs_demo":"ajf_cs2";
 /* CSV[يوم_رحلة] = {خانة: قيمة} · CSN[يوم_رحلة] = {خانة: اسم اللي سجّلها} */
@@ -1907,7 +1915,7 @@ function csSync(force){if(DEMO||!AUTH.tok||csP||(!force&&Date.now()-csAt<8000))r
     if(JSON.stringify([V,N,can])!==JSON.stringify([CSV,CSN,CSCAN])){CSV=V;CSN=N;CSCAN=can;csSave();if(!open)render();renderNext();
       if(!$("cs").hidden&&csCur){const a=document.activeElement;if(a&&$("csBody").contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))csPend=true;else renderCS()}}})
     .catch(()=>{}).finally(()=>{csP=null});return csP}
-(function relayLoop(){if(!document.hidden&&!DEMO){loadRelay();loadShared();csSync()}setTimeout(relayLoop,relayFast()?8000:20000)})();document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay();shAt=0;loadShared();csSync(true)}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
+(function relayLoop(){if(!document.hidden&&!DEMO){loadRelay();loadShared();csSync()}setTimeout(relayLoop,relayFast()?8000:relayNear()?20000:45000)})();document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay();shAt=0;loadShared();csSync(true)}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
 
 /* ---------- Coordination Sheet (GS-OL-029) ----------
    نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن».
@@ -2656,7 +2664,7 @@ function openSheet(f,date){
   $("track").onclick=()=>openTrack(f,date);
   $("csOpen").onclick=()=>openCS(f,date);
   const da=dcAirOf(f);$("dcOpen").hidden=true;$("dcOpen").textContent="📋 أكواد التأخير · "+(DC_LONG[da]||"");$("dcOpen").onclick=()=>openDC(null,da);
-  clearInterval(turnTimer);turnEdit=false;renderTurn(f,date);turnTimer=setInterval(()=>{try{renderTurn(f,date)}catch(e){}},1000);
+  clearInterval(turnTimer);turnEdit=false;renderTurn(f,date);turnTimer=setInterval(()=>{if(document.hidden)return;try{renderTurn(f,date)}catch(e){}},10000);
   const ff={...f,t:f.t||f.time},has=hasClip(ff);
   $("listen").hidden=!has;$("listen").onclick=()=>playFlight(ff,$("listen"));
   if(has)playFlight(ff,$("listen"));
@@ -3476,6 +3484,6 @@ function bootShow(){const b=$("boot");if(!b||!AUTH.tok)return;
 window.bootShow=bootShow;
 try{if(AUTH.tok&&!DEMO)bootShow();else hubShow(true)}catch(e){console.error(e);try{hubShow(true)}catch(x){}}
 </script>
-<script src="radio.js?v=8" defer></script>
+<script src="radio.js?v=9" defer></script>
 </body>
 </html>
