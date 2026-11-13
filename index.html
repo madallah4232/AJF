@@ -2491,7 +2491,7 @@ function lcDrawLS(x,R){const s=R.s,{f,date}=R,dd=lcDD(date),r0=v=>v==null?"":Str
     B&&B.mz!=null?`MAC ZFW ${B.mz.toFixed(1)}  TOW ${B.mt==null?"-":B.mt.toFixed(1)}  LAW ${B.ml==null?"-":B.ml.toFixed(1)}`:"",
     B&&B.st!=null?`STAB ${Math.abs(B.st).toFixed(1)} ${B.st<0?"DOWN":"UP"}`+(R.low===2?"  L=LAW LIMITING":R.low===0?"  Z=ZFW LIMITING":R.low===1?"  T=TOW LIMITING":""):"",s("notes")].filter(Boolean).join("\n"));
   if(B&&B.mt!=null)P("bal","MAC "+B.mt.toFixed(1));if(R.zA!=null)P("seat",`A${R.zA} B${R.zB} C${R.zC}`);
-  P("tpob",R.M+R.F+R.Cc+R.I);const cr=(R.A.crew||"").split("/").reduce((a,b)=>a+(+b||0),0)+(+R.A.adl||0);P("tob","TOB "+(R.M+R.F+R.Cc+R.I+cr));
+  P("tpob",R.M+R.F+R.Cc+R.I);P("tob","TOB "+(R.M+R.F+R.Cc)+(R.I?" + "+String(R.I).padStart(2,"0")+" INF":""));
   P("prep",s("prep").toUpperCase());
   if(/^NIL$/i.test(s("lmc"))){lcFont(x,83);x.textAlign="center";x.fillText("NIL",711,1570)}}
 function LCCPTC(R,code){const out=[];LCCPT.forEach(c=>{const n=lcN(R.V["b"+c+code])||0;if(n)out.push(`${c}/${code.replace(/^B/,"")}/${n}`)});return out.join(" ")}
