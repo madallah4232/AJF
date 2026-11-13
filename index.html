@@ -929,6 +929,23 @@ body,.bd,.hub{background:var(--felt),var(--night)}
   box-shadow:0 0 0 2px color-mix(in oklab,var(--c) 70%,#000),0 0 8px 2px color-mix(in oklab,var(--c) 28%,transparent),inset 0 -4px 7px rgba(0,0,0,.3),inset 0 3px 5px rgba(255,255,255,.2)}
 .hub-c em{color:#1a1008}
 .portal{background:var(--felt),radial-gradient(120% 80% at 50% 30%,color-mix(in oklab,var(--c) 40%,#110b07) 0%,#110b07 75%)}
+
+/* ===== أيقونات صوف منفوشة (صور ثابتة بدون حركة: ما تستهلك بطارية) ===== */
+:root{
+  --woolmask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cfilter id='f' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.7' numOctaves='2' seed='4'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='15' xChannelSelector='R' yChannelSelector='G'/%3E%3CfeGaussianBlur stdDeviation='.35'/%3E%3C/filter%3E%3Ccircle cx='50' cy='50' r='38' fill='%23fff' filter='url(%23f)'/%3E%3C/svg%3E");
+  --furL:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3 .9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .96 0 0 0 0 .9 1.1 0 0 0 -.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --furD:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9 1.4' numOctaves='3' seed='2'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .06 0 0 0 0 .03 1.2 0 0 0 -.55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.hub-c .ic,.hub-home,.hub-ac,.weeknav button{position:relative;isolation:isolate;background:none!important;box-shadow:none!important;border:0!important}
+.hub-c .ic::before,.hub-home::before,.hub-ac::before,.weeknav button::before{content:"";position:absolute;inset:-11px;z-index:-1;
+  background:repeating-conic-gradient(from 3deg,rgba(255,240,220,.10) 0 .7deg,rgba(0,0,0,.12) .7deg 1.6deg,transparent 1.6deg 2.4deg),var(--furL),var(--furD),radial-gradient(circle at 36% 30%,color-mix(in oklab,var(--w) 70%,#fff) 0%,var(--w) 38%,color-mix(in oklab,var(--w) 62%,#000) 82%);
+  background-size:100% 100%,40px 40px,48px 48px,100% 100%;
+  -webkit-mask:var(--woolmask) center/100% 100% no-repeat;mask:var(--woolmask) center/100% 100% no-repeat}
+.hub-c .ic::after,.hub-home::after,.hub-ac::after,.weeknav button::after{content:"";position:absolute;inset:-11px;z-index:-2;transform:translateY(4px) scale(.98);opacity:.55;background:#000;
+  -webkit-mask:var(--woolmask) center/100% 100% no-repeat;mask:var(--woolmask) center/100% 100% no-repeat}
+.hub-c .ic{--w:var(--c);width:60px;height:60px;margin:6px}
+.hub-c .ic svg{width:27px;height:27px;stroke-width:2.4;filter:drop-shadow(0 1px 0 rgba(255,240,220,.35))}
+.hub-home,.hub-ac,.weeknav button{--w:#3b2618}
+.hub-home,.hub-ac{color:#ecdcbf}
 </style>
 </head>
 <body>
