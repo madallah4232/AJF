@@ -20,13 +20,39 @@ const css=document.createElement("style");css.textContent=`
 .rd-air{position:fixed;z-index:72;left:12px;right:12px;bottom:calc(150px + env(safe-area-inset-bottom));padding:12px 14px;border-radius:16px;background:var(--panel);border:1.5px solid var(--go);display:flex;gap:12px;align-items:center;box-shadow:0 20px 50px rgba(0,0,0,.55)}
 .rd-air[hidden]{display:none}.rd-air div{flex:1;min-width:0}.rd-air b{display:block;font-size:15px}.rd-air small{color:var(--muted);font-size:12.5px}
 .rd-air .go{background:var(--go);color:#062417;border:0;border-radius:11px;padding:10px 14px;font-weight:700;font-size:14px}
-.rd-wave{display:flex;gap:3px;align-items:center;height:26px}.rd-wave span{width:4px;border-radius:2px;background:var(--go);animation:rdW .9s ease-in-out infinite}
+.rd-wave{display:flex;gap:3px;align-items:center;height:28px}.rd-wave span{width:4px;height:6px;border-radius:2px;background:var(--go);transition:height .07s linear}
+.rd-wave.idle span{animation:rdW .9s ease-in-out infinite}
 .rd-wave span:nth-child(2){animation-delay:.15s}.rd-wave span:nth-child(3){animation-delay:.3s}.rd-wave span:nth-child(4){animation-delay:.45s}
 @keyframes rdW{0%,100%{height:6px}50%{height:24px}}
-.rd-ptt{width:100%;min-height:150px;border-radius:24px;border:2px solid var(--line);background:var(--raise);color:var(--ink);font:700 18px var(--display);display:grid;place-items:center;gap:6px;
-  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;transition:background .15s,border-color .15s}
-.rd-ptt small{font:500 13px var(--body);color:var(--muted)}.rd-ptt.on{background:color-mix(in oklab,var(--warn) 30%,var(--raise));border-color:var(--warn)}
-.rd-ptt:disabled{opacity:.5}
+.rd-pttw{display:grid;justify-items:center;gap:14px;padding:10px 0 2px;-webkit-user-select:none;user-select:none}
+.rd-ptt{--l:0;position:relative;width:176px;height:176px;border-radius:50%;border:0;padding:0;color:var(--amber);display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 30%,#22304d 0%,var(--raise) 62%,#111a2d 100%);
+  box-shadow:0 0 0 1px var(--line) inset,0 0 0 8px color-mix(in oklab,var(--amber) 7%,transparent),0 18px 44px rgba(0,0,0,.5);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;-webkit-tap-highlight-color:transparent;transition:transform .14s cubic-bezier(.3,.7,.4,1),color .2s,box-shadow .25s}
+.rd-ptt:disabled{opacity:.45}
+.rd-ptt.prep{transform:scale(.96)}
+.rd-ptt.on{transform:scale(.96);color:#fff;background:radial-gradient(circle at 50% 30%,#ff8f7d 0%,#e2493a 58%,#a92a20 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset,0 0 0 8px color-mix(in oklab,var(--warn) 22%,transparent),0 18px 50px rgba(226,73,58,.45)}
+.rd-core{position:relative;z-index:2;display:grid;place-items:center;gap:4px;pointer-events:none}
+.rd-core svg{width:54px;height:54px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+.rd-halo{position:absolute;inset:0;border-radius:50%;pointer-events:none;border:2px solid var(--warn);opacity:0;transform:scale(1);transition:transform .08s linear,opacity .2s}
+.rd-ptt.on .rd-halo.h1{opacity:calc(.25 + var(--l)*.6);transform:scale(calc(1.04 + var(--l)*.16))}
+.rd-ptt.on .rd-halo.h2{opacity:calc(var(--l)*.45);transform:scale(calc(1.1 + var(--l)*.32))}
+.rd-ring{position:absolute;inset:-12px;width:200px;height:200px;transform:rotate(-90deg);pointer-events:none;overflow:visible}
+.rd-ring circle{fill:none;stroke-width:4;stroke-linecap:round}
+.rd-ring .tr{stroke:var(--line);opacity:.0;transition:opacity .2s}.rd-ptt.on .rd-ring .tr,.rd-ptt.prep .rd-ring .tr{opacity:.9}
+.rd-ring .pg{stroke:var(--warn);stroke-dasharray:597;stroke-dashoffset:597;transition:stroke .3s}
+.rd-ptt.prep .rd-ring .pg{stroke:var(--amber);stroke-dashoffset:450;transform-origin:100px 100px;animation:rdSpin .9s linear infinite}
+@keyframes rdSpin{to{transform:rotate(360deg)}}
+.rd-ptt.late .rd-ring .pg{stroke:var(--amber)}
+.rd-info{width:100%;display:grid;justify-items:center;gap:8px}
+.rd-st{font:700 17px var(--display);display:flex;align-items:center;gap:8px;min-height:26px}
+.rd-st .rec{width:10px;height:10px;border-radius:5px;background:var(--warn);box-shadow:0 0 0 0 var(--warn);animation:rdRec 1.2s ease-out infinite}
+@keyframes rdRec{0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--warn) 70%,transparent)}100%{box-shadow:0 0 0 9px transparent}}
+.rd-st .tm{font:600 17px var(--mono);letter-spacing:.5px;color:var(--ink)}
+.rd-cv{width:100%;max-width:340px;height:52px;display:block}
+.rd-sub{font-size:13px;color:var(--muted);text-align:center;min-height:18px}
+.rd-sub.w{color:var(--amber)}
 .rd-it{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:6px;background:var(--raise)}
 .rd-it.u{border-color:var(--warn)}.rd-it.new{box-shadow:0 0 0 1.5px var(--amber) inset}
 .rd-it p{margin:0;font-size:14.5px;white-space:pre-wrap;line-height:1.6}.rd-it .m{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
@@ -43,7 +69,7 @@ const air=document.createElement("div");air.className="rd-air";air.id="rdAir";ai
 
 /* ===== الصوت: تشغيل ===== */
 let ctx=null;
-function aSess(t){try{if(navigator.audioSession)navigator.audioSession.type=t}catch(e){}}
+function aSess(t){try{if(navigator.audioSession&&navigator.audioSession.type!==t)navigator.audioSession.type=t}catch(e){}}
 function unlock(){try{if(!ctx){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;ctx=new A();aSess("playback")}
   if(ctx.state!=="running")ctx.resume();const b=ctx.createBuffer(1,1,ctx.sampleRate),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0)}catch(e){}}
 const audioOK=()=>ctx&&ctx.state==="running";
@@ -56,22 +82,28 @@ function muEnc(x){let s=Math.max(-1,Math.min(1,x))*32767|0;const sign=s<0?0x80:0
 const MUD=new Float32Array(256);for(let i=0;i<256;i++){const u=~i&0xFF,e=(u>>4)&7;let s=(((u&0x0F)<<3)+0x84)<<e;s-=0x84;MUD[i]=((u&0x80)?-s:s)/32768}
 const b64e=u=>{let s="";for(let i=0;i<u.length;i+=0x2000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x2000));return btoa(s)};
 const b64d=s=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
-const RX={sid:null,name:"",next:0,last:0,t:null};
-function rxStart(p){RX.sid=p.sid;RX.name=p.name||"";RX.next=0;RX.last=Date.now();fab.classList.add("live");if(!muted)beep(880,1320,.12);airPaint();rxWatch();
+const RX={sid:null,name:"",next:0,last:0,t:null,lv:[],raf:0};
+const toLvl=r=>{const db=20*Math.log10(r||1e-6);return Math.max(0,Math.min(1,(db+52)/40))};
+function rxStart(p){RX.sid=p.sid;RX.name=p.name||"";RX.next=0;RX.lv=[];RX.last=Date.now();fab.classList.add("live");if(!muted)beep(880,1320,.12);airPaint();rxWatch();
   try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}}
 function rxChunk(p){if(!RX.sid||p.sid!==RX.sid){if(!RX.sid)rxStart(p);else return}RX.last=Date.now();if(muted||!audioOK())return;
   try{const u=b64d(p.d),sr=ctx.sampleRate,n=Math.round(u.length*sr/RATE),buf=ctx.createBuffer(1,n,sr),o=buf.getChannelData(0),k=RATE/sr;
     for(let i=0;i<n;i++){const x=i*k,j=x|0,f=x-j,a=MUD[u[j]],b=j+1<u.length?MUD[u[j+1]]:a;o[i]=(a+(b-a)*f)*1.6}
     const s=ctx.createBufferSource();s.buffer=buf;s.connect(ctx.destination);const now=ctx.currentTime;
     if(RX.next<now+.05)RX.next=now+.35;/* أول دفعة أو بعد تقطّع: هامش صغير عشان ما يتقطع الصوت */
-    s.start(RX.next);RX.next+=buf.duration}catch(e){}}
+    s.start(RX.next);const seg=400;for(let i=0;i<u.length;i+=seg){let q=0,m=Math.min(seg,u.length-i);for(let k2=0;k2<m;k2++){const v=MUD[u[i+k2]];q+=v*v}RX.lv.push({t:RX.next+i/RATE,v:toLvl(Math.sqrt(q/m)*1.6)})}
+    if(RX.lv.length>400)RX.lv.splice(0,RX.lv.length-400);RX.next+=buf.duration;rxAnim()}catch(e){}}
+function rxAnim(){if(RX.raf)return;const f=()=>{RX.raf=0;if(!RX.sid||air.hidden)return;const sp=air.querySelectorAll(".rd-wave span");
+    if(audioOK()&&!muted&&sp.length){const now=ctx.currentTime;let v=0;while(RX.lv.length>1&&RX.lv[1].t<=now)RX.lv.shift();if(RX.lv.length&&RX.lv[0].t<=now)v=RX.lv[0].v;
+      const w=[.55,.9,1,.8,.6],tt=performance.now()/90;sp.forEach((e,i)=>{e.style.height=(5+v*22*w[i]*(.75+.25*Math.sin(tt+i*1.7)))+"px"})}
+    RX.raf=requestAnimationFrame(f)};RX.raf=requestAnimationFrame(f)}
 function rxEnd(sid){if(sid&&sid!==RX.sid)return;const wait=audioOK()?Math.max(0,(RX.next-ctx.currentTime)*1000):0;const was=RX.sid;
   setTimeout(()=>{if(RX.sid!==was)return;RX.sid=null;fab.classList.remove("live");air.hidden=true;if(!muted)beep(1320,700,.14,.14)},wait+50)}
 function rxWatch(){clearTimeout(RX.t);RX.t=setTimeout(()=>{if(!RX.sid)return;if(Date.now()-RX.last>4000)rxEnd(RX.sid);else rxWatch()},1500)}
 function airPaint(){if(!RX.sid||TX.on){air.hidden=true;return}
   const need=!muted&&!audioOK();
-  air.innerHTML=`<div class="rd-wave"><span></span><span></span><span></span><span></span></div><div><b>📻 ${escT(RX.name||"المشرف")} يتكلم الحين</b><small>${muted?"الراديو مكتوم على هذا الجوال":need?"اضغط «استماع» عشان يطلع الصوت":"بث مباشر"}</small></div>${need?'<button class="go" id="rdHear">🔊 استماع</button>':""}`;
-  air.hidden=false;const h=$("rdHear");if(h)h.onclick=()=>{unlock();setTimeout(airPaint,200)}}
+  air.innerHTML=`<div class="rd-wave ${need||muted?"idle":""}"><span></span><span></span><span></span><span></span></div><div><b>📻 ${escT(RX.name||"المشرف")} يتكلم الحين</b><small>${muted?"الراديو مكتوم على هذا الجوال":need?"اضغط «استماع» عشان يطلع الصوت":"بث مباشر"}</small></div>${need?'<button class="go" id="rdHear">🔊 استماع</button>':""}`;
+  air.hidden=false;rxAnim();const h=$("rdHear");if(h)h.onclick=()=>{unlock();setTimeout(airPaint,200)}}
 
 /* ===== الاتصال المباشر (Supabase Realtime) ===== */
 const RT={ws:null,ref:0,jref:null,ok:false,hb:null,retry:0,rt:null,topic:null,pres:{}};
@@ -99,38 +131,64 @@ addEventListener("online",()=>{if(AUTH.tok)rtOpen()});
 const listeners=()=>Object.keys(RT.pres).filter(k=>k!==((AUTH.me&&AUTH.me.emp)||AUTH.dev)).length;
 
 /* ===== الصوت: إرسال (اضغط مطوّل وتكلم) ===== */
-const TX={on:false,want:false,stream:null,src:null,proc:null,sid:null,q:0,buf:null,n:0,acc:0,cnt:0,pos:0,t0:0,id:null,tm:null};
+const TX={on:false,want:false,stream:null,src:null,proc:null,sid:null,q:0,buf:null,n:0,acc:0,cnt:0,pos:0,t0:0,id:null,tm:null,lvl:0,raw:0,hist:[],raf:0,quiet:0};
+async function getMic(){const md=navigator.mediaDevices;
+  try{return await md.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}})}
+  catch(e){if(e&&(e.name==="NotAllowedError"||e.name==="SecurityError"))throw e;return await md.getUserMedia({audio:true})}}
 async function txStart(){if(TX.on||TX.want)return;if(!RT.ok){toast("الراديو غير متصل، انتظر ثواني وجرّب");return}
   unlock();if(!ctx||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast("هذا الجوال ما يدعم المايك من التطبيق");return}
-  TX.want=true;pttPaint();
-  try{const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
-    if(!TX.want){s.getTracks().forEach(t=>t.stop());return}
-    aSess("play-and-record");if(ctx.state!=="running")await ctx.resume();
+  TX.want=true;pttPaint();txAnim();
+  /* الآيفون: جلسة الصوت لازم تكون "تسجيل وتشغيل" قبل طلب المايك، وإلا يرفض المايك (كان هذا سبب «تعذّر تشغيل المايك») */
+  aSess("play-and-record");
+  try{const s=await getMic();
+    if(!TX.want){s.getTracks().forEach(t=>t.stop());aSess("playback");say("✅ تم تجهيز المايك. اضغط مطوّل مرة ثانية وتكلم");pttPaint();return}
+    if(ctx.state!=="running")await ctx.resume().catch(()=>{});
     TX.stream=s;TX.src=ctx.createMediaStreamSource(s);TX.proc=ctx.createScriptProcessor(2048,1,1);
-    TX.buf=new Uint8Array(CHUNK);TX.n=0;TX.acc=0;TX.cnt=0;TX.pos=0;TX.q=0;TX.sid=Math.random().toString(36).slice(2,10);
+    TX.buf=new Uint8Array(CHUNK);TX.n=0;TX.acc=0;TX.cnt=0;TX.pos=0;TX.q=0;TX.lvl=0;TX.raw=0;TX.hist=[];TX.quiet=0;TX.sid=Math.random().toString(36).slice(2,10);
     const ratio=ctx.sampleRate/RATE;
-    TX.proc.onaudioprocess=e=>{if(!TX.on)return;const x=e.inputBuffer.getChannelData(0);
+    TX.proc.onaudioprocess=e=>{if(!TX.on)return;const x=e.inputBuffer.getChannelData(0);let q=0;for(let i=0;i<x.length;i++)q+=x[i]*x[i];TX.raw=toLvl(Math.sqrt(q/x.length));
       for(let i=0;i<x.length;i++){TX.acc+=x[i];TX.cnt++;TX.pos+=1;if(TX.pos>=ratio){TX.pos-=ratio;TX.buf[TX.n++]=muEnc(TX.acc/TX.cnt);TX.acc=0;TX.cnt=0;if(TX.n>=CHUNK)txFlush()}}};
     TX.src.connect(TX.proc);TX.proc.connect(ctx.destination);
     TX.on=true;TX.t0=Date.now();rtSend("vs",{sid:TX.sid,emp:AUTH.me&&AUTH.me.emp,name:(AUTH.me&&AUTH.me.name)||""});beep(1320,880,.08,.12);
     try{navigator.vibrate&&navigator.vibrate(40)}catch(e){}
     TX.id=null;rpc("ajf_bc_talk",{p_token:AUTH.tok,p_device:AUTH.dev,p_id:null,p_secs:null}).then(j=>{if(j&&j.s==="ok")TX.id=j.id}).catch(()=>{});
-    clearInterval(TX.tm);TX.tm=setInterval(()=>{const s=(Date.now()-TX.t0)/1000;pttPaint();if(s>=MAX_SEC)txStop()},250);pttPaint()}
-  catch(e){TX.want=false;toast(e&&e.name==="NotAllowedError"?"المايك مرفوض. اسمح للتطبيق باستخدام الميكروفون من إعدادات الجوال (Safari ← الميكروفون).":"تعذّر تشغيل المايك");pttPaint()}}
+    clearInterval(TX.tm);TX.tm=setInterval(()=>{const s=(Date.now()-TX.t0)/1000;pttPaint();if(s>=MAX_SEC)txStop()},250);pttPaint();txAnim()}
+  catch(e){TX.want=false;aSess("playback");const n=e&&e.name||"";
+    toast(n==="NotAllowedError"?"المايك مرفوض. افتح الإعدادات ← Safari ← الميكروفون واختر «اسمح»، ثم سكّر التطبيق وافتحه من جديد."
+      :n==="NotFoundError"?"ما لقيت مايك في الجوال"
+      :n==="NotReadableError"||n==="AbortError"?"المايك مشغول بتطبيق ثاني (مكالمة أو تسجيل). سكّره وجرّب":"تعذّر تشغيل المايك ("+(n||"خطأ")+")");pttPaint()}}
 function txFlush(){if(!TX.n)return;rtSend("va",{sid:TX.sid,q:TX.q++,d:b64e(TX.buf.subarray(0,TX.n))});TX.buf=new Uint8Array(CHUNK);TX.n=0}
 function txStop(){TX.want=false;if(!TX.on)return;TX.on=false;clearInterval(TX.tm);
   try{txFlush()}catch(e){}rtSend("ve",{sid:TX.sid});
   try{TX.src.disconnect();TX.proc.disconnect();TX.proc.onaudioprocess=null}catch(e){}
-  if(TX.stream)TX.stream.getTracks().forEach(t=>t.stop());TX.stream=null;aSess("playback");
+  if(TX.stream)TX.stream.getTracks().forEach(t=>t.stop());TX.stream=null;setTimeout(()=>{if(!TX.on&&!TX.want)aSess("playback")},300);
   const secs=Math.round((Date.now()-TX.t0)/1000);const id0=TX.id;
   const fin=id=>rpc("ajf_bc_talk",{p_token:AUTH.tok,p_device:AUTH.dev,p_id:id,p_secs:secs}).catch(()=>{});
   if(id0)fin(id0);else setTimeout(()=>{if(TX.id)fin(TX.id)},1500);
   try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}pttPaint();setTimeout(()=>load(true),1800)}
 addEventListener("pagehide",()=>{if(TX.on)txStop()});
-function pttPaint(){const b=$("rdPtt");if(!b)return;b.classList.toggle("on",TX.on);
-  b.innerHTML=TX.on?`<span>🔴 على الهواء ${fmtS((Date.now()-TX.t0)/1000)}</span><small>شيل إصبعك لما تخلص</small>`
-    :TX.want?`<span>…</span><small>يجهّز المايك</small>`:`<span>🎙️ اضغط مطوّل وتكلم</span><small>${RT.ok?(listeners()?"يسمعك الحين "+listeners()+" موظف فاتح التطبيق":"ما فيه أحد فاتح التطبيق الحين"):"جاري الاتصال…"}</small>`;
-  b.disabled=!RT.ok&&!TX.on}
+const MIC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="12" rx="3" fill="currentColor" fill-opacity=".18"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>';
+function pttPaint(){const b=$("rdPtt");if(!b)return;const el=(Date.now()-TX.t0)/1000,left=MAX_SEC-el;
+  b.classList.toggle("on",TX.on);b.classList.toggle("prep",TX.want&&!TX.on);b.classList.toggle("late",TX.on&&left<=10);b.disabled=!RT.ok&&!TX.on&&!TX.want;
+  const S=$("rdSt"),U=$("rdSub");if(!S||!U)return;const L=listeners();
+  if(TX.on){S.innerHTML=`<span class="rec"></span><span>على الهواء</span><span class="tm">${fmtS(el)}</span>`;
+    const lo=TX.quiet>45;U.className="rd-sub"+(lo||left<=10?" w":"");
+    U.textContent=lo?"الصوت ضعيف — قرّب الجوال من فمك":left<=10?"باقي "+Math.ceil(left)+" ثانية":(L?"يسمعك "+L+" موظف":"ما فيه أحد فاتح التطبيق الحين")+" · شيل إصبعك لما تخلص"}
+  else if(TX.want){S.innerHTML="<span>يجهّز المايك…</span>";U.className="rd-sub";U.textContent="خلك ضاغط"}
+  else{S.innerHTML="<span>اضغط مطوّل وتكلم</span>";U.className="rd-sub";U.textContent=RT.ok?(L?"يسمعك الحين "+L+" موظف فاتح التطبيق":"ما فيه أحد فاتح التطبيق الحين"):"جاري الاتصال…"}}
+function txAnim(){if(TX.raf)return;let last=0;const f=ts=>{TX.raf=0;const b=$("rdPtt"),cv=$("rdCv");
+    TX.lvl+=((TX.on?TX.raw:0)-TX.lvl)*(TX.raw>TX.lvl?.55:.18);if(b)b.style.setProperty("--l",TX.lvl.toFixed(3));
+    const pg=b&&b.querySelector(".pg");if(pg&&TX.on)pg.style.strokeDashoffset=(597*(1-Math.min(1,(Date.now()-TX.t0)/1000/MAX_SEC))).toFixed(1);else if(pg&&!TX.want)pg.style.strokeDashoffset="597";
+    if(ts-last>45){last=ts;TX.hist.push(TX.on?TX.raw:0);if(TX.hist.length>120)TX.hist.shift();if(TX.on)TX.quiet=TX.raw<.12?TX.quiet+1:0;if(cv)drawCv(cv)}
+    if(TX.on||TX.want||TX.lvl>.01)TX.raf=requestAnimationFrame(f);else{TX.hist=[];if(cv)drawCv(cv)}};TX.raf=requestAnimationFrame(f)}
+let CVC=null;function drawCv(cv){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w)return;
+  if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}const g=cv.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+  if(!CVC){const cs=getComputedStyle(document.documentElement);CVC={w:cs.getPropertyValue("--warn").trim()||"#ff7a66",a:cs.getPropertyValue("--amber").trim()||"#ffb340",m:cs.getPropertyValue("--line").trim()||"#2a3550"}}
+  const bw=3,gap=2.5,n=Math.floor(w/(bw+gap)),H=TX.hist,mid=h/2;
+  /* الأحدث على اليسار والموجة تمشي لليمين (اتجاه الوقت بالعربي) */
+  for(let i=0;i<n;i++){const v=H[H.length-1-i],xx=i*(bw+gap);if(v==null||v<.02){g.fillStyle=CVC.m;g.fillRect(xx,mid-1,bw,2);continue}
+    const bh=Math.max(3,v*(h-4));g.fillStyle=v>.92?CVC.a:CVC.w;g.globalAlpha=1-.65*(i/n);
+    g.beginPath();if(g.roundRect)g.roundRect(xx,mid-bh/2,bw,bh,1.5);else g.rect(xx,mid-bh/2,bw,bh);g.fill();g.globalAlpha=1}}
 const fmtS=s=>{s=Math.max(0,s|0);return (s/60|0)+":"+String(s%60).padStart(2,"0")};
 
 /* ===== التنبيهات المكتوبة ===== */
@@ -166,7 +224,8 @@ async function openRd(){st.open=true;pan.hidden=false;const b=$("bcBan");if(b)b.
   const ids=st.items.filter(x=>x.kind==="text"&&!x.read).map(x=>x.id);setTimeout(()=>{if(st.open)seen(ids)},1200)}
 function closeRd(){st.open=false;pan.hidden=true;if(TX.on)txStop()}
 function render(){const me=AUTH.me||{};let h="";
-  h+=`<div class="adm-s"><h3>📻 البث المباشر</h3>${st.can?`<button class="rd-ptt" id="rdPtt"></button><div class="amsg">اضغط على الزر واستمر ضاغط وأنت تتكلم، وشيل إصبعك لما تخلص (حد أقصى ${MAX_SEC} ثانية). يسمعك كل موظف فاتح التطبيق الحين.</div>`
+  h+=`<div class="adm-s"><h3>📻 البث المباشر</h3>${st.can?`<div class="rd-pttw"><button class="rd-ptt" id="rdPtt" aria-label="اضغط مطوّل وتكلم"><span class="rd-halo h2"></span><span class="rd-halo h1"></span><svg class="rd-ring" viewBox="0 0 200 200"><circle class="tr" cx="100" cy="100" r="95"/><circle class="pg" cx="100" cy="100" r="95"/></svg><span class="rd-core">${MIC}</span></button>
+    <div class="rd-info"><div class="rd-st" id="rdSt"></div><canvas class="rd-cv" id="rdCv"></canvas><div class="rd-sub" id="rdSub"></div></div></div><div class="amsg">اضغط على الزر واستمر ضاغط وأنت تتكلم، وشيل إصبعك لما تخلص (حد أقصى ${MAX_SEC} ثانية). يسمعك كل موظف فاتح التطبيق الحين.</div>`
     :`<div class="amsg">لما يتكلم المشرف يطلع لك شريط أخضر ويطلع الصوت مباشرة، بشرط يكون التطبيق مفتوح قدامك. لو الجوال مقفل ما يوصلك الصوت، لكن التنبيهات المكتوبة توصلك.</div>`}
     <div class="amsg" id="rdMsg">${escT(st.msg||"")}</div>
     <button class="abtn ${muted?"a":""}" id="rdMute">${muted?"🔇 الراديو مكتوم على هذا الجوال · اضغط للتشغيل":"🔊 الصوت شغّال · كتم الراديو"}</button>
@@ -184,7 +243,7 @@ function render(){const me=AUTH.me||{};let h="";
     ${st.perm.map(e=>`<div class="req"><div><b>${escT((NAMES&&NAMES[e])||"")}</b> <span class="chip">${escT(e)}</span></div><button class="abtn n" data-rp="${escT(e)}">إزالة</button></div>`).join("")}
     <div style="display:flex;gap:8px"><input id="rdPE" inputmode="numeric" placeholder="الرقم الوظيفي"><button class="abtn a" id="rdPA">إضافة</button></div></div>`;
   const keep=$("rdTx")?{v:$("rdTx").value,u:$("rdUrg").checked}:null;
-  $("rdB").innerHTML=h;if(keep&&$("rdTx")){$("rdTx").value=keep.v;$("rdUrg").checked=keep.u}stPaint();
+  $("rdB").innerHTML=h;if(keep&&$("rdTx")){$("rdTx").value=keep.v;$("rdUrg").checked=keep.u}stPaint();{const c=$("rdCv");if(c)requestAnimationFrame(()=>drawCv(c))}
   if(me.admin&&!NAMES)admCall("list").then(j=>{NAMES={};(j.emps||[]).forEach(e=>NAMES[e.emp]=e.name);if(st.open)render()}).catch(()=>{});
   const p=$("rdPtt");if(p){const go=e=>{e.preventDefault();try{p.setPointerCapture(e.pointerId)}catch(x){}txStart()},end=e=>{e.preventDefault();txStop()};
     p.addEventListener("pointerdown",go);p.addEventListener("pointerup",end);p.addEventListener("pointercancel",end);p.addEventListener("lostpointercapture",()=>{if(TX.on||TX.want)txStop()});p.oncontextmenu=e=>e.preventDefault()}}
