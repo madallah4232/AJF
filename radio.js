@@ -10,13 +10,15 @@ const RATE=8000,CHUNK=4000,MAX_SEC=90;
 const st={can:false,room:null,items:[],perm:[],at:0,open:false,unread:0,seen:new Set(),auto:new Set(),stt:{}};
 const myEmp=()=>(AUTH.me&&AUTH.me.emp)||"";
 /* نص كلام الراديو يظهر للمشرف ومن عنده صلاحية فقط؛ الموظفين توصلهم التنبيهات المكتوبة على الشاشة بدون سجل */
-const isNote=x=>(x.kind==="text"||(st.can&&x.kind==="voice"&&x.body))&&x.emp!==myEmp();
+const isAdm=()=>!!(AUTH.me&&AUTH.me.admin);
+/* تنبيهات كلام الراديو (النص المكتوب من الكلام) تطلع للمشرف فقط */
+const isNote=x=>(x.kind==="text"||(isAdm()&&x.kind==="voice"&&x.body))&&x.emp!==myEmp();
 let muted=false;try{muted=localStorage.getItem("ajf_rd_mute")==="1"}catch(e){}
 try{(JSON.parse(localStorage.getItem("ajf_bc_seen")||"[]")).forEach(i=>st.seen.add(i))}catch(e){}
 
 /* ===== الشكل ===== */
 const css=document.createElement("style");css.textContent=`
-.rd-fab{position:fixed;z-index:30;right:16px;bottom:calc(82px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:26px;background:var(--panel);border:1px solid var(--line);color:var(--amber);display:grid;place-items:center;box-shadow:0 10px 28px rgba(0,0,0,.45)}
+.rd-fab{position:fixed;z-index:39;right:16px;bottom:calc(82px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:26px;background:var(--panel);border:1px solid var(--line);color:var(--amber);display:grid;place-items:center;box-shadow:0 10px 28px rgba(0,0,0,.45)}
 .rd-fab[hidden]{display:none}.rd-fab i{position:absolute;top:-4px;left:-4px;min-width:18px;height:18px;border-radius:9px;background:var(--warn);color:#fff;font:700 11px/18px var(--mono);font-style:normal;padding:0 4px}
 .rd-fab.live{border-color:var(--go);color:var(--go);animation:rdPulse 1.1s ease-in-out infinite}
 @keyframes rdPulse{50%{box-shadow:0 0 0 8px color-mix(in oklab,var(--go) 25%,transparent),0 10px 28px rgba(0,0,0,.45)}}
@@ -68,7 +70,7 @@ const css=document.createElement("style");css.textContent=`
 `;document.head.appendChild(css);
 const ICO='<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="12" height="14" rx="2"/><path d="M9 8V2M12 12v.01M9 16h6M9 19h6"/></svg>';
 const fab=document.createElement("button");fab.className="rd-fab";fab.id="rdFab";fab.hidden=true;fab.setAttribute("aria-label","الراديو والتنبيهات");fab.innerHTML=ICO+'<i id="rdN" hidden></i>';document.body.appendChild(fab);
-const pan=document.createElement("div");pan.className="dlyc";pan.id="rd";pan.hidden=true;pan.setAttribute("role","dialog");pan.setAttribute("aria-modal","true");pan.style.gridTemplateRows="auto 1fr";
+const pan=document.createElement("div");pan.className="dlyc";pan.id="rd";pan.hidden=true;pan.setAttribute("role","dialog");pan.setAttribute("aria-modal","true");pan.style.gridTemplateRows="auto 1fr";pan.style.zIndex="41";
 pan.innerHTML=`<div class="trk-top"><button class="trk-back" id="rdBack" aria-label="رجوع"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
 <div><b>📻 الراديو والتنبيهات</b><span id="rdS"></span></div></div><div class="adm-b" id="rdB"></div>`;document.body.appendChild(pan);
 const air=document.createElement("div");air.className="rd-air";air.id="rdAir";air.hidden=true;air.setAttribute("role","status");document.body.appendChild(air);
@@ -118,6 +120,8 @@ function rxEnd(sid){if(sid&&sid!==RX.sid)return;rxPump();const wait=audioOK()?Ma
 function rxWatch(){clearTimeout(RX.t);RX.t=setTimeout(()=>{if(!RX.sid)return;if(Date.now()-RX.last>4000)rxEnd(RX.sid);else rxWatch()},1500)}
 function airPaint(){if(!RX.sid||TX.on){air.hidden=true;return}
   const need=!muted&&!audioOK();
+  /* شريط «فلان يتكلم» للمشرف فقط؛ الموظف يطلع له بس لو الجوال يحتاج ضغطة عشان يسمع */
+  if(!isAdm()&&!need){air.hidden=true;return}
   air.innerHTML=`<div class="rd-wave ${need||muted?"idle":""}"><span></span><span></span><span></span><span></span></div><div><b>📻 ${escT(RX.name||"المشرف")} يتكلم الحين</b><small>${muted?"الراديو مكتوم على هذا الجوال":need?"اضغط هنا عشان تسمع (من أول الكلام)":"بث مباشر"}</small></div>${need?'<button class="go" id="rdHear">🔊 استماع</button>':""}`;
   air.classList.toggle("need",need);air.onclick=need?()=>{unlock();setTimeout(()=>{rxPump();airPaint()},150)}:null;
   air.hidden=false;rxAnim()}
