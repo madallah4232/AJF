@@ -9,7 +9,8 @@ const RT_URL=SB_URL.replace(/^http/,"ws")+"/realtime/v1/websocket?apikey="+encod
 const RATE=8000,CHUNK=4000,MAX_SEC=90;
 const st={can:false,room:null,items:[],perm:[],at:0,open:false,unread:0,seen:new Set(),auto:new Set(),stt:{}};
 const myEmp=()=>(AUTH.me&&AUTH.me.emp)||"";
-const isNote=x=>(x.kind==="text"||(x.kind==="voice"&&x.body))&&x.emp!==myEmp();
+/* نص كلام الراديو يظهر للمشرف ومن عنده صلاحية فقط؛ الموظفين توصلهم التنبيهات المكتوبة على الشاشة بدون سجل */
+const isNote=x=>(x.kind==="text"||(st.can&&x.kind==="voice"&&x.body))&&x.emp!==myEmp();
 let muted=false;try{muted=localStorage.getItem("ajf_rd_mute")==="1"}catch(e){}
 try{(JSON.parse(localStorage.getItem("ajf_bc_seen")||"[]")).forEach(i=>st.seen.add(i))}catch(e){}
 
@@ -80,7 +81,12 @@ function unlock(){try{if(!ctx){const A=window.AudioContext||window.webkitAudioCo
 const audioOK=()=>ctx&&ctx.state==="running";
 /* الآيفون يسمح بتشغيل الصوت بعد لمسة "نقر" فقط (مو سحب)، فنفتح الصوت مع أي نقرة في أي لوحة */
 ["pointerdown","touchend","click","keydown"].forEach(ev=>document.addEventListener(ev,()=>{const was=audioOK();if(!was)unlock();if(RX.sid){if(!was)setTimeout(()=>{rxPump();airPaint()},120);else rxPump()}},{capture:true,passive:true}));
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&ctx&&ctx.state!=="running")ctx.resume().catch(()=>{})});
+/* الآيفون: لما الموظف يطلع من التطبيق ويرجع، الصوت القديم يصير صامت حتى لو يقول إنه شغّال.
+   فنسكّره ونسوي واحد جديد مع أول لمسة، والشريط الأخضر يطلب منه يضغط عشان يسمع */
+let wasHidden=false;
+function audioReset(){if(TX.on||TX.want)return;try{ctx&&ctx.close()}catch(e){}ctx=null;RX.next=0;RX.pi=0}
+document.addEventListener("visibilitychange",()=>{if(document.hidden){wasHidden=true;return}if(wasHidden){wasHidden=false;audioReset();if(RX.sid)airPaint()}});
+addEventListener("pageshow",e=>{if(e.persisted){audioReset();if(RX.sid)airPaint()}});
 function beep(f1,f2,dur,vol){if(!audioOK()||muted)return;try{const t=ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();o.type="sine";o.frequency.setValueAtTime(f1,t);o.frequency.linearRampToValueAtTime(f2,t+dur);
   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol||.18,t+.02);g.gain.linearRampToValueAtTime(0,t+dur);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+dur+.02)}catch(e){}}
 /* μ-law (G.711) */
@@ -230,7 +236,7 @@ function badge(){const i=$("rdN");if(!i)return;i.hidden=!st.unread;i.textContent
 function banner(x,n){const old=$("bcBan");if(old)old.remove();
   const d=document.createElement("div");d.className="jr-ban";d.id="bcBan";d.setAttribute("role","alert");if(x.urgent)d.style.borderColor="var(--warn)";
   d.innerHTML=`<i>${x.urgent?"🚨":x.kind==="voice"?"📻":"📢"}</i><div><b>${x.urgent?"عاجل · ":""}${escT(x.name||"المشرف")}${x.kind==="voice"?" · 📻 كلام الراديو":""}</b><small style="white-space:pre-wrap;display:block;color:var(--ink);font-size:14px;margin-top:2px">${escT(x.body.length>220?x.body.slice(0,220)+"…":x.body)}</small>${n>1?`<small>+${n-1} تنبيهات ثانية</small>`:""}</div><button class="go">تم ✓</button>`;
-  d.querySelector(".go").onclick=()=>{d.remove();if(n>1)openRd();else seen([x.id])};
+  d.querySelector(".go").onclick=()=>{d.remove();if(n>1&&st.can)openRd();else seen(n>1?st.items.filter(y=>isNote(y)&&!y.read).map(y=>y.id):[x.id])};
   document.body.appendChild(d);if(!muted){beep(988,988,.12,.2);setTimeout(()=>beep(1319,1319,.18,.2),160)}
   try{navigator.vibrate&&navigator.vibrate(x.urgent?[300,120,300,120,300]:[150,80,150])}catch(e){}}
 function seen(ids){ids=ids.filter(i=>!st.seen.has(i));if(!ids.length)return;ids.forEach(i=>st.seen.add(i));
@@ -257,7 +263,8 @@ function render(){const me=AUTH.me||{};let h="";
     <label class="rd-urg"><input type="checkbox" id="rdUrg"> 🚨 عاجل (يبقى على الشاشة لين يفتحه الموظف)</label><button class="abtn a" id="rdSend">إرسال للجميع</button>
     <div class="amsg">يطلع فوراً للي فاتحين التطبيق، ويوصل على شاشة القفل للي مفعّلين التنبيهات خلال نص دقيقة تقريباً.</div></div>`;
   const its=st.items;
-  h+=`<div class="adm-s"><h3>آخر التنبيهات <span class="chip">48 ساعة</span></h3>${its.length?its.map(x=>x.kind==="voice"
+  if(!st.can)h+=`<div class="adm-s"><h3>📢 التنبيهات</h3><div class="amsg">أي تنبيه جديد من المشرف يطلع لك على الشاشة مباشرة، ويوصلك على شاشة القفل إذا مفعّل التنبيهات.</div></div>`;
+  else h+=`<div class="adm-s"><h3>آخر التنبيهات <span class="chip">48 ساعة</span></h3>${its.length?its.map(x=>x.kind==="voice"
     ?`<div class="rd-it ${x.body&&isNote(x)&&!x.read&&!st.seen.has(x.id)?"new":""}"><div class="m"><span>📻 ${escT(x.name||x.emp)} تكلم على الراديو${x.secs?" · "+fmtS(x.secs):""}</span><span>${tm(x.at)}</span></div>${x.body?`<p class="v">${escT(x.body)}</p>`:st.stt[x.id]?`<div class="rd-stt">${st.stt[x.id]==="w"?"⏳ يحوّل الكلام لنص…":escT(st.stt[x.id])}</div>`:""}
       ${st.can&&x.body?`<div class="m"><button class="abtn" data-rw="${x.id}">👁️ قرأه ${x.n||0}</button></div>${openW&&openW.id===x.id?`<div class="who">${openW.html}</div>`:""}`:""}</div>`
     :`<div class="rd-it ${x.urgent?"u":""} ${!x.read&&!st.seen.has(x.id)?"new":""}"><div class="m"><span>${x.urgent?'<span class="chip w">عاجل</span> ':""}${escT(x.name||x.emp)}</span><span>${tm(x.at)}</span></div><p>${escT(x.body)}</p>
