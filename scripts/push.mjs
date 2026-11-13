@@ -93,11 +93,40 @@ async function bcTick(N) {
   }
 }
 let busy = false;
+// 📻 أحد يتكلم على الراديو ← تنبيه على شاشة القفل لكل الموظفين المشتركين باسم المتكلم (يُفحص كل 5 ثواني)
+let vcBusy = false, vcTimer = null;
+async function vcTick() {
+  if (vcBusy) return; vcBusy = true;
+  try {
+    const since = new Date(Date.now() - 90e3).toISOString();
+    const r = await fetch(SB_URL + "/rest/v1/ajf_bc?select=id,name,emp&kind=eq.voice&at=gt." + encodeURIComponent(since) + "&order=id",
+      { headers: { apikey: KEY, ...(KEY.startsWith("eyJ") ? { Authorization: "Bearer " + KEY } : {}) }, signal: AbortSignal.timeout(8000) });
+    if (!r.ok) { console.log("push: vc", r.status); return; }
+    const rows = await r.json();
+    if (!rows.length) return;
+    const iso = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+    let subs = null;
+    for (const x of rows) {
+      if (!(await rpc("ajf_push_claim", { p_day: iso, p_flight: "VC", p_stage: String(x.id) }).catch(() => false))) continue;
+      subs = subs || await rpc("ajf_push_targets");
+      const msg = JSON.stringify({ title: "📻 " + (x.name || "زميلك") + " يتكلم على الراديو", body: "افتح التطبيق عشان تسمع", tag: "ajf-vc", url: "./" });
+      let ok = 0;
+      await Promise.all(subs.map(async (s) => {
+        try { await wp.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, msg, { TTL: 120, urgency: "high", topic: "vc" }); ok++; }
+        catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await rpc("ajf_push_drop", { p_endpoint: s.endpoint }).catch(() => {}); else console.log("push: vc send", e.statusCode || e.message); }
+      }));
+      console.log(`push: VC ${x.id} → ${ok}/${subs.length}`);
+    }
+  } catch (e) { console.log("push: vc", e.message); }
+  finally { vcBusy = false; }
+}
+
 export async function pushTick(state, N, fallbackFlights) {
   if (busy) return; busy = true;
   try {
     if (ready === null) ready = await init();
     if (!ready) return;
+    if (!vcTimer) { vcTimer = setInterval(vcTick, 5000); vcTimer.unref?.(); vcTick(); }
     await adminTick(N).catch((e) => console.log("push: admin", e.message));
     await bcTick(N).catch((e) => console.log("push: bc", e.message));
     const F = await loadSched(fallbackFlights);
