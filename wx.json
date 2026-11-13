@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-13T22:38:07Z",
+  "fetched": "2026-11-13T23:22:38Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-13T23:01:32.069Z",
+      "obsTime": 1794610800,
+      "reportTime": "2026-11-13T23:00:00.000Z",
+      "temp": 12,
+      "dewp": 6,
+      "wdir": 70,
+      "wspd": 5,
+      "visib": "6+",
+      "altim": 1029,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 132300Z 07005KT CAVOK 12/06 Q1029 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-13T22:00:42.437Z",
@@ -44,39 +66,17 @@
       "cover": "CAVOK",
       "clouds": [],
       "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-13T20:00:40.071Z",
-      "obsTime": 1794600000,
-      "reportTime": "2026-11-13T20:00:00.000Z",
-      "temp": 15,
-      "dewp": 6,
-      "wdir": 70,
-      "wspd": 8,
-      "visib": "6+",
-      "altim": 1029,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 132000Z 07008KT CAVOK 15/06 Q1029 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "CAVOK",
-      "clouds": [],
-      "fltCat": "VFR"
     }
   ],
   "taf": [
     {
       "icaoId": "OESK",
-      "dbPopTime": "2026-11-13T11:17:45.249Z",
-      "bulletinTime": "2026-11-13T11:00:00.000Z",
-      "issueTime": "2026-11-13T11:00:00.000Z",
-      "validTimeFrom": 1794571200,
-      "validTimeTo": 1794679200,
-      "rawTAF": "TAF OESK 131100Z 1312/1418 10010KT 7000 NSC TEMPO 1318/1406 1500 BR",
+      "dbPopTime": "2026-11-13T23:05:44.730Z",
+      "bulletinTime": "2026-11-13T23:00:00.000Z",
+      "issueTime": "2026-11-13T23:00:00.000Z",
+      "validTimeFrom": 1794614400,
+      "validTimeTo": 1794722400,
+      "rawTAF": "TAF OESK 132300Z 1400/1506 10010KT CAVOK",
       "mostRecent": 1,
       "remarks": "",
       "lat": 29.785,
@@ -86,8 +86,8 @@
       "name": "Al-Jouf Arpt",
       "fcsts": [
         {
-          "timeFrom": 1794571200,
-          "timeTo": 1794679200,
+          "timeFrom": 1794614400,
+          "timeTo": 1794722400,
           "timeBec": null,
           "fcstChange": null,
           "probability": null,
@@ -97,10 +97,10 @@
           "wshearHgt": null,
           "wshearDir": null,
           "wshearSpd": null,
-          "visib": 4.35,
+          "visib": "6+",
           "altim": null,
           "vertVis": null,
-          "wxString": null,
+          "wxString": "NSW",
           "notDecoded": null,
           "clouds": [
             {
@@ -109,27 +109,6 @@
               "type": null
             }
           ],
-          "icgTurb": [],
-          "temp": []
-        },
-        {
-          "timeFrom": 1794592800,
-          "timeTo": 1794636000,
-          "timeBec": null,
-          "fcstChange": "TEMPO",
-          "probability": null,
-          "wdir": null,
-          "wspd": null,
-          "wgst": null,
-          "wshearHgt": null,
-          "wshearDir": null,
-          "wshearSpd": null,
-          "visib": 0.93,
-          "altim": null,
-          "vertVis": null,
-          "wxString": "BR",
-          "notDecoded": null,
-          "clouds": [],
           "icgTurb": [],
           "temp": []
         }
