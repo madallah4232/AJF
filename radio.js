@@ -100,7 +100,7 @@ const RX={sid:null,name:"",next:0,last:0,t:null,lv:[],raf:0,buf:[],pi:0,heard:ne
 const toLvl=r=>{const db=20*Math.log10(r||1e-6);return Math.max(0,Math.min(1,(db+52)/40))};
 function rxStart(p){RX.sid=p.sid;RX.name=p.name||"";RX.next=0;RX.lv=[];RX.buf=[];RX.pi=0;RX.last=Date.now();fab.classList.add("live");if(!muted)beep(880,1320,.12);airPaint();rxWatch();
   try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}}
-function rxChunk(p){if(!RX.sid||p.sid!==RX.sid){if(!RX.sid)rxStart(p);else return}RX.last=Date.now();
+function rxChunk(p){if(!RX.sid||p.sid!==RX.sid){if(!RX.sid)rxStart(p);else return}RX.last=Date.now();if(!RX.name&&p.name){RX.name=p.name;airPaint()}
   try{RX.buf.push(b64d(p.d))}catch(e){}rxPump()}
 /* يشغّل كل اللي وصل وما انسمع — لو الموظف ضغط «استماع» متأخر يسمع الكلام من أوله */
 function rxPump(){if(!RX.sid||muted||!audioOK())return;while(RX.pi<RX.buf.length)rxPlay(RX.buf[RX.pi++])}
@@ -120,9 +120,7 @@ function rxEnd(sid){if(sid&&sid!==RX.sid)return;rxPump();const wait=audioOK()?Ma
 function rxWatch(){clearTimeout(RX.t);RX.t=setTimeout(()=>{if(!RX.sid)return;if(Date.now()-RX.last>4000)rxEnd(RX.sid);else rxWatch()},1500)}
 function airPaint(){if(!RX.sid||TX.on){air.hidden=true;return}
   const need=!muted&&!audioOK();
-  /* شريط «فلان يتكلم» للمشرف فقط؛ الموظف يطلع له بس لو الجوال يحتاج ضغطة عشان يسمع */
-  if(!isAdm()&&!need){air.hidden=true;return}
-  air.innerHTML=`<div class="rd-wave ${need||muted?"idle":""}"><span></span><span></span><span></span><span></span></div><div><b>📻 ${escT(RX.name||"المشرف")} يتكلم الحين</b><small>${muted?"الراديو مكتوم على هذا الجوال":need?"اضغط هنا عشان تسمع (من أول الكلام)":"بث مباشر"}</small></div>${need?'<button class="go" id="rdHear">🔊 استماع</button>':""}`;
+  air.innerHTML=`<div class="rd-wave ${need||muted?"idle":""}"><span></span><span></span><span></span><span></span></div><div><b>📻 ${escT(RX.name||"زميلك")} يتكلم الحين</b><small>${muted?"الراديو مكتوم على هذا الجوال":need?"اضغط هنا عشان تسمع (من أول الكلام)":"بث مباشر"}</small></div>${need?'<button class="go" id="rdHear">🔊 استماع</button>':""}`;
   air.classList.toggle("need",need);air.onclick=need?()=>{unlock();setTimeout(()=>{rxPump();airPaint()},150)}:null;
   air.hidden=false;rxAnim()}
 
@@ -178,7 +176,7 @@ async function txStart(){if(TX.on||TX.want)return;if(!RT.ok){toast("الرادي
     toast(n==="NotAllowedError"?"المايك مرفوض. افتح الإعدادات ← Safari ← الميكروفون واختر «اسمح»، ثم سكّر التطبيق وافتحه من جديد."
       :n==="NotFoundError"?"ما لقيت مايك في الجوال"
       :n==="NotReadableError"||n==="AbortError"?"المايك مشغول بتطبيق ثاني (مكالمة أو تسجيل). سكّره وجرّب":"تعذّر تشغيل المايك ("+(n||"خطأ")+")");pttPaint()}}
-function txFlush(){if(!TX.n)return;TX.all.push(TX.buf.subarray(0,TX.n));rtSend("va",{sid:TX.sid,q:TX.q++,d:b64e(TX.buf.subarray(0,TX.n))});TX.buf=new Uint8Array(CHUNK);TX.n=0}
+function txFlush(){if(!TX.n)return;TX.all.push(TX.buf.subarray(0,TX.n));rtSend("va",{sid:TX.sid,name:(AUTH.me&&AUTH.me.name)||"",q:TX.q++,d:b64e(TX.buf.subarray(0,TX.n))});TX.buf=new Uint8Array(CHUNK);TX.n=0}
 function txStop(){TX.want=false;if(!TX.on)return;TX.on=false;clearInterval(TX.tm);
   try{txFlush()}catch(e){}rtSend("ve",{sid:TX.sid});
   try{TX.src.disconnect();TX.proc.disconnect();TX.proc.onaudioprocess=null}catch(e){}
