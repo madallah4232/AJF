@@ -78,23 +78,29 @@ async function adminTick(N) {
 }
 // 📻 تنبيهات المشرف المكتوبة (من صفحة الراديو في التطبيق) ← كل الموظفين المشتركين، حتى والجوال مقفل
 async function bcTick(N) {
-  let rows; try { rows = await rpc("ajf_bc_due"); } catch (e) { if (!/404|PGRST202/.test(e.message)) console.log("push: bc", e.message); return; }
+  // ajf_bc_due2 ترجع المستلمين (للتنبيه الموجّه لموظفين محددين)؛ لو ما انضاف ملف bc_to.sql نرجع للقديمة (لكل الموظفين فقط)
+  let rows, v2 = true;
+  try { rows = await rpc("ajf_bc_due2"); }
+  catch (e) { v2 = false; try { rows = await rpc("ajf_bc_due"); } catch (e2) { if (!/404|PGRST202/.test(e2.message)) console.log("push: bc", e2.message); return; } }
   for (const x of rows || []) {
     if (!(await rpc("ajf_push_claim", { p_day: N.iso, p_flight: "BC", p_stage: String(x.id) }).catch(() => false))) continue;
     const body = String(x.body || "").slice(0, 300);
     const msg = JSON.stringify({ title: (x.urgent ? "🚨 عاجل · " : "📢 ") + (x.name || "المشرف"), body, tag: "ajf-bc-" + x.id, url: "./?bc", ri: !!x.urgent });
-    const subs = await rpc("ajf_push_targets");
+    const to = v2 && Array.isArray(x.to_emps) && x.to_emps.length ? new Set(x.to_emps.map(String)) : null;
+    const subs = to ? (await rpc("ajf_push_targets_emp")).filter((s) => to.has(String(s.emp))) : await rpc(v2 ? "ajf_push_targets_emp" : "ajf_push_targets");
     let ok = 0;
     await Promise.all(subs.map(async (s) => {
       try { await wp.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, msg, { TTL: 6 * 3600, urgency: "high", topic: ("bc" + x.id).slice(0, 32) }); ok++; }
       catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await rpc("ajf_push_drop", { p_endpoint: s.endpoint }).catch(() => {}); else console.log("push: bc send", e.statusCode || e.message); }
     }));
-    console.log(`push: BC ${x.id} → ${ok}/${subs.length}`);
+    console.log(`push: BC ${x.id}${to ? " (موجّه)" : ""} → ${ok}/${subs.length}`);
   }
 }
 let busy = false;
 // 📻 أحد يتكلم على الراديو ← تنبيه على شاشة القفل لكل الموظفين المشتركين باسم المتكلم (يُفحص كل 5 ثواني)
-let vcBusy = false, vcTimer = null;
+// مرة وحدة بس كل 10 دقائق مهما تكرر الكلام (طلب المشرف: كان يطلع مع كل ضغطة وهذا مزعج)
+const VC_GAP = 10 * 60e3;
+let vcBusy = false, vcTimer = null, vcLast = 0;
 async function vcTick() {
   if (vcBusy) return; vcBusy = true;
   try {
@@ -108,6 +114,10 @@ async function vcTick() {
     let subs = null;
     for (const x of rows) {
       if (!(await rpc("ajf_push_claim", { p_day: iso, p_flight: "VC", p_stage: String(x.id) }).catch(() => false))) continue;
+      if (Date.now() - vcLast < VC_GAP) { console.log(`push: VC ${x.id} skipped (أقل من 10 دقائق من آخر تنبيه)`); continue; }
+      // حجز فترة الـ10 دقائق في القاعدة عشان لو اشتغل وسيطين مع بعض ما يتكرر التنبيه
+      if (!(await rpc("ajf_push_claim", { p_day: iso, p_flight: "VC10", p_stage: String(Math.floor(Date.now() / VC_GAP)) }).catch(() => false))) { vcLast = Date.now(); continue; }
+      vcLast = Date.now();
       subs = subs || await rpc("ajf_push_targets");
       const msg = JSON.stringify({ title: "📻 " + (x.name || "زميلك") + " يتكلم على الراديو", body: "افتح التطبيق عشان تسمع", tag: "ajf-vc", url: "./" });
       let ok = 0;
