@@ -1,4 +1,5 @@
 // ajf-dc — المساعد الذكي لأكواد التأخير (كل شركة على دليلها فقط) + مساعد فحص وثائق الراكب (kind:"tim")
+//          + تحويل كلام الراديو لنص (kind:"stt") ويحفظه مع البث في جدول ajf_bc
 // التحديث: Edge Functions ← ajf-dc ← Code ← امسح الكود والصق هذا الملف كامل ← Deploy
 // الإعداد: Edge Functions ← Deploy a new function ← الاسم ajf-dc ← الصق هذا الملف ← Deploy
 //          ثم من إعدادات الدالة: أطفئ "Verify JWT" (التطبيق يتحقق بالرقم الوظيفي والجلسة)
@@ -23,6 +24,27 @@ async function gem(text: string, sys: string): Promise<string> {
         generationConfig: { temperature: 0.1 } }),
     });
     if (r.ok) { const j = await r.json(); return (j.candidates?.[0]?.content?.parts || []).map((x: { text?: string }) => x.text || "").join(""); }
+    last = r.status + " " + (await r.text()).slice(0, 200);
+  }
+  throw new Error("gemini " + last);
+}
+
+// تحويل تسجيل الراديو (WAV) لنص
+const SYS_STT = `فرّغ هذا التسجيل الصوتي لمشرف عمليات أرضية في مطار الجوف (AJF) كلمة بكلمة بالعربي كما قيل (لهجة سعودية).
+- اكتب أرقام الرحلات بالحروف اللاتينية والأرقام مثل SV1382 و XY55 و F3 و G9، والأوقات بالأرقام مثل 19:45، وأرقام البوابات والمواقف بالأرقام.
+- مصطلحات الطيران الإنجليزية اكتبها كما تُنطق بالإنجليزي إذا قيلت بالإنجليزي (مثل Push Back, ETA, ETD, Gate, Load Sheet).
+- لا تضف أي شرح أو مقدمة أو علامات تنصيص. أرجع النص فقط.
+- إذا ما فيه كلام مفهوم أرجع —`;
+async function gemAudio(b64: string): Promise<string> {
+  let last = "";
+  for (const m of GM) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.trim()}:generateContent`, {
+      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GK }, signal: AbortSignal.timeout(50000),
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: SYS_STT }] },
+        contents: [{ role: "user", parts: [{ inline_data: { mime_type: "audio/wav", data: b64 } }, { text: "فرّغ التسجيل." }] }],
+        generationConfig: { temperature: 0 } }),
+    });
+    if (r.ok) { const j = await r.json(); return (j.candidates?.[0]?.content?.parts || []).map((x: { text?: string }) => x.text || "").join("").trim(); }
     last = r.status + " " + (await r.text()).slice(0, 200);
   }
   throw new Error("gemini " + last);
@@ -106,6 +128,18 @@ Deno.serve(async (req) => {
   const { data: me } = await sb.rpc("ajf_me", { p_token: a.token || "", p_device: a.device || "" });
   if (!me || !me.emp || me.s === "out") return out({ s: "out" });
   if (!GK) return out({ s: "nokey" });
+  if (a.kind === "stt") {
+    const id = Number(a.id), w = String(a.wav || "");
+    if (!id || w.length < 1000 || w.length > 4_000_000) return out({ s: "bad" });
+    const { data: row } = await sb.from("ajf_bc").select("id,emp,kind").eq("id", id).maybeSingle();
+    if (!row || row.kind !== "voice" || row.emp !== me.emp) return out({ s: "denied" });
+    try {
+      let t = (await gemAudio(w)).replace(/^["«»]+|["«»]+$/g, "").trim().slice(0, 1500);
+      if (!t || t === "—" || t === "-") t = "";
+      if (t) await sb.from("ajf_bc").update({ body: t }).eq("id", id);
+      return out({ s: "ok", text: t });
+    } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
+  }
   if (a.kind === "tim") {
     const q = String(a.q || "").slice(0, 1500).trim(), ctx = String(a.ctx || "").slice(0, 40000);
     if (q.length < 2) return out({ s: "bad" });
