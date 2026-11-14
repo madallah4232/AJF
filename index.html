@@ -1166,7 +1166,11 @@ function joinAlert(n){if(!(AUTH.me&&AUTH.me.admin))return;n=+n||0;
 function acctPaint(n){if(n>0||n===0&&arguments.length>1)joinAlert(n);$("acctBtn").hidden=!AUTH.tok;const i=$("acctN");if(AUTH.me&&AUTH.me.admin&&n>0){i.hidden=false;i.textContent=n}else i.hidden=true}
 async function authCheck(){if(!AUTH.tok)return;try{const j=await rpc("ajf_me",{p_token:AUTH.tok,p_device:AUTH.dev});
   if(j.s==="out"){authOut("طلعت من هذا الجوال (يمكن دخلت بحسابك من جوال ثاني). ادخل برقمك السري مرة ثانية.");return}
-  AUTH.me={emp:j.emp,name:j.name,admin:j.admin};authSave();acctPaint(j.pending||0,1);pushResync()}catch(e){/* بدون اتصال: نكمل بالجلسة المحفوظة */}}
+  AUTH.me={emp:j.emp,name:j.name,admin:j.admin};authSave();acctPaint(j.pending||0,1);pushResync();if(LCK_IN&&j.admin)lckSave()}catch(e){/* بدون اتصال: نكمل بالجلسة المحفوظة */}}
+/* تفعيل نماذج A321 (مفتاحها): المشرف يفتح رابط التفعيل مرة وحدة، والمفتاح ينحفظ في الإعدادات المحمية (للموظفين المسجّلين فقط) */
+let LCK_IN=(location.hash.match(/lck=([\w-]{40,})/)||[])[1]||null;if(LCK_IN)try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}
+async function lckSave(){const k=LCK_IN;LCK_IN=null;try{const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"lc_k2",p_v:{k}});
+  alert(j.s==="ok"?"✓ تم تفعيل نماذج A321 (Balance Chart و LIR) لكل الموظفين":"تعذّر التفعيل: "+j.s)}catch(e){alert("تعذّر التفعيل — تأكد من الاتصال وافتح الرابط مرة ثانية")}}
 /* ---------- تنبيهات وصول الرحلات على الجوال (Web Push) ----------
    الخادم (وسيط ADS-B) يرسل: قبل الوصول بـ10 دقائق ← قبل 5 دقائق ← هبطت. الآيفون يحتاج فتح التطبيق من الشاشة الرئيسية. */
 const VAPID_PUB="BMomC-1J0x_63i0lye7d6qV8aAH5loPmXSaC_xGo7ktQWBpgdcuSsBTwjRb62gbG1VUQIHWTaScBS0QpvooTufI";
@@ -2365,11 +2369,21 @@ $("csBody").addEventListener("click",e=>{const s=e.target.closest("#fmSend");if(
 const LSL={"adr":[347,120,333,26,[[348,123,12,22],[363,123,11,22],[377,123,11,22],[391,123,12,22],[406,123,11,22],[420,123,11,22],[434,123,11,22],[464,123,11,22],[478,123,12,22],[493,123,11,22],[507,123,11,22],[521,123,12,22],[536,123,11,22],[550,123,11,22],[579,123,11,22],[593,123,12,22],[608,123,11,22],[622,123,11,22],[636,123,12,22],[651,123,11,22],[665,123,11,22]]],"org":[84,204,104,25,[[78,206,11,22],[92,206,11,22],[106,206,10,22],[119,206,11,22],[133,206,11,22],[147,206,11,22],[161,206,11,22],[175,206,11,22]]],"rch":[200,204,140,25,[[204,206,11,22],[218,206,11,22],[232,206,11,22],[246,206,12,22],[261,206,11,22],[275,206,11,22],[289,206,11,22],[303,206,12,22],[318,206,11,22],[332,206,11,22]]],"ini":[528,204,32,25,[[532,204,14,24],[546,204,14,24]]],"flt":[78,246,168,25,[[78,249,11,21],[92,249,11,21],[106,249,11,21],[120,249,11,21],[134,249,11,21],[148,249,11,21],[162,249,11,21],[176,249,11,21],[190,249,11,21],[204,249,11,21],[218,249,11,21],[232,249,11,21]]],"reg":[256,246,88,25,[[260,249,11,21],[274,249,11,21],[288,249,12,21],[303,249,11,21],[317,249,11,21],[331,249,11,21]]],"ver":[357,246,245,25,[[361,249,12,21],[376,249,11,21],[390,249,11,21],[404,249,11,21],[418,249,12,21],[433,249,11,21],[447,249,11,21],[461,249,11,21],[475,249,11,21],[489,249,12,21],[504,249,11,21],[518,249,11,21],[532,249,11,21],[546,249,12,21],[561,249,11,21],[575,249,11,21],[589,249,11,21]]],"crw":[615,246,101,25,[[618,249,11,21],[632,249,12,21],[647,249,11,21],[661,249,11,21],[675,249,12,21],[690,249,11,21],[704,249,11,21]]],"date":[762,272,168,30],"from":[1057,272,105,30],"bew":[313,310,138,18,[[313,310,21,18],[336,310,21,18],[360,310,21,18],[384,310,20,18],[407,310,21,18],[431,310,20,18]]],"bewi":[478,310,115,18,[[431,310,44,18],[478,310,21,18],[502,310,20,18],[525,310,21,18],[549,310,21,18],[573,310,20,18]]],"opv":[313,331,138,19,[[313,331,21,19],[336,331,21,19],[360,331,21,19],[384,331,20,19],[407,331,21,19],[431,331,20,19]]],"opvi":[478,331,115,19,[[431,331,44,19],[478,331,21,19],[502,331,20,19],[525,331,21,19],[549,331,21,19],[573,331,20,19]]],"pan":[313,353,138,18,[[313,353,21,18],[336,353,21,18],[360,353,21,18],[384,353,20,18],[407,353,21,18],[431,353,20,18]]],"pani":[478,353,115,18,[[431,353,44,18],[478,353,21,18],[502,353,20,18],[525,353,21,18],[549,353,21,18],[573,353,20,18]]],"adl":[313,374,138,18,[[313,374,21,18],[336,374,21,18],[360,374,21,18],[384,374,20,18],[407,374,21,18],[431,374,20,18]]],"adli":[478,374,115,18,[[431,374,44,18],[478,374,21,18],[502,374,20,18],[525,374,21,18],[549,374,21,18],[573,374,20,18]]],"dow":[313,395,138,18,[[313,395,21,18],[336,395,21,18],[360,395,21,18],[384,395,20,18],[407,395,21,18],[431,395,20,18]]],"doi":[478,395,115,18,[[431,395,44,18],[478,395,21,18],[502,395,20,18],[525,395,21,18],[549,395,21,18],[573,395,20,18]]],"tof":[337,438,114,18,[[337,438,20,18],[360,438,21,18],[384,438,20,18],[407,438,21,18],[431,438,20,18]]],"ow":[337,481,114,18,[[337,481,20,18],[360,481,21,18],[384,481,20,18],[407,481,21,18],[431,481,20,18]]],"mzfw":[757,333,133,16,[[757,333,20,16],[780,333,19,16],[802,333,20,16],[825,333,20,16],[848,333,19,16],[870,333,20,16]]],"mlw":[1031,333,131,17,[[1031,333,19,17],[1053,333,19,17],[1075,333,19,17],[1097,333,20,17],[1120,333,19,17],[1142,333,20,17]]],"rtof":[780,352,110,19,[[780,352,19,19],[802,352,20,19],[825,352,20,19],[848,352,19,19],[870,352,20,19]]],"trip":[1053,354,109,17,[[1053,354,19,17],[1075,354,19,17],[1097,354,20,17],[1120,354,19,17],[1142,354,20,17]]],"a":[780,395,110,18,[[780,395,19,18],[802,395,20,18],[825,395,20,18],[848,395,19,18],[870,395,20,18]]],"b":[916,395,111,18,[[893,395,20,18],[916,395,20,18],[939,395,20,18],[962,395,20,18],[985,395,19,18],[1007,395,20,18]]],"c":[1053,395,109,18,[[1031,395,19,18],[1053,395,19,18],[1075,395,19,18],[1097,395,20,18],[1120,395,19,18],[1142,395,20,18]]],"owa":[780,438,110,18,[[780,438,19,18],[802,438,20,18],[825,438,20,18],[848,438,19,18],[870,438,20,18]]],"owb":[893,438,134,18,[[893,438,20,18],[916,438,20,18],[939,438,20,18],[962,438,20,18],[985,438,19,18],[1007,438,20,18]]],"owc":[1031,438,131,18,[[1031,438,19,18],[1053,438,19,18],[1075,438,19,18],[1097,438,20,18],[1120,438,19,18],[1142,438,20,18]]],"atla":[780,481,110,18,[[780,481,19,18],[802,481,20,18],[825,481,20,18],[848,481,19,18],[870,481,20,18]]],"atlb":[893,481,134,18,[[893,481,20,18],[916,481,20,18],[939,481,20,18],[962,481,20,18],[985,481,19,18],[1007,481,20,18]]],"atlc":[1031,481,131,18,[[1031,481,19,18],[1053,481,19,18],[1075,481,19,18],[1097,481,20,18],[1120,481,19,18],[1142,481,20,18]]],"dest":[98,585,60,75],"pm":[164,587,26,83],"pf":[193,587,27,83],"pc":[223,587,26,83],"pi":[252,587,27,83],"cab":[282,587,28,83],"trT":[336,566,115,18,[[313,566,20,18],[336,566,21,18],[360,566,21,18],[384,566,20,18],[407,566,21,18],[431,566,20,18]]],"bT":[336,587,115,19,[[313,587,20,19],[336,587,21,19],[360,587,21,19],[384,587,20,19],[407,587,21,19],[431,587,20,19]]],"cT":[336,609,115,18,[[313,609,20,18],[336,609,21,18],[360,609,21,18],[384,609,20,18],[407,609,21,18],[431,609,20,18]]],"mT":[336,630,115,19,[[313,630,20,19],[336,630,21,19],[360,630,21,19],[384,630,20,19],[407,630,21,19],[431,630,20,19]]],"uT":[336,652,115,18,[[313,652,20,18],[336,652,21,18],[360,652,21,18],[384,652,20,18],[407,652,21,18],[431,652,20,18]]],"tT":[336,674,92,18,[[313,674,20,18],[336,674,21,18],[360,674,21,18],[384,674,20,18],[407,674,21,18]]],"pF":[893,587,42,19],"pJ":[938,587,43,19],"pY":[984,587,43,19],"dF":[1031,587,41,19],"dJ":[1075,587,43,19],"dY":[1121,587,41,19],"tm":[164,1207,26,19],"tf":[193,1207,27,19],"tc":[223,1207,26,19],"ti":[252,1207,27,19],"twt":[313,1207,138,19,[[313,1207,20,19],[336,1207,21,19],[360,1207,21,19],[384,1207,20,19],[407,1207,21,19],[431,1207,20,19]]],"tF":[893,1207,43,19],"tJ":[939,1207,42,19],"tY":[984,1207,43,19],"lpw":[336,1250,115,18,[[336,1250,21,18],[360,1250,21,18],[384,1250,20,18],[407,1250,21,18],[431,1250,20,18]]],"lttl":[336,1292,115,17,[[336,1292,21,17],[360,1292,21,17],[384,1292,20,17],[407,1292,21,17],[431,1292,20,17]]],"ldow":[336,1333,115,18,[[336,1333,21,18],[360,1333,21,18],[384,1333,20,18],[407,1333,21,18],[431,1333,20,18]]],"lzfw":[313,1375,138,18,[[313,1375,20,18],[336,1375,21,18],[360,1375,21,18],[384,1375,20,18],[407,1375,21,18],[431,1375,20,18]]],"lzm":[78,1416,110,18,[[78,1416,17,18],[98,1416,15,18],[116,1416,16,18],[135,1416,16,18],[154,1416,16,18],[173,1416,15,18]]],"ltof":[336,1437,115,18,[[336,1437,21,18],[360,1437,21,18],[384,1437,20,18],[407,1437,21,18],[431,1437,20,18]]],"ltow":[313,1479,138,17,[[313,1479,20,17],[336,1479,21,17],[360,1479,21,17],[384,1479,20,17],[407,1479,21,17],[431,1479,20,17]]],"ltm":[78,1520,110,18,[[78,1520,16,18],[97,1520,16,18],[116,1520,16,18],[135,1520,16,18],[154,1520,15,18],[172,1520,16,18]]],"ltrip":[336,1541,115,18,[[336,1541,21,18],[360,1541,21,18],[384,1541,20,18],[407,1541,21,18],[431,1541,20,18]]],"llaw":[313,1583,138,17,[[313,1583,20,17],[336,1583,21,17],[360,1583,21,17],[384,1583,20,17],[407,1583,21,17],[431,1583,20,17]]],"llm":[78,1624,110,17,[[78,1624,16,17],[97,1624,16,17],[116,1624,16,17],[135,1624,16,17],[154,1624,15,17],[172,1624,16,17]]],"ratl":[833,1250,134,18,[[833,1250,20,18],[856,1250,20,18],[879,1250,19,18],[901,1250,20,18],[924,1250,20,18],[947,1250,20,18]]],"rttl":[856,1292,111,17,[[856,1292,20,17],[879,1292,19,17],[901,1292,20,17],[924,1292,20,17],[947,1292,20,17]]],"rud":[856,1333,111,18,[[856,1333,20,18],[879,1333,19,18],[901,1333,20,18],[924,1333,20,18],[947,1333,20,18]]],"si":[1010,1252,152,66],"notes":[990,1342,172,70],"bal":[989,1437,84,38],"seat":[1076,1437,86,38],"tpob":[989,1500,84,18],"tob":[1076,1500,86,18],"prep":[990,1562,132,26],"tr1":[455,566,69,18],"tr2":[528,566,69,18],"tr3":[601,566,70,18],"tr4":[674,566,69,18],"tr5":[747,566,70,18],"tr0":[820,566,70,18],"b1":[455,587,69,19],"b2":[528,587,69,19],"b3":[601,587,70,19],"b4":[674,587,69,19],"b5":[747,587,70,19],"b0":[820,587,70,19],"c1":[455,609,69,18],"c2":[528,609,69,18],"c3":[601,609,70,18],"c4":[674,609,69,18],"c5":[747,609,70,18],"c0":[820,609,70,18],"m1":[455,630,69,19],"m2":[528,630,69,19],"m3":[601,630,70,19],"m4":[674,630,69,19],"m5":[747,630,70,19],"m0":[820,630,70,19],"u1":[455,652,69,18],"u2":[528,652,69,18],"u3":[601,652,70,18],"u4":[674,652,69,18],"u5":[747,652,70,18],"u0":[820,652,70,18],"t1":[455,1207,69,19],"t2":[528,1207,69,19],"t3":[601,1207,70,19],"t4":[674,1207,69,19],"t5":[747,1207,70,19],"t0":[820,1207,70,19]};
 let LCD=null,LCTAB="in";
 async function lcData(){if(LCD)return LCD;const k=await fmKey();const b=new Uint8Array(await (await fetch("forms/lcd.bin",{cache:"force-cache"})).arrayBuffer());
-  return LCD=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b.slice(0,12)},k,b.slice(12))))}
+  LCD=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b.slice(0,12)},k,b.slice(12))));try{lc321Merge(JSON.parse(new TextDecoder().decode(await lcDec2("a321.bin"))))}catch(e){}return LCD}
+let LCK2=null;const LCIMG2={};
+async function lcKey2(){if(LCK2)return LCK2;const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok||"",p_device:AUTH.dev,p_k:"lc_k2"});if(j.s==="out"){authOut();throw new Error("out")}
+  const s=j.v&&j.v.k;if(!s)throw new Error("nok2");const r=atob(s.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((s.length+3)%4));
+  return LCK2=await crypto.subtle.importKey("raw",Uint8Array.from(r,c=>c.charCodeAt(0)),"AES-GCM",false,["decrypt"])}
+async function lcDec2(fn){const k=await lcKey2(),b=new Uint8Array(await (await fetch("forms/"+fn,{cache:"no-cache"})).arrayBuffer());return crypto.subtle.decrypt({name:"AES-GCM",iv:b.slice(0,12)},k,b.slice(12))}
+async function lcImg2(fn){return LCIMG2[fn]||(LCIMG2[fn]=URL.createObjectURL(new Blob([await lcDec2(fn)],{type:"image/png"})))}
+/* A321-211 (20J/145Y): نضيف له الـ Balance Chart و LIR — لو النوع موجود في مستند الأوزان نكمّله، وإلا نضيفه كنوع جديد (BEW والطاقم يدوي) */
+function lc321Merge(X){let hit=false;for(const k in LCD.cfg){const c=LCD.cfg[k],t=String(c.type||"")+" "+String(c.ver||"");
+    if(/A321/i.test(t)&&!/neo|251|N\b/i.test(t)&&(!c.seats||(c.seats[0]===20&&c.seats[1]===145))){hit=true;if(!c.bal)c.bal=X.bal;c.lir=true;if(!c.lim)c.lim=X.cfg.lim}}
+  if(!hit)LCD.cfg["A321-211"]=X.cfg}
 const lcV=()=>{const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]||{},o={};for(const k in V)if(k.startsWith("lc."))o[k.slice(3)]=V[k];return o};
 const lcN=v=>{if(v==null||v==="")return null;const n=parseFloat(String(v).replace(/,/g,""));return isFinite(n)?n:null};
 const lcR=(n,d=0)=>n==null?"":(+n).toFixed(d);
-const LCCPT=["1","3","4","5"],LCBC=["BY","BJ","BTD","BTI"];
+let LCCPT=["1","3","4","5"];const LCBC=["BY","BJ","BTD","BTI"];
 const lcDD=d=>{const[y,m,dd]=iso(d).split("-");return{dd,m,y,yy:y.slice(2),mon:["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][+m-1]}};
 let LCPREP="";try{LCPREP=localStorage.getItem("ajf_lc_prep")||""}catch(e){}
 /* وزن ومؤشر الطاقم لأي تشكيلة (مثل 3/6): من جدول مستند الأوزان إن وُجدت، وإلا تُحسب منه —
@@ -2388,23 +2402,24 @@ function lcCrew(C,crew,cb){if(!C||!C.opv)return null;const T=C.opv,col=a=>cb?[a[
     if(d>0&&k)add=col(k);else if(one){const o=col(one);add=[o[0]*Math.abs(d),o[1]*Math.abs(d)]}else return null;
     const sg=d>0?1:-1;w=[w[0]+sg*add[0],w[1]+sg*add[1]];how+=` ${sg>0?"+":"−"} ${Math.abs(d)} طاقم قمرة (قيمة ADD'L)`}
   return{w:[Math.round(w[0]),Math.round(w[1]*100)/100],n:how}}
+const lc321=C=>!!(C&&(/A321/i.test(String(C.type||""))||(C.bal&&C.bal.v==="321")));
 /* القيم التلقائية (اللي ما يحتاج الموظف يكتبها) */
 function lcAuto(V){const{f,date}=csCur,d=csData(f,date),D=LCD,reg=(V.reg||d.reg||"").toUpperCase().replace(/\s/g,"").replace(/^HZ(?!-)/,"HZ-");
   const R=D&&D.reg[reg],cfgK=V.cfg||(R&&R[0])||"",C=(D&&D.cfg[cfgK])||null,cm=V.crew==="m",ckN=lcN(V.crk),ccN=lcN(V.crc),crew=cm?`${ckN!=null?Math.round(ckN):2}/${ccN!=null?Math.round(ccN):5}`:(V.crew||"2/5"),cb=V.cbag==="1",adl=V.adl||"0",PA=lcPanAuto(f),pan=V.pan||PA.c;
-  const op=lcCrew(C,crew,cb),ad=C&&C.addl[adl],pn=C&&C.pan[pan];const J=lcN(V.J)!=null?lcN(V.J):lcN((d.pd||{}).J),Y=lcN(V.Y)!=null?lcN(V.Y):lcN((d.pd||{}).Y);
+  const op=lcCrew(C,crew,cb),ad=C&&C.addl&&C.addl[adl],pn=C&&C.pan&&C.pan[pan];const J=lcN(V.J)!=null?lcN(V.J):lcN((d.pd||{}).J),Y=lcN(V.Y)!=null?lcN(V.Y):lcN((d.pd||{}).Y);
   const dd=lcDD(date);
   return{reg,cfgK,C,crew,cm,crN:op&&op.n,cb,adl,pan,PA,
     bew:R?R[1]:null,bewi:R?R[2]:null,opv:op?op.w[0]:null,opvi:op?op.w[1]:null,adw:adl==="0"?0:ad?ad[cb?2:0]:null,adi:adl==="0"?0:ad?ad[cb?3:1]:null,
-    pw:pn?pn[0]:null,pi:pn?pn[1]:null,ww:C?C.wat[0]:null,wi:C?C.wat[1]:null,
+    pw:pn?pn[0]:null,pi:pn?pn[1]:null,ww:C&&C.wat?C.wat[0]:null,wi:C&&C.wat?C.wat[1]:null,
     mzfw:C&&C.lim?C.lim[0]:null,mlw:C&&C.lim?C.lim[1]:null,J,Y,
-    zA:J,zB:Y!=null?Math.ceil(Y/2):null,zC:Y!=null?Math.floor(Y/2):null,
+    zA:J,zB:Y!=null?(C&&C.bal&&C.bal.v==="321"?Math.round(Y*75/145):Math.ceil(Y/2)):null,zC:Y!=null?(C&&C.bal&&C.bal.v==="321"?Y-Math.round(Y*75/145):Math.floor(Y/2)):null,
     dest:f.iata,adr:f.iata+"KLSV",org:"AJFKLSV",rch:`SV/${dd.dd}${dd.m}${dd.yy}`,from:f.iata,dens:0.785,aw:85,cw:35,iw:0,prep:LCPREP,lmc:"NIL",notoc:"NO"}}
 /* كود الـ Pantry حسب جدول Pantry Route Assignment: داخلي ≤1:29 → A، 1:30–2:45 → C (مدة البلوك تقديرية من المسافة) */
 function lcPanAuto(f){const D={CAI:"D",IST:"D"};if(D[f.iata])return{c:D[f.iata],t:"دولي"};
   /* رحلات الجوف الداخلية: النظام يعطيها Code C (تأكد من SV1383 AJF-JED و SV8035 AJF-ELQ) */
   return{c:"C",t:""}}
 const lcG=(V,A,k,ak=k)=>{const v=lcN(V[k]);return v!=null?v:A[ak]};
-function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>LCLOCK.includes(k)&&A[ak||k]!=null?A[ak||k]:lcG(V,A,k,ak),s=k=>V[k]!=null&&V[k]!==""?V[k]:(A[k]!=null?String(A[k]):"");
+function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];LCCPT=lc321(A.C)?["1","2","3","4","5"]:["1","3","4","5"];const g=(k,ak)=>LCLOCK.includes(k)&&A[ak||k]!=null?A[ak||k]:lcG(V,A,k,ak),s=k=>V[k]!=null&&V[k]!==""?V[k]:(A[k]!=null?String(A[k]):"");
   const bew=g("bew"),bewi=g("bewi"),opv=g("opv"),opvi=g("opvi"),pw=g("pw"),pi=g("pi"),ww=g("ww"),wi=g("wi"),adw=g("adw"),adi=g("adi");
   const opvT=opv!=null&&ww!=null?opv+ww:null,opviT=opvi!=null&&wi!=null?opvi+wi:null;
   const dow=[bew,opvT,pw,adw].every(x=>x!=null)?bew+opvT+pw+adw:null,doi=[bewi,opviT,pi,adi].every(x=>x!=null)?bewi+opviT+pi+adi:null;
@@ -2439,12 +2454,13 @@ function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>
   if(BL&&doi!=null){const zs=[zA||0,zB||0,zC||0];if(zs[0]+zs[1]+zs[2]!==J+Y)W.push(`توزيع المناطق A+B+C = ${zs[0]+zs[1]+zs[2]} ≠ ${J+Y}|zA`);
     const steps=[];let ix=doi;BL.zones.forEach(([n,cap,k],i)=>{if(zs[i]>cap)W.push(`Zone ${n} فيها ${zs[i]} والسعة ${cap}|z${n}`);const dI=zs[i]*k;steps.push([n,zs[i],dI,ix,ix+dI]);ix+=dI});
     LCCPT.forEach(c=>{const[k,mx]=BL.cpt[c],w=cp[c].tot;if(w>mx)W.push(`عنبر ${c} وزنه ${w} والحد ${mx}|b${c}kg`);const dI=w*k;steps.push([c,w,dI,ix,ix+dI]);ix+=dI});
+    if(BL.c12&&cp["1"].tot+cp["2"].tot>BL.c12)W.push(`العنبر 1+2 وزنهم ${cp["1"].tot+cp["2"].tot} والحد ${BL.c12}|b1kg`);
     if(cp["3"].tot+cp["4"].tot>BL.c34)W.push(`العنبر 3+4 وزنهم ${cp["3"].tot+cp["4"].tot} والحد ${BL.c34}|b3kg`);
     const fi=fw=>{if(fw==null)return null;const T=BL.fuel,dens=g("dens")||0.785;let col=0;T.d.forEach((x,i)=>{if(Math.abs(x-dens)<Math.abs(T.d[col]-dens))col=i});
       const r=T.t.reduce((p,q)=>Math.abs(q[0]-fw)<Math.abs(p[0]-fw)?q:p);let v=r[col+1];if(fw>T.t[T.t.length-1][0]+250||v==null)v=T.full[col];return v};
     const lizfw=ix,ftf=fi(tof),litow=ftf!=null?lizfw+ftf:null,flf=tof!=null&&trip!=null?fi(tof-trip):null,lilaw=flf!=null?lizfw+flf:null;
-    const mac=(I_,w)=>I_==null||!w?null:((I_-50)*39370/w+742.124-BL.lemac)/BL.mac*100;
-    const mz=mac(lizfw,zfw),mt=mac(litow,tow),ml=mac(lilaw,law);let st=mt!=null?(BL.stab[0]-mt)/BL.stab[1]:null;if(st!=null)st=Math.max(-2.5,Math.min(2.5,st));
+    const mac=(I_,w)=>I_==null||!w?null:((I_-50)*39370/w+(BL.ref||742.124)-BL.lemac)/BL.mac*100;
+    const mz=mac(lizfw,zfw),mt=mac(litow,tow),ml=mac(lilaw,law);let st=mt!=null?(BL.stab[0]-mt)/BL.stab[1]:null;if(st!=null){const sc=BL.stc||[-2.5,2.5];st=Math.max(sc[0],Math.min(sc[1],st))}
     bal={steps,lizfw,litow,lilaw,ftf,mz,mt,ml,st};
     /* حدود التوازن (Envelope) من الرسم في الـ Balance Chart */
     const E=BL.env;if(E){const at=(P,w)=>{w/=1000;for(let i=0;i<P.length-1;i++){const[a1,b1]=P[i],[a2,b2]=P[i+1];if((w-b1)*(w-b2)<=0&&b1!==b2)return a1+(a2-a1)*(w-b1)/(b2-b1)}return null};
@@ -2452,8 +2468,8 @@ function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];const g=(k,ak)=>
         if(lo!=null&&I_<lo)W.push(`OUT OF TRIM: ${lab} Index ${I_.toFixed(1)} قدّام الحد الأمامي ${lo.toFixed(1)} — حرّك ركاب/عفش للخلف|${go}`);
         if(hi!=null&&I_>hi)W.push(`OUT OF TRIM: ${lab} Index ${I_.toFixed(1)} ورا الحد الخلفي ${hi.toFixed(1)} — حرّك ركاب/عفش لقدّام|${go}`)};
       chk("ZFW",lizfw,zfw,E.zf[0],E.zf[1],"zC");chk("TOW",litow,tow,E.to[0],E.to[1],"zC");chk("LAW",lilaw,law,E.to[0],E.to[1],"zC")}
-    if(mt!=null&&mt<27)W.push(`MAC TOW ${mt.toFixed(1)}% أقل من 27% — لازم تصحيح الأداء (Basic Performance) أو RTOW chart المناسب|rtow`);
-    if(tow!=null&&tow<64000&&!/^NIL$/i.test(V.lmc||"NIL"))W.push("LMC ممنوع إذا TOW أقل من 64000 كغ|lmc")}
+    if(!BL.ref&&mt!=null&&mt<27)W.push(`MAC TOW ${mt.toFixed(1)}% أقل من 27% — لازم تصحيح الأداء (Basic Performance) أو RTOW chart المناسب|rtow`);
+    if(!BL.ref&&tow!=null&&tow<64000&&!/^NIL$/i.test(V.lmc||"NIL"))W.push("LMC ممنوع إذا TOW أقل من 64000 كغ|lmc")}
   const taxi2=g("taxi"),block=tof!=null?tof+(taxi2||0):null;
   return{V,A,s,g,W,taxi:taxi2,block,bew,bewi,opvT,opviT,pw,pi,adw,adi,dow,doi,M,F,Cc,I,J,Y,seats,paxW,cp,bag,cgo,mail,pcs,codes,ttl,zfw,tof,trip,tow,law,ow,rtow,mzfw,mlw,a,b,c,low,allow,atl,ud,zA,zB,zC,bal,f,date}}
 /* ---------- الواجهة ---------- */
@@ -2466,10 +2482,10 @@ function lcSum(R){const n=x=>x==null?"—":Math.round(x).toLocaleString("en-US")
   <div class="lc-kv">${[["DOW",n(R.dow)],["DOI",R.doi==null?"—":R.doi.toFixed(2)],["TRAFFIC LOAD",n(R.ttl)],["ZFW",n(R.zfw)],["TOW",n(R.tow)],["LAW",n(R.law)],["TAKE-OFF FUEL",n(R.tof)],["TAXI",n(R.taxi)],["BLOCK FUEL",n(R.block)]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>
   <div class="lc-abc">${[R.a,R.b,R.c].map((x,i)=>`<div class="${R.low===i?"on":"off"}"><span>${lim[i]}</span><b>${n(x)}</b></div>`).join("")}</div>
   <div class="lc-kv">${[["ALLOWED TRAFFIC",n(R.atl)],["UNDERLOAD",n(R.ud)]].map(([a,b],i)=>`<div class="${i&&R.ud!=null?(R.ud<0?"bad":"ok"):""}"><span>${a}</span><b>${b}</b></div>`).join("")}</div>
-  ${B?`<div class="lc-kv">${[["LIZFW",B.lizfw.toFixed(1)],["LITOW",B.litow==null?"—":B.litow.toFixed(1)],["MAC ZFW",B.mz==null?"—":B.mz.toFixed(1)+"%"],["MAC TOW",B.mt==null?"—":B.mt.toFixed(1)+"%"],["MAC LAW",B.ml==null?"—":B.ml.toFixed(1)+"%"],["STAB",B.st==null?"—":Math.abs(B.st).toFixed(1)+(B.st<0?" DN":" UP")]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>`:`<div class="lc-w i">الـ Balance Chart متوفر لطائرات A320-214 (12J/132Y) فقط</div>`}
+  ${B?`<div class="lc-kv">${[["LIZFW",B.lizfw.toFixed(1)],["LITOW",B.litow==null?"—":B.litow.toFixed(1)],["MAC ZFW",B.mz==null?"—":B.mz.toFixed(1)+"%"],["MAC TOW",B.mt==null?"—":B.mt.toFixed(1)+"%"],["MAC LAW",B.ml==null?"—":B.ml.toFixed(1)+"%"],["STAB",B.st==null?"—":Math.abs(B.st).toFixed(1)+(B.st<0?" DN":" UP")]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>`:`<div class="lc-w i">الـ Balance Chart غير متوفر لهذا النوع</div>`}
   ${R.W.map(w=>{const[t,k]=w.split("|");return k?`<button class="lc-w go" data-go="${k}">⚠︎ ${escT(t)} <i>← اضغط هنا</i></button>`:`<div class="lc-w">⚠︎ ${escT(t)}</div>`}).join("")}</div>`}
 function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg[k].type+" · "+D.cfg[k].ver]);
-  const crews=C?Object.keys(C.opv):["2/5"];if(!A.cm&&!crews.includes(A.crew))crews.push(A.crew);const pans=C?Object.keys(C.pan):["C"],nr=A.reg&&!D.reg[A.reg];
+  const crews=C&&Object.keys(C.opv||{}).length?Object.keys(C.opv):["2/5"];if(!A.cm&&!crews.includes(A.crew))crews.push(A.crew);const pans=C&&Object.keys(C.pan||{}).length?Object.keys(C.pan):["C"],nr=A.reg&&!D.reg[A.reg];
   const cpt=c=>`<div class="lc-cpt"><b>CMPT ${c}</b><div class="lc-g4">${LCBC.map(k=>lcField("b"+c+k,k+" pcs",R,{ph:"0"})).join("")}</div>
     <div class="cs-g">${lcField("b"+c+"kg","BAG KG",R,{ph:"0"})}${lcField("c"+c,"CARGO KG",R,{ph:"0"})}${lcField("m"+c,"MAIL KG",R,{ph:"0"})}</div></div>`;
   return lcSum(R)+`
@@ -2529,7 +2545,7 @@ async function openLC(){if(!csCur||!/^SV/i.test(csCur.f.n))return;$("lc").hidden
   try{await lcData();lcRender()}catch(e){$("lcBody").innerHTML=`<div class="fm-msg">${/404|PGRST202/.test(e.message)?"تحتاج تفعيل النماذج من المشرف.":e.message==="out"?"سجّل دخولك أول.":"تعذّر التحميل. تأكد من الاتصال."}</div>`}}
 $("lcBack").onclick=()=>{$("lc").hidden=true;if(csCur&&!$("cs").hidden)renderCS()};
 /* ---------- رسم النماذج ---------- */
-const LCPG={ls:{f:"lcs-1.bin",W:1241,H:1754,mm:[210,297]},bc:{f:"lcb-1.bin",W:1701,H:2386,mm:[216,303]},lir:{f:"lcl-1.bin",W:2339,H:1653,mm:[297,210]}};
+const LCPG={bc321:{f:"b321-1.bin",W:1771,H:2456,mm:[224.8,311.8],k2:1},lir321:{f:"l321-1.bin",W:2339,H:1654,mm:[297,210],k2:1},ls:{f:"lcs-1.bin",W:1241,H:1754,mm:[210,297]},bc:{f:"lcb-1.bin",W:1701,H:2386,mm:[216,303]},lir:{f:"lcl-1.bin",W:2339,H:1653,mm:[297,210]}};
 const LCINK="#14298c";
 function lcCtx(cv){const x=cv.getContext("2d");x.fillStyle=LCINK;x.strokeStyle=LCINK;x.textBaseline="alphabetic";x.direction="ltr";return x}
 const lcFont=(x,px)=>{x.font=`700 ${px}px Helvetica,Arial,sans-serif`};
@@ -2545,9 +2561,10 @@ function lcPut(x,key,v){if(v==null||v==="")return;const r=LSL[key];if(!r)return;
   const PM={bewi:325,opvi:345,pani:366,adli:387,doi:408};if(PM[key]&&/^-/.test(v)){v=v.slice(1);x.save();x.lineWidth=2;x.beginPath();x.ellipse(453,PM[key],5.8,5.8,0,0,7);x.stroke();x.restore()}const num=/^-?[\d.]+$/.test(v);
   if(key==="crw"&&r[4]){const p=v.split(/[\/:]/);[[p[0],r[4][0]],[p[1],r[4][2]]].forEach(([t,b])=>{if(t==null||!b)return;lcFont(x,18);x.textAlign="center";x.fillText(t,b[0]+b[2]/2,b[1]+b[3]/2+6)});return}
   if(!v.includes("\n")&&lcBoxed(x,v,r,num))return;lcFree(x,v,r,150/72)}
-async function lcBase(P){const src=await fmImg(P.f),img=new Image();img.src=src;await img.decode();const cv=document.createElement("canvas");cv.width=P.W;cv.height=P.H;
+const lcPK=(t,R)=>t!=="ls"&&R.A.C&&R.A.C.bal&&R.A.C.bal.v==="321"?t+"321":t;
+async function lcBase(P){const src=await (P.k2?lcImg2:fmImg)(P.f),img=new Image();img.src=src;await img.decode();const cv=document.createElement("canvas");cv.width=P.W;cv.height=P.H;
   const x=cv.getContext("2d");x.drawImage(img,0,0,P.W,P.H);return cv}
-async function lcPage(t,R){const P=LCPG[t],cv=await lcBase(P),x=lcCtx(cv);({ls:lcDrawLS,bc:lcDrawBC,lir:lcDrawLIR})[t](x,R);return cv}
+async function lcPage(t,R){const pk=lcPK(t,R),P=LCPG[pk],cv=await lcBase(P),x=lcCtx(cv);({ls:lcDrawLS,bc:lcDrawBC,lir:lcDrawLIR,bc321:lcDrawBC321,lir321:lcDrawLIR321})[pk](x,R);return cv}
 function lcDrawLS(x,R){const s=R.s,{f,date}=R,dd=lcDD(date),r0=v=>v==null?"":String(Math.round(v)),ix=v=>v==null?"":(Math.round(v*100)/100).toFixed(2);
   const P=(k,v)=>lcPut(x,k,v);
   P("adr",s("adr"));P("org",s("org"));P("rch",s("rch"));P("ini",s("ini"));P("flt",f.n);P("reg",R.A.reg.replace("-",""));P("ver",R.A.C?R.A.C.ver:"");P("crw",R.A.crew);
@@ -2558,13 +2575,13 @@ function lcDrawLS(x,R){const s=R.s,{f,date}=R,dd=lcDD(date),r0=v=>v==null?"":Str
   if(R.low>=0){const L="abc"[R.low];P("ow"+L,r0(R.ow));P("atl"+L,r0(R.atl));
     x.lineWidth=3.3;x.lineCap="round";[[762,418,124,102],[898,418,127,102],[1034,418,126,102]].forEach((q,i)=>{if(i===R.low)return;x.beginPath();x.moveTo(q[0]+3,q[1]+q[3]-3);x.lineTo(q[0]+q[2]-3,q[1]+3);x.stroke()})}
   P("dest",s("dest"));P("pm",R.M);P("pf",R.F);P("pc",R.Cc);P("pi",R.I);
-  const cpI={"1":"1","3":"3","4":"4","5":"5"};LCCPT.forEach(c=>{const q=R.cp[c];if(q.bag)P("b"+cpI[c],q.bag);if(q.cgo)P("c"+cpI[c],q.cgo);if(q.mail)P("m"+cpI[c],q.mail);P("t"+cpI[c],q.tot||0)});
+  const cpI={"1":"1","2":"2","3":"3","4":"4","5":"5"};LCCPT.forEach(c=>{const q=R.cp[c];if(q.bag)P("b"+cpI[c],q.bag);if(q.cgo)P("c"+cpI[c],q.cgo);if(q.mail)P("m"+cpI[c],q.mail);P("t"+cpI[c],q.tot||0)});
   P("bT",r0(R.bag));if(R.cgo)P("cT",r0(R.cgo));if(R.mail)P("mT",r0(R.mail));P("tT",r0(R.bag+R.cgo+R.mail));
   P("pF","0");P("pJ",R.J);P("pY",R.Y);P("dF","0");P("dJ","0");P("dY","0");
-  P("tm",R.M);P("tf",R.F);P("tc",R.Cc);P("ti",R.I);P("twt",r0(R.bag+R.cgo+R.mail));P("t2","0");P("t0","0");P("tF","0");P("tJ",R.J);P("tY",R.Y);
+  P("tm",R.M);P("tf",R.F);P("tc",R.Cc);P("ti",R.I);P("twt",r0(R.bag+R.cgo+R.mail));if(!R.cp["2"])P("t2","0");P("t0","0");P("tF","0");P("tJ",R.J);P("tY",R.Y);
   /* سطر المحطة: M/F/C/I + توزيع العنابر */
   lcFont(x,15.6);x.textAlign="left";const y=684;[[167,R.M],[199,R.F],[231,R.Cc],[261,R.I]].forEach(([X,v])=>x.fillText(String(v),X,y));
-  [[463,R.cp["1"].tot],[536,0],[609,R.cp["3"].tot],[682,R.cp["4"].tot],[756,R.cp["5"].tot],[829,0]].forEach(([X,v])=>x.fillText(String(v),X,y));
+  [[463,R.cp["1"].tot],[536,R.cp["2"]?R.cp["2"].tot:0],[609,R.cp["3"].tot],[682,R.cp["4"].tot],[756,R.cp["5"].tot],[829,0]].forEach(([X,v])=>x.fillText(String(v),X,y));
   P("lpw",r0(R.paxW));P("lttl",r0(R.ttl));P("ldow",r0(R.dow));P("lzfw",r0(R.zfw));P("lzm",r0(R.mzfw));P("ltof",r0(R.tof));P("ltow",r0(R.tow));P("ltm",r0(R.rtow));
   P("ltrip",r0(R.trip));P("llaw",r0(R.law));P("llm",r0(R.mlw));P("ratl",r0(R.atl));P("rttl",r0(R.ttl));P("rud",r0(R.ud));
   const B=R.bal,cd=Object.entries(R.codes).filter(([,n])=>n).map(([k,n])=>LCCPTC(R,k)).filter(Boolean).join(" ");
@@ -2600,6 +2617,31 @@ function lcDrawLIR(x,R){const{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y,s,pt=10,w=
   const cd=Object.entries(R.codes).filter(([,n])=>n).map(([k,n])=>`${k} ${n}`).join("  ");
   t(90,738,`TOTAL ${R.s("dest")} ${R.pcs} PCS / ${R.bag} KG${cd?` (${cd})`:""}.  C ${R.cgo}  M ${R.mail}.`,8,400);
   const BL=R.A.C&&R.A.C.bal;t(90,752,(BL?`CMPT 1: ${R.cp["1"].tot} KG (MAX ${BL.cpt["1"][1]})   CMPT 3+4: ${R.cp["3"].tot+R.cp["4"].tot} KG (MAX ${BL.c34})   CMPT 5: ${R.cp["5"].tot} KG (MAX ${BL.cpt["5"][1]})   `:"")+`NOTOC: ${R.s("notoc")}`,8,400)}
+/* A321-211 Balance Chart (20J/145Y) — الإحداثيات على صورة 200dpi */
+function lcDrawBC321(x,R){const B=R.bal,{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y,s,pt=11,al="left")=>{lcFont(x,pt*k);x.textAlign=al;x.fillText(s,X,Y)};
+  t(170,468,"AJF",13);t(545,468,`${dd.dd}${dd.mon}${dd.yy}`,13);t(915,468,f.n,13);t(1290,468,R.A.reg,13);t(170,566,R.s("dest"),13);t(545,566,R.s("capt").toUpperCase(),11);
+  t(915,566,R.A.crew,13);t(1290,566,"20J/145Y",13);t(150,2000,R.s("prep").toUpperCase(),10);
+  if(!B){t(885,1150,"BALANCE CHART NOT AVAILABLE",16,"center");return}
+  const ix=I=>475.5+(I-10)*12.561,gx=I=>610+(I-20)*12.4,gy=w=>1526+(90-w/1000)*12.83,S=[918,971,1024,1077,1130,1182,1235,1288,1341];
+  t(298,887,R.doi.toFixed(2),8);x.lineWidth=3.6;x.lineCap="round";
+  const ln=(a,b,c,d)=>{x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke()},arr=(X,Y,dir)=>{ln(X,Y,X-11*dir,Y-7);ln(X,Y,X-11*dir,Y+7)};
+  ln(ix(R.doi),895,ix(R.doi),S[0]);
+  B.steps.forEach(([n,q,dI,i0,i1],j)=>{const y0=S[j],y1=S[j+1],m=(y0+y1)/2,x0=ix(i0),x1=ix(i1);ln(x0,y0,x0,m);if(Math.abs(dI)>.01){ln(x0,m,x1,m);arr(x1,m,x1>x0?1:-1)}ln(x1,m,x1,y1);t(330,m+9,String(Math.round(q)),9)});
+  if(B.litow!=null){const x0=ix(B.lizfw),x1=ix(B.litow),m=1366;ln(x0,1341,x0,m);if(B.ftf){ln(x0,m,x1,m);arr(x1,m,x1>x0?1:-1)}
+    x.setLineDash([8,6]);ln(gx(B.lizfw),1400,gx(B.lizfw),gy(R.zfw));ln(gx(B.litow),1400,gx(B.litow),gy(R.tow));x.setLineDash([]);
+    [[B.lizfw,R.zfw,"ZFW"],[B.litow,R.tow,"TOW"]].forEach(([I_,w,lab])=>{const X=gx(I_),Y=gy(w);x.beginPath();x.arc(X,Y,8,0,7);x.fill();t(X+14,Y-6,lab,8)})}
+  if(B.mt!=null)t(150,1600,`TOW ${B.mt.toFixed(1)} %`,12);if(B.mz!=null)t(150,1630,`ZFW ${B.mz.toFixed(1)} %`,10);
+  t(150,1658,`LIZFW ${B.lizfw.toFixed(1)}  LITOW ${B.litow==null?"-":B.litow.toFixed(1)}`,6);
+  if(B.st!=null)t(150,1770,`${Math.abs(B.st).toFixed(1)} ${B.st<0?"DN":"UP"}`,12)}
+function lcDrawLIR321(x,R){const{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y,s,pt=10,w=700)=>{x.font=`${w} ${pt*k}px Helvetica,Arial,sans-serif`;x.textAlign="left";x.fillText(s,X*2,Y*2)};
+  t(456,88,"AJF");t(588,88,f.n.replace(/^SV/,""));t(672,88,`${dd.dd}${dd.mon}${dd.yy}`);t(776,88,R.A.reg);t(885,88,R.s("prep").toUpperCase());
+  const col={"5":190,"4":336,"3":529,"2":723,"1":917};
+  ["1","2","3","4","5"].forEach(c=>{const X=col[c],q=R.cp[c]||{bag:0,cgo:0,mail:0};t(X,232,"NIL");const L=[];LCBC.forEach(k=>{const n=lcN(R.V["b"+c+k])||0;if(n)L.push(`${k}- ${n} PCS`)});
+    if(q.cgo)L.push(`C- ${q.cgo} KG`);if(q.mail)L.push(`M- ${q.mail} KG`);
+    if(!L.length){t(X,340,"NIL");return}t(X,338,R.s("dest"));let y=355;L.forEach(l=>{t(X,y,l,9);y+=15});if(q.bag)t(X,y+2,`B ${q.bag} KG`,9,400)});
+  const cd=Object.entries(R.codes).filter(([,n])=>n).map(([k,n])=>`${k} ${n}`).join("  "),T=c=>(R.cp[c]||{tot:0}).tot,BL=R.A.C&&R.A.C.bal;
+  t(64,732,`TOTAL ${R.s("dest")} ${R.pcs} PCS / ${R.bag} KG${cd?` (${cd})`:""}.  C ${R.cgo}  M ${R.mail}.`,8,400);
+  t(64,748,(BL?`CMPT 1+2: ${T("1")+T("2")} KG (MAX ${BL.c12})   CMPT 3+4: ${T("3")+T("4")} KG (MAX ${BL.c34})   CMPT 5: ${T("5")} KG (MAX ${BL.cpt["5"][1]})   `:"")+`NOTOC: ${R.s("notoc")}`,8,400)}
 /* PDF: الثلاثة في ملف واحد */
 let lcReady=null;
 async function lcPDF(){const b=$("lcPdf"),t0="PDF · إرسال الثلاثة",{f,date}=csCur,name=`LoadControl ${f.n} ${iso(date)}.pdf`;
@@ -2608,7 +2650,7 @@ async function lcPDF(){const b=$("lcPdf"),t0="PDF · إرسال الثلاثة",
   if(lcReady&&lcReady.name===name){const fl=lcReady;try{await share(fl);lcReady=null;b.textContent=t0}catch(e){}return}
   b.disabled=true;b.textContent="… جاري التجهيز";
   try{await csLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");const R=lcCalc();let pdf=null;
-    for(const t of["ls","bc","lir"]){if(t==="lir"&&!(R.A.C&&R.A.C.lir))continue;const P=LCPG[t],cv=await lcPage(t,R),o=P.mm[0]>P.mm[1]?"l":"p";
+    for(const t of["ls","bc","lir"]){if(t==="lir"&&!(R.A.C&&R.A.C.lir))continue;const P=LCPG[lcPK(t,R)],cv=await lcPage(t,R),o=P.mm[0]>P.mm[1]?"l":"p";
       if(!pdf)pdf=new jspdf.jsPDF({orientation:o,unit:"mm",format:P.mm});else pdf.addPage(P.mm,o);pdf.addImage(cv.toDataURL("image/jpeg",.9),"JPEG",0,0,P.mm[0],P.mm[1])}
     const file=new File([pdf.output("blob")],name,{type:"application/pdf"});b.disabled=false;
     try{await share(file);b.textContent=t0}catch(e){if(e.name==="AbortError"){b.textContent=t0;return}lcReady=file;b.textContent="✓ جاهز — اضغط للإرسال"}}
