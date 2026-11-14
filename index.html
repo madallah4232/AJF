@@ -715,6 +715,7 @@ html:has(#hub:not([hidden])),body:has(#hub:not([hidden])){overflow:hidden}
 .hub-c{--c:var(--amber);position:relative;overflow:hidden;min-height:150px;border-radius:22px;padding:14px;text-align:start;display:grid;align-content:space-between;gap:12px;color:var(--ink);
   background:linear-gradient(160deg,color-mix(in oklab,var(--c) 22%,var(--panel)) 0%,var(--panel) 70%);border:1px solid color-mix(in oklab,var(--c) 35%,var(--line));
   transition:transform .25s var(--ease),box-shadow .25s var(--ease);transform-style:preserve-3d}
+.hub-c[data-b="qz"]{grid-column:1/-1;min-height:118px}
 .hub-c:active,.hub-c.press{transform:scale(.95) rotateX(6deg)}
 .hub-c .ic{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;background:color-mix(in oklab,var(--c) 22%,transparent);color:var(--c)}
 .hub-c b{display:block;font:700 16px/1.3 var(--display)}
@@ -3559,7 +3560,8 @@ const BOARDS=[
   {id:"tim",t:"تيماتيك والتعاميم",s:"تعاميم المحطة ومتطلبات وثائق السفر",c:"#ecdcbf",ic:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'},
   {id:"flt",t:"لوحة الرحلات",s:"المغادرة والوصول والتتبع المباشر",c:"#d8733f",ic:'<path d="M2.5 19h19"/><path d="M3.5 13.5l3 .5 3.5-3.5-5-4 1.5-1 7 3 3.5-3.5a1.8 1.8 0 0 1 2.5 2.5L16 11l3 7-1.5 1-4-5-3.5 3.5.5 3"/>'},
   {id:"trc",t:"TRC",s:"Coordination Sheet والنماذج",c:"#a8bd6e",ic:'<path d="M9 4h6l1 2h3v15H5V6h3z"/><path d="M9 12l2 2 4-4"/>'},
-  {id:"lc",t:"Load Control",s:"اللودشيت ونموذج GACA",c:"#c4936a",ic:'<path d="M12 3v18M5 7h14"/><path d="M5 7l-3 7a3.5 3.5 0 0 0 6 0zM19 7l-3 7a3.5 3.5 0 0 0 6 0z"/>'}];
+  {id:"lc",t:"Load Control",s:"اللودشيت ونموذج GACA",c:"#c4936a",ic:'<path d="M12 3v18M5 7h14"/><path d="M5 7l-3 7a3.5 3.5 0 0 0 6 0zM19 7l-3 7a3.5 3.5 0 0 0 6 0z"/>'},
+  {id:"qz",t:"تحدي التشغيل",s:"أسئلة يومية من التعاميم ودليل العمليات ولوحة المراكز",c:"#d9b45a",ic:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>'}];
 const svgI=(p,s=24)=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const hubDays=()=>[TODAY,addDays(TODAY,-1)];
 let CIRC=[],TIMN="",circAt=0,CQ="";
@@ -3610,7 +3612,7 @@ function hubPaint(){
     <p>${left?`باقي <b>${left}</b> ${left>2&&left<11?"رحلات":"رحلة"} اليوم. السلامة أولاً، ومناوبة موفقة.`:"ما فيه رحلات متبقية اليوم. يومك سعيد."}</p>
     <div class="hub-st"><div><b>${fl.length}</b><span>رحلات اليوم</span></div><div><b>${nd?nd.f.t:"—"}</b><span>${nd?escT(nd.f.n):"القادمة"}</span></div><div><b>${cd}</b><span>على الإقلاع</span></div></div>`;
   const sv=fl.filter(f=>/^SV/i.test(f.n)).length,seen=circSeen(),nw=CIRCN&&CIRCLAST&&CIRCLAST!==seen;
-  const info={tim:[CIRCN?CIRCN+" تعميم":"",nw?"جديد":""],flt:[left+" متبقية",""],trc:[fl.length+" رحلة اليوم",""],lc:[sv+" رحلة سعودية",""]};
+  const info={tim:[CIRCN?CIRCN+" تعميم":"",nw?"جديد":""],flt:[left+" متبقية",""],trc:[fl.length+" رحلة اليوم",""],lc:[sv+" رحلة سعودية",""],qz:(()=>{try{const q=JSON.parse(localStorage.getItem("ajf_qz_hub")||"null");return q&&q.k>Date.now()?[q.t,q.b]:["",""]}catch(e){return["",""]}})()};
   const g=$("hubG");if(!g.children.length)g.innerHTML=BOARDS.map(B=>`<button class="hub-c" data-b="${B.id}" style="--c:${B.c}"><div class="ic">${svgI(B.ic,24)}</div><div><b>${B.t}</b><span>${B.s}</span><span class="nf" style="color:${B.c}"></span></div><em></em></button>`).join("");
   BOARDS.forEach(B=>{const c=g.querySelector(`[data-b="${B.id}"]`);c.querySelector(".nf").textContent=info[B.id][0];c.querySelector("em").textContent=info[B.id][1]});
 }
@@ -3631,6 +3633,7 @@ function openBoard(id,card){const B=BOARDS.find(x=>x.id===id);if(!B)return;
     if(id==="flt"){$("bd").hidden=true;scrollTo(0,0);const w=document.querySelector(".wrap");if(!reduce){w.classList.remove("in");void w.offsetWidth;w.classList.add("in")}return}
     const b=$("bd");b.style.setProperty("--c",B.c);b.classList.remove("out");$("bdT").textContent=B.t;$("bdS").textContent=B.s;b.hidden=false;$("bdB").scrollTop=0;bdDay=0;
     bdRender();if(!reduce){b.classList.remove("in");void b.offsetWidth;b.classList.add("in")}
+    if(id==="qz")return;
     if(id==="tim"){circLoad(true);dcpLoad().then(()=>{if(BOARD==="tim")bdRender()})}else csSync(true).then(()=>{if(BOARD===id)bdRender()})})}
 function boardBack(){const b=$("bd");
   const go=()=>{b.hidden=true;b.classList.remove("out");hubShow(true)};
@@ -3651,6 +3654,8 @@ function bdRender(){const B=$("bdB");
       (list.length?list.map(f=>{const V=CSV[iso(d)+"_"+f.n]||{},sv=/^SV/i.test(f.n),nl=Object.keys(V).filter(k=>k.startsWith("lc.")).length,ng=fmN(V,"bsd");
         return`<div class="bf"><div class="h"><span class="t">${f.t}</span><div class="n"><b>${escT(f.n)} · ${escT(f.dest)}</b><small>${escT(f.airline||"")}</small></div></div>
           <div class="a"><button class="p" data-ls="${escT(f.n)}" ${sv?"":"disabled"}>⚖︎ Load Sheet<small>${sv?(nl?"✍︎ "+nl+" خانة":"Balance · LIR"):"للسعودية فقط"}</small></button><button data-gaca="${escT(f.n)}">🛄 نموذج GACA<small>${ng?"✍︎ "+ng+" خانة":"Baggage Security"}</small></button></div></div>`}).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`);return}
+  if(BOARD==="qz"){B.innerHTML=`<div id="qzRoot"><div class="bd-empty">جاري التحميل…</div></div>`;
+    qzLoad().then(()=>{const r=$("qzRoot");if(r&&window.QZ)QZ.mount(r)}).catch(()=>{const r=$("qzRoot");if(r)r.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
   /* اللوحة كاملة (التعاميم + فحص الوثائق) مقفلة مؤقتاً لين نحل مشكلة المساعد — مفتوحة للمشرف ومن يعطيه صلاحية */
   if(BOARD==="tim"&&!dcOK()){B.innerHTML=`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>لوحة تيماتيك والتعاميم تحت الصيانة حالياً، ومتاحة فقط لمن يمنحه المشرف الصلاحية.</p><small>بنبلغكم أول ما ترجع.</small></div>`;return}
   if(BOARD==="tim"&&TIMTAB==="doc"){B.innerHTML=timTabs()+`<div id="txRoot"><div class="bd-empty">جاري التحميل…</div></div>
@@ -3668,6 +3673,7 @@ async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e
 const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=1").catch(e=>{qzP=null;throw e}));
 let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=16")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;

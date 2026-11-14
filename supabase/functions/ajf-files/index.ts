@@ -123,6 +123,60 @@ Deno.serve(async (req) => {
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
   if (!admin) return out({ s: "denied" });
+  // ---------- تحدي التشغيل: توليد أسئلة من التعاميم والأدلة (تنحفظ بانتظار اعتماد المشرف) ----------
+  if (a.action === "quizgen") {
+    if (!GK) return out({ s: "nokey" });
+    try {
+      const want = Math.max(3, Math.min(15, Number(a.n) || 10));
+      const { data: meta } = await sb.rpc("ajf_circ_meta");
+      const M = ((meta || []) as Record<string, any>[]).filter((r) => r.n > 300);
+      if (!M.length) return out({ s: "nosrc" });
+      // المصدر: اللي اختاره المشرف، أو عشوائي (الأدلة الكبيرة لها فرصة أكبر)
+      let c = a.src ? M.find((r) => r.id === a.src) : null;
+      if (!c) { const w = M.map((r) => Math.sqrt(r.n)), t = w.reduce((x, y) => x + y, 0); let p = Math.random() * t; c = M[M.length - 1]; for (let i = 0; i < M.length; i++) { p -= w[i]; if (p <= 0) { c = M[i]; break; } } }
+      let txt = "";
+      if (c.chunks > 0) {
+        const k = Math.floor(Math.random() * c.chunks);
+        const { data: ch } = await sb.from("ajf_circ_chunk").select("n,txt").eq("cid", c.id).in("n", [k, k + 1, k + 2]).order("n");
+        txt = (ch || []).map((x: any) => x.txt).join("\n\n");
+      }
+      if (txt.length < 400) {
+        const { data: r } = await sb.from("ajf_circ").select("body,ftext").eq("id", c.id).single();
+        const all = (String(r?.body || "") + "\n\n" + String(r?.ftext || ""));
+        const st = all.length > 14000 ? Math.floor(Math.random() * (all.length - 12000)) : 0;
+        txt = all.slice(st, st + 12000);
+      }
+      const { data: old } = await sb.from("ajf_quiz_q").select("q").eq("src_id", c.id).order("id", { ascending: false }).limit(60);
+      const avoid = (old || []).map((x: any) => "- " + String(x.q).slice(0, 160)).join("\n");
+      const SYS_QZ = "أنت مدرّب خبير في الخدمات الأرضية (SGS) والخطوط السعودية (Saudia). تكتب أسئلة اختيار من متعدد لتحدي يومي لموظفي محطة الجوف AJF (كاونتر، بوابة، تحكم بالحمولة، رامب، مشرفين). دقتك أهم من عدد الأسئلة.";
+      const prompt = `المصدر: ${c.title}${c.cd ? " (" + c.cd + ")" : ""}\nالنص:\n${txt}\n\n=====\nاكتب ${want} أسئلة من هذا النص فقط، بهذه الشروط:
+- كل سؤال مبني على معلومة مكتوبة صراحة في النص، والجواب الصحيح مؤكد منه 100%. لا تخترع ولا تعتمد على معلوماتك العامة.
+- أسئلة تفيد التشغيل اليومي: إجراءات، شروط قبول الركاب والوثائق، مواعيد الإغلاق، الأوزان والحدود، الأمتعة والمواد الخطرة، ذوي الاحتياجات، التأخير، السلامة، التصرف الصحيح في موقف. تجاهل المقدمات والتعريفات الإدارية وأرقام المراجع وتواريخ الإصدار وأسماء الأشخاص.
+- الأفضل صيغة موقف عملي قصير (مثل: "راكب على رحلة السعودية معه ... ، وش الإجراء الصحيح؟") حتى يحتاج الموظف يفهم مو يحفظ.
+- عربي مبسط وواضح، والمصطلح الفني بالإنجليزي بين قوسين إذا لزم (مثل WCHR).
+- 4 خيارات قصيرة ومتقاربة الطول، واحد فقط صحيح، والخاطئة معقولة لكنها خاطئة بوضوح حسب النص. ممنوع "كل ما سبق" و"لا شيء مما سبق".
+- d: 1 سهل، 2 متوسط، 3 صعب — نوّع بينها.
+- why: سطر أو سطرين يشرح ليش الجواب صحيح حسب النص.
+- page: رقم الصفحة إذا ظاهر في النص مثل [صفحة 214]، وإلا "".
+- لا تكرر ولا تعيد صياغة هذه الأسئلة الموجودة:\n${avoid || "(ما فيه)"}
+- إذا النص ما فيه معلومات تشغيلية كافية أرجع أقل، أو قائمة فاضية.
+أرجع JSON فقط: {"qs":[{"q":"...","o":["...","...","...","..."],"a":0,"d":1,"why":"...","page":""}]}`;
+      const j = JSON.parse(await gem(prompt, SYS_QZ, true, true));
+      const seen = new Set((old || []).map((x: any) => NORM(x.q)));
+      const rows: Record<string, unknown>[] = [];
+      for (const x of (Array.isArray(j.qs) ? j.qs : []) as any[]) {
+        const q = String(x.q || "").trim(), o = (Array.isArray(x.o) ? x.o : []).map((t: unknown) => String(t || "").trim()), ai = Number(x.a);
+        if (q.length < 8 || o.length !== 4 || o.some((t: string) => !t) || new Set(o).size !== 4 || !(ai >= 0 && ai <= 3) || seen.has(NORM(q))) continue;
+        seen.add(NORM(q));
+        // نخلط الخيارات حتى الجواب الصحيح ما يكون دايم الأول
+        const idx = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+        rows.push({ q: q.slice(0, 600), o: idx.map((i) => o[i].slice(0, 200)), a: idx.indexOf(ai), d: [1, 2, 3].includes(Number(x.d)) ? Number(x.d) : 2,
+          why: String(x.why || "").slice(0, 800), page: String(x.page || "").slice(0, 20), src_id: c.id, src_title: String(c.title || "").slice(0, 200), st: "pending", by_ai: true });
+      }
+      if (rows.length) { const { error } = await sb.from("ajf_quiz_q").insert(rows); if (error) return out({ s: "err", e: error.message }); }
+      return out({ s: "ok", n: rows.length, src: c.title });
+    } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
+  }
   if (a.action === "upload") {
     if (!okPath(a.path)) return out({ s: "bad" });
     const { data, error } = await B.createSignedUploadUrl(a.path, { upsert: true });
