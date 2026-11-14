@@ -89,17 +89,22 @@ const air=document.createElement("div");air.className="rd-air";air.id="rdAir";ai
 let ctx=null;
 function aSess(t){try{if(navigator.audioSession&&navigator.audioSession.type!==t)navigator.audioSession.type=t}catch(e){}}
 function unlock(){try{if(!ctx){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;ctx=new A();aSess("playback")}
-  if(ctx.state!=="running")ctx.resume();const b=ctx.createBuffer(1,1,ctx.sampleRate),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0)}catch(e){}}
+  napped=false;if(ctx.state!=="running")ctx.resume();napLater();const b=ctx.createBuffer(1,1,ctx.sampleRate),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0)}catch(e){}}
 const audioOK=()=>ctx&&ctx.state==="running";
+/* توفير البطارية: الصوت يرتاح (suspend) بعد 15 ثانية هدوء، ويصحى تلقائيًا أول ما يجي كلام أو تنبيه.
+   الكلام اللي يوصل وقت الصحيان محفوظ ويتشغّل من أوله، فما يفوت الموظف شي */
+let napped=false,napT=0;
+function napLater(){clearTimeout(napT);napT=setTimeout(()=>{if(!ctx||napped)return;if(RX.sid||TX.on||TX.want)return napLater();try{ctx.suspend();napped=true}catch(e){}},15000)}
+function wake(cb){if(!ctx||!napped){cb&&cb();return}napped=false;const go=()=>{napLater();cb&&cb()};try{ctx.resume().then(go,go)}catch(e){go()}}
 /* الآيفون يسمح بتشغيل الصوت بعد لمسة "نقر" فقط (مو سحب)، فنفتح الصوت مع أي نقرة في أي لوحة */
 ["pointerdown","touchend","click","keydown"].forEach(ev=>document.addEventListener(ev,()=>{const was=audioOK();if(!was)unlock();if(RX.sid){if(!was)setTimeout(()=>{rxPump();airPaint()},120);else rxPump()}},{capture:true,passive:true}));
 /* الآيفون: لما الموظف يطلع من التطبيق ويرجع، الصوت القديم يصير صامت حتى لو يقول إنه شغّال.
    فنسكّره ونسوي واحد جديد مع أول لمسة، والشريط الأخضر يطلب منه يضغط عشان يسمع */
 let wasHidden=false;
-function audioReset(){if(TX.on||TX.want)return;try{ctx&&ctx.close()}catch(e){}ctx=null;RX.next=0;RX.pi=0}
+function audioReset(){if(TX.on||TX.want)return;try{ctx&&ctx.close()}catch(e){}ctx=null;napped=false;clearTimeout(napT);RX.next=0;RX.pi=0}
 document.addEventListener("visibilitychange",()=>{if(document.hidden){wasHidden=true;return}if(wasHidden){wasHidden=false;audioReset();if(RX.sid)airPaint()}});
 addEventListener("pageshow",e=>{if(e.persisted){audioReset();if(RX.sid)airPaint()}});
-function beep(f1,f2,dur,vol){if(!audioOK()||muted)return;try{const t=ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();o.type="sine";o.frequency.setValueAtTime(f1,t);o.frequency.linearRampToValueAtTime(f2,t+dur);
+function beep(f1,f2,dur,vol){if(napped&&!muted){wake(()=>beep(f1,f2,dur,vol));return}if(!audioOK()||muted)return;try{const t=ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();o.type="sine";o.frequency.setValueAtTime(f1,t);o.frequency.linearRampToValueAtTime(f2,t+dur);
   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol||.18,t+.02);g.gain.linearRampToValueAtTime(0,t+dur);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+dur+.02)}catch(e){}}
 /* μ-law (G.711) */
 function muEnc(x){let s=Math.max(-1,Math.min(1,x))*32767|0;const sign=s<0?0x80:0;if(sign)s=-s;if(s>32635)s=32635;s+=0x84;let e=7;for(let m=0x4000;(s&m)===0&&e>0;e--,m>>=1);return ~(sign|(e<<4)|((s>>(e+3))&0x0F))&0xFF}
@@ -108,7 +113,7 @@ const b64e=u=>{let s="";for(let i=0;i<u.length;i+=0x2000)s+=String.fromCharCode.
 const b64d=s=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
 const RX={sid:null,name:"",next:0,last:0,t:null,lv:[],raf:0,buf:[],pi:0,heard:new Set()};
 const toLvl=r=>{const db=20*Math.log10(r||1e-6);return Math.max(0,Math.min(1,(db+52)/40))};
-function rxStart(p){RX.sid=p.sid;RX.name=p.name||"";RX.next=0;RX.lv=[];RX.buf=[];RX.pi=0;RX.last=Date.now();fab.classList.add("live");if(!muted)beep(880,1320,.12);airPaint();rxWatch();
+function rxStart(p){RX.sid=p.sid;RX.name=p.name||"";RX.next=0;RX.lv=[];RX.buf=[];RX.pi=0;RX.last=Date.now();fab.classList.add("live");if(napped)wake(()=>{if(!muted)beep(880,1320,.12);rxPump();airPaint()});else if(!muted)beep(880,1320,.12);airPaint();rxWatch();
   try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}}
 function rxChunk(p){if(!RX.sid||p.sid!==RX.sid){if(!RX.sid)rxStart(p);else return}RX.last=Date.now();if(!RX.name&&p.name){RX.name=p.name;airPaint()}
   try{RX.buf.push(b64d(p.d))}catch(e){}rxPump()}
@@ -129,7 +134,7 @@ function rxEnd(sid){if(sid&&sid!==RX.sid)return;rxPump();const wait=audioOK()?Ma
   setTimeout(()=>{if(RX.sid!==was)return;RX.sid=null;fab.classList.remove("live");air.hidden=true;if(!muted)beep(1320,700,.14,.14)},wait+50)}
 function rxWatch(){clearTimeout(RX.t);RX.t=setTimeout(()=>{if(!RX.sid)return;if(Date.now()-RX.last>4000)rxEnd(RX.sid);else rxWatch()},1500)}
 function airPaint(){if(!RX.sid||TX.on){air.hidden=true;return}
-  const need=!muted&&!audioOK();
+  const need=!muted&&!audioOK()&&!napped;
   air.innerHTML=`<div class="rd-wave ${need||muted?"idle":""}"><span></span><span></span><span></span><span></span></div><div><b>📻 ${escT(RX.name||"زميلك")} يتكلم الحين</b><small>${muted?"الراديو مكتوم على هذا الجوال":need?"اضغط هنا عشان تسمع (من أول الكلام)":"بث مباشر"}</small></div>${need?'<button class="go" id="rdHear">🔊 استماع</button>':""}`;
   air.classList.toggle("need",need);air.onclick=need?()=>{unlock();setTimeout(()=>{rxPump();airPaint()},150)}:null;
   air.hidden=false;rxAnim()}

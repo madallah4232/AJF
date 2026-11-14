@@ -901,7 +901,7 @@ html:has(#hub:not([hidden])),body:has(#hub:not([hidden])){overflow:hidden}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
 /* ===== ثيم اللبّاد الخريفي (خلفية داكنة لتوفير البطارية) ===== */
-:root{--felt:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .93 0 0 0 0 .83 .16 0 0 0 -.02'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+:root{--felt:url("media/felt.png");
   --fuzz:0 0 0 1px rgba(0,0,0,.45),0 3px 8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,236,210,.07);
   --leaf:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 110'%3E%3Cpath d='M50 4l7 20 13-8-3 20 20-7-8 17 16 7-20 8 5 16-19-8-6 25-5-15-5 15-6-25-19 8 5-16-20-8 16-7-8-17 20 7-3-20 13 8z' fill='%23c8622f'/%3E%3Cpath d='M50 22v80M50 60l-22-14M50 60l22-14M50 78l-18 2M50 78l18 2' stroke='%23ecdcbf' stroke-opacity='.45' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")}
 html{background:var(--night)}
@@ -3445,15 +3445,15 @@ function wxScene(c,lv){
   const fit=()=>{cv.width=W()*dpr;cv.height=H()*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)};fit();
   const ws=c.ws||0,to=((c.wd||0)+180)*Math.PI/180,vx=Math.sin(to),vy=-Math.cos(to),sp=.5+ws*.16;
   const rain=isRain(c.code)||isTS(c.code)||(c.rain||0)>0,ts=isTS(c.code),dust=!!(c.obs&&(c.dustObs||(c.vis!=null&&c.vis<5000&&c.haze)));
-  const N=Math.min(170,25+ws*5),P=[...Array(N)].map(()=>({x:Math.random()*W(),y:Math.random()*H(),l:6+Math.random()*18,a:.08+Math.random()*.22}));
-  const R=rain?[...Array(Math.min(220,60+Math.round((c.rain||1)*30)))].map(()=>({x:Math.random()*W(),y:Math.random()*H(),s:6+Math.random()*6})):[];
+  const N=Math.min(170,25+ws*5),P=[...Array(N)].map(()=>({x:Math.random()*(W()||400),y:Math.random()*(H()||170),l:6+Math.random()*18,a:.08+Math.random()*.22}));
+  const R=rain?[...Array(Math.min(220,60+Math.round((c.rain||1)*30)))].map(()=>({x:Math.random()*(W()||400),y:Math.random()*(H()||170),s:6+Math.random()*6})):[];
   const day=c.day,bg=lv>=3?["#2a0f14","#110b07"]:dust?["#3a2a14","#14110d"]:day?["#3a2616","#1a110b"]:["#24170e","#110b07"];
   el.style.background=`linear-gradient(165deg,${bg[0]},${bg[1]} 75%)`;
   let fl=el.querySelector(".flash");if(!fl){fl=document.createElement("div");fl.className="flash";el.prepend(fl)}
   let nextF=performance.now()+2000+Math.random()*4000;
   cancelAnimationFrame(wxRAF);
   const frame=t=>{
-    const w=W(),h=H();ctx.clearRect(0,0,w,h);
+    const w=W(),h=H();if(!w||!h)return;if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr))fit();ctx.clearRect(0,0,w,h);
     if(dust){ctx.fillStyle="rgba(196,150,90,.10)";ctx.fillRect(0,0,w,h)}
     ctx.lineCap="round";
     P.forEach(p=>{p.x+=vx*sp*(1+p.a);p.y+=vy*sp*(1+p.a)+Math.sin((t/700)+p.l)*.15;
@@ -3462,10 +3462,10 @@ function wxScene(c,lv){
       ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-vx*p.l*(.4+ws/25),p.y-vy*p.l*(.4+ws/25));ctx.stroke()});
     if(R.length){ctx.strokeStyle="rgba(160,200,255,.45)";ctx.lineWidth=1;const dx=vx*ws*.06;R.forEach(d=>{d.y+=d.s;d.x+=dx*d.s/6;if(d.y>h){d.y=-10;d.x=Math.random()*w}if(d.x<0)d.x=w;if(d.x>w)d.x=0;ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x-dx*2,d.y-d.s*1.6);ctx.stroke()})}
     if(ts&&t>nextF){fl.classList.remove("on");void fl.offsetWidth;fl.classList.add("on");nextF=t+3000+Math.random()*6000}
-    if(!reduce&&wxVis&&!document.hidden)wxRAF=requestAnimationFrame(frame);
+    /* توفير البطارية: رسمة ثابتة بدل حركة مستمرة 60-120 مرة بالثانية */
   };
   frame(performance.now());
-  if(!el._io){el._io=new IntersectionObserver(e=>{wxVis=e[0].isIntersecting;if(wxVis&&!reduce&&el._frame){cancelAnimationFrame(wxRAF);wxRAF=requestAnimationFrame(el._frame)}});el._io.observe(el);addEventListener("resize",()=>{cv.width=cv.clientWidth*dpr;cv.height=cv.clientHeight*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)})}
+  if(!el._io){el._io=new IntersectionObserver(e=>{wxVis=e[0].isIntersecting;if(wxVis&&!reduce&&el._frame){cancelAnimationFrame(wxRAF);wxRAF=requestAnimationFrame(el._frame)}});el._io.observe(el);addEventListener("resize",()=>{const f=$("wx")._frame;f&&f(performance.now())})}
   el._frame=frame;
 }
 document.addEventListener("visibilitychange",()=>{const el=$("wx");if(!document.hidden&&el&&el._frame&&!reduce){cancelAnimationFrame(wxRAF);wxRAF=requestAnimationFrame(el._frame)}});
@@ -3663,6 +3663,6 @@ function bootShow(){const b=$("boot");if(!b||!AUTH.tok)return;
 window.bootShow=bootShow;
 try{if(AUTH.tok&&!DEMO)bootShow();else hubShow(true)}catch(e){console.error(e);try{hubShow(true)}catch(x){}}
 </script>
-<script src="radio.js?v=9" defer></script>
+<script src="radio.js?v=10" defer></script>
 </body>
 </html>
