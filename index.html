@@ -2469,7 +2469,7 @@ function lcSum(R){const n=x=>x==null?"—":Math.round(x).toLocaleString("en-US")
   ${B?`<div class="lc-kv">${[["LIZFW",B.lizfw.toFixed(1)],["LITOW",B.litow==null?"—":B.litow.toFixed(1)],["MAC ZFW",B.mz==null?"—":B.mz.toFixed(1)+"%"],["MAC TOW",B.mt==null?"—":B.mt.toFixed(1)+"%"],["MAC LAW",B.ml==null?"—":B.ml.toFixed(1)+"%"],["STAB",B.st==null?"—":Math.abs(B.st).toFixed(1)+(B.st<0?" DN":" UP")]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>`:`<div class="lc-w i">الـ Balance Chart متوفر لطائرات A320-214 (12J/132Y) فقط</div>`}
   ${R.W.map(w=>{const[t,k]=w.split("|");return k?`<button class="lc-w go" data-go="${k}">⚠︎ ${escT(t)} <i>← اضغط هنا</i></button>`:`<div class="lc-w">⚠︎ ${escT(t)}</div>`}).join("")}</div>`}
 function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg[k].type+" · "+D.cfg[k].ver]);
-  const crews=C?Object.keys(C.opv):["2/5"];if(!A.cm&&!crews.includes(A.crew))crews.push(A.crew);constpans=C?Object.keys(C.pan):["C"],nr=A.reg&&!D.reg[A.reg];
+  const crews=C?Object.keys(C.opv):["2/5"];if(!A.cm&&!crews.includes(A.crew))crews.push(A.crew);const pans=C?Object.keys(C.pan):["C"],nr=A.reg&&!D.reg[A.reg];
   const cpt=c=>`<div class="lc-cpt"><b>CMPT ${c}</b><div class="lc-g4">${LCBC.map(k=>lcField("b"+c+k,k+" pcs",R,{ph:"0"})).join("")}</div>
     <div class="cs-g">${lcField("b"+c+"kg","BAG KG",R,{ph:"0"})}${lcField("c"+c,"CARGO KG",R,{ph:"0"})}${lcField("m"+c,"MAIL KG",R,{ph:"0"})}</div></div>`;
   return lcSum(R)+`
