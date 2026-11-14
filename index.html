@@ -938,17 +938,46 @@ body,.bd,.hub{background:var(--felt),var(--night)}
   --woolmask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cfilter id='f' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.7' numOctaves='2' seed='4'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='15' xChannelSelector='R' yChannelSelector='G'/%3E%3CfeGaussianBlur stdDeviation='.35'/%3E%3C/filter%3E%3Ccircle cx='50' cy='50' r='38' fill='%23fff' filter='url(%23f)'/%3E%3C/svg%3E");
   --furL:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3 .9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .96 0 0 0 0 .9 1.1 0 0 0 -.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --furD:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9 1.4' numOctaves='3' seed='2'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .06 0 0 0 0 .03 1.2 0 0 0 -.55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-.hub-c .ic,.hub-home,.hub-ac,.weeknav button{position:relative;isolation:isolate;background:none!important;box-shadow:none!important;border:0!important}
-.hub-c .ic::before,.hub-home::before,.hub-ac::before,.weeknav button::before{content:"";position:absolute;inset:-11px;z-index:-1;
+.hub-c .ic,.at .ic,.hub-home,.hub-ac,.weeknav button{position:relative;isolation:isolate;background:none!important;box-shadow:none!important;border:0!important}
+.hub-c .ic::before,.at .ic::before,.hub-home::before,.hub-ac::before,.weeknav button::before{content:"";position:absolute;inset:-11px;z-index:-1;
   background:repeating-conic-gradient(from 3deg,rgba(255,240,220,.10) 0 .7deg,rgba(0,0,0,.12) .7deg 1.6deg,transparent 1.6deg 2.4deg),var(--furL),var(--furD),radial-gradient(circle at 36% 30%,color-mix(in oklab,var(--w) 70%,#fff) 0%,var(--w) 38%,color-mix(in oklab,var(--w) 62%,#000) 82%);
   background-size:100% 100%,40px 40px,48px 48px,100% 100%;
   -webkit-mask:var(--woolmask) center/100% 100% no-repeat;mask:var(--woolmask) center/100% 100% no-repeat}
-.hub-c .ic::after,.hub-home::after,.hub-ac::after,.weeknav button::after{content:"";position:absolute;inset:-11px;z-index:-2;transform:translateY(4px) scale(.98);opacity:.55;background:#000;
+.hub-c .ic::after,.at .ic::after,.hub-home::after,.hub-ac::after,.weeknav button::after{content:"";position:absolute;inset:-11px;z-index:-2;transform:translateY(4px) scale(.98);opacity:.55;background:#000;
   -webkit-mask:var(--woolmask) center/100% 100% no-repeat;mask:var(--woolmask) center/100% 100% no-repeat}
 .hub-c .ic{--w:var(--c);width:60px;height:60px;margin:6px}
 .hub-c .ic svg{width:27px;height:27px;stroke-width:2.4;filter:drop-shadow(0 1px 0 rgba(255,240,220,.35))}
 .hub-home,.hub-ac,.weeknav button{--w:#3b2618}
 .hub-home,.hub-ac{color:#ecdcbf}
+/* ===== لوحة المشرف: مستطيلات صغيرة + لوحة منبثقة في الوسط ===== */
+.at-g{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.at{--c:var(--amber);position:relative;display:flex;align-items:center;gap:10px;min-height:76px;padding:10px 12px;border-radius:20px;text-align:start;color:var(--ink);
+  background:var(--felt),color-mix(in oklab,var(--c) 12%,#1c130d);box-shadow:var(--fuzz)}
+.at::after{content:"";position:absolute;inset:5px;border-radius:15px;border:1.5px dashed color-mix(in oklab,var(--c) 34%,transparent);pointer-events:none}
+.at:active{transform:scale(.97)}
+.at .ic{--w:var(--c);flex:none;width:34px;height:34px;margin:7px;display:grid;place-items:center;color:#1a1008}
+.at .ic svg{width:20px;height:20px;stroke-width:2.4}
+.at span{min-width:0;display:grid;gap:2px}.at b{font:700 13.5px/1.3 var(--display)}.at small{color:var(--muted);font-size:12px}
+.at i{position:absolute;top:-6px;left:-6px;min-width:22px;height:22px;border-radius:11px;background:var(--warn);color:#fff;font:700 12px/22px var(--mono);font-style:normal;text-align:center;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.at.wide{grid-column:1/-1}
+.adm-sh{position:fixed;inset:0;z-index:45;display:none;place-items:center;padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));background:rgba(8,5,3,.72)}
+.adm-sh.on{display:grid}.adm-sh.emp-sh{z-index:46}
+.adm-shc{width:100%;max-width:520px;max-height:100%;display:grid;grid-template-rows:auto 1fr;border-radius:26px;overflow:hidden;
+  background:var(--felt),#1d140d;box-shadow:0 0 0 1px rgba(236,220,191,.08),0 18px 50px rgba(0,0,0,.6);animation:shIn .22s cubic-bezier(.2,.8,.3,1) 1}
+@keyframes shIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+.adm-shh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px dashed rgba(236,220,191,.14)}
+.adm-shh b{flex:1;font:700 16px var(--display)}.adm-shh small{display:block;color:var(--muted);font:600 12px var(--mono);margin-top:2px}
+.adm-shh button{flex:none;width:38px;height:38px;border-radius:50%;background:var(--raise);border:1px solid var(--line);color:var(--ink);font-size:16px}
+.adm-shb{overflow:auto;padding:14px;display:grid;gap:12px;align-content:start;-webkit-overflow-scrolling:touch}
+.adm-shb>.adm-s{display:none;background:none;border:0;padding:0}.adm-shb>.adm-s.cur{display:grid}
+.adm-shb>.adm-s>h3{display:none}
+.emp-sh .more{display:grid;gap:10px}
+.emp-sh .more>.row{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important}
+.emp-sh .more>.row .abtn{height:auto;min-height:44px;padding:8px 10px;line-height:1.35;white-space:normal}
+.emp-sh .es-h{font:700 12.5px var(--display);color:var(--muted);margin-top:4px}
+.emp>button{padding:6px 2px}
+.adm-b .row{background:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;padding:0!important;min-height:0!important;overflow:visible!important;margin:0!important}
+.adm-b .row::before,.adm-b .row::after{display:none!important}
 </style>
 </head>
 <body>
@@ -1246,32 +1275,56 @@ function gateWait(isNew){GATE.mode="old";$("gateC").innerHTML=`<div class="orb" 
   <button class="go" id="gGo">تحقق الآن</button><div class="err" id="gErr"></div><button class="lnk" id="gBack">رجوع</button>`;
   $("gGo").onclick=gateLogin;$("gBack").onclick=()=>gateEmp()}
 /* ---------- صفحة الحساب والإدارة ---------- */
-let ADM=null,admQ="",admOpen=new Set();
+let ADM=null,admQ="",admSec=null,admEmp=null;
+const AIC={push:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  req:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  emps:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  add:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+  csp:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+  dcp:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5.5 17a4 4 0 0 1 7 0M15 10h3M15 14h3"/>',
+  sw:'<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/><path d="M3 9l-2 2 2 2M21 11l2 2-2 2"/>',
+  mvt:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/>'};
+const ADM_T=[{k:"req",t:"طلبات الموافقة",c:"#ef8a5b"},{k:"emps",t:"الموظفين",c:"#e8a058"},{k:"csp",t:"صلاحية الكوردنيتر",c:"#a9c47f"},{k:"dcp",t:"صلاحية فحص الوثائق",c:"#d9c8a8"},
+  {k:"add",t:"إضافة موظفين",c:"#c9a27a"},{k:"sw",t:"تغيير الجوالات",c:"#8fb3c9"},{k:"push",t:"تنبيهات الرحلات",c:"#e6b450"},{k:"mvt",t:"إيميلات MVT ناس",c:"#7fc4c9"}];
+function admTiles(n){const sub={req:n.pend?n.pend+" بانتظارك":"ما فيه طلبات",emps:n.emps+" موظف",csp:n.csp+" مصرّح",dcp:n.dcp+" مصرّح",add:"أضف بالرقم والاسم",sw:(n.sw||0)+" آخر 7 أيام",push:"تشغيل وتجربة",mvt:n.mvt+" إيميل"};
+  return`<div class="at-g">${ADM_T.map(x=>`<button class="at" data-sec="${x.k}" style="--c:${x.c}">${x.k==="req"&&n.pend?`<i>${n.pend}</i>`:""}<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${AIC[x.k]}</svg></div><span><b>${x.t}</b><small>${sub[x.k]}</small></span></button>`).join("")}</div>`}
 const fdt=t=>{if(!t)return"—";const d=new Date(t);return d.toLocaleString("ar-SA-u-nu-latn",{timeZone:"Asia/Riyadh",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})};
 async function admCall(action,arg){const j=await rpc("ajf_admin",{p_token:AUTH.tok,p_device:AUTH.dev,p_action:action,p_arg:arg||{}});if(j.s==="out"){authOut();throw new Error("out")}return j}
 async function openAcct(){$("adm").hidden=false;$("admS").textContent=AUTH.me?(AUTH.me.name||"")+" · "+AUTH.me.emp:"";await admRender()}
-async function admRender(){const me=AUTH.me||{};let h=`<div class="adm-s"><h3><span>${escT(me.name||"")}<span class="chip">${escT(me.emp||"")}</span>${me.admin?'<span class="chip a">مشرف</span>':""}</span><button class="abtn n" id="aOut">تسجيل خروج</button></h3><div class="amsg">حسابك معتمد ✅ تبقى متصل على هذا الجوال. لو غيّرت جوالك أو انمسحت بيانات Safari، ادخل برقمك الوظيفي والرقم السري بدون انتظار موافقة، والجوال القديم يطلع تلقائياً. الأفضل تفتح التطبيق دايماً من أيقونته في الشاشة الرئيسية.</div></div>`;
-  h+=`<div class="adm-s" id="aPushS"><h3>🔔 تنبيهات وصول الرحلات</h3><div class="amsg" id="aPushM">…</div></div>`;
-  if(!me.admin){$("admB").innerHTML=h;admBind();return}
-  $("admB").innerHTML=h+'<div class="adm-s"><div class="amsg">جاري التحميل…</div></div>';admBind();
-  try{ADM=await admCall("list");await csSync(true);await dcpLoad(true)}catch(e){$("admB").lastChild.innerHTML='<div class="amsg">تعذّر التحميل، تأكد من الاتصال.</div>';return}
+async function admRender(cached){const me=AUTH.me||{};let hA=`<div class="adm-s"><h3><span>${escT(me.name||"")}<span class="chip">${escT(me.emp||"")}</span>${me.admin?'<span class="chip a">مشرف</span>':""}</span><button class="abtn n" id="aOut">تسجيل خروج</button></h3><div class="amsg">حسابك معتمد ✅ تبقى متصل على هذا الجوال. لو غيّرت جوالك أو انمسحت بيانات Safari، ادخل برقمك الوظيفي والرقم السري بدون انتظار موافقة، والجوال القديم يطلع تلقائياً. الأفضل تفتح التطبيق دايماً من أيقونته في الشاشة الرئيسية.</div></div>`;
+  let h=`<div class="adm-s" data-k="push" id="aPushS"><h3>🔔 تنبيهات وصول الرحلات</h3><div class="amsg" id="aPushM">…</div></div>`;
+  if(!me.admin){$("admB").innerHTML=hA+h;admBind();return}
+  if(!cached||!ADM){if(!ADM){$("admB").innerHTML=hA+'<div class="adm-s"><div class="amsg">جاري التحميل…</div></div>'}
+    try{ADM=await admCall("list");await csSync(true);await dcpLoad(true)}catch(e){if(!ADM)$("admB").lastChild.innerHTML='<div class="amsg">تعذّر التحميل، تأكد من الاتصال.</div>';return}}
   const emps=ADM.emps||[],pend=[];emps.forEach(e=>e.devices.forEach(d=>{if(d.status==="pending")pend.push({e,d})}));acctPaint(pend.length,1);
-  h+=`<div class="adm-s"><h3>طلبات بانتظار موافقتك <span class="chip ${pend.length?"w":""}">${pend.length}</span></h3>${pend.length?pend.map(({e,d})=>`<div class="req"><div><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${d.first?'<span class="chip a">تفعيل حساب جديد</span>':'<span class="chip">جوال إضافي</span>'}<small>${escT(d.label)} · ${fdt(d.created)}</small></div><div class="row"><button class="abtn y" data-dv="${d.id}" data-st="approved">✅ موافقة</button><button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button></div></div>`).join(""):'<div class="amsg">ما فيه طلبات حالياً.</div>'}</div>`;
-  {const C=(await mvtMailCfg())||{},L=a=>escT(mailList(a).join("\n"));h+=`<div class="adm-s"><h3>إيميلات برقيات MVT · طيران ناس</h3><div class="amsg">زر «📧 أوت لوك» في الكوردنيتر شيت يفتح مسودة فيها هذي العناوين، والموظف يراجعها ويرسلها من أوت لوك. إيميل واحد في كل سطر.</div>
+  h+=`<div class="adm-s" data-k="req"><h3>طلبات بانتظار موافقتك <span class="chip ${pend.length?"w":""}">${pend.length}</span></h3>${pend.length?pend.map(({e,d})=>`<div class="req"><div><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${d.first?'<span class="chip a">تفعيل حساب جديد</span>':'<span class="chip">جوال إضافي</span>'}<small>${escT(d.label)} · ${fdt(d.created)}</small></div><div class="row"><button class="abtn y" data-dv="${d.id}" data-st="approved">✅ موافقة</button><button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button></div></div>`).join(""):'<div class="amsg">ما فيه طلبات حالياً.</div>'}</div>`;
+  {const C=(await mvtMailCfg())||{},L=a=>escT(mailList(a).join("\n"));h+=`<div class="adm-s" data-k="mvt"><h3>إيميلات برقيات MVT · طيران ناس</h3><div class="amsg">زر «📧 أوت لوك» في الكوردنيتر شيت يفتح مسودة فيها هذي العناوين، والموظف يراجعها ويرسلها من أوت لوك. إيميل واحد في كل سطر.</div>
     <div class="amsg">إلى</div><textarea id="aMvtTo" dir="ltr" placeholder="name@flynas.com">${L(C.to)}</textarea><div class="amsg">نسخة (CC)</div><textarea id="aMvtCc" dir="ltr" style="min-height:60px">${L(C.cc)}</textarea>
     <button class="abtn a" id="aMvtGo">حفظ الإيميلات</button><div class="amsg" id="aMvtMsg"></div></div>`}
   {const wk=Date.now()-7*864e5,sw=[];emps.forEach(e=>e.devices.forEach(d=>{if(d.auto&&d.decided&&new Date(d.decided).getTime()>wk)sw.push({e,d})}));
     sw.sort((x,y)=>new Date(y.d.decided)-new Date(x.d.decided));
-    h+=`<div class="adm-s"><h3>🔄 تغيير جوال (آخر 7 أيام) <span class="chip">${sw.length}</span></h3><div class="amsg">الموظف اللي سبق وافقت عليه يدخل من أي جوال جديد برقمه السري بدون موافقة، والجوال القديم يطلع تلقائياً. لو شفت تغيير مو طبيعي اضغط «رفض» أو «إعادة تعيين الرقم السري» من صفحة الموظف.</div>${sw.length?sw.map(({e,d})=>`<div class="req"><div><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span><small>${escT(d.label)} · ${fdt(d.decided)}</small></div><div class="row"><button class="abtn n" data-dv="${d.id}" data-st="rejected">⛔ رفض</button></div></div>`).join(""):'<div class="amsg">ما فيه تغييرات.</div>'}</div>`}
-  h+=`<div class="adm-s"><h3>إضافة موظفين</h3><div class="amsg">كل سطر: الرقم الوظيفي ثم الاسم. مثال:<br>12345 محمد أحمد</div><textarea id="aAdd" placeholder="12345 محمد أحمد"></textarea><button class="abtn a" id="aAddGo">إضافة</button><div class="amsg" id="aAddMsg"></div></div>`;
-  {const nm=x=>(emps.find(e=>e.emp===x)||{}).name||x;h+=`<div class="adm-s"><h3>صلاحية الكوردنيتر شيت <span class="chip">${CSPERM.length}</span></h3><div class="amsg">الكل يشوف الشيت وأسماء اللي سجّلوا. التسجيل والتعديل (ومنه Push Back) لك ولهؤلاء فقط. تعطي الصلاحية من صفحة الموظف تحت.</div>${CSPERM.map(x=>`<div class="req"><div><b>${escT(nm(x))}</b> <span class="chip">${escT(x)}</span></div><div class="row"><button class="abtn n" data-csp="${escT(x)}" data-v="false">سحب</button></div></div>`).join("")}</div>`;
-    h+=`<div class="adm-s"><h3>صلاحية فحص وثائق الراكب <span class="chip">${DCP.length}</span></h3><div class="amsg">تبويب «فحص وثائق الراكب» يظهر لك ولهؤلاء فقط (تحت التجربة). تعطي الصلاحية من صفحة الموظف تحت.</div>${DCP.map(x=>`<div class="req"><div><b>${escT(nm(x))}</b> <span class="chip">${escT(x)}</span></div><div class="row"><button class="abtn n" data-dcp="${escT(x)}" data-v="false">سحب</button></div></div>`).join("")}</div>`}
+    h+=`<div class="adm-s" data-k="sw"><h3>🔄 تغيير جوال (آخر 7 أيام) <span class="chip">${sw.length}</span></h3><div class="amsg">الموظف اللي سبق وافقت عليه يدخل من أي جوال جديد برقمه السري بدون موافقة، والجوال القديم يطلع تلقائياً. لو شفت تغيير مو طبيعي اضغط «رفض» أو «إعادة تعيين الرقم السري» من صفحة الموظف.</div>${sw.length?sw.map(({e,d})=>`<div class="req"><div><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span><small>${escT(d.label)} · ${fdt(d.decided)}</small></div><div class="row"><button class="abtn n" data-dv="${d.id}" data-st="rejected">⛔ رفض</button></div></div>`).join(""):'<div class="amsg">ما فيه تغييرات.</div>'}</div>`}
+  h+=`<div class="adm-s" data-k="add"><h3>إضافة موظفين</h3><div class="amsg">كل سطر: الرقم الوظيفي ثم الاسم. مثال:<br>12345 محمد أحمد</div><textarea id="aAdd" placeholder="12345 محمد أحمد"></textarea><button class="abtn a" id="aAddGo">إضافة</button><div class="amsg" id="aAddMsg"></div></div>`;
+  {const nm=x=>(emps.find(e=>e.emp===x)||{}).name||x;h+=`<div class="adm-s" data-k="csp"><h3>صلاحية الكوردنيتر شيت <span class="chip">${CSPERM.length}</span></h3><div class="amsg">الكل يشوف الشيت وأسماء اللي سجّلوا. التسجيل والتعديل (ومنه Push Back) لك ولهؤلاء فقط. تعطي الصلاحية من صفحة الموظف تحت.</div>${CSPERM.map(x=>`<div class="req"><div><b>${escT(nm(x))}</b> <span class="chip">${escT(x)}</span></div><div class="row"><button class="abtn n" data-csp="${escT(x)}" data-v="false">سحب</button></div></div>`).join("")}</div>`;
+    h+=`<div class="adm-s" data-k="dcp"><h3>صلاحية فحص وثائق الراكب <span class="chip">${DCP.length}</span></h3><div class="amsg">تبويب «فحص وثائق الراكب» يظهر لك ولهؤلاء فقط (تحت التجربة). تعطي الصلاحية من صفحة الموظف تحت.</div>${DCP.map(x=>`<div class="req"><div><b>${escT(nm(x))}</b> <span class="chip">${escT(x)}</span></div><div class="row"><button class="abtn n" data-dcp="${escT(x)}" data-v="false">سحب</button></div></div>`).join("")}</div>`}
   const q=norm(admQ),list=emps.filter(e=>!q||norm(e.name+" "+e.emp).includes(q));
-  h+=`<div class="adm-s"><h3>الموظفين <span class="chip">${emps.length}</span></h3><input id="aQ" type="search" placeholder="بحث بالاسم أو الرقم" value="${escT(admQ)}">${list.map(e=>{const ap=e.devices.filter(d=>d.status==="approved").length;const st=!e.active?'<span class="chip w">موقوف</span>':e.locked?'<span class="chip w">مقفل مؤقتاً</span>':!e.activated?'<span class="chip">لم يفعّل</span>':ap?'<span class="chip g">فعّال</span>':'<span class="chip w">بدون جوال معتمد</span>';
-    const o=admOpen.has(e.emp);return`<div class="emp"><button data-op="${escT(e.emp)}"><span><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${e.admin?'<span class="chip a">مشرف</span>':""}</span><span>${st}</span></button>${o?`<div class="more">${e.devices.length?e.devices.map(d=>`<div class="req"><small>${escT(d.label)} · ${{approved:"✅ معتمد",pending:"⏳ بانتظار",rejected:"⛔ مرفوض"}[d.status]}${d.auto?" · 🔄 تغيير جوال تلقائي":""} · آخر دخول ${fdt(d.seen)}</small><div class="row">${d.status!=="approved"?`<button class="abtn y" data-dv="${d.id}" data-st="approved">اعتماد</button>`:""}${d.status!=="rejected"?`<button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button>`:""}<button class="abtn" data-dv="${d.id}" data-st="delete" data-cf="1">حذف الجوال</button></div></div>`).join(""):'<div class="amsg">ما سجّل دخول من أي جوال.</div>'}
+  h+=`<div class="adm-s" data-k="emps"><h3>الموظفين <span class="chip">${emps.length}</span></h3><input id="aQ" type="search" placeholder="بحث بالاسم أو الرقم" value="${escT(admQ)}">${list.map(e=>{const ap=e.devices.filter(d=>d.status==="approved").length;const st=!e.active?'<span class="chip w">موقوف</span>':e.locked?'<span class="chip w">مقفل مؤقتاً</span>':!e.activated?'<span class="chip">لم يفعّل</span>':ap?'<span class="chip g">فعّال</span>':'<span class="chip w">بدون جوال معتمد</span>';
+    const o=admEmp===e.emp;return`<div class="emp"><button data-op="${escT(e.emp)}"><span><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${e.admin?'<span class="chip a">مشرف</span>':""}</span><span>${st}</span></button>${o?`<div class="more">${e.devices.length?e.devices.map(d=>`<div class="req"><small>${escT(d.label)} · ${{approved:"✅ معتمد",pending:"⏳ بانتظار",rejected:"⛔ مرفوض"}[d.status]}${d.auto?" · 🔄 تغيير جوال تلقائي":""} · آخر دخول ${fdt(d.seen)}</small><div class="row">${d.status!=="approved"?`<button class="abtn y" data-dv="${d.id}" data-st="approved">اعتماد</button>`:""}${d.status!=="rejected"?`<button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button>`:""}<button class="abtn" data-dv="${d.id}" data-st="delete" data-cf="1">حذف الجوال</button></div></div>`).join(""):'<div class="amsg">ما سجّل دخول من أي جوال.</div>'}
       <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">${e.activated?`<button class="abtn" data-ac="reset_pass" data-e="${escT(e.emp)}" data-cf="1">إعادة تعيين الرقم السري</button>`:""}${e.locked?`<button class="abtn" data-ac="unlock" data-e="${escT(e.emp)}">فك القفل</button>`:""}${!e.admin?`<button class="abtn ${CSPERM.includes(e.emp)?"n":"y"}" data-csp="${escT(e.emp)}" data-v="${!CSPERM.includes(e.emp)}">${CSPERM.includes(e.emp)?"سحب صلاحية الكوردنيتر شيت":"إعطاء صلاحية الكوردنيتر شيت"}</button><button class="abtn ${DCP.includes(e.emp)?"n":"y"}" data-dcp="${escT(e.emp)}" data-v="${!DCP.includes(e.emp)}">${DCP.includes(e.emp)?"سحب صلاحية فحص الوثائق":"إعطاء صلاحية فحص الوثائق"}</button>`:""}${e.emp!==ADM.me?`<button class="abtn ${e.active?"n":"y"}" data-ac="active" data-e="${escT(e.emp)}" data-v="${!e.active}" ${e.active?'data-cf="1"':""}>${e.active?"إيقاف":"تفعيل"}</button><button class="abtn" data-ac="set_admin" data-e="${escT(e.emp)}" data-v="${!e.admin}" data-cf="1">${e.admin?"إلغاء الإشراف":"جعله مشرف"}</button><button class="abtn n" data-ac="delete" data-e="${escT(e.emp)}" data-cf="1">حذف</button>`:""}</div></div>`:""}</div>`}).join("")||'<div class="amsg">ما فيه نتائج.</div>'}</div>`;
-  $("admB").innerHTML=h;admBind();
-  const aq=$("aQ");if(aq)aq.oninput=()=>{admQ=aq.value;clearTimeout(aq._t);aq._t=setTimeout(()=>{const p=aq.selectionStart;admRender().then(()=>{const n=$("aQ");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(e){}}})},300)}}
+  const B=$("admB"),sc=[...B.querySelectorAll(".adm-shb")].map(x=>x.scrollTop);
+  B.innerHTML=hA+admTiles({pend:pend.length,emps:emps.length,sw:(h.match(/data-k="sw"[\s\S]*?<span class="chip">(\d+)/)||[])[1],csp:CSPERM.length,dcp:DCP.length,mvt:mailList((MVT_MAIL||{}).to).length})
+    +`<div class="adm-sh${admSec?" on":""}" id="admSh" data-shx="sec"><div class="adm-shc"><div class="adm-shh"><b id="admShT"></b><button data-shx="sec" aria-label="إغلاق">✕</button></div><div class="adm-shb">${h}</div></div></div>`
+    +`<div class="adm-sh emp-sh" id="admEs" data-shx="emp"><div class="adm-shc"><div class="adm-shh"><b id="admEsT"></b><button data-shx="emp" aria-label="إغلاق">✕</button></div><div class="adm-shb"></div></div></div>`;
+  B.querySelectorAll("#admSh .adm-shb>.adm-s").forEach(x=>x.classList.toggle("cur",x.dataset.k===admSec));
+  {const t=ADM_T.find(x=>x.k===admSec);$("admShT").textContent=t?t.t:""}
+  {const e=admEmp&&emps.find(x=>x.emp===admEmp),m=e&&B.querySelector("#admSh .emp .more");
+    if(e&&m){const es=$("admEs");es.classList.add("on");$("admEsT").innerHTML=`${escT(e.name||"—")}<small>${escT(e.emp)}${e.admin?" · مشرف":""}</small>`;
+      const dv=document.createElement("div");dv.className="es-h";dv.textContent="📱 الجوالات";m.prepend(dv);
+      const r=m.querySelector(":scope>.row");if(r&&r.children.length){const hh=document.createElement("div");hh.className="es-h";hh.textContent="⚙️ الصلاحيات والإجراءات";r.before(hh)}
+      es.querySelector(".adm-shb").appendChild(m)}else admEmp=null}
+  B.querySelectorAll(".adm-shb").forEach((x,i)=>{if(sc[i])x.scrollTop=sc[i]});
+  admBind();
+  const aq=$("aQ");if(aq)aq.oninput=()=>{admQ=aq.value;clearTimeout(aq._t);aq._t=setTimeout(()=>{const p=aq.selectionStart;admRender(true).then(()=>{const n=$("aQ");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(e){}}})},300)}}
 async function pushPaint(){const S=$("aPushS");if(!S)return;const st=await pushState(),M=$("aPushM");if(!M)return;M.textContent=PU_TXT[st];
   S.querySelectorAll(".abtn").forEach(b=>b.remove());if(st!=="on"&&st!=="off")return;
   const b=document.createElement("button");b.className="abtn "+(st==="on"?"n":"a");b.id="aPush";b.textContent=st==="on"?"إيقاف التنبيهات":"تفعيل التنبيهات";S.appendChild(b);
@@ -1288,8 +1341,11 @@ async function pushPaint(){const S=$("aPushS");if(!S)return;const st=await pushS
       if(j.s!=="ok")throw new Error(j.s);t2.textContent="✅ انطلب — اقفل الجوال، يوصلك خلال دقيقة"}
     catch(e){t2.disabled=false;t2.textContent="تعذّر الطلب، جرّب مرة ثانية"}}}
 function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.dataset.c!=="1"){o.dataset.c="1";o.textContent="متأكد؟ اضغط مرة ثانية";return}try{await rpc("ajf_logout",{p_token:AUTH.tok})}catch(e){}authOut()};
-  const B=$("admB");B.onclick=async ev=>{const t=ev.target.closest("button");if(!t||t.id==="aOut"||t.id==="aPush")return;
-    if(t.dataset.op){admOpen.has(t.dataset.op)?admOpen.delete(t.dataset.op):admOpen.add(t.dataset.op);admRender();return}
+  const B=$("admB");B.onclick=async ev=>{if(ev.target.classList&&ev.target.classList.contains("adm-sh")){if(ev.target.id==="admEs")admEmp=null;else{admSec=null;admEmp=null}admRender(true);return}
+    const t=ev.target.closest("button");if(!t||t.id==="aOut"||t.id==="aPush")return;
+    if(t.dataset.sec){admSec=t.dataset.sec;admEmp=null;admRender(true);return}
+    if(t.dataset.shx){if(t.dataset.shx==="emp")admEmp=null;else{admSec=null;admEmp=null}admRender(true);return}
+    if(t.dataset.op){admEmp=t.dataset.op;admRender(true);return}
     if(t.dataset.cf==="1"&&t.dataset.c!=="1"){t.dataset.c="1";t._txt=t.textContent;t.textContent="متأكد؟";setTimeout(()=>{if(t.isConnected){t.dataset.c="";t.textContent=t._txt}},3000);return}
     try{t.disabled=true;
       if(t.id==="aMvtGo"){const v={to:mailList($("aMvtTo").value),cc:mailList($("aMvtCc").value)};const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"mvt_xy",p_v:v});
@@ -1306,7 +1362,7 @@ function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.d
         await admRender();$("aAddMsg").textContent=`تمت إضافة ${ok}`+(bad.length?` · ما انضافت: ${bad.join("، ")}`:"");return}
       await admRender()}catch(e){t.disabled=false}}}
 /* التشغيل بعد تحميل باقي السكربتات (تحتاج $ و escT) */
-addEventListener("DOMContentLoaded",()=>{$("acctBtn").onclick=openAcct;$("admBack").onclick=()=>{$("adm").hidden=true};
+addEventListener("DOMContentLoaded",()=>{$("acctBtn").onclick=openAcct;$("admBack").onclick=()=>{if(admEmp||admSec){if(admEmp)admEmp=null;else admSec=null;admRender(true);return}$("adm").hidden=true};
   if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{acctPaint(0);authCheck();setTimeout(pushOffer,4000);if(/[?&]acct/.test(location.search))openAcct()}
   let acT=0;setInterval(()=>{if(document.hidden)return;const adm=AUTH.me&&AUTH.me.admin;if(adm||Date.now()-acT>3*60e3){acT=Date.now();authCheck()}},45e3);document.addEventListener("visibilitychange",()=>{if(!document.hidden)authCheck()})});
 </script>
