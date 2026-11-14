@@ -418,7 +418,10 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .lc-cpt{display:grid;gap:6px;padding:8px;border:1px solid var(--line);border-radius:12px}.lc-cpt>b{font:700 12px var(--mono);color:var(--muted);direction:ltr;text-align:left}
 .lc-lk input{opacity:.75;background:transparent!important;border-style:dashed!important;pointer-events:none}.lc-det summary{font-size:12.5px;color:var(--muted);cursor:pointer;padding:4px 0}.lc-det[open]{display:grid;gap:8px}
 .lc-ck{display:flex;align-items:center;gap:8px;font-size:13px}.lc-ck input{width:18px;height:18px}
-.lc-pvw{padding:12px 10px calc(90px + env(safe-area-inset-bottom));display:grid;gap:8px;max-width:900px;margin:0 auto}
+.lc-pvw{padding:12px 10px calc(90px + env(safe-area-inset-bottom));display:grid;gap:8px;width:calc(100% * var(--z,1));max-width:calc(900px * var(--z,1));margin:0 auto;direction:ltr}.lc-pvw .lc-w{direction:rtl}.lc-body{touch-action:pan-x pan-y}.lc-body.pv{direction:ltr}.lc-zh{font-size:11.5px;color:var(--muted);text-align:center;direction:rtl}
+.lc-add{width:100%;padding:11px;border-radius:10px;border:1px dashed var(--line);background:var(--raise);color:var(--amber);font:inherit;font-weight:700;cursor:pointer}.lc-x{float:left;border:0;background:none;color:#ff6b6b;font:inherit;font-size:12px;cursor:pointer}
+.lc-lmcp{font:12px var(--mono);direction:ltr;display:grid;gap:3px;background:var(--raise);border-radius:8px;padding:8px}.lc-lmcp div{display:grid;grid-template-columns:44px 1fr 44px 18px 48px;gap:6px}.lc-lmcp .t{grid-template-columns:1fr 18px 48px;border-top:1px solid var(--line);padding-top:4px;font-weight:700}
+.lc-kv.lmc .h{grid-column:1/-1;color:var(--amber);font-weight:700}
 .lc-pv{width:100%;height:auto;border-radius:6px;background:#fff;display:block}
 .lc .cs-f span{font-size:10px}
 .fm-send{width:100%;margin-top:10px;padding:12px;border-radius:12px;background:#0a64c8;color:#fff;border:0;font-weight:700;font-size:14px}.fm-send:disabled{opacity:.7}.fm-sendh{margin:6px 2px 0;font-size:11.5px;color:var(--muted);line-height:1.5}.fm-list button b{font-size:14px}.fm-list button span{font:12px var(--mono);color:var(--muted)}
@@ -2469,9 +2472,42 @@ function lcCalc(){const V=lcV(),A=lcAuto(V),{f,date}=csCur,W=[];LCCPT=lc321(A.C)
         if(hi!=null&&I_>hi)W.push(`OUT OF TRIM: ${lab} Index ${I_.toFixed(1)} ورا الحد الخلفي ${hi.toFixed(1)} — حرّك ركاب/عفش لقدّام|${go}`)};
       chk("ZFW",lizfw,zfw,E.zf[0],E.zf[1],"zC");chk("TOW",litow,tow,E.to[0],E.to[1],"zC");chk("LAW",lilaw,law,E.to[0],E.to[1],"zC")}
     if(!BL.ref&&mt!=null&&mt<27)W.push(`MAC TOW ${mt.toFixed(1)}% أقل من 27% — لازم تصحيح الأداء (Basic Performance) أو RTOW chart المناسب|rtow`);
-    if(!BL.ref&&tow!=null&&tow<64000&&!/^NIL$/i.test(V.lmc||"NIL"))W.push("LMC ممنوع إذا TOW أقل من 64000 كغ|lmc")}
+    if(!BL.ref&&tow!=null&&tow<64000&&(lcLmcN(V)||!/^NIL$/i.test(V.lmc||"NIL")))W.push("LMC ممنوع إذا TOW أقل من 64000 كغ — لازم Load Sheet جديد|lmc")}
   const taxi2=g("taxi"),block=tof!=null?tof+(taxi2||0):null;
-  return{V,A,s,g,W,taxi:taxi2,block,bew,bewi,opvT,opviT,pw,pi,adw,adi,dow,doi,M,F,Cc,I,J,Y,seats,paxW,cp,bag,cgo,mail,pcs,codes,ttl,zfw,tof,trip,tow,law,ow,rtow,mzfw,mlw,a,b,c,low,allow,atl,ud,zA,zB,zC,bal,f,date}}
+  const lmc=lcLmc(V,A,g,BL,s("dest"),{zfw,tow,law,ud,bal,M,F,Cc,I,J,Y,mzfw,mlw,rtow},W);
+  return{V,A,s,g,W,lmc,taxi:taxi2,block,bew,bewi,opvT,opviT,pw,pi,adw,adi,dow,doi,M,F,Cc,I,J,Y,seats,paxW,cp,bag,cgo,mail,pcs,codes,ttl,zfw,tof,trip,tow,law,ow,rtow,mzfw,mlw,a,b,c,low,allow,atl,ud,zA,zB,zC,bal,f,date}}
+/* ---------- LMC (تعديلات آخر لحظة): كل تعديل له نوع (راكب/عفش/شحن/بريد) والتطبيق يحسب الوزن والسطر والأثر ---------- */
+const lcLmcN=V=>{let n=0;for(let i=1;i<=(+V.xcnt||0);i++)if((V["xk"+i]||"P")!=="0")n++;return n};
+function lcLmc(V,A,g,BL,dest,T,W){const E=[],L=[],aw=g("aw")||85,cw=g("cw")||0,iw=g("iw")||0,pad=n=>String(n).padStart(2,"0");
+  let dW=0,dI=0,dPax=0,dDead=0,dSeat=0,dJ=0,dY=0,dM=0,dF=0,dC=0,dIn=0;const zN={},cN={};
+  for(let i=1;i<=(+V.xcnt||0);i++){const k=V["xk"+i]||"P";if(k==="0")continue;const sg=V["xs"+i]==="+"?1:-1,sgT=sg>0?"+":"-",cpt=V["xq"+i]||"",pcs=Math.round(lcN(V["xp"+i])||0),kg=Math.round(lcN(V["xw"+i])||0);
+    if(k==="P"){const cat=V["xc"+i]||"M",cls=V["xj"+i]||"Y",zone=V["xz"+i]||(cls==="J"?"A":"B"),n=Math.max(1,Math.round(lcN(V["xn"+i])||1)),pw=cat==="C"?cw:cat==="I"?iw:aw,w=n*pw;
+      L.push([dest,`${pad(n)} ${cat==="C"?"CHD":cat==="I"?"INF":"PAX"} ${pcs?pcs+" BAG":"NIL BAG"}`,"O"+zone,sgT,w]);dW+=sg*w;
+      if(cat!=="I"){dSeat+=sg*n;zN[zone]=(zN[zone]||0)+sg*n;if(cls==="J")dJ+=sg*n;else dY+=sg*n}
+      ({M:()=>dM+=sg*n,F:()=>dF+=sg*n,C:()=>dC+=sg*n,I:()=>dIn+=sg*n})[cat]();dPax+=sg*n;
+      if(BL){const z=BL.zones.find(z=>z[0]===zone);if(z)dI+=sg*n*z[2]*(aw?pw/aw:1)}
+      if(pcs||kg){if(!kg)W.push(`LMC ${i}: الراكب معه ${pcs} شنطة — اكتب وزنها|xw${i}`);if(!cpt)W.push(`LMC ${i}: اختر عنبر العفش|xq${i}`);
+        L.push([dest,`${pcs?pcs+" ":""}BAG`,cpt,sgT,kg]);dW+=sg*kg;dDead+=sg*kg;cN[cpt]=(cN[cpt]||0)+sg*kg;if(BL&&BL.cpt[cpt])dI+=sg*kg*BL.cpt[cpt][0]}
+      E.push({i,k,cat,cls,zone,n,pcs,kg,cpt,sg})}
+    else{if(!kg)W.push(`LMC ${i}: اكتب الوزن|xw${i}`);if(!cpt)W.push(`LMC ${i}: اختر العنبر|xq${i}`);
+      L.push([dest,k==="B"?`${pcs?pcs+" ":""}BAG`:k==="C"?"CARGO":"MAIL",cpt,sgT,kg]);dW+=sg*kg;dDead+=sg*kg;cN[cpt]=(cN[cpt]||0)+sg*kg;if(BL&&BL.cpt[cpt])dI+=sg*kg*BL.cpt[cpt][0];E.push({i,k,pcs,kg,cpt,sg})}}
+  if(!E.length)return null;
+  /* حدود الـ LMC: A321 من الـ Balance Chart (±6 ركاب، ±500 كغ)، A320 من جدول الـ Load Sheet (5 ركاب، 500 كغ) */
+  const mxP=BL&&BL.v==="321"?6:5;
+  if(Math.abs(dSeat)>mxP)W.push(`LMC الركاب ${Math.abs(dSeat)} — الحد ${mxP} ركاب. لازم Load Sheet جديد|xn${E[0].i}`);
+  for(const z in zN)if(Math.abs(zN[z])>mxP)W.push(`LMC Zone ${z}: ${Math.abs(zN[z])} ركاب — الحد ${mxP}|xz${E[0].i}`);
+  if(Math.abs(dW)>500)W.push(`مجموع الـ LMC ${Math.abs(dW)} كغ — الحد 500 كغ. لازم Load Sheet جديد|xw${E[0].i}`);
+  if(Math.abs(dDead)>500)W.push(`LMC العفش/الشحن ${Math.abs(dDead)} كغ — الحد 500 كغ|xw${E[0].i}`);
+  for(const c in cN)if(c&&Math.abs(cN[c])>500)W.push(`LMC عنبر ${c}: ${Math.abs(cN[c])} كغ — الحد 500 كغ|xq${E[0].i}`);
+  if(L.length>6)W.push(`الـ LMC ${L.length} أسطر — النموذج يتسع 6 فقط|xk${E[E.length-1].i}`);
+  const add=v=>v==null?null:v+dW,zfw=add(T.zfw),tow=add(T.tow),law=add(T.law),ud=T.ud==null?null:T.ud-dW;
+  const af={zfw,tow,law,ud,J:T.J+dJ,Y:T.Y+dY,M:T.M+dM,F:T.F+dF,C:T.Cc+dC,I:T.I+dIn};
+  if(T.mzfw!=null&&zfw>T.mzfw)W.push(`بعد الـ LMC: ZFW ${zfw} أكبر من MZFW ${T.mzfw}|xw${E[0].i}`);
+  if(ud!=null&&ud<0)W.push(`بعد الـ LMC: Underload بالسالب (${ud}) — الحمولة أكبر من المسموح|xw${E[0].i}`);
+  if(af.M<0||af.F<0||af.C<0||af.I<0||af.J<0||af.Y<0)W.push(`الـ LMC يلغي ركاب أكثر من الموجودين في الرحلة — راجع الفئة والدرجة|xc${E[0].i}`);
+  if(T.bal&&BL){const B=T.bal,lz=B.lizfw+dI,lt=B.ftf!=null?lz+B.ftf:null,mac=(I_,w)=>I_==null||!w?null:((I_-50)*39370/w+(BL.ref||742.124)-BL.lemac)/BL.mac*100;
+    af.lizfw=lz;af.litow=lt;af.mz=mac(lz,zfw);af.mt=mac(lt,tow)}
+  return{E,L,dW,dI,dSeat,af}}
 /* ---------- الواجهة ---------- */
 function lcField(k,lbl,R,o={}){if(LCLOCK.includes(k)&&R.A[k]!=null)return`<label class="cs-f lc-lk"><span>${lbl} 🔒</span><input value="${escT(String(R.A[k]))}" readonly tabindex="-1" dir="ltr"></label>`;
   const v=R.V[k]!=null?R.V[k]:"",ph=o.ph!=null?o.ph:(R.A[o.ak||k]!=null?String(R.A[o.ak||k]):"");
@@ -2483,6 +2519,7 @@ function lcSum(R){const n=x=>x==null?"—":Math.round(x).toLocaleString("en-US")
   <div class="lc-abc">${[R.a,R.b,R.c].map((x,i)=>`<div class="${R.low===i?"on":"off"}"><span>${lim[i]}</span><b>${n(x)}</b></div>`).join("")}</div>
   <div class="lc-kv">${[["ALLOWED TRAFFIC",n(R.atl)],["UNDERLOAD",n(R.ud)]].map(([a,b],i)=>`<div class="${i&&R.ud!=null?(R.ud<0?"bad":"ok"):""}"><span>${a}</span><b>${b}</b></div>`).join("")}</div>
   ${B?`<div class="lc-kv">${[["LIZFW",B.lizfw.toFixed(1)],["LITOW",B.litow==null?"—":B.litow.toFixed(1)],["MAC ZFW",B.mz==null?"—":B.mz.toFixed(1)+"%"],["MAC TOW",B.mt==null?"—":B.mt.toFixed(1)+"%"],["MAC LAW",B.ml==null?"—":B.ml.toFixed(1)+"%"],["STAB",B.st==null?"—":Math.abs(B.st).toFixed(1)+(B.st<0?" DN":" UP")]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>`:`<div class="lc-w i">الـ Balance Chart غير متوفر لهذا النوع</div>`}
+  ${R.lmc?`<div class="lc-kv lmc"><div class="h"><span>بعد الـ LMC (${R.lmc.dW>0?"+":""}${R.lmc.dW} كغ)</span></div>${[["ZFW",n(R.lmc.af.zfw)],["TOW",n(R.lmc.af.tow)],["LAW",n(R.lmc.af.law)],["UNDERLOAD",n(R.lmc.af.ud)],["J / Y",R.lmc.af.J+" / "+R.lmc.af.Y],["M/F/C/I",[R.lmc.af.M,R.lmc.af.F,R.lmc.af.C,R.lmc.af.I].join("/")],...(R.lmc.af.mt!=null?[["MAC ZFW",R.lmc.af.mz==null?"—":R.lmc.af.mz.toFixed(1)+"%"],["MAC TOW",R.lmc.af.mt.toFixed(1)+"%"]]:[])].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("")}</div>`:""}
   ${R.W.map(w=>{const[t,k]=w.split("|");return k?`<button class="lc-w go" data-go="${k}">⚠︎ ${escT(t)} <i>← اضغط هنا</i></button>`:`<div class="lc-w">⚠︎ ${escT(t)}</div>`}).join("")}</div>`}
 function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg[k].type+" · "+D.cfg[k].ver]);
   const crews=C&&Object.keys(C.opv||{}).length?Object.keys(C.opv):["2/5"];if(!A.cm&&!crews.includes(A.crew))crews.push(A.crew);const pans=C&&Object.keys(C.pan||{}).length?Object.keys(C.pan):["C"],nr=A.reg&&!D.reg[A.reg];
@@ -2514,6 +2551,7 @@ function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg
     ${R.bal||(C&&C.bal)?`<div class="cs-g">${lcField("zA","ZONE A",R)}${lcField("zB","ZONE B",R)}${lcField("zC","ZONE C",R)}</div>`:""}
     <details class="lc-det"><summary>الأوزان القياسية</summary><div class="cs-g">${lcField("aw","ADULT",R)}${lcField("cw","CHILD",R)}${lcField("iw","INFANT",R)}</div></details></div>
   <div class="cs-card"><h5>DEADLOAD · العفش والشحن</h5>${LCCPT.map(cpt).join("")}</div>
+  ${lcLmcUI(R)}
   <div class="cs-card"><h5>INFO · معلومات</h5>
     <div class="cs-g two">${lcField("dest","DEST",R,{t:"t"})}${lcField("capt","CAPTAIN",R,{t:"t",ph:""})}</div>
     <div class="cs-g two">${lcField("prep","PREPARED BY (EN)",R,{t:"t"})}${lcField("ini","INITIALS",R,{t:"t",ph:""})}</div>
@@ -2521,22 +2559,47 @@ function lcIn(R){const A=R.A,D=LCD,C=A.C,cfgs=Object.keys(D.cfg).map(k=>[k,D.cfg
     ${lcField("si","SI (إضافي)",R,{t:"t",ph:""})}${lcField("notes","NOTES (إضافي)",R,{t:"t",ph:""})}
     <details class="lc-det"><summary>رأس الرسالة</summary><div class="cs-g">${lcField("adr","ADDRESS",R,{t:"t"})}${lcField("org","ORIGINATOR",R,{t:"t"})}${lcField("rch","RECHARGE",R,{t:"t"})}</div>
       <div class="cs-g two">${lcField("from","FROM",R,{t:"t"})}</div></details></div>`}
-function lcRender(){const B=$("lcBody");document.querySelectorAll("#lc .lc-tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===LCTAB));
+function lcLmcUI(R){const V=R.V,BL=R.A.C&&R.A.C.bal,zones=BL?BL.zones.map(z=>z[0]):["A","B","C"],rows=[];
+  for(let i=1;i<=(+V.xcnt||0);i++){const k=V["xk"+i]||"P";if(k==="0")continue;const cls=V["xj"+i]||"Y";
+    rows.push(`<div class="lc-cpt"><b>LMC ${rows.length+1}<button class="lc-x" data-lmdel="${i}">حذف ✕</button></b>
+      <div class="cs-g two">${lcSel("xk"+i,"النوع",[["P","راكب"],["B","عفش"],["C","شحن"],["M","بريد"]],k)}${lcSel("xs"+i,"إلغاء / إضافة",[["-","− إلغاء"],["+","+ إضافة"]],V["xs"+i]==="+"?"+":"-")}</div>
+      ${k==="P"?`<div class="cs-g">${lcSel("xc"+i,"الفئة",[["M","رجل M"],["F","امرأة F"],["C","طفل C"],["I","رضيع I"]],V["xc"+i]||"M")}${lcSel("xj"+i,"الدرجة",[["Y","سياحي Y"],["J","أعمال J"]],cls)}${lcSel("xz"+i,"ZONE",zones.map(z=>[z,z]),V["xz"+i]||(cls==="J"?zones[0]:zones[1]||zones[0]))}</div>
+        <div class="cs-g">${lcField("xn"+i,"العدد",R,{ph:"1"})}${lcField("xp"+i,"شنط (قطع)",R,{ph:"0"})}${lcField("xw"+i,"وزن الشنط",R,{ph:"0"})}</div>
+        ${lcN(V["xp"+i])||lcN(V["xw"+i])?`<div class="cs-g two">${lcSel("xq"+i,"عنبر الشنط",[["","—"],...LCCPT.map(c=>[c,"CMPT "+c])],V["xq"+i]||"")}</div>`:""}`
+      :`<div class="cs-g">${k==="B"?lcField("xp"+i,"القطع",R,{ph:"0"}):""}${lcField("xw"+i,"الوزن KG",R,{ph:"0"})}${lcSel("xq"+i,"العنبر",[["","—"],...LCCPT.map(c=>[c,"CMPT "+c])],V["xq"+i]||"")}</div>`}</div>`)}
+  const L=R.lmc?R.lmc.L:[];
+  return`<div class="cs-card"><h5>LMC · تعديلات آخر لحظة</h5>${rows.join("")}
+    <button class="lc-add" data-lmadd>+ إضافة LMC (إلغاء أو إضافة راكب / عفش / شحن)</button>
+    ${L.length?`<div class="lc-lmcp">${L.map(l=>`<div><span>${escT(l[0])}</span><span>${escT(l[1])}</span><span>${escT(l[2])}</span><span>${l[3]}</span><span>${l[4]}</span></div>`).join("")}<div class="t"><span>LMC TOTAL</span><span>${R.lmc.dW<0?"-":"+"}</span><span>${Math.abs(R.lmc.dW)}</span></div></div>
+      <div class="lc-w i">الأسطر هذي تنكتب في خانة LMC في الـ Load Sheet. الوزن من الأوزان القياسية (البالغ ${R.g("aw")} كغ) وأرقام الرحلة الأصلية تبقى مثل ما هي.</div>`:""}</div>`}
+function lcRender(){const B=$("lcBody");B.classList.remove("pv");document.querySelectorAll("#lc .lc-tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===LCTAB));
   if(!LCD){B.innerHTML=`<div class="fm-msg">جاري التحميل…</div>`;return}
   const R=lcCalc();lcBadge();
   if(LCTAB==="in"){const y=B.scrollTop,op=[...B.querySelectorAll("details")].map(d=>d.open);B.innerHTML=`<div class="cs-body lc-in">${csCan()?"":`<div class="cs-ro">👁️ عرض فقط</div>`}${lcIn(R)}</div>`;
     B.querySelectorAll("details").forEach((d,i)=>{if(op[i])d.open=true});B.scrollTop=y;if(!csCan())B.querySelectorAll("input,select").forEach(e=>e.disabled=true);return}
   B.innerHTML=`<div class="fm-msg">جاري تجهيز النموذج…</div>`;
-  lcPage(LCTAB,R).then(cv=>{if(LCTAB==="in")return;cv.className="lc-pv";B.innerHTML="";const w=document.createElement("div");w.className="lc-pvw";
-    if(R.W.length)w.innerHTML=R.W.map(x=>{const[t,k]=x.split("|");return`<button class="lc-w go" data-go="${k||""}">⚠︎ ${escT(t)} <i>← اضغط للتصحيح</i></button>`}).join("");w.appendChild(cv);B.appendChild(w)})
+  lcPage(LCTAB,R).then(cv=>{if(LCTAB==="in")return;cv.className="lc-pv";B.innerHTML="";B.classList.add("pv");B.style.setProperty("--z",lcZoom);const w=document.createElement("div");w.className="lc-pvw";
+    w.innerHTML=R.W.map(x=>{const[t,k]=x.split("|");return`<button class="lc-w go" data-go="${k||""}">⚠︎ ${escT(t)} <i>← اضغط للتصحيح</i></button>`}).join("")+`<div class="lc-zh">🔍 كبّر بإصبعين أو اضغط مرتين على النموذج</div>`;w.appendChild(cv);B.appendChild(w)})
    .catch(e=>{B.innerHTML=`<div class="fm-msg">${e.message==="out"?"سجّل دخولك أول.":"تعذّر فتح النموذج. تأكد من الاتصال."}</div>`})}
+/* تكبير النماذج (Load Sheet / Balance / LIR) بإصبعين أو ضغطتين */
+let lcZoom=1;
+function lcSetZoom(z,cx,cy){const B=$("lcBody");if(LCTAB==="in")return;const r=B.getBoundingClientRect(),old=lcZoom;z=Math.max(1,Math.min(4,z));if(Math.abs(z-old)<.005)return;
+  const ax=(cx==null?r.left+r.width/2:cx)-r.left,ay=(cy==null?r.top+r.height/2:cy)-r.top,px=B.scrollLeft+ax,py=B.scrollTop+ay;
+  lcZoom=+z.toFixed(2);B.style.setProperty("--z",lcZoom);const k=lcZoom/old;B.scrollLeft=px*k-ax;B.scrollTop=py*k-ay}
+{let p0=null,lt=0,lp=null;const B=$("lcBody"),dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  B.addEventListener("touchstart",e=>{if(e.touches.length===2)p0={d:dist(e.touches),z:lcZoom}},{passive:true});
+  B.addEventListener("touchmove",e=>{if(p0&&e.touches.length===2&&LCTAB!=="in"){e.preventDefault();const t=e.touches;lcSetZoom(p0.z*dist(t)/p0.d,(t[0].clientX+t[1].clientX)/2,(t[0].clientY+t[1].clientY)/2)}},{passive:false});
+  B.addEventListener("touchend",e=>{if(e.touches.length<2)p0=null;if(LCTAB==="in"||e.touches.length||e.changedTouches.length!==1||!e.target.closest(".lc-pv"))return;
+    const t=e.changedTouches[0],now=Date.now();if(now-lt<320&&lp&&Math.hypot(t.clientX-lp[0],t.clientY-lp[1])<30){e.preventDefault();lcSetZoom(lcZoom>1.2?1:2.5,t.clientX,t.clientY);lt=0}else{lt=now;lp=[t.clientX,t.clientY]}},{passive:false})}
 function lcUpd(){lcBadge();if(LCTAB!=="in")return;const R=lcCalc(),s=$("lcBody").querySelector(".lc-sum");if(s)s.outerHTML=lcSum(R);const b=$("lcBlock");if(b)b.value=R.block==null?"":R.block}
 function lcBadge(){try{const n=lcCalc().W.length,t=document.querySelector('#lc .lc-tabs [data-t="in"]');t.innerHTML="البيانات"+(n?` <i class="lc-n">${n}</i>`:"")}catch(e){}}
-$("lcBody").addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(!g)return;if(LCTAB!=="in"){LCTAB="in";lcRender()}const el=$("lcBody").querySelector(`[data-l="${g.dataset.go}"]`);if(!el)return;
+$("lcBody").addEventListener("click",e=>{const a=e.target.closest("[data-lmadd],[data-lmdel]");if(a){e.preventDefault();if(!csCan())return;
+    if(a.dataset.lmadd!=null){const n=(+lcV().xcnt||0)+1;csSet("lc.xcnt",String(n))}else csSet("lc.xk"+a.dataset.lmdel,"0");lcRender();return}
+  const g=e.target.closest("[data-go]");if(!g)return;if(LCTAB!=="in"){LCTAB="in";lcRender()}const el=$("lcBody").querySelector(`[data-l="${g.dataset.go}"]`);if(!el)return;
   const d=el.closest("details");if(d)d.open=true;el.scrollIntoView({block:"center",behavior:"smooth"});el.classList.add("lc-hi");setTimeout(()=>{el.focus({preventScroll:true})},350);setTimeout(()=>el.classList.remove("lc-hi"),2600)});
 $("lcBody").addEventListener("change",e=>{const el=e.target.closest("[data-l]");if(!el)return;const k=el.dataset.l;let v=el.type==="checkbox"?(el.checked?"1":""):el.value.trim();
   if(k==="prep"&&v){LCPREP=v;try{localStorage.setItem("ajf_lc_prep",v)}catch(e){}}
-  if(k==="reg"&&v)v=v.toUpperCase();csSet("lc."+k,v);if(["reg","cfg","crew","pan","adl","cbag","crk","crc"].includes(k))lcRender();else lcUpd()});
+  if(k==="reg"&&v)v=v.toUpperCase();csSet("lc."+k,v);if(["reg","cfg","crew","pan","adl","cbag","crk","crc"].includes(k)||/^x[kscjzpqnw]\d/.test(k))lcRender();else lcUpd()});
 $("lcBody").addEventListener("input",e=>{if(e.target.closest("[data-l]"))clearTimeout(lcUpd.t),lcUpd.t=setTimeout(()=>{const el=e.target;const k=el.dataset.l;
   const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]=CSV[iso(date)+"_"+f.n]||{};const ov=V["lc."+k];V["lc."+k]=el.value.trim();if(!V["lc."+k])delete V["lc."+k];lcUpd();if(ov!=null)V["lc."+k]=ov;else delete V["lc."+k]},250)});
 document.querySelectorAll("#lc .lc-tabs button").forEach(b=>b.onclick=()=>{LCTAB=b.dataset.t;lcRender()});
@@ -2592,7 +2655,10 @@ function lcDrawLS(x,R){const s=R.s,{f,date}=R,dd=lcDD(date),r0=v=>v==null?"":Str
   if(B&&B.mt!=null)P("bal","MAC "+B.mt.toFixed(1));if(R.zA!=null)P("seat",`A${R.zA} B${R.zB} C${R.zC}`);
   P("tpob",R.M+R.F+R.Cc+R.I);P("tob","TOB "+(R.M+R.F+R.Cc)+(R.I?" + "+String(R.I).padStart(2,"0")+" INF":""));
   P("prep",s("prep").toUpperCase());
-  if(/^NIL$/i.test(s("lmc"))){lcFont(x,83);x.textAlign="center";x.fillText("NIL",711,1570)}}
+  if(R.lmc){const Y=[1489,1510,1532,1552,1573,1594];lcFont(x,15);R.lmc.L.slice(0,6).forEach((l,i)=>{const y=Y[i]+5;x.textAlign="left";x.fillText(l[0],457,y);x.fillText(l[1],532,y);
+      x.textAlign="center";x.fillText(l[2],818,y);x.fillText(l[3],862,y);x.textAlign="right";x.fillText(String(l[4]),962,y)});
+    lcFont(x,15);x.textAlign="center";x.fillText(R.lmc.dW<0?"-":"+",862,1620);x.textAlign="right";x.fillText(String(Math.abs(R.lmc.dW)),962,1620)}
+  else if(/^NIL$/i.test(s("lmc"))){lcFont(x,83);x.textAlign="center";x.fillText("NIL",711,1570)}}
 function LCCPTC(R,code){const out=[];LCCPT.forEach(c=>{const n=lcN(R.V["b"+c+code])||0;if(n)out.push(`${c}/${code.replace(/^B/,"")}/${n}`)});return out.join(" ")}
 function lcDrawBC(x,R){const B=R.bal,{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y,s,pt=11,al="left")=>{lcFont(x,pt*k);x.textAlign=al;x.fillText(s,X,Y)};
   t(130,362,"AJF",13);t(480,362,`${dd.dd}${dd.mon}${dd.yy}`,13);t(870,362,f.n,13);t(1245,362,R.A.reg,13);t(130,462,R.s("dest"),13);t(480,462,R.s("capt").toUpperCase(),11);
