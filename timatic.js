@@ -241,7 +241,7 @@ function brHTML(){const b=S.br||(S.br={from:"SA"});const any=BRF.some(f=>b[f.k]&
     <p class="tx-note">موقع IATA مجاني ومصدره تيماتيك نفسه، لكن أماديوس أدق وأشمل — استخدمه إذا متاح.</p></details>`}
 function paint(){if(!root)return;
   root.innerHTML=`<div class="tx-intro"><b>فحص وثائق الراكب</b><span>صوّر شاشة TIMATIC ووثائق الراكب، والتطبيق يقرأها ويطلع لك المطلوب بوضوح. الصور تُقرأ على جوالك فقط ولا تُرفع ولا تُحفظ.</span></div>
-  ${brHTML()}<div class="tx-slots">${SLOTS.map(sl=>{const n=S.files[sl.k].length;return`<div class="tx-slot ${n?"on":""}"><label><input type="file" accept="image/*" ${sl.multi?"multiple":""} data-slot="${sl.k}" hidden><i>${sl.ic}</i><b>${sl.t}</b><small>${n?`✓ ${n} صورة`:sl.s}</small></label>${n?`<button class="tx-x" data-clr="${sl.k}" aria-label="حذف">✕</button>`:""}</div>`}).join("")}</div>
+  ${brHTML()}<div class="tx-slots">${SLOTS.map(sl=>{const n=S.files[sl.k].length;const bd=S.bad&&S.bad[sl.k];return`<div class="tx-slot ${n?"on":""} ${bd&&n?"bad":""}"><label><input type="file" accept="image/*" ${sl.multi?"multiple":""} data-slot="${sl.k}" hidden><i>${sl.ic}</i><b>${sl.t}</b><small>${n?(bd?`✗ ${bd}`:`✓ ${n} صورة`):sl.s}</small></label>${n?`<button class="tx-x" data-clr="${sl.k}" aria-label="حذف">✕</button>`:""}</div>`}).join("")}</div>
   <label class="tx-note-in"><span>📝 معلومات إضافية <small>(اختياري)</small></span><textarea id="txNote" rows="2" placeholder="مثال: معه تأشيرة عمل للإمارات، أو مقيم في قطر، أو مرافق لراكب — بدون الاسم ورقم الجواز">${E(S.note||"")}</textarea></label>
   <label class="tx-date"><span>تاريخ السفر</span><input type="date" id="txDate" value="${S.date}"></label>
   <button class="tx-go" id="txGo" ${S.busy||!S.files.tim.length&&!S.files.pp.length?"disabled":""}>${S.busy?"… جاري القراءة":"🔍 اقرأ وحلّل"}</button>
@@ -249,13 +249,82 @@ function paint(){if(!root)return;
   <div id="txRes">${S.res?S.res:""}</div>`;paintAI();
   if(S.res&&S.circ&&window.CIRCM){const el=root.querySelector("#txCirc");if(el)Promise.resolve(CIRCM.related(S.ctx,el)).then(()=>circFlag(),()=>{})}}
 function prog(p,t){const b=root&&root.querySelector("#txBar"),s=root&&root.querySelector("#txPT");if(b)b.style.width=Math.round(p*100)+"%";if(s)s.textContent=t}
-async function run(){if(S.busy)return;S.busy=true;S.run=(S.run||0)+1;S.res=null;S.ctx=null;S.aictx=undefined;S.ai=[];S.aerr="";S.aq="";paint();
+/* ---------- فحص صارم: نوع كل صورة لازم يطابق خانتها، وإلا ما تنقرأ ---------- */
+const SLOT_N={tim:"شاشة TIMATIC",pp:"جواز",vs:"تأشيرة / إقامة",bk:"حجز / تذكرة"};
+function docType(t,m){const T=String(t||"").toUpperCase(),sc=a=>a.reduce((n,re)=>n+(re.test(T)?1:0),0);
+  if(m&&m.type==="passport"&&Object.values(m.ok).filter(Boolean).length>=2)return"pp";
+  if(m&&(m.type==="visa"||m.type==="id"))return"vs";
+  const tim=sc([/T[I1]MAT[I1]C/,/NAT[I1]ONAL\s+[A-Z ]{3,30}\s*[([{]\s*[A-Z]{2}\s*[)\]}]/,/DEST[I1]NAT[I1]ON\s+[A-Z ]{3,30}\s*[([{]\s*[A-Z]{2}/,/EMBARKAT[I1]ON/,/PASSPORTS?\s+(?:REQUIRED|EXEMPT)|PASSPORT REQUIRED/,/V[I1]SA\s+(?:REQUIRED|EXEMPT|ISSUANCE)/,/ADDITIONAL INFORMATION|ADMISSION AND TRANSIT|TRANSIT RESTRICTIONS/,/\bTWOV\b|TRANSIT WITHOUT V[I1]SA/,/WARNING:?\s/,/NATIONALS OF|PASSENGERS? (?:WITH|HOLDING|ARE)|ARE ALLOWED TO ENTER/,/DOCUMENTS? (?:ACCEPTED|REQUIRED)|MUST HOLD|ONWARD OR RETURN/]);
+  const vis=sc([/DATE OF ISSUE|ISSUE DATE|ISSUED ON|DATE ISSUED|DATE OF ISSUANCE/,/PLACE OF ISSUE|ISSUED AT|ISSUING (?:AUTHORITY|POST|OFFICE)/,/TYPE OF V[I1]SA|V[I1]SA TYPE|V[I1]SA CATEGORY|V[I1]SA CLASS/,/NO\.? OF ENTRIES|NUMBER OF ENTRIES|\bENTRIES\b|SINGLE ENTRY|MULTIPLE ENTR/,/DURATION OF STAY|LENGTH OF STAY|PERIOD OF STAY/,/VALID (?:FROM|UNTIL|TILL)|ENTER BEFORE|USE BEFORE/,/V[I1]SA (?:NO|NUMBER|#)|E-?V[I1]SA\b|ENTRY PERMIT|VISIT V[I1]SA|TOURIST V[I1]SA|EXIT.?RE.?ENTRY/,/SPONSOR|EMPLOYER|PROFESSION/,/RESIDEN(?:CE|T) (?:PERMIT|VISA|CARD)|\bIQAMA\b|EMIRATES ID|IDENTITY CARD|ID (?:NO|NUMBER)/]);
+  const pp=sc([/\bPASSPORT\b|PASSEPORT|PASAPORTE/,/PLACE OF BIRTH/,/DATE OF EXPIRY|EXPIRY DATE|DATE D.EXPIRATION/,/AUTHORITY|AUTORIT/,/SURNAME|NOM\b/,/\bP<[A-Z<]{3}/,/COUNTRY CODE|CODE OF ISSUING|TYPE\s*P\b/]);
+  const bk=sc([/\bPNR\b|BOOKING (?:REF|REFERENCE|CODE|NUMBER)|RECORD LOCATOR|RESERVATION|CONFIRMATION (?:NO|NUMBER|CODE)/,/E-?TICKET|TICKET (?:NO|NUMBER)|ITINERARY|ETKT|\bTKT\b/,/\bRP\/[A-Z0-9]|\b1\.[A-Z]{2,}\/[A-Z]/,/\bHK\d\b|CONFIRMED|\bOK\b/,/\bFARE\b|BAGGAGE|\bCLASS\b|\bSEAT\b|CABIN/,/DEPART|ARRIV|\bFROM\b.*\bTO\b/]);
+  const vis2=vis+(/RESIDEN(?:CE|T) (?:PERMIT|VISA|CARD)|\bIQAMA\b|EMIRATES ID|EXIT.?RE.?ENTRY/.test(T)?2:0);
+  const S0=[["tim",tim,3],["vs",vis2,3],["pp",pp,3],["bk",bk,3]].filter(x=>x[1]>=x[2]).sort((a,b)=>b[1]-a[1]);
+  if(!S0.length)return"?";
+  /* التأشيرة فيها كلمات من الجواز (رقم الجواز، الاسم): نفضّل التأشيرة لو كلماتها أكثر */
+  if(S0[0][0]==="pp"&&vis2>=pp-1&&vis2>=3)return"vs";
+  return S0[0][0]}
+/* رمز QR في التأشيرة: يوصل لموقع التحقق الرسمي للدولة */
+let QRL=null;function qrLib(){if(window.jsQR)return Promise.resolve();if(QRL)return QRL;
+  QRL=new Promise((ok,no)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";s.onload=ok;s.onerror=()=>{QRL=null;no(new Error("qr"))};document.head.appendChild(s)});return QRL}
+async function qrRead(im){try{await qrLib()}catch(e){return null}
+  for(const tw of [1000,1600,700]){const s=Math.min(1,tw/Math.max(im.naturalWidth,im.naturalHeight)),W=Math.round(im.naturalWidth*s),H=Math.round(im.naturalHeight*s);
+    const cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d",{willReadFrequently:true});x.drawImage(im,0,0,W,H);
+    try{const r=window.jsQR(x.getImageData(0,0,W,H).data,W,H,{inversionAttempts:"attemptBoth"});if(r&&r.data)return r.data}catch(e){}}
+  return null}
+/* مواقع التحقق الرسمية: جهات حكومية (gov) + منصات التأشيرات الرسمية المعروفة */
+const OFFICIAL=[/(^|\.)gov(\.[a-z]{2})?$/,/(^|\.)gob\.[a-z]{2}$/,/(^|\.)gouv\.[a-z]{2}$/,/(^|\.)go\.[a-z]{2}$/,/(^|\.)govt\.[a-z]{2}$/,/(^|\.)gc\.ca$/,/(^|\.)europa\.eu$/,/(^|\.)ksavisa\.sa$/,/(^|\.)enjazit\.com\.sa$/,/(^|\.)absher\.sa$/,/(^|\.)mofa\.gov\.sa$/,/(^|\.)nic\.in$/];
+function qrInfo(q){const m=String(q).match(/https?:\/\/([^\/\s?#:]+)/i);if(!m)return{url:"",host:"",off:false,raw:String(q).slice(0,200)};
+  const host=m[1].toLowerCase(),url=String(q).trim().slice(0,400);return{url,host,off:OFFICIAL.some(re=>re.test(host)),raw:""}}
+/* تاريخ بعد كلمة معيّنة في نص الوثيقة */
+function dateAfter(T,re){const m=String(T||"").toUpperCase().match(re);if(!m)return null;const d=datesIn(m[1]);return d.length?d[0].d:null}
+const sameD=(a,b)=>a&&b&&a.getUTCFullYear()===b.getUTCFullYear()&&a.getUTCMonth()===b.getUTCMonth()&&a.getUTCDate()===b.getUTCDate();
+const nameOK=(a,b)=>{a=String(a||"").replace(/[^A-Z]/g,"");b=String(b||"").replace(/[^A-Z]/g,"");if(!a||!b)return true;return a.includes(b)||b.includes(a)||lev(a,b)<=Math.max(1,Math.floor(Math.min(a.length,b.length)/5))};
+/* الرقم الضابط المركّب لجواز TD3 (الخانة 44) */
+function ppComposite(P){const l=(P.lines&&P.lines[1])||"";if(l.length<44||!P.ok||!P.ok.num||!P.ok.dob||!P.ok.exp)return null;
+  const x=l.slice(0,10)+toDig(l.slice(13,20))+toDig(l.slice(21,28))+l.slice(28,43);return cd(x)===toDig(l[43])}
+/* فحص سلامة الوثائق: أي تعارض = اشتباه، والراكب ما يُقبل قبل التحقق */
+function integrity(P,V,travel){const F=[],W=[],today=new Date(Date.now()+3*3600e3);
+  if(P){const c=ppComposite(P);if(c===false)F.push("الرقم الضابط المركّب في شريط الجواز <b>غير صحيح</b> رغم إن باقي الأرقام سليمة");
+    if(P.dob&&P.dob>today)F.push("تاريخ الميلاد في الجواز <b>في المستقبل</b>");
+    if(P.raw&&P.sur&&P.sur.length>=3){const vz=P.raw.toUpperCase().split(/\n/).filter(l=>!/<</.test(l)).join(" ");
+      if(vz.replace(/[^A-Z]/g,"").length>80&&!vz.split(/[^A-Z]+/).some(w=>w.length>=3&&nameOK(w,P.sur.split(" ")[0])))W.push("ما لقيت اسم العائلة المطبوع في الجواز مطابق للشريط السفلي — طابقه بعينك")}}
+  V.filter(v=>v.type!=="passport").forEach(v=>{const lab=v.type==="res"||v.type==="id"?"الإقامة":"التأشيرة",raw=String(v.raw||"").toUpperCase();
+    /* شريط التأشيرة مقابل شريط الجواز */
+    if(!v.ocr&&P){if(v.nat&&P.nat&&v.nat.replace(/</g,"")!==P.nat.replace(/</g,""))F.push(`جنسية حامل ${lab} (${E(v.nat)}) <b>غير جنسية الجواز</b> (${E(P.nat)})`);
+      if(v.dob&&P.dob&&v.ok&&v.ok.dob&&P.ok.dob&&!sameD(v.dob,P.dob))F.push(`تاريخ الميلاد في ${lab} (${fD(v.dob)}) <b>غير الجواز</b> (${fD(P.dob)})`);
+      if(v.sex&&P.sex&&v.sex!==P.sex)F.push(`الجنس في ${lab} <b>غير الجواز</b>`);
+      if(v.sur&&P.sur&&!nameOK(v.sur,P.sur))F.push(`الاسم في ${lab} (${E(v.sur)}) <b>غير اسم الجواز</b> (${E(P.sur)})`);
+      if(v.ok&&Object.values(v.ok).some(x=>!x))W.push(`أرقام الشريط الضابطة في ${lab} ما تطابقت — صورة غير واضحة أو وثيقة معدّلة، أعد التصوير`)}
+    /* تأشيرة إلكترونية / نصية: نقارن البيانات المكتوبة بالجواز */
+    if(v.ocr&&P){if(v.pass&&P.num&&P.ok.num&&v.pass.length>=7&&v.pass!==P.num&&lev(v.pass,P.num)>1)F.push(`رقم الجواز المكتوب في ${lab} (${E(v.pass)}) <b>غير رقم الجواز</b> (${E(P.num)})`);
+      const vd=dateAfter(raw,/(?:DATE OF BIRTH|BIRTH ?DATE|D\.?O\.?B\.?)[^0-9A-Z]{0,8}([0-9][0-9A-Z\/.\- ]{5,12})/);if(vd&&P.dob&&P.ok.dob&&!sameD(vd,P.dob))F.push(`تاريخ الميلاد في ${lab} (${fD(vd)}) <b>غير الجواز</b> (${fD(P.dob)})`);
+      const nm=raw.match(/NATIONALITY[^A-Z]{0,6}([A-Z]{3,}(?: [A-Z]{3,})?)/),vc=nm&&cFind(nm[1]),pc=byA3(P.nat);if(vc&&pc&&vc.a2!==pc.a2)F.push(`الجنسية في ${lab} (${vc.ar}) <b>غير جنسية الجواز</b> (${pc.ar})`);
+      if(v.sur&&P.sur&&!v.sur.split(" ").some(w=>w.length>=3&&P.sur.split(" ").some(p=>nameOK(w,p))))W.push(`الاسم المقروء في ${lab} ما يطابق الجواز — طابقه بعينك`)}
+    /* منطق التواريخ */
+    const iss=dateAfter(raw,/(?:DATE OF ISSUE|ISSUE DATE|ISSUED ON|DATE ISSUED|DATE OF ISSUANCE)[^0-9A-Z]{0,8}([0-9][0-9A-Z\/.\- ]{5,12})/);
+    if(iss&&v.exp&&iss>=v.exp)F.push(`تاريخ إصدار ${lab} <b>بعد</b> تاريخ انتهائها`);
+    if(iss&&iss>new Date(today.getTime()+864e5))F.push(`تاريخ إصدار ${lab} <b>في المستقبل</b> (${fD(iss)})`);
+    if(iss&&v.exp&&v.type==="visa"&&(v.exp-iss)>10.2*365*864e5)F.push(`مدة صلاحية ${lab} <b>أكثر من 10 سنوات</b> — غير منطقية`);
+    /* رمز QR */
+    if(v.qr){const q=qrInfo(v.qr);v.q=q;if(q.url&&!q.off)F.push(`رمز QR في ${lab} يوجّه لموقع <b dir="ltr">${E(q.host)}</b> وهو <b>مو موقع حكومي رسمي</b>`)}
+    else if(v.type==="visa"&&v.ocr)W.push(`ما لقيت رمز QR في ${lab} — تحقق من رقمها في الموقع الرسمي للدولة المُصدِرة`)});
+  return{F,W}}
+
+async function run(){if(S.busy)return;S.busy=true;S.run=(S.run||0)+1;S.res=null;S.bad={};S.badL=[];S.ctx=null;S.aictx=undefined;S.ai=[];S.aerr="";S.aq="";paint();
   const jobs=[];SLOTS.forEach(sl=>S.files[sl.k].forEach((f,i)=>jobs.push({k:sl.k,f,i})));const txt={tim:[],pp:[],vs:[],bk:[]},mrz={pp:null,vs:[]};
   try{prog(.02,"تحميل محرك القراءة… (أول مرة فقط ~4MB)");await getWorker(m=>{if(m.status==="loading language traineddata")prog(.05,"تحميل لغة القراءة…")});
     for(let j=0;j<jobs.length;j++){const J=jobs[j],lbl=SLOTS.find(s=>s.k===J.k).t;prog((j+.1)/jobs.length,`قراءة ${lbl} (${j+1}/${jobs.length})…`);
       const im=await loadImg(J.f);
-      if(J.k==="tim"){txt.tim.push(await ocr(prep(im,"screen"),6))}
-      else{const t1=await ocr(prep(im,"doc"),J.k==="bk"?4:3);txt[J.k].push(t1);
+      const no=S.files[J.k].length>1?` (الصورة ${J.i+1})`:"",bad=(got)=>{S.bad[J.k]=got==="?"?"غير واضحة أو غير مطابقة":`هذي ${SLOT_N[got]} مو ${SLOT_N[J.k]}`;
+        S.badL.push(got==="?"?`<b>${lbl}${no}:</b> ما قدرت أتأكد إنها ${SLOT_N[J.k]} — صوّرها كاملة وواضحة، أو تأكد إنك رفعتها في الخانة الصحيحة`:`<b>${lbl}${no}:</b> الصورة <b>${SLOT_N[got]}</b> وليست ${SLOT_N[J.k]} — احذفها وارفعها في خانة «${SLOTS.find(s=>s.k===got).t}»`)};
+      if(J.k==="tim"){const tt=await ocr(prep(im,"screen"),6);let dt=docType(tt,parseMRZ(tt));
+        /* شاشة تيماتيك ما فيها شريط <<< ولا كلمات وثيقة؛ لو الشك قائم نقرأها كوثيقة مرة ثانية */
+        if(dt!=="tim"){const t3=await ocr(prep(im,"doc"),3),d3=docType(t3,parseMRZ(t3));if(d3!=="?"&&d3!=="tim")dt=d3;else if(d3==="tim")dt="tim"}
+        if(dt!=="tim"){bad(dt);continue}txt.tim.push(tt)}
+      else{const t1=await ocr(prep(im,"doc"),J.k==="bk"?4:3);
+        if(J.k==="bk"){const dt=docType(t1,parseMRZ(t1));if(dt!=="bk"){bad(dt);continue}}
+        if(J.k!=="pp"&&J.k!=="vs")txt[J.k].push(t1);
         if(J.k==="pp"||J.k==="vs"){let m=parseMRZ(t1);
           const good=m=>m&&Object.values(m.ok).every(Boolean),score=m=>m?Object.values(m.ok).filter(Boolean).length:-1;
           /* محاولات إضافية على أسفل الصورة بحروف الشريط فقط، بقصّات ودقة وعتبات مختلفة لين تطابق الأرقام الضابطة */
@@ -263,13 +332,14 @@ async function run(){if(S.busy)return;S.busy=true;S.run=(S.run||0)+1;S.res=null;
           for(let k=0;k<tries.length&&!good(m);k++){const[fr,md,bin]=tries[k];prog((j+.3+k*.15)/jobs.length,`قراءة ${lbl} — محاولة ${k+2}…`);
             const cv=prepMRZ(im,fr,md==="hi"?3000:2000,bin);const w=await getWorker();await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<",tessedit_pageseg_mode:"6"});
             const t2=(await w.recognize(cv)).data.text||"";await w.setParameters({tessedit_char_whitelist:""});const m2=parseMRZ(t2);if(score(m2)>score(m)){if(m&&m2&&!m2.sur&&m.sur){m2.sur=m.sur;m2.giv=m.giv}m=m2}}
-          if(m){if(J.k==="pp"&&m.type!=="visa"&&!mrz.pp)mrz.pp=m;else mrz.vs.push(m)}
-          else if(J.k==="vs"){const v=parseVisaText(t1,mrz.pp?byA3(mrz.pp.nat):null);if(v)mrz.vs.push(v)}}}}
+          const dt=docType(t1,m);if(dt!==J.k){bad(dt);continue}txt[J.k].push(t1);
+          if(m){m.raw=t1;if(J.k==="pp"&&m.type!=="visa"&&!mrz.pp)mrz.pp=m;else{if(J.k==="vs"){prog((j+.9)/jobs.length,`البحث عن رمز التحقق QR…`);m.qr=await qrRead(im)}mrz.vs.push(m)}}
+          else if(J.k==="vs"){const v=parseVisaText(t1,mrz.pp?byA3(mrz.pp.nat):null);if(v){prog((j+.9)/jobs.length,`البحث عن رمز التحقق QR…`);v.qr=await qrRead(im);mrz.vs.push(v)}else{bad("?");txt.vs.pop()}}}}}
     prog(1,"تحليل…");
     /* دمج صور تيماتيك وحذف الأسطر المكررة بين الصور */
     const seen=new Set(),lines=[];txt.tim.forEach(t=>cleanLines(t).forEach(l=>{const k=l.replace(/[^A-Z]/g,"");if(k.length>8&&seen.has(k))return;seen.add(k);lines.push(l)}));
     const T=lines.length?parseTim(lines,brOv()):null;
-    S.res=report(T,mrz,txt)}
+    S.res=S.badL.length?`<div class="tx-v r">⛔ صور في خانات خطأ أو غير مطابقة — ما تم التحليل</div><div class="tx-chk"><h5>صحّح هذي الصور ثم اضغط «اقرأ وحلّل» مرة ثانية</h5>${S.badL.map((x,i)=>`<div class="r"><i>${i+1}</i><p>${x}</p></div>`).join("")}</div><p class="tx-note">ما نقرأ أي صورة في غير خانتها عشان ما يطلع حكم غلط.</p>`:report(T,mrz,txt)}
   catch(e){console.error(e);S.res=`<div class="tx-err">تعذّرت القراءة: ${e.message==="lib"?"ما قدرنا نحمّل محرك القراءة — تأكد من الإنترنت.":"جرّب صورة أوضح."}</div>`}
   S.busy=false;paint();const r=root.querySelector("#txRes");if(r)r.scrollIntoView({behavior:"smooth",block:"start"});relate();
   const nt=(S.note||"").trim();if(S.ctx&&nt.length>1&&S.aictx!==undefined){S.aq=nt;askAI()}}
@@ -329,11 +399,18 @@ function report(T,M,txt){S.ctx={T,P:M.pp,B:null,V:M.vs,date:S.date,note:(S.note|
     if(T&&T.hdr.tr&&B.codes.length<2)ask("i","ما قدرت أقرأ مسار الحجز كامل — تأكد من نقطة الترانزيت ووقت الرحلة التالية");
     const tw=T&&T.secs.some(s=>s.kind==="tr"&&s.items.some(i=>/تذكرة مؤكدة/.test(i.ar)));if(tw)ask("a",`تأكد من الحجز: الرحلة التالية من الترانزيت <b>مؤكدة</b> وضمن المدة المسموحة`)}
   else st("bk","—","لم يُرفق");
+  /* فحص سلامة الوثائق */
+  const IG=integrity(P,M.vs,travel);
+  if(IG.F.length){/* وثيقة مشتبه فيها: ما نقول عنها "سارية ✓" */for(let i=chk.length-1;i>=0;i--)if(/تأشيرة|التأشيرة/.test(chk[i].ar)&&(chk[i].lv==="g"||/ما يطابق/.test(chk[i].ar)))chk.splice(i,1);
+    if(M.vs.some(v=>v.type!=="passport"))st("vs","✗","🚩 مشتبه فيها — لا تعتمدها قبل التحقق من المصدر الرسمي")}
+  IG.F.forEach(x=>ask("r","🚩 "+x));IG.W.forEach(x=>{ask("a",x);SM.look.push(x.replace(/ — .*/,""))});
   /* الحكم العام */
   const worst=chk.reduce((m,c)=>Math.max(m,LV[c.lv]),0);
   if(!T)cond("التأكد من شاشة TIMATIC");
-  const FV=SM.block.length?{c:"r",t:"⛔ لا يُسمح له بالسفر",d:"السبب: "+SM.block.map(E).join(" · ")}:SM.cond.length?{c:"a",t:"⚠️ يُسمح له بالسفر إذا معه:",d:SM.cond.map(x=>"• "+E(x)).join("<br>")}:{c:"g",t:"✅ يُسمح له بالسفر",d:"حسب الوثائق المقروءة ما فيه مانع"};
-  const V={c:FV.c,t:FV.c==="r"?"⛔ لا يُسمح له بالسفر — شف الخلاصة تحت":FV.c==="a"?"⚠️ يُسمح له بالسفر بشروط — شف الخلاصة تحت":"✅ يُسمح له بالسفر"};
+  const hasV=M.vs.some(v=>v.type!=="passport"),VER="🔎 الفحص الآلي ما يثبت إن التأشيرة أصلية — تحقق منها من رمز QR أو الموقع الرسمي للدولة المُصدِرة، وطابق صورة الراكب بوجهه.";
+  const FV=IG.F.length?{c:"r",t:"🚩 اشتباه في الوثائق — لا يُقبل قبل التحقق",d:IG.F.map(x=>"• "+x).join("<br>")+"<br>بلّغ المشرف، وتحقق من المصدر الرسمي قبل أي قرار."}:SM.block.length?{c:"r",t:"⛔ لا يُسمح له بالسفر",d:"السبب: "+SM.block.map(E).join(" · ")}:SM.cond.length?{c:"a",t:"⚠️ يُسمح له بالسفر إذا معه:",d:SM.cond.map(x=>"• "+E(x)).join("<br>")}:{c:"g",t:"✅ يُسمح له بالسفر",d:"حسب الوثائق المقروءة ما فيه مانع"+(hasV?"<br>"+VER:"")};
+  if(hasV&&FV.c==="a")FV.d+="<br>"+VER;
+  const V={c:FV.c,t:IG.F.length?"🚩 اشتباه في الوثائق — لا يُقبل قبل التحقق":FV.c==="r"?"⛔ لا يُسمح له بالسفر — شف الخلاصة تحت":FV.c==="a"?"⚠️ يُسمح له بالسفر بشروط — شف الخلاصة تحت":"✅ يُسمح له بالسفر"};
   const SUMR=[["🛂","الجواز",SM.pp],["🪪","التأشيرة / الإقامة",SM.vs],["🎫","الحجز",SM.bk],["🖥️","شاشة تيماتيك",SM.tim]].filter(r=>r[2]);
   const mk=m=>m==="✓"?"g":m==="✗"?"r":m==="⚠️"?"a":"n";
   const sumH=`<div class="tx-sum"><h5>📋 الخلاصة</h5>${SUMR.map(r=>`<div class="tx-sr ${mk(r[2].m)}"><i>${r[2].m==="✓"?"✓":r[2].m==="✗"?"✕":r[2].m==="⚠️"?"!":"—"}</i><b>${r[0]} ${r[1]}</b><span>${r[2].t}</span></div>`).join("")}
@@ -346,6 +423,8 @@ function report(T,M,txt){S.ctx={T,P:M.pp,B:null,V:M.vs,date:S.date,note:(S.note|
     <span>الانتهاء</span><b dir="ltr" class="${P.exp&&P.exp<travel?"r":""}">${fD(P.exp)}${P.exp&&P.exp>=travel?` · باقي ${mBetween(travel,P.exp)} شهر`:""}</b></div></div>`:"";
   const docV=M.vs.filter(v=>v.type!=="passport").map(v=>`<div class="tx-doc"><h6>🪪 ${v.type==="visa"?"تأشيرة "+(v.kind?v.kind+" ":"")+cAr(byA3(v.state)):"بطاقة / إقامة "+cAr(byA3(v.state))}${v.ocr?' <em class="a">قراءة نصية — طابق بعينك</em>':""}</h6><div class="kv">${v.sur?`<span>الاسم</span><b dir="ltr">${E(v.sur)}${v.giv?" / "+E(v.giv):""}</b>`:""}${v.num?`<span>رقم الوثيقة</span><b dir="ltr">${E(v.num)}</b>`:""}${v.pass?`<span>رقم الجواز</span><b dir="ltr">${E(v.pass)}</b>`:""}<span>الانتهاء</span><b dir="ltr" class="${v.exp&&v.exp<travel?"r":""}">${fD(v.exp)}</b></div></div>`).join("")+
     (txt.vs.length&&!M.vs.length?`<div class="tx-doc"><h6>🪪 الفيزا / الإقامة</h6><p>ما فيها شريط مقروء آلياً. التواريخ اللي قدرت أقرأها: ${datesIn(txt.vs.join("\n")).map(x=>`<b dir="ltr">${fD(x.d)}</b>${x.h?` (${x.h})`:""}`).join(" · ")||"—"} — تأكد من تاريخ الانتهاء بعينك.</p></div>`:"");
+  const qrH=M.vs.filter(v=>v.q).map(v=>v.q.url?`<div class="tx-qr ${v.q.off?"g":"r"}"><b>${v.q.off?"🔗 رمز التحقق QR — موقع رسمي":"🚩 رمز QR لموقع غير رسمي"}</b><span dir="ltr">${E(v.q.host)}</span>
+      <p>${v.q.off?"افتحه وتأكد إن الاسم ورقم الجواز ونوع التأشيرة وتاريخها في الموقع <b>نفس</b> الورقة بالضبط.":"لا تفتح الرابط ولا تعتمد التأشيرة — بلّغ المشرف."}</p>${v.q.off?`<a href="${E(v.q.url)}" target="_blank" rel="noopener noreferrer">افتح موقع التحقق ↗</a>`:""}</div>`:`<div class="tx-qr a"><b>رمز QR بدون رابط</b><p dir="ltr">${E(v.q.raw)}</p><p>طابق المكتوب فيه مع التأشيرة.</p></div>`).join("");
   const docB=B?`<div class="tx-doc"><h6>🎫 الحجز${B.pnr?` <em dir="ltr">${E(B.pnr)}</em>`:""}</h6><div class="kv">${B.names[0]?`<span>الاسم</span><b dir="ltr">${E(B.names[0].sur)} / ${E(B.names[0].giv)}</b>`:""}<span>المسار</span><b dir="ltr">${B.codes.join(" → ")||"—"}</b><span>الرحلات</span><b dir="ltr">${B.flights.slice(0,6).join(" · ")||"—"}</b>${B.dates.length?`<span>التواريخ</span><b dir="ltr">${B.dates.slice(0,4).map(fD).join(" · ")}</b>`:""}</div></div>`:"";
   const secs=T?T.secs.map(s=>`<details class="tx-sec" ${s.kind==="dst"?"open":""}><summary>${s.health?"🩺 الصحة":s.kind==="tr"?"🔁 ترانزيت":"🎯 الوجهة"} · <b>${cAr(s.c)}</b></summary>
     ${s.items.length?s.items.map(i=>`<div class="tx-it ${i.lv}"><p>${i.ar}</p>${i.src?`<small dir="ltr">${E(i.src)}</small>`:""}</div>`).join(""):`<p class="tx-m">ما طلعت بنود واضحة — راجع النص.</p>`}
@@ -361,7 +440,7 @@ function report(T,M,txt){S.ctx={T,P:M.pp,B:null,V:M.vs,date:S.date,note:(S.note|
     T?"نص شاشة TIMATIC:\n"+T.secs.map(s=>`[${s.health?"HEALTH":s.kind==="tr"?"TRANSIT":"DESTINATION"} ${s.c?s.c.en:""}]\n`+s.lines.join("\n")).join("\n\n"):""].filter(Boolean).join("\n");
   return`<div class="tx-v ${V.c}">${V.t}</div>${trip}
     ${chk.length?`<div class="tx-chk"><h5>انتبه / اطلب من الراكب</h5>${chk.map((c,i)=>`<div class="${c.lv}"><i>${i+1}</i><p>${c.ar}</p></div>`).join("")}</div>`:""}
-    ${docP}${docV}${docB}${secs}
+    ${docP}${docV}${qrH}${docB}${secs}
     <div id="txCirc"></div>
     ${sumH}
     <div id="txAI"></div>
@@ -389,7 +468,7 @@ async function askAI(){const q=(S.aq||"").trim();if(q.length<2||S.abusy)return;S
   catch(e){S.aq=q;const m=e.message;S.aerr=m==="nofn"?"دالة ajf-dc غير موجودة في Supabase.":m==="bad"||m==="old"?"المساعد يحتاج تحديث دالة ajf-dc في Supabase (المشرف).":m==="nokey"?"مفتاح Gemini ناقص في Supabase.":m==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":m==="out"?"سجّل دخولك أول.":"تعذّر الاتصال، تأكد من الإنترنت."}
   S.abusy=false;paintAI();const a=root&&root.querySelectorAll("#txAI .ax-a");if(a&&a.length)a[a.length-1].scrollIntoView({behavior:"smooth",block:"start"})}
 function onEv(e){const t=e.target;if(t.id==="txAQ"){S.aq=t.value;return}
-  if(t.matches&&t.matches("input[data-slot]")){const k=t.dataset.slot,sl=SLOTS.find(s=>s.k===k);const fs=[...t.files];S.files[k]=sl.multi?S.files[k].concat(fs).slice(0,6):fs.slice(0,1);S.res=null;paint();return}
+  if(t.matches&&t.matches("input[data-slot]")){const k=t.dataset.slot,sl=SLOTS.find(s=>s.k===k);const fs=[...t.files];S.files[k]=sl.multi?S.files[k].concat(fs).slice(0,6):fs.slice(0,1);S.res=null;if(S.bad)delete S.bad[k];paint();return}
   if(t.dataset&&t.dataset.br){S.br=S.br||{};S.br[t.dataset.br]=t.value;S.brOpen=true;paint();return}
   if(t.id==="txNote"){S.note=t.value;try{localStorage.setItem("ajf_tx_note",t.value)}catch(x){}return}
   if(t.id==="txDate"){S.date=t.value||todayISO();return}}
@@ -397,7 +476,7 @@ function onClick(e){const cp=e.target.closest("[data-cp]");if(cp){const v=cp.dat
     if(navigator.clipboard)navigator.clipboard.writeText(v).then(done,()=>{});return}
   const sm=e.target.closest(".tx-br>summary");if(sm){setTimeout(()=>{const d=sm.parentElement;S.brOpen=d.open},0)}
 if(e.target.closest("#txAsk")){const ta=root.querySelector("#txAQ");if(ta)S.aq=ta.value;askAI();return}if(e.target.closest("#txAINew")){S.ai=[];S.aerr="";paintAI();return}
-  const c=e.target.closest("[data-clr]");if(c){S.files[c.dataset.clr]=[];S.res=null;paint();return}if(e.target.closest("#txGo"))run()}
+  const c=e.target.closest("[data-clr]");if(c){S.files[c.dataset.clr]=[];S.res=null;if(S.bad)delete S.bad[c.dataset.clr];paint();return}if(e.target.closest("#txGo"))run()}
 window.TIM={countries:CTRY,mount:el=>{mount(el);if(!el.__tx){el.__tx=1;el.addEventListener("change",onEv);el.addEventListener("input",onEv);el.addEventListener("click",onClick)}},
-  /* للاختبار */_parse:(raw)=>parseTim(cleanLines(raw)),_mrz:parseMRZ,_bk:parseBooking,_vt:parseVisaText,_rep:(T,M,txt,f)=>{if(f)S.files=f;if(!S.date)S.date=todayISO();return report(T,M,txt)}};
+  /* للاختبار */_parse:(raw)=>parseTim(cleanLines(raw)),_mrz:parseMRZ,_bk:parseBooking,_vt:parseVisaText,_dt:docType,_ig:integrity,_rep:(T,M,txt,f)=>{if(f)S.files=f;if(!S.date)S.date=todayISO();return report(T,M,txt)}};
 })();
