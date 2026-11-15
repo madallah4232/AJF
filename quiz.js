@@ -61,6 +61,12 @@ const CSS=`
 .qa-f label{display:flex;gap:8px;align-items:center;font-size:13px}.qa-f label input[type=radio]{width:auto}
 .qa-st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.qa-st div{background:var(--raise);border-radius:12px;padding:8px 4px}.qa-st b{display:block;font:700 18px var(--mono)}.qa-st span{font-size:11.5px;color:var(--muted)}
 .qa-m{font-size:12.5px;color:var(--muted);line-height:1.7}
+.qz-lb .r.qe{cursor:pointer}.qz-lb .r.qe:active{transform:scale(.98)}
+.qe-q p{margin:6px 0 10px;font-size:14.5px;line-height:1.7}.qe-h{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+.qe-o{display:grid;gap:6px;margin-bottom:6px}.qe-o div{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:11px;background:var(--raise);border:1px solid var(--line);font-size:13.5px}
+.qe-o div span{flex:1}.qe-o div i{font-style:normal;font-size:11.5px;white-space:nowrap}
+.qe-o div.r{border-color:var(--go);background:rgba(120,190,110,.14)}.qe-o div.r i{color:var(--go)}
+.qe-o div.w{border-color:var(--warn);background:rgba(230,110,80,.14)}.qe-o div.w i{color:var(--warn)}
 `;
 function css(){if(document.getElementById("qzCss"))return;const s=document.createElement("style");s.id="qzCss";s.textContent=CSS;document.head.appendChild(s)}
 
@@ -101,14 +107,34 @@ function paint(){if(!root||VIEW!=="home")return;const r=ST&&ST.round,T=(ST&&ST.t
   h+=`<div class="qz-card"><div class="bd-sec" style="margin:0 0 10px"><span>🏆 لوحة المراكز</span></div>
     <div class="qz-tabs">${[["round","الجولة"],["day","اليوم"],["all","كل الجولات"]].map(([k,t])=>`<button data-qb="${k}" class="${BT===k?"on":""}">${t}</button>`).join("")}</div>
     <div class="qz-lb">${BD==null?`<div class="bd-empty" style="padding:16px">تعذّر تحميل المراكز</div>`:!BD.length?`<div class="bd-empty" style="padding:16px">ما فيه نتائج للحين. كن الأول!</div>`:
-      BD.slice(0,50).map(x=>`<div class="r ${x.me?"me":""}"><span class="k">${x.rk<=3?["🥇","🥈","🥉"][x.rk-1]:x.rk}</span><div class="nm">${E(x.name)}${x.me?" (أنت)":""}<small>${x.n} سؤال · ${secs(x.ms)}</small></div><span class="sc">${x.ok}</span></div>`).join("")+
+      BD.slice(0,50).map(x=>`<div class="r ${x.me?"me":""}${x.emp?" qe":""}"${x.emp?` data-qemp="${E(x.emp)}"`:""}><span class="k">${x.rk<=3?["🥇","🥈","🥉"][x.rk-1]:x.rk}</span><div class="nm">${E(x.name)}${x.me?" (أنت)":""}<small>${x.n} سؤال · ${secs(x.ms)}${x.emp?" · اضغط لعرض إجاباته":""}</small></div><span class="sc">${x.ok}${x.emp?" ‹":""}</span></div>`).join("")+
       (BD.length>50&&BD.some((x,i)=>i>=50&&x.me)?(x=>`<div class="r me"><span class="k">${x.rk}</span><div class="nm">${E(x.name)} (أنت)<small>${x.n} سؤال</small></div><span class="sc">${x.ok}</span></div>`)(BD.find(x=>x.me)):"")}</div></div>`;
   if(ST&&ST.admin)h+=`<button class="qz-adm" id="qzAdm">🛠 إدارة الأسئلة والجولات${ST.adm&&ST.adm.pending?" · "+ST.adm.pending+" بانتظار الاعتماد":""}</button>
     <div class="qa-m" style="text-align:center">أنت مشرف: تقدر تجرب الأسئلة، لكن ما تدخل الترتيب لأنك تشوف الأجوبة وقت الاعتماد.</div>`;
   root.innerHTML=`<div class="qz">${h}</div>`;
   const s=root.querySelector("#qzStart");if(s)s.onclick=()=>openQuiz();
   root.querySelectorAll("[data-qb]").forEach(b=>b.onclick=async()=>{BT=b.dataset.qb;BD=undefined;paint();await loadBoard();paint()});
-  const a=root.querySelector("#qzAdm");if(a)a.onclick=()=>{VIEW="adm";admPaint()}}
+  const a=root.querySelector("#qzAdm");if(a)a.onclick=()=>{VIEW="adm";admPaint()};
+  root.querySelectorAll("[data-qemp]").forEach(b=>b.onclick=()=>empOpen(b.dataset.qemp))}
+
+/* ---------- المشرف: تفاصيل إجابات موظف (supabase/quiz_emp.sql) ---------- */
+let EMP=null;
+async function empOpen(emp){VIEW="emp";EMP={emp,ld:true};empPaint();root.scrollIntoView();
+  try{const j=await call("ajf_qz_emp",{p_emp:emp});EMP=j.s==="ok"?j:{emp,err:j.s==="denied"?"هذي للمشرف فقط":"تعذّر التحميل"}}
+  catch(e){EMP={emp,err:/rpc 404|ajf_qz_emp|PGRST202/.test(e&&e.message||"")?"لازم يتشغّل ملف supabase/quiz_emp.sql في Supabase أول":"تعذّر التحميل، تأكد من الإنترنت"}}
+  empPaint()}
+function empPaint(){if(!root||VIEW!=="emp")return;const D=EMP||{},R=D.rows||[];let h=`<button class="qz-adm" id="qeBack">→ رجوع للوحة المراكز</button>`;
+  if(D.ld)h+=`<div class="bd-empty">جاري التحميل…</div>`;else if(D.err)h+=`<div class="bd-empty">${E(D.err)}</div>`;
+  else{const done=R.filter(x=>x.ans),ok=done.filter(x=>x.ok).length,to=done.filter(x=>!x.ok&&x.pick==null).length;
+    h+=`<div class="qz-card qz-st"><h3>${E(D.name||D.emp)}</h3><small dir="ltr" style="display:block;text-align:right">${E(D.title||"")} · ${E(D.emp)}</small>
+      <div class="qa-st" style="margin-top:10px"><div><b style="color:var(--go)">${ok}</b><span>صح</span></div><div><b style="color:var(--warn)">${done.length-ok}</b><span>غلط${to?" (منها "+to+" وقت/خروج)":""}</span></div><div><b>${done.length}</b><span>سؤال</span></div></div></div>`;
+    if(!R.length)h+=`<div class="bd-empty">ما جاوب على أي سؤال للحين</div>`;
+    let g="";R.forEach(x=>{const k=x.rno+"-"+x.day;if(k!==g){g=k;h+=`<div class="bd-sec" style="margin:6px 2px 0"><span>الجولة ${x.rno} · اليوم ${x.day}</span><span style="font-size:12px">${E(fdate(x.shown))}</span></div>`}
+      const st=!x.ans?"⏳ لم يجاوب بعد":x.ok?"✅ صح":x.pick==null?"⏱️ خلص الوقت أو طلع من التطبيق":"❌ غلط";
+      h+=`<div class="qz-card qe-q"><div class="qe-h"><span>سؤال ${x.n} · ${LV[x.d]||""}</span><span>${st}${x.ans?" · "+secs(x.ms):""}</span></div><p>${E(x.q)}</p>
+        <div class="qe-o">${(x.o||[]).map((t,i)=>`<div class="${i===x.right?"r":i===x.pick?"w":""}"><b>${LT[i]}</b><span>${E(t)}</span>${i===x.right?"<i>✓ الصحيح</i>":i===x.pick?"<i>✗ اختياره</i>":""}</div>`).join("")}</div>
+        ${x.why?`<div class="qa-m">💡 ${E(x.why)}</div>`:""}${x.src?`<div class="qa-m">📄 ${E(x.src)}</div>`:""}</div>`})}
+  root.innerHTML=`<div class="qz">${h}</div>`;root.querySelector("#qeBack").onclick=()=>{VIEW="home";EMP=null;paint()}}
 
 /* ---------- شاشة السؤال ---------- */
 let ov=null,cur=null,tmr=null;
