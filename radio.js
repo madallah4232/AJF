@@ -197,7 +197,7 @@ function txStop(){TX.want=false;if(!TX.on)return;TX.on=false;clearInterval(TX.tm
   try{TX.src.disconnect();TX.proc.disconnect();TX.proc.onaudioprocess=null}catch(e){}
   if(TX.stream)TX.stream.getTracks().forEach(t=>t.stop());TX.stream=null;setTimeout(()=>{if(!TX.on&&!TX.want)aSess("playback")},300);
   const secs=Math.round((Date.now()-TX.t0)/1000);const id0=TX.id,all=TX.all,sid=TX.sid;TX.all=[];
-  const fin=id=>{rpc("ajf_bc_talk",{p_token:AUTH.tok,p_device:AUTH.dev,p_id:id,p_secs:secs}).catch(()=>{});stt(id,all,sid)};
+  const fin=id=>{rpc("ajf_bc_talk",{p_token:AUTH.tok,p_device:AUTH.dev,p_id:id,p_secs:secs}).catch(()=>{})};
   if(id0)fin(id0);else setTimeout(()=>{if(TX.id)fin(TX.id)},1500);
   try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}pttPaint();setTimeout(()=>load(true),1800)}
 addEventListener("pagehide",()=>{if(TX.on)txStop()});
@@ -243,7 +243,7 @@ async function load(force){if(!AUTH.tok)return;if(loading)return loading;if(!for
   loading=(async()=>{try{const j=await rpc("ajf_bc_get",{p_token:AUTH.tok,p_device:AUTH.dev});
       if(j.s==="out"){authOut();return}if(j.s!=="ok")return;
       const fresh=!st.room;st.can=!!j.can;st.room=j.room;st.perm=j.perm||[];st.at=Date.now();
-      const prev=new Set(st.items.map(x=>x.id));st.items=j.items||[];
+      const prev=new Set(st.items.map(x=>x.id));st.items=(j.items||[]).filter(x=>x.kind!=="voice");/* تنبيهات كلام الراديو انحذفت نهائياً */
       const au=st.items.filter(x=>st.auto.has(x.id)&&x.body).map(x=>x.id);if(au.length){au.forEach(i=>st.auto.delete(i));seen(au)}
       const un=st.items.filter(x=>isNote(x)&&!x.read&&!st.seen.has(x.id));st.unread=un.length;badge();
       /* تنبيه جديد وصل والتطبيق مفتوح: يطلع على الشاشة */
