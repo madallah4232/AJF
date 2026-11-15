@@ -5,6 +5,10 @@
 const FN=SB_URL+"/functions/v1/ajf-files";
 const E=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
 const LV=["","سهل","متوسط","صعب"],LT=["أ","ب","ج","د"];
+/* اختصاص السؤال: يحدد مين يطلع له (supabase/quiz_roles.sql) */
+const TPS=[["","🌐 عام للكل"],["chk","🧳 كاونتر"],["gate","🚪 بوابة"],["ramp","🛫 ساحة"],["lc","📋 لود كنترول"]];
+const TPN=t=>(TPS.find(x=>x[0]===(t||""))||TPS[0])[1];
+const TPK={"الكاونتر وإنهاء إجراءات الركاب":"chk","بوابة التصعيد":"gate","الساحة (Ramp)":"ramp","اللود كنترول (Load Control)":"lc"};
 const CSS=`
 .qz{display:grid;gap:12px;padding-bottom:70px}
 .qz-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}
@@ -61,6 +65,7 @@ const CSS=`
 .qa-f label{display:flex;gap:8px;align-items:center;font-size:13px}.qa-f label input[type=radio]{width:auto}
 .qa-st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.qa-st div{background:var(--raise);border-radius:12px;padding:8px 4px}.qa-st b{display:block;font:700 18px var(--mono)}.qa-st span{font-size:11.5px;color:var(--muted)}
 .qa-m{font-size:12.5px;color:var(--muted);line-height:1.7}
+.qa-tp{background:var(--raise);color:var(--ink);border:1px solid var(--line);color-scheme:dark;width:auto!important;display:inline-block;padding:2px 6px!important;font-size:12px!important;border-radius:8px!important;margin-inline-end:4px}
 .qz-lb .r.qe{cursor:pointer}.qz-lb .r.qe:active{transform:scale(.98)}
 .qe-q p{margin:6px 0 10px;font-size:14.5px;line-height:1.7}.qe-h{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
 .qe-o{display:grid;gap:6px;margin-bottom:6px}.qe-o div{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:11px;background:var(--raise);border:1px solid var(--line);font-size:13.5px}
@@ -101,7 +106,7 @@ function paint(){if(!root||VIEW!=="home")return;const r=ST&&ST.round,T=(ST&&ST.t
     <li>كل يوم ${r?r.per:10} أسئلة من التعاميم ودليل العمليات، ولكل سؤال 4 خيارات.</li>
     <li>عندك ${r?r.secs:30} ثانية لكل سؤال، وإذا خلص الوقت ينحسب خطأ.</li>
     <li>إذا طلعت من التطبيق والسؤال مفتوح ينحسب خطأ وتنتقل للي بعده، وما تقدر ترجع لنفس السؤال.</li>
-    <li>أسئلتك خاصة فيك وما تتكرر عليك.</li>
+    <li>أسئلتك خاصة فيك وما تتكرر عليك، وتجيك حسب اختصاصك (كاونتر، بوابة، ساحة، لود كنترول).</li>
     <li>أسئلة كل يوم تبقى 24 ساعة وبعدها تختفي.</li>
     <li>الترتيب بعدد الإجابات الصحيحة، وعند التعادل يتقدم الأسرع.</li></ul></details>`;
   h+=`<div class="qz-card"><div class="bd-sec" style="margin:0 0 10px"><span>🏆 لوحة المراكز</span></div>
@@ -188,12 +193,13 @@ async function admLoad(){try{const j=await call("ajf_qz_admin",{p_action:"list",
 async function srcLoad(){if(ASRC)return;try{const j=await call("ajf_circ_list",{p_offset:0,p_limit:100});ASRC=j.s==="ok"?j.rows:[]}catch(e){ASRC=[]}}
 function qCard(x){if(AED===x.id)return qForm(x);
   return`<div class="qz-card qa-c"><div class="q">${E(x.q)}</div><ol>${x.o.map((t,i)=>`<li class="${i===x.a?"ok":""}">${LT[i]}) ${E(t)}</li>`).join("")}</ol>
-    ${x.why?`<div class="w">💡 ${E(x.why)}</div>`:""}<div class="m">${LV[x.d]||""} · ${E(x.src_title||"يدوي")}${x.page?" · ص "+E(x.page):""}${x.used?" · ظهر "+x.used+" مرة، صح "+x.good:""}</div>
+    ${x.why?`<div class="w">💡 ${E(x.why)}</div>`:""}<div class="m"><select class="qa-tp" data-qtp="${x.id}">${TPS.map(([k,t])=>`<option value="${k}" ${(x.tp||"")===k?"selected":""}>${t}</option>`).join("")}</select> ${LV[x.d]||""} · ${E(x.src_title||"يدوي")}${x.page?" · ص "+E(x.page):""}${x.used?" · ظهر "+x.used+" مرة، صح "+x.good:""}</div>
     <div class="qa-b">${x.st!=="ok"?`<button class="g" data-qs="ok" data-id="${x.id}">✓ اعتماد</button>`:""}${x.st!=="no"?`<button class="x" data-qs="no" data-id="${x.id}">✕ ${x.st==="ok"?"إيقاف":"رفض"}</button>`:""}${x.st==="no"?`<button data-qs="pending" data-id="${x.id}">↺ إرجاع للمراجعة</button>`:""}<button data-qe="${x.id}">✎ تعديل</button></div></div>`}
 function qForm(x){x=x||{id:"new",q:"",o:["","","",""],a:0,d:2,why:""};
   return`<div class="qz-card qa-f" id="qaF"><b>${x.id==="new"?"➕ سؤال جديد":"✎ تعديل السؤال"}</b><textarea id="qaQ" rows="3" placeholder="نص السؤال">${E(x.q)}</textarea>
     ${x.o.map((t,i)=>`<label><input type="radio" name="qaA" value="${i}" ${i===x.a?"checked":""}><input id="qaO${i}" value="${E(t)}" placeholder="الخيار ${LT[i]}"></label>`).join("")}
     <div class="qa-m">علّم الدائرة جنب الجواب الصحيح</div>
+    <select id="qaTp">${TPS.map(([k,t])=>`<option value="${k}" ${(x.tp||"")===k?"selected":""}>${t}</option>`).join("")}</select>
     <select id="qaD">${[1,2,3].map(d=>`<option value="${d}" ${d===x.d?"selected":""}>${LV[d]}</option>`).join("")}</select>
     <textarea id="qaW" rows="2" placeholder="الشرح (ليش الجواب صحيح)">${E(x.why)}</textarea>
     <div class="qa-b"><button class="g" id="qaSave" data-id="${x.id}">حفظ</button><button id="qaCan">إلغاء</button></div><div class="qa-m" id="qaFm"></div></div>`}
@@ -222,6 +228,8 @@ function admPaint(){if(!root||VIEW!=="adm")return;const a=(ST&&ST.adm)||{},r=ST&
   $q("#qaBack").onclick=()=>{VIEW="home";AED=null;paint()};
   $q("#qaGen").onclick=async()=>{AGEN=true;AMSG="";const src=$q("#qaSrc").value,n=+$q("#qaN").value;ATOP=$q("#qaTop").value;admPaint();
     try{const j=await edge({action:"quizgen",n,src,topic:ATOP==="mix"?"":ATOP});
+      /* الأسئلة الجديدة تاخذ اختصاص المجال اللي انولّدت له */
+      const tk=TPK[j.topic]||(ATOP!=="mix"?ATOP:"");if(j.s==="ok"&&j.n&&tk){try{await call("ajf_qz_admin",{p_action:"tag",p_arg:{last:j.n,tp:tk}})}catch(e){}}
       AMSG=j.s==="ok"?(j.n?`✓ انضاف ${j.n} سؤال (${j.topic||""}) من: ${j.src}`:`ما طلع أسئلة مفيدة كفاية من: ${j.src}. اضغط توليد مرة ثانية.`):j.s==="nokey"?"مفتاح Gemini غير موجود":j.s==="nosrc"?"ما فيه تعاميم مرفوعة":j.s==="aierr"?"خدمة الذكاء الاصطناعي ما ردّت، جرّب بعد دقيقة":"تعذّر التوليد"}
     catch(e){AMSG=/fn 404/.test(e.message)?"حدّث الدالة ajf-files في Supabase أول":"تعذّر التوليد، تأكد من الإنترنت"}
     AGEN=false;AT="pending";AOFF=0;await re()};
@@ -235,11 +243,12 @@ function admPaint(){if(!root||VIEW!=="adm")return;const a=(ST&&ST.adm)||{},r=ST&
     try{await call("ajf_qz_admin",{p_action:"set",p_arg:{ids:AL.rows.map(x=>x.id),st:"ok"}});await re()}catch(e){all.disabled=false}};
   const none=$q("#qaNone");if(none)none.onclick=async()=>{if(!confirm("رفض كل الأسئلة الظاهرة؟"))return;none.disabled=true;
     try{await call("ajf_qz_admin",{p_action:"set",p_arg:{ids:AL.rows.map(x=>x.id),st:"no"}});await re()}catch(e){none.disabled=false}};
+  root.querySelectorAll("[data-qtp]").forEach(b=>b.onchange=async()=>{b.disabled=true;try{const j=await call("ajf_qz_admin",{p_action:"tag",p_arg:{ids:[+b.dataset.qtp],tp:b.value}});if(j.s!=="ok")throw 0;const x=AL&&AL.rows.find(y=>y.id===+b.dataset.qtp);if(x)x.tp=b.value||null}catch(e){alert("تعذّر تغيير الاختصاص")}b.disabled=false});
   root.querySelectorAll("[data-qe]").forEach(b=>b.onclick=()=>{AED=+b.dataset.qe;admPaint();const f=$q("#qaF");if(f)f.scrollIntoView({block:"center"})});
   $q("#qaAdd").onclick=()=>{AED="new";admPaint()};
   const can=$q("#qaCan");if(can)can.onclick=()=>{AED=null;admPaint()};
   const sv=$q("#qaSave");if(sv)sv.onclick=async()=>{const id=sv.dataset.id,ck=root.querySelector("input[name=qaA]:checked");
-    const arg={q:$q("#qaQ").value,o:[0,1,2,3].map(i=>$q("#qaO"+i).value.trim()),a:ck?+ck.value:0,d:+$q("#qaD").value,why:$q("#qaW").value};
+    const arg={q:$q("#qaQ").value,o:[0,1,2,3].map(i=>$q("#qaO"+i).value.trim()),a:ck?+ck.value:0,d:+$q("#qaD").value,why:$q("#qaW").value,tp:$q("#qaTp").value};
     if(arg.q.trim().length<5||arg.o.some(x=>!x)){$q("#qaFm").textContent="اكتب السؤال والخيارات الأربعة";return}
     if(id!=="new")arg.id=+id;sv.disabled=true;
     try{const j=await call("ajf_qz_admin",{p_action:id==="new"?"add":"edit",p_arg:arg});if(j.s!=="ok")throw 0;AED=null;await re()}catch(e){sv.disabled=false;$q("#qaFm").textContent="تعذّر الحفظ"}};
