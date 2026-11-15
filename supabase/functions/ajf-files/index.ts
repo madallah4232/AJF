@@ -131,11 +131,31 @@ Deno.serve(async (req) => {
       const { data: meta } = await sb.rpc("ajf_circ_meta");
       const M = ((meta || []) as Record<string, any>[]).filter((r) => r.n > 300);
       if (!M.length) return out({ s: "nosrc" });
-      // المصدر: اللي اختاره المشرف، أو عشوائي (الأدلة الكبيرة لها فرصة أكبر)
-      let c = a.src ? M.find((r) => r.id === a.src) : null;
-      if (!c) { const w = M.map((r) => Math.sqrt(r.n)), t = w.reduce((x, y) => x + y, 0); let p = Math.random() * t; c = M[M.length - 1]; for (let i = 0; i < M.length; i++) { p -= w[i]; if (p <= 0) { c = M[i]; break; } } }
+      // المجال: كاونتر / بوابة / ساحة / لود كنترول. "mix" = واحد عشوائي كل مرة
+      const TOP: Record<string, [string, string, string[]]> = {
+        chk: ["الكاونتر وإنهاء إجراءات الركاب", "موظف الكاونتر (إنهاء إجراءات السفر)", ["check-in", "checkin", "counter", "acceptance", "passport", "visa", "iqama", "travel document", "baggage allowance", "excess baggage", "free baggage", "infant", "unaccompanied", "umnr", "wchr", "wchs", "wchc", "prm", "pregnan", "medif", "stretcher", "seat", "exit row", "ticket", "pnr", "dcs", "bag tag", "cabin baggage", "hand baggage", "dangerous goods", "lithium", "power bank", "inad", "deportee", "avih", "petc", "pet", "closing time", "check-in closure", "كاونتر", "اجراءات السفر", "قبول الركاب", "جواز", "تاشيره", "اقامه", "امتعه", "عفش", "وزن زائد", "رضيع", "كرسي متحرك", "حامل", "تذكره", "حجز", "مقعد"]],
+        gate: ["بوابة التصعيد", "موظف بوابة التصعيد (Boarding Gate)", ["boarding", "gate", "boarding pass", "gate closure", "final call", "offload", "off-load", "no-show", "no show", "headcount", "head count", "pax count", "priority boarding", "standby", "upgrade", "denied boarding", "overbook", "misconnect", "deplan", "delay", "cancellation", "compensation", "ambulift", "bus", "jet bridge", "cabin baggage", "gate baggage", "boarding sequence", "unruly", "disruptive", "بوابه", "تصعيد", "صعود", "بطاقه صعود", "اغلاق البوابه", "انزال", "تاخير", "الغاء", "تعويض"]],
+        ramp: ["الساحة (Ramp)", "موظف الساحة والتحميل (Ramp)", ["ramp", "apron", "loading", "unloading", "offloading", "hold", "bulk", "uld", "container", "baggage loading", "belt loader", "high loader", "pushback", "push back", "tow", "chock", "cone", "gpu", "ground power", "fod", "marshal", "wing walker", "refuel", "fuelling", "aircraft damage", "turnaround", "turn around", "lir", "loading instruction", "notoc", "dangerous goods", "avih", "hum", "lightning", "wind", "safety", "ppe", "engine", "door", "cargo door", "ساحه", "تحميل", "تنزيل", "عنبر", "سلامه", "دفع", "معدات", "اضرار"]],
+        lc: ["اللود كنترول (Load Control)", "موظف التحكم بالحمولة (Load Control)", ["load sheet", "loadsheet", "load control", "weight and balance", "balance", "trim", "index", "mzfw", "mtow", "mlw", "zfw", "lir", "loading instruction", "notoc", "lmc", "last minute change", "standard weight", "pax weight", "crew weight", "fuel", "cpm", "ldm", "mvt", "dry operating", "doi", "dow", "captain", "underload", "cg", "centre of gravity", "center of gravity", "لود شيت", "لودشيت", "الحموله", "التوازن", "وزن", "الطاقم"]],
+      };
+      const tk = TOP[a.topic] ? a.topic : Object.keys(TOP)[Math.floor(Math.random() * 4)];
+      const [tName, tRole, kws] = TOP[tk];
+      let c: Record<string, any> | null = a.src ? M.find((r) => r.id === a.src) || null : null;
       let txt = "";
-      if (c.chunks > 0) {
+      if (!c) {
+        // نجيب أجزاء الأدلة اللي تتكلم عن هذا المجال فعلاً، ونختار منها عشوائياً حتى تتنوع الأسئلة
+        const groups = kws.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 2);
+        const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: 60 });
+        const L = ((ch || []) as any[]).filter((x) => x.hit >= 3);
+        if (L.length) {
+          const top = L.slice(0, 30).sort(() => Math.random() - 0.5);
+          const first = top[0], same = top.filter((x) => x.cid === first.cid).slice(0, 3);
+          c = M.find((r) => r.id === first.cid) || { id: first.cid, title: "" };
+          txt = same.map((x) => x.txt).join("\n\n…\n\n");
+        }
+      }
+      if (!c) { const w = M.map((r) => Math.sqrt(r.n)), t = w.reduce((x, y) => x + y, 0); let p = Math.random() * t; c = M[M.length - 1]; for (let i = 0; i < M.length; i++) { p -= w[i]; if (p <= 0) { c = M[i]; break; } } }
+      if (!txt && c.chunks > 0) {
         const k = Math.floor(Math.random() * c.chunks);
         const { data: ch } = await sb.from("ajf_circ_chunk").select("n,txt").eq("cid", c.id).in("n", [k, k + 1, k + 2]).order("n");
         txt = (ch || []).map((x: any) => x.txt).join("\n\n");
@@ -146,27 +166,33 @@ Deno.serve(async (req) => {
         const st = all.length > 14000 ? Math.floor(Math.random() * (all.length - 12000)) : 0;
         txt = all.slice(st, st + 12000);
       }
-      const { data: old } = await sb.from("ajf_quiz_q").select("q").eq("src_id", c.id).order("id", { ascending: false }).limit(60);
-      const avoid = (old || []).map((x: any) => "- " + String(x.q).slice(0, 160)).join("\n");
-      const SYS_QZ = "أنت مدرّب خبير في الخدمات الأرضية (SGS) والخطوط السعودية (Saudia). تكتب أسئلة اختيار من متعدد لتحدي يومي لموظفي محطة الجوف AJF (كاونتر، بوابة، تحكم بالحمولة، رامب، مشرفين). دقتك أهم من عدد الأسئلة.";
-      const prompt = `المصدر: ${c.title}${c.cd ? " (" + c.cd + ")" : ""}\nالنص:\n${txt}\n\n=====\nاكتب ${want} أسئلة من هذا النص فقط، بهذه الشروط:
+      const { data: old } = await sb.from("ajf_quiz_q").select("q").order("id", { ascending: false }).limit(150);
+      const avoid = (old || []).map((x: any) => "- " + String(x.q).slice(0, 140)).join("\n");
+      const SYS_QZ = `أنت مدرّب خبير في الخدمات الأرضية (SGS) والخطوط السعودية (Saudia). تكتب أسئلة اختيار من متعدد لتحدي يومي لموظفي محطة مطار الجوف AJF.
+واقع محطة الجوف: مطار صغير، رحلات داخلية أغلبها (السعودية، طيران ناس، طيران أديل) إلى الرياض وجدة والدمام وغيرها، وبعض الرحلات الدولية لمصر (Air Cairo، Nile Air). طائرات ضيقة البدن (عائلة A320/A321). ما فيه صالات ترانزيت ولا تحويل أمتعة بين رحلات ولا طائرات عريضة ولا مبنى شحن كبير.
+الموظفين: كاونتر إنهاء الإجراءات، بوابة التصعيد، الساحة (Ramp)، اللود كنترول، ومشرفين.
+دقتك ووضوح السؤال وفائدته للموظف أهم من عدد الأسئلة.`;
+      const prompt = `المجال المطلوب: ${tName} — الأسئلة موجهة لـ ${tRole} في محطة الجوف.
+المصدر: ${c.title || ""}${c.cd ? " (" + c.cd + ")" : ""}\nالنص:\n${txt}\n\n=====\nاكتب حتى ${want} أسئلة من هذا النص فقط، بهذه الشروط:
+- كل سؤال عن شي يسويه أو يقرره ${tRole} بيده في شغله اليومي في الجوف. اسأل نفسك: "هل موظف الجوف بيواجه هذا الموقف فعلاً؟" إذا لا، لا تكتب السؤال.
+- ممنوع: أي شي خاص بمحطات كبيرة أو دولية (الترانزيت والتحويل، الصالات، الطائرات العريضة، مستودعات الشحن، مكاتب التذاكر، مراكز التحكم، الإدارة)، وتعاريف المصطلحات، وأرقام النماذج والمراجع، وتواريخ الإصدار، وأسماء الإدارات والأشخاص، والمسؤوليات الإدارية.
 - كل سؤال مبني على معلومة مكتوبة صراحة في النص، والجواب الصحيح مؤكد منه 100%. لا تخترع ولا تعتمد على معلوماتك العامة.
-- أسئلة تفيد التشغيل اليومي: إجراءات، شروط قبول الركاب والوثائق، مواعيد الإغلاق، الأوزان والحدود، الأمتعة والمواد الخطرة، ذوي الاحتياجات، التأخير، السلامة، التصرف الصحيح في موقف. تجاهل المقدمات والتعريفات الإدارية وأرقام المراجع وتواريخ الإصدار وأسماء الأشخاص.
-- الأفضل صيغة موقف عملي قصير (مثل: "راكب على رحلة السعودية معه ... ، وش الإجراء الصحيح؟") حتى يحتاج الموظف يفهم مو يحفظ.
-- عربي مبسط وواضح، والمصطلح الفني بالإنجليزي بين قوسين إذا لزم (مثل WCHR).
+- اكتب السؤال كموقف تشغيلي واضح وقصير بلغة الشغل اليومية، مثل: "راكب على رحلة الرياض معه ... وش تسوي؟" أو "قبل إغلاق البوابة بـ ... وش الإجراء الصحيح؟". سطر أو سطرين، بدون غموض، والموظف يفهمه من أول قراءة.
+- عربي مبسط، والمصطلح الفني بالإنجليزي بين قوسين إذا لزم (مثل WCHR، Load Sheet).
 - 4 خيارات قصيرة ومتقاربة الطول، واحد فقط صحيح، والخاطئة معقولة لكنها خاطئة بوضوح حسب النص. ممنوع "كل ما سبق" و"لا شيء مما سبق".
 - d: 1 سهل، 2 متوسط، 3 صعب — نوّع بينها.
 - why: سطر أو سطرين يشرح ليش الجواب صحيح حسب النص.
 - page: رقم الصفحة إذا ظاهر في النص مثل [صفحة 214]، وإلا "".
+- rel: من 1 إلى 5، كم السؤال مفيد فعلاً لـ ${tRole} في الجوف (5 = موقف يتكرر ولازم يعرفه). كن صارم.
 - لا تكرر ولا تعيد صياغة هذه الأسئلة الموجودة:\n${avoid || "(ما فيه)"}
-- إذا النص ما فيه معلومات تشغيلية كافية أرجع أقل، أو قائمة فاضية.
-أرجع JSON فقط: {"qs":[{"q":"...","o":["...","...","...","..."],"a":0,"d":1,"why":"...","page":""}]}`;
+- إذا النص ما فيه معلومات تنفع هذا المجال، أرجع قائمة فاضية. أسئلة أقل وقوية أفضل من كثيرة وضعيفة.
+أرجع JSON فقط: {"qs":[{"q":"...","o":["...","...","...","..."],"a":0,"d":1,"why":"...","page":"","rel":5}]}`;
       const j = JSON.parse(await gem(prompt, SYS_QZ, true, true));
       const seen = new Set((old || []).map((x: any) => NORM(x.q)));
       const rows: Record<string, unknown>[] = [];
       for (const x of (Array.isArray(j.qs) ? j.qs : []) as any[]) {
         const q = String(x.q || "").trim(), o = (Array.isArray(x.o) ? x.o : []).map((t: unknown) => String(t || "").trim()), ai = Number(x.a);
-        if (q.length < 8 || o.length !== 4 || o.some((t: string) => !t) || new Set(o).size !== 4 || !(ai >= 0 && ai <= 3) || seen.has(NORM(q))) continue;
+        if (Number(x.rel) < 4 || q.length < 8 || o.length !== 4 || o.some((t: string) => !t) || new Set(o).size !== 4 || !(ai >= 0 && ai <= 3) || seen.has(NORM(q))) continue;
         seen.add(NORM(q));
         // نخلط الخيارات حتى الجواب الصحيح ما يكون دايم الأول
         const idx = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
@@ -174,7 +200,7 @@ Deno.serve(async (req) => {
           why: String(x.why || "").slice(0, 800), page: String(x.page || "").slice(0, 20), src_id: c.id, src_title: String(c.title || "").slice(0, 200), st: "pending", by_ai: true });
       }
       if (rows.length) { const { error } = await sb.from("ajf_quiz_q").insert(rows); if (error) return out({ s: "err", e: error.message }); }
-      return out({ s: "ok", n: rows.length, src: c.title });
+      return out({ s: "ok", n: rows.length, src: c.title, topic: tName });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
   if (a.action === "upload") {

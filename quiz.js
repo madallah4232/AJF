@@ -157,7 +157,7 @@ document.addEventListener("visibilitychange",async()=>{if(document.hidden){leave
 addEventListener("pagehide",leaveNow);
 
 /* ---------- إدارة الأسئلة (المشرف) ---------- */
-let AT="pending",AL=undefined,AOFF=0,AED=null,ASRC=null,AGEN=false,AMSG="";
+let ATOP="mix",AT="pending",AL=undefined,AOFF=0,AED=null,ASRC=null,AGEN=false,AMSG="";
 async function admLoad(){try{const j=await call("ajf_qz_admin",{p_action:"list",p_arg:{st:AT,off:AOFF}});AL=j.s==="ok"?j:{n:0,rows:[]}}catch(e){AL=null}}
 async function srcLoad(){if(ASRC)return;try{const j=await call("ajf_circ_list",{p_offset:0,p_limit:100});ASRC=j.s==="ok"?j.rows:[]}catch(e){ASRC=[]}}
 function qCard(x){if(AED===x.id)return qForm(x);
@@ -178,7 +178,8 @@ function admPaint(){if(!root||VIEW!=="adm")return;const a=(ST&&ST.adm)||{},r=ST&
     <div class="qa-st"><div><b>${a.ok||0}</b><span>معتمد</span></div><div><b>${a.pending||0}</b><span>بانتظار الاعتماد</span></div><div><b>${a.players||0}</b><span>مشارك بالجولة</span></div></div>
     <div class="qa-m" style="margin-top:8px">المعتمد: سهل ${a.ok1||0} · متوسط ${a.ok2||0} · صعب ${a.ok3||0}<br>كل موظف يحتاج ${need} سؤال في الجولة. عشان تكون أسئلة كل موظف خاصة فيه، يكون المعتمد تقريباً ${need} × عدد الموظفين. إذا البنك أقل، تتوزع الأسئلة الأقل استخداماً أول.</div></div>
   <div class="qz-card qa-f"><b>✨ توليد أسئلة بالذكاء الاصطناعي</b>
-    <select id="qaSrc"><option value="">مصدر عشوائي من التعاميم والأدلة</option>${(ASRC||[]).map(c=>`<option value="${E(c.id)}">${E(c.title)}</option>`).join("")}</select>
+    <select id="qaTop">${[["mix","كل المجالات (بالتناوب)"],["chk","الكاونتر وإنهاء إجراءات الركاب"],["gate","بوابة التصعيد"],["ramp","الساحة (Ramp)"],["lc","اللود كنترول"]].map(([k,t])=>`<option value="${k}" ${k===ATOP?"selected":""}>${t}</option>`).join("")}</select>
+    <select id="qaSrc"><option value="">يختار المصدر المناسب للمجال من التعاميم والأدلة</option>${(ASRC||[]).map(c=>`<option value="${E(c.id)}">${E(c.title)}</option>`).join("")}</select>
     <select id="qaN">${[5,10,15].map(n=>`<option value="${n}" ${n===10?"selected":""}>${n} أسئلة</option>`).join("")}</select>
     <button class="qz-go" id="qaGen" style="margin:0" ${AGEN?"disabled":""}>${AGEN?"… جاري التوليد (قرابة 30 ثانية)":"توليد الأسئلة"}</button>
     <div class="qa-m">الأسئلة الجديدة تروح لـ "بانتظار الاعتماد" وما تظهر للموظفين لين تعتمدها.${AMSG?"<br><b style='color:var(--ink)'>"+E(AMSG)+"</b>":""}</div></div>
@@ -187,15 +188,15 @@ function admPaint(){if(!root||VIEW!=="adm")return;const a=(ST&&ST.adm)||{},r=ST&
     <label><input type="checkbox" id="qaAuto" checked style="width:auto"> بعد ما تخلص الجولة تبدأ اللي بعدها تلقائياً</label>
     <div class="qa-b"><button class="g" id="qaRound">▶ بدء جولة جديدة</button>${r&&(r.ph==="on"||r.ph==="wait")?`<button class="x" id="qaStop">إيقاف الجولة</button>`:""}</div></div>
   <div class="qz-tabs">${[["pending","بانتظار الاعتماد"],["ok","معتمدة"],["no","مرفوضة"]].map(([k,t])=>`<button data-qt="${k}" class="${AT===k?"on":""}">${t}</button>`).join("")}</div>
-  <div class="qa-b"><button id="qaAdd">➕ إضافة سؤال يدوي</button>${AT==="pending"&&AL&&AL.rows.length?`<button class="g" id="qaAll">✓ اعتماد كل الظاهر (${AL.rows.length})</button>`:""}</div>
+  <div class="qa-b"><button id="qaAdd">➕ إضافة سؤال يدوي</button>${AT==="pending"&&AL&&AL.rows.length?`<button class="g" id="qaAll">✓ اعتماد كل الظاهر (${AL.rows.length})</button>`:""}${AT==="pending"&&AL&&AL.rows.length?`<button class="x" id="qaNone">✕ رفض كل الظاهر</button>`:""}</div>
   ${AED==="new"?qForm():""}
   <div class="qz" id="qaList">${AL===undefined?`<div class="bd-empty">جاري التحميل…</div>`:AL===null?`<div class="bd-empty">تعذّر التحميل</div>`:!AL.rows.length?`<div class="bd-empty">ما فيه أسئلة هنا</div>`:AL.rows.map(qCard).join("")}</div>
   ${AL&&AL.n>AOFF+AL.rows.length||AOFF?`<div class="qa-b">${AOFF?`<button id="qaPrev">السابق</button>`:""}${AL&&AL.n>AOFF+AL.rows.length?`<button id="qaNext">التالي (${AL.n-AOFF-AL.rows.length})</button>`:""}</div>`:""}</div>`;
   const $q=s=>root.querySelector(s),re=async()=>{await Promise.all([admLoad(),load()]);admPaint()};
   $q("#qaBack").onclick=()=>{VIEW="home";AED=null;paint()};
-  $q("#qaGen").onclick=async()=>{AGEN=true;AMSG="";const src=$q("#qaSrc").value,n=+$q("#qaN").value;admPaint();
-    try{const j=await edge({action:"quizgen",n,src});
-      AMSG=j.s==="ok"?(j.n?`✓ انضاف ${j.n} سؤال من: ${j.src}`:`ما طلع أسئلة مناسبة من: ${j.src}. جرّب مرة ثانية أو اختر مصدر ثاني.`):j.s==="nokey"?"مفتاح Gemini غير موجود":j.s==="nosrc"?"ما فيه تعاميم مرفوعة":j.s==="aierr"?"خدمة الذكاء الاصطناعي ما ردّت، جرّب بعد دقيقة":"تعذّر التوليد"}
+  $q("#qaGen").onclick=async()=>{AGEN=true;AMSG="";const src=$q("#qaSrc").value,n=+$q("#qaN").value;ATOP=$q("#qaTop").value;admPaint();
+    try{const j=await edge({action:"quizgen",n,src,topic:ATOP==="mix"?"":ATOP});
+      AMSG=j.s==="ok"?(j.n?`✓ انضاف ${j.n} سؤال (${j.topic||""}) من: ${j.src}`:`ما طلع أسئلة مفيدة كفاية من: ${j.src}. اضغط توليد مرة ثانية.`):j.s==="nokey"?"مفتاح Gemini غير موجود":j.s==="nosrc"?"ما فيه تعاميم مرفوعة":j.s==="aierr"?"خدمة الذكاء الاصطناعي ما ردّت، جرّب بعد دقيقة":"تعذّر التوليد"}
     catch(e){AMSG=/fn 404/.test(e.message)?"حدّث الدالة ajf-files في Supabase أول":"تعذّر التوليد، تأكد من الإنترنت"}
     AGEN=false;AT="pending";AOFF=0;await re()};
   $q("#qaRound").onclick=async()=>{if(r&&(r.ph==="on"||r.ph==="wait")&&!confirm("فيه جولة شغّالة. توقفها وتبدأ جولة جديدة؟"))return;
@@ -206,6 +207,8 @@ function admPaint(){if(!root||VIEW!=="adm")return;const a=(ST&&ST.adm)||{},r=ST&
   root.querySelectorAll("[data-qs]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{await call("ajf_qz_admin",{p_action:"set",p_arg:{ids:[+b.dataset.id],st:b.dataset.qs}});await re()}catch(e){b.disabled=false}});
   const all=$q("#qaAll");if(all)all.onclick=async()=>{if(!confirm("اعتماد كل الأسئلة الظاهرة؟ تأكد إنك راجعتها."))return;all.disabled=true;
     try{await call("ajf_qz_admin",{p_action:"set",p_arg:{ids:AL.rows.map(x=>x.id),st:"ok"}});await re()}catch(e){all.disabled=false}};
+  const none=$q("#qaNone");if(none)none.onclick=async()=>{if(!confirm("رفض كل الأسئلة الظاهرة؟"))return;none.disabled=true;
+    try{await call("ajf_qz_admin",{p_action:"set",p_arg:{ids:AL.rows.map(x=>x.id),st:"no"}});await re()}catch(e){none.disabled=false}};
   root.querySelectorAll("[data-qe]").forEach(b=>b.onclick=()=>{AED=+b.dataset.qe;admPaint();const f=$q("#qaF");if(f)f.scrollIntoView({block:"center"})});
   $q("#qaAdd").onclick=()=>{AED="new";admPaint()};
   const can=$q("#qaCan");if(can)can.onclick=()=>{AED=null;admPaint()};
