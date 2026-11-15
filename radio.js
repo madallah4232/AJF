@@ -253,7 +253,7 @@ function badge(){const i=$("rdN");if(!i)return;i.hidden=!st.unread;i.textContent
 function banner(x,n){const old=$("bcBan");if(old)old.remove();
   const d=document.createElement("div");d.className="jr-ban";d.id="bcBan";d.setAttribute("role","alert");if(x.urgent)d.style.borderColor="var(--warn)";
   d.innerHTML=`<i>${x.urgent?"🚨":x.kind==="voice"?"📻":"📢"}</i><div><b>${x.urgent?"عاجل · ":""}${escT(x.name||"المشرف")}${x.kind==="voice"?" · 📻 كلام الراديو":""}</b><small style="white-space:pre-wrap;display:block;color:var(--ink);font-size:14px;margin-top:2px">${escT(x.body.length>220?x.body.slice(0,220)+"…":x.body)}</small>${n>1?`<small>+${n-1} تنبيهات ثانية</small>`:""}</div><button class="go">تم ✓</button>`;
-  d.querySelector(".go").onclick=()=>{d.remove();if(n>1&&st.can)openRd();else seen(n>1?st.items.filter(y=>isNote(y)&&!y.read).map(y=>y.id):[x.id])};
+  d.querySelector(".go").onclick=()=>{d.remove();if(n>1&&logOK())openRd();else seen(n>1?st.items.filter(y=>isNote(y)&&!y.read).map(y=>y.id):[x.id])};
   document.body.appendChild(d);if(!muted){beep(988,988,.12,.2);setTimeout(()=>beep(1319,1319,.18,.2),160)}
   try{navigator.vibrate&&navigator.vibrate(x.urgent?[300,120,300,120,300]:[150,80,150])}catch(e){}}
 function seen(ids){ids=ids.filter(i=>!st.seen.has(i));if(!ids.length)return;ids.forEach(i=>st.seen.add(i));
@@ -283,12 +283,14 @@ function toPaint(){const w=$("rdPk"),b=$("rdSend");if(b&&b.dataset.c!=="1"){b.te
   $("rdEl").innerHTML=TO.err?`<div class="amsg" style="padding:10px">${escT(TO.err)}</div>`:!TO.emps?'<div class="amsg" style="padding:10px">⏳ يجيب الأسماء…</div>'
     :L.length?L.map(e=>`<label><input type="checkbox" data-pk="${escT(e.emp)}" ${TO.sel.has(e.emp)?"checked":""}><span>${escT(e.name||"—")}</span><small>${escT(e.emp)}</small></label>`).join(""):'<div class="amsg" style="padding:10px">ما فيه اسم مطابق</div>'}
 async function openRd(){st.open=true;pan.hidden=false;const b=$("bcBan");if(b)b.remove();unlock();render();await load(true);rtOpen();render();
-  if(!st.can){const ids=st.items.filter(x=>isNote(x)&&!x.read).map(x=>x.id);setTimeout(()=>{if(st.open)seen(ids)},1200)}}
+  if(!logOK()){const ids=st.items.filter(x=>isNote(x)&&!x.read).map(x=>x.id);setTimeout(()=>{if(st.open)seen(ids)},1200)}}
 function closeRd(){st.open=false;st.hist=false;pan.hidden=true;if(TX.on)txStop()}
-function inbPaint(){const b=$("rdInb");if(!b)return;b.hidden=!st.can;b.classList.toggle("on",!!st.hist);const n=st.items.filter(x=>isNote(x)&&!x.read&&!st.seen.has(x.id)).length,i=$("rdInbN");i.hidden=!n||st.hist;i.textContent=n>99?"99+":n}
+/* سجل التنبيهات للمشرفين فقط: الأدمن أو المسمى الوظيفي فيه Supervisor/Manager. الباقين (حتى لو عندهم صلاحية الإرسال) ما يشوفونه */
+const logOK=()=>{const m=AUTH.me||{};return !!st.can&&(!!m.admin||/supervisor|manager/i.test(m.title||""))};
+function inbPaint(){const b=$("rdInb");if(!b)return;if(!logOK())st.hist=false;b.hidden=!logOK();b.classList.toggle("on",!!st.hist);const n=st.items.filter(x=>isNote(x)&&!x.read&&!st.seen.has(x.id)).length,i=$("rdInbN");i.hidden=!n||st.hist;i.textContent=n>99?"99+":n}
 function render(){const me=AUTH.me||{};let h="";inbPaint();
   if($("rdTx"))st.draft={v:$("rdTx").value,u:$("rdUrg").checked};
-  if(st.can&&st.hist){const its=st.items;h=(`<div class="adm-s"><h3>📥 سجل التنبيهات <span class="chip">48 ساعة</span></h3>${its.length?its.map(x=>x.kind==="voice"
+  if(logOK()&&st.hist){const its=st.items;h=(`<div class="adm-s"><h3>📥 سجل التنبيهات <span class="chip">48 ساعة</span></h3>${its.length?its.map(x=>x.kind==="voice"
     ?`<div class="rd-it ${x.body&&isNote(x)&&!x.read&&!st.seen.has(x.id)?"new":""}"><div class="m"><span>📻 ${escT(x.name||x.emp)} تكلم على الراديو${x.secs?" · "+fmtS(x.secs):""}</span><span>${tm(x.at)}</span></div>${x.body?`<p class="v">${escT(x.body)}</p>`:st.stt[x.id]?`<div class="rd-stt">${st.stt[x.id]==="w"?"⏳ يحوّل الكلام لنص…":escT(st.stt[x.id])}</div>`:""}
       ${st.can&&x.body?`<div class="m"><button class="abtn" data-rw="${x.id}">👁️ قرأه ${x.n||0}</button></div>${openW&&openW.id===x.id?`<div class="who">${openW.html}</div>`:""}`:""}</div>`
     :`<div class="rd-it ${x.urgent?"u":""} ${!x.read&&!st.seen.has(x.id)?"new":""}"><div class="m"><span>${x.urgent?'<span class="chip w">عاجل</span> ':""}${escT(x.name||x.emp)}${x.to?" ← "+escT(x.to.join("، ")):""}</span><span>${tm(x.at)}</span></div><p>${escT(x.body)}</p>
@@ -321,7 +323,7 @@ function render(){const me=AUTH.me||{};let h="";inbPaint();
     p.addEventListener("pointerdown",go);p.addEventListener("pointerup",end);p.addEventListener("pointercancel",end);p.addEventListener("lostpointercapture",()=>{if(TX.on||TX.want)txStop()});p.oncontextmenu=e=>e.preventDefault()}}
 pan.addEventListener("click",async ev=>{const t=ev.target.closest("button");if(!t)return;
   if(t.id==="rdBack"){if(st.hist){st.hist=false;render();return}closeRd();return}
-  if(t.id==="rdInb"||t.id==="rdInb2"){st.hist=!st.hist;if(st.hist){const ids=st.items.filter(x=>isNote(x)&&!x.read).map(x=>x.id);setTimeout(()=>{if(st.open&&st.hist){seen(ids);inbPaint()}},1500)}render();pan.scrollTop=0;$("rdB").scrollTop=0;return}
+  if(t.id==="rdInb"||t.id==="rdInb2"){if(!logOK())return;st.hist=!st.hist;if(st.hist){const ids=st.items.filter(x=>isNote(x)&&!x.read).map(x=>x.id);setTimeout(()=>{if(st.open&&st.hist){seen(ids);inbPaint()}},1500)}render();pan.scrollTop=0;$("rdB").scrollTop=0;return}
   if(t.id==="rdMute"){muted=!muted;try{localStorage.setItem("ajf_rd_mute",muted?"1":"0")}catch(e){}render();airPaint();return}
   if(t.dataset.to){TO.all=t.dataset.to==="all";if(!TO.all)toLoad();toPaint();return}
   if(t.id==="rdSend"){const v=$("rdTx").value.trim();if(!v){say("اكتب التنبيه أول");return}if(!TO.all&&!TO.sel.size){say("اختر موظف واحد على الأقل");return}
