@@ -440,7 +440,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .csf .bx{display:inline-block;width:10px;height:10px;border:1.2px solid #000;margin-left:6px;vertical-align:-1px;font:700 10px/10px Arial;text-align:center;font-style:normal}
 .csf .t3 tr.h1 td,.csf .t3 tr.h2 td{font-size:12.5px;height:19px}.csf .t3 tr.ac td{height:37px}.csf .t3 td.rm{font-size:10.5px;white-space:normal}
 .csf .ft{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;margin-top:3px}
-.csf .ft .pb{width:180px;font-size:8px}.csf .ft .pb span{font-size:10px}.csf .ft .no{font-size:11px}
+.csf .ft .pb{width:180px;font-size:8px}.csf .ft .pb img.sg{height:26px;max-width:120px;vertical-align:middle;margin-top:-10px}.csf .ft .pb span{font-size:10px}.csf .ft .no{font-size:11px}
 @media print{
   @page{size:A4;margin:0}
   body>*:not(#csPrint){display:none!important}
@@ -2123,6 +2123,7 @@ function renderCS(){
   {const el=$("csBody").querySelector("[data-dly]"),n=N.dlyr;if(el&&n)el.closest(".cs-f").insertAdjacentHTML("beforeend",`<div class="cs-by">✍︎ ${escT(n)}</div>`)}
   /* بدون صلاحية: عرض فقط (النسخ والطباعة تشتغل) */
   if(!can)$("csBody").querySelectorAll("input,select,textarea,button[data-now],button[data-chk],button[data-dmq],button[data-dmpick],button[data-xyq],button[data-xypick],button[data-dcpick]").forEach(el=>{if(el.tagName==="BUTTON"){if(el.dataset.now)el.remove();else el.disabled=true}else{el.readOnly=true;el.disabled=el.type==="time"||el.tagName==="SELECT"}});
+  $("csBody").insertAdjacentHTML("beforeend",csSigCard(can,N));
   $("csBody").insertAdjacentHTML("beforeend",fmCard());
   $("csClear").hidden=!can;
 }
@@ -2226,7 +2227,7 @@ function csFormHTML(){
   <tr class="h2"><td>Start</td><td>Finish</td><td>Start</td><td>Finish</td></tr>${rows}</table>
   <div class="ft"><div><b>Note :</b> ${e(d.rem||"")}</div><div class="pb"><b>PREPARED BY : NAME:</b> <span>${e(prep)}</span></div></div>
   <div class="ft"><b>Please fill in this form after each schedule flight and send it by email to bellow addresses :</b><div class="pb"><b>P.R.N :</b> <span>${e(prn)}</span></div></div>
-  <div class="ft"><b class="no">GS-OL-029</b><div class="pb"><b>SIGNATURE:</b></div></div></div>`;
+  <div class="ft"><b class="no">GS-OL-029</b><div class="pb"><b>SIGNATURE:</b> ${(()=>{const u=csSigPNG();return u?`<img class="sg" src="${u}" alt="">`:""})()}</div></div></div>`;
 }
 const csLib=src=>new Promise((ok,no)=>{if(document.querySelector(`script[src="${src}"]`)&&csLib[src])return ok();const j=document.createElement("script");j.src=src;j.onload=()=>{csLib[src]=1;ok()};j.onerror=no;document.head.appendChild(j)});
 async function csPDF(){
@@ -2390,7 +2391,7 @@ function sigPlace(pi,fx,fy){const raw=(()=>{try{return JSON.parse(localStorage.g
   const P=fmCur.p[pi],w=.2,h=w*raw.ar*P.W/P.H,id=`f.${fmCur.id}.g${Date.now().toString(36)}`,ch=raw.s.match(/.{1,390}/g)||[];
   ch.forEach((c,i)=>csSet(id+"."+i,c));csSet(id,`${pi}|${Math.max(0,fx-w/2).toFixed(4)}|${Math.max(0,fy-h/2).toFixed(4)}|${w}|${raw.ar}|${ch.length}`);
   fmSigMode=false;$("fmSig").classList.remove("on");fmRender();$("fmSaved").textContent="✓ تم التوقيع — لمسته مرتين تحذفه"}
-function sigPad(){const o=$("fmPad");o.hidden=false;const cv=$("fmPadC"),r=cv.getBoundingClientRect(),dpr=devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;
+function sigPad(cb){const o=$("fmPad");if(o.parentElement!==document.body)document.body.appendChild(o);o.hidden=false;const cv=$("fmPadC"),r=cv.getBoundingClientRect(),dpr=devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;
   const x=cv.getContext("2d");x.scale(dpr,dpr);x.lineWidth=2.6;x.lineCap=x.lineJoin="round";x.strokeStyle="#1b2f8a";const S=[];let cur=null;
   const pt=e=>{const b=cv.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
   cv.onpointerdown=e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);cur=[pt(e)];S.push(cur);x.beginPath();x.moveTo(...cur[0])};
@@ -2399,11 +2400,27 @@ function sigPad(){const o=$("fmPad");o.hidden=false;const cv=$("fmPadC"),r=cv.ge
   $("fmPadClr").onclick=()=>{S.length=0;x.clearRect(0,0,cv.width,cv.height)};
   $("fmPadX").onclick=()=>{o.hidden=true};
   $("fmPadOk").onclick=()=>{const enc=sigEncode(S);if(!enc){$("fmPadH").textContent="ارسم توقيعك أول";return}
-    try{localStorage.setItem(SIG_KEY,JSON.stringify(enc))}catch(e){}o.hidden=true;sigArm()}}
+    try{localStorage.setItem(SIG_KEY,JSON.stringify(enc))}catch(e){}o.hidden=true;cb?cb():sigArm()}}
 function sigArm(){fmSigMode=true;$("fmSig").classList.add("on");$("fmSaved").textContent="✍︎ اضغط مكان التوقيع في النموذج"}
 $("fmSig").onclick=()=>{if(!csCan())return;if(fmSigMode){fmSigMode=false;$("fmSig").classList.remove("on");$("fmSaved").textContent="";return}
   let has=false;try{has=!!localStorage.getItem(SIG_KEY)}catch(e){}has?sigArm():sigPad()};
 $("fmSigNew").onclick=e=>{e.stopPropagation();sigPad()};
+/* ---------- توقيع الكوردنيتر شيت: نفس توقيع النماذج المحفوظ على الجوال، يُخزَّن مع الشيت (مفتاح sig + أجزاء sig.0..) فيظهر عند الكل وفي الـ PDF ---------- */
+function csSigGet(){if(!csCur)return null;const V=CSV[iso(csCur.date)+"_"+csCur.f.n]||{},a=String(V.sig||"").split("|");const n=+a[1]||0;if(!n)return null;
+  let t="";for(let i=0;i<n;i++)t+=V["sig."+i]||"";return t?{s:t,ar:+a[0]||.3}:null}
+function csSigPNG(){const g=csSigGet();if(!g)return"";try{const W=600,H=Math.max(40,Math.round(W*g.ar))+20,c=document.createElement("canvas");c.width=W+20;c.height=H;const x=c.getContext("2d"),sc=W/1295;
+  x.strokeStyle="#1b2f8a";x.lineWidth=5;x.lineCap=x.lineJoin="round";
+  sigDecode(g.s).forEach(st=>{if(!st.length)return;x.beginPath();x.moveTo(10+st[0][0]*sc,10+st[0][1]*sc);st.forEach(p=>x.lineTo(10+p[0]*sc,10+p[1]*sc));if(st.length===1)x.lineTo(11+st[0][0]*sc,10+st[0][1]*sc);x.stroke()});
+  return c.toDataURL("image/png")}catch(e){return""}}
+function csSigCard(can,N){const u=csSigPNG();
+  return`<div class="cs-card"><h5>SIGNATURE</h5><div style="min-height:70px;border:1px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;background:#f6f1e7">${u?`<img src="${u}" alt="التوقيع" style="max-height:80px;max-width:90%">`:'<small style="color:#7a6f5c">ما فيه توقيع</small>'}</div>
+  ${can?`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="abtn y" data-cssig>✍︎ ${u?"وقّع من جديد":"وقّع"}</button><button class="abtn" data-cssignew>رسم توقيع جديد</button>${u?'<button class="abtn n" data-cssigdel>حذف التوقيع</button>':""}</div>`:""}
+  ${u&&N.sig?`<div class="cs-by">✍︎ ${escT(N.sig)}</div>`:""}</div>`}
+function csSigClear(){const V=CSV[iso(csCur.date)+"_"+csCur.f.n]||{};Object.keys(V).filter(x=>x==="sig"||x.startsWith("sig.")).forEach(x=>csSet(x,""))}
+function csSigPut(){const raw=(()=>{try{return JSON.parse(localStorage.getItem(SIG_KEY)||"null")}catch(e){return null}})();if(!raw)return sigPad(csSigPut);
+  csSigClear();const ch=raw.s.match(/.{1,390}/g)||[];ch.forEach((c,i)=>csSet("sig."+i,c));csSet("sig",`${raw.ar}|${ch.length}`);renderCS()}
+$("csBody").addEventListener("click",e=>{const t=e.target.closest("[data-cssig],[data-cssignew],[data-cssigdel]");if(!t||!csCan())return;e.stopPropagation();
+  if(t.dataset.cssig!=null)csSigPut();else if(t.dataset.cssignew!=null)sigPad(csSigPut);else{csSigClear();renderCS()}});
 
 /* ✓ الكل: يعلّم كل خانات عمود الإجابة (✓ / نعم / YES) الفاضية — ما يغيّر أي خانة معبّاة */
 $("fmAll").onclick=()=>{const F=fmCur;if(!F||!(F.y||F.ya)||!csCan())return;const V=fmVals();let n=0;
