@@ -196,7 +196,7 @@ function txStop(){TX.want=false;if(!TX.on)return;TX.on=false;clearInterval(TX.tm
   try{txFlush()}catch(e){}rtSend("ve",{sid:TX.sid});
   try{TX.src.disconnect();TX.proc.disconnect();TX.proc.onaudioprocess=null}catch(e){}
   if(TX.stream)TX.stream.getTracks().forEach(t=>t.stop());TX.stream=null;setTimeout(()=>{if(!TX.on&&!TX.want)aSess("playback")},300);
-  const secs=Math.round((Date.now()-TX.t0)/1000);const id0=TX.id,all=TX.all,sid=TX.sid;TX.all=[];
+  const secs=Math.round((Date.now()-TX.t0)/1000);try{window.ajfAct&&ajfAct("talk",secs)}catch(e){}const id0=TX.id,all=TX.all,sid=TX.sid;TX.all=[];
   const fin=id=>{rpc("ajf_bc_talk",{p_token:AUTH.tok,p_device:AUTH.dev,p_id:id,p_secs:secs}).catch(()=>{})};
   if(id0)fin(id0);else setTimeout(()=>{if(TX.id)fin(TX.id)},1500);
   try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}pttPaint();setTimeout(()=>load(true),1800)}
@@ -282,7 +282,7 @@ function toPaint(){const w=$("rdPk"),b=$("rdSend");if(b&&b.dataset.c!=="1"){b.te
   $("rdSel").innerHTML=[...TO.sel].map(e=>`<span data-un="${escT(e)}">${escT(nm(e))} ✕</span>`).join("");
   $("rdEl").innerHTML=TO.err?`<div class="amsg" style="padding:10px">${escT(TO.err)}</div>`:!TO.emps?'<div class="amsg" style="padding:10px">⏳ يجيب الأسماء…</div>'
     :L.length?L.map(e=>`<label><input type="checkbox" data-pk="${escT(e.emp)}" ${TO.sel.has(e.emp)?"checked":""}><span>${escT(e.name||"—")}</span><small>${escT(e.emp)}</small></label>`).join(""):'<div class="amsg" style="padding:10px">ما فيه اسم مطابق</div>'}
-async function openRd(){st.open=true;pan.hidden=false;const b=$("bcBan");if(b)b.remove();unlock();render();await load(true);rtOpen();render();
+async function openRd(){try{window.ajfAct&&ajfAct("radio")}catch(e){}st.open=true;pan.hidden=false;const b=$("bcBan");if(b)b.remove();unlock();render();await load(true);rtOpen();render();
   if(!logOK()){const ids=st.items.filter(x=>isNote(x)&&!x.read).map(x=>x.id);setTimeout(()=>{if(st.open)seen(ids)},1200)}}
 function closeRd(){st.open=false;st.hist=false;pan.hidden=true;if(TX.on)txStop()}
 /* سجل التنبيهات للمشرفين فقط: الأدمن أو المسمى الوظيفي فيه Supervisor/Manager. الباقين (حتى لو عندهم صلاحية الإرسال) ما يشوفونه */
@@ -332,7 +332,7 @@ pan.addEventListener("click",async ev=>{const t=ev.target.closest("button");if(!
     t.disabled=true;t.textContent="…";const args={p_token:AUTH.tok,p_device:AUTH.dev,p_body:v,p_urgent:$("rdUrg").checked};if(!TO.all)args.p_to=[...TO.sel];
     try{const j=await rpc("ajf_bc_send",args);
       if(j.s==="out"){authOut();return}if(j.s!=="ok")throw new Error(j.s);$("rdTx").value="";$("rdUrg").checked=false;t.dataset.c="";
-      rtSend("bc",{id:j.id});say("✅ انرسل التنبيه "+who);TO.all=true;TO.sel.clear();TO.q="";await load(true);render()}
+      rtSend("bc",{id:j.id});try{window.ajfAct&&ajfAct("bcsend",who)}catch(e){}say("✅ انرسل التنبيه "+who);TO.all=true;TO.sel.clear();TO.q="";await load(true);render()}
     catch(e){t.disabled=false;t.dataset.c="";toPaint();const m=String(e&&e.message||"");
       say(m==="denied"?"ما عندك صلاحية الإرسال":/404/.test(m)?"لازم يتشغّل ملف supabase/bc_to.sql في Supabase أول":"تعذّر الإرسال، تأكد من الإنترنت")}return}
   if(t.dataset.rw){const id=+t.dataset.rw;if(openW&&openW.id===id){openW=null;render();return}t.disabled=true;

@@ -117,7 +117,7 @@ function paint(){if(!root||VIEW!=="home")return;const r=ST&&ST.round,T=(ST&&ST.t
   if(ST&&ST.admin)h+=`<button class="qz-adm" id="qzAdm">🛠 إدارة الأسئلة والجولات${ST.adm&&ST.adm.pending?" · "+ST.adm.pending+" بانتظار الاعتماد":""}</button>
     <div class="qa-m" style="text-align:center">أنت مشرف: تقدر تجرب الأسئلة، لكن ما تدخل الترتيب لأنك تشوف الأجوبة وقت الاعتماد.</div>`;
   root.innerHTML=`<div class="qz">${h}</div>`;
-  const s=root.querySelector("#qzStart");if(s)s.onclick=()=>openQuiz();
+  const s=root.querySelector("#qzStart");if(s)s.onclick=()=>{try{window.ajfAct&&ajfAct("qzgo")}catch(e){}openQuiz()};
   root.querySelectorAll("[data-qb]").forEach(b=>b.onclick=async()=>{BT=b.dataset.qb;BD=undefined;paint();await loadBoard();paint()});
   const a=root.querySelector("#qzAdm");if(a)a.onclick=()=>{VIEW="adm";admPaint()};
   root.querySelectorAll("[data-qemp]").forEach(b=>b.onclick=()=>empOpen(b.dataset.qemp))}

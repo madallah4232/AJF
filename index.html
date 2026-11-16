@@ -992,6 +992,15 @@ body,.bd,.hub{background:var(--felt),var(--night)}
 .emp-sh .more>.row .abtn{height:auto;min-height:44px;padding:8px 10px;line-height:1.35;white-space:normal}
 .emp-sh .es-h{font:700 12.5px var(--display);color:var(--muted);margin-top:4px}
 .emp>button{padding:6px 2px}
+.hx{display:grid;gap:6px}
+.hx-f{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hx-f select{flex:1;min-width:150px;height:42px;border-radius:12px;background:var(--raise);color:var(--ink);border:1px solid var(--line);padding:0 10px;font:inherit;font-size:14px}
+.hx-f label{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)}
+.hx-d{position:sticky;top:-14px;z-index:1;margin-top:8px;padding:6px 2px;background:#1d140d;font:700 12.5px var(--display);color:var(--muted);border-bottom:1px dashed rgba(236,220,191,.12)}
+.hx-r{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;align-items:center;padding:8px 10px;border-radius:12px;background:rgba(236,220,191,.04);border:1px solid rgba(236,220,191,.06)}
+.hx-r time{grid-row:span 2;font:600 13px var(--mono);color:var(--amber)}
+.hx-r button{all:unset;cursor:pointer;font:700 13.5px var(--display);color:var(--ink)}
+.hx-r span{font-size:12.5px;line-height:1.45;color:var(--muted)}
 .adm-b .row{background:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;padding:0!important;min-height:0!important;overflow:visible!important;margin:0!important}
 .adm-b .row::before,.adm-b .row::after{display:none!important}
 </style>
@@ -1192,6 +1201,20 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}ca
 if(!AUTH.dev){const a=new Uint8Array(16);crypto.getRandomValues(a);AUTH.dev="d"+[...a].map(x=>x.toString(16).padStart(2,"0")).join("");try{localStorage.setItem("ajf_dev",AUTH.dev)}catch(e){}}
 async function rpc(fn,args){const r=await fetch(SB_URL+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(args),cache:"no-store"});
   if(!r.ok)throw new Error("rpc "+r.status);return r.json()}
+/* سجل الحركات (H): كل حركة للموظف (دخول، أي لوحة فتح، الراديو، التحدي، النماذج…) تنحفظ بوقتها وتنرسل دفعات — يشوفها المشرف فقط من لوحة المشرف ← H */
+const ACTQ=(()=>{try{const a=JSON.parse(localStorage.getItem("ajf_actq")||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}})();let actT=null,actBusy=false;
+function actSave(){try{localStorage.setItem("ajf_actq",JSON.stringify(ACTQ))}catch(e){}}
+function ajfAct(e,d){try{if(DEMO||!AUTH.tok)return;const l=ACTQ[ACTQ.length-1],now=Date.now(),dd=d==null?"":String(d).slice(0,80);
+  if(l&&l.e===e&&l.d===dd&&now-l.t<4000)return;ACTQ.push({e,d:dd,t:now});if(ACTQ.length>300)ACTQ.splice(0,ACTQ.length-300);actSave();
+  clearTimeout(actT);actT=setTimeout(actFlush,ACTQ.length>=20?200:6000)}catch(x){}}
+window.ajfAct=ajfAct;
+async function actFlush(keep){if(actBusy||!ACTQ.length||!AUTH.tok||DEMO)return;actBusy=true;const b=ACTQ.slice(0,50);let ok=false;
+  try{const r=await fetch(SB_URL+"/rest/v1/rpc/ajf_act_log",{method:"POST",keepalive:!!keep,headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({p_token:AUTH.tok,p_device:AUTH.dev,p_ev:b}),cache:"no-store"});
+    if(r.ok){const j=await r.json();if(j.s==="ok"||j.s==="out"||j.s==="bad"){ACTQ.splice(0,b.length);actSave();ok=true}}}catch(e){}
+  actBusy=false;if(ACTQ.length&&!keep){clearTimeout(actT);actT=setTimeout(actFlush,ok?800:90e3)}}
+{let hidAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden){hidAt=Date.now();actFlush(true);return}
+  if(hidAt&&Date.now()-hidAt>=60e3&&AUTH.tok){const g=Math.round((Date.now()-hidAt)/60e3);ACTQ.push({e:"bg",d:"",t:hidAt});ajfAct("fg",g)}hidAt=0});
+  addEventListener("pagehide",()=>actFlush(true))}
 const DOCC={};
 async function getDoc(name){if(DOCC[name])return DOCC[name];
   const j=await rpc("ajf_doc",{p_token:AUTH.tok||"",p_device:AUTH.dev,p_name:name});
@@ -1284,7 +1307,7 @@ function gatePass(isNew){GATE.mode=isNew?"new":"old";$("gateC").innerHTML=`${ICO
   $("gGo").onclick=go;$("gateC").querySelectorAll("input").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")go()});setTimeout(()=>$("gP1").focus(),80)}
 async function gateLogin(){const b=$("gGo");if(b){b.disabled=true;b.textContent="…"}
   try{const j=await rpc("ajf_login",{p_emp:GATE.emp,p_pass:GATE.pass,p_device:AUTH.dev,p_label:devLabel()});
-    if(j.s==="ok"){AUTH.tok=j.token;AUTH.me={emp:GATE.emp,name:j.name||GATE.name,title:GATE.title,admin:j.admin};authSave();GATE.pass="";$("gate").hidden=true;acctPaint(0);authCheck();setTimeout(pushOffer,2500);
+    if(j.s==="ok"){AUTH.tok=j.token;AUTH.me={emp:GATE.emp,name:j.name||GATE.name,title:GATE.title,admin:j.admin};authSave();GATE.pass="";$("gate").hidden=true;ajfAct("login",devLabel());acctPaint(0);authCheck();setTimeout(pushOffer,2500);
       try{if(window.bootShow)bootShow()}catch(e){}return}
     if(j.s==="pending"){gateWait(j.new);return}
     const m={bad:"الرقم الوظيفي أو الرقم السري غير صحيح",locked:"محاولات كثيرة خاطئة. جرّب بعد "+(j.min||15)+" دقيقة",weak:"الرقم السري لازم 6 خانات على الأقل",rejected:"تم رفض هذا الجوال. راجع المشرف."}[j.s]||"صار خطأ، جرّب مرة ثانية";
@@ -1305,14 +1328,46 @@ const AIC={push:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M
   csp:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
   dcp:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5.5 17a4 4 0 0 1 7 0M15 10h3M15 14h3"/>',
   sw:'<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/><path d="M3 9l-2 2 2 2M21 11l2 2-2 2"/>',
-  mvt:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/>'};
-const ADM_T=[{k:"req",t:"طلبات الموافقة",c:"#ef8a5b"},{k:"emps",t:"الموظفين",c:"#e8a058"},{k:"csp",t:"صلاحية الكوردنيتر",c:"#a9c47f"},{k:"dcp",t:"صلاحية فحص الوثائق",c:"#d9c8a8"},
+  mvt:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/>',
+  h:'<path d="M7 5v14M17 5v14M7 12h10" stroke-width="3.2"/>'};
+const ADM_T=[{k:"h",t:"H",c:"#c3a6d9",w:1},{k:"req",t:"طلبات الموافقة",c:"#ef8a5b"},{k:"emps",t:"الموظفين",c:"#e8a058"},{k:"csp",t:"صلاحية الكوردنيتر",c:"#a9c47f"},{k:"dcp",t:"صلاحية فحص الوثائق",c:"#d9c8a8"},
   {k:"add",t:"إضافة موظفين",c:"#c9a27a"},{k:"sw",t:"تغيير الجوالات",c:"#8fb3c9"},{k:"push",t:"تنبيهات الرحلات",c:"#e6b450"},{k:"mvt",t:"إيميلات MVT ناس",c:"#7fc4c9"}];
-function admTiles(n){const sub={req:n.pend?n.pend+" بانتظارك":"ما فيه طلبات",emps:n.emps+" موظف",csp:n.csp+" مصرّح",dcp:n.dcp+" مصرّح",add:"أضف بالرقم والاسم",sw:(n.sw||0)+" آخر 7 أيام",push:"تشغيل وتجربة",mvt:n.mvt+" إيميل"};
-  return`<div class="at-g">${ADM_T.map(x=>`<button class="at" data-sec="${x.k}" style="--c:${x.c}">${x.k==="req"&&n.pend?`<i>${n.pend}</i>`:""}<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${AIC[x.k]}</svg></div><span><b>${x.t}</b><small>${sub[x.k]}</small></span></button>`).join("")}</div>`}
+function admTiles(n){const sub={req:n.pend?n.pend+" بانتظارك":"ما فيه طلبات",emps:n.emps+" موظف",csp:n.csp+" مصرّح",dcp:n.dcp+" مصرّح",add:"أضف بالرقم والاسم",sw:(n.sw||0)+" آخر 7 أيام",push:"تشغيل وتجربة",mvt:n.mvt+" إيميل",h:"سجل دخول وحركات كل موظف داخل التطبيق"};
+  return`<div class="at-g">${ADM_T.map(x=>`<button class="at${x.w?" wide":""}" data-sec="${x.k}" style="--c:${x.c}">${x.k==="req"&&n.pend?`<i>${n.pend}</i>`:""}<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${AIC[x.k]}</svg></div><span><b>${x.t}</b><small>${sub[x.k]}</small></span></button>`).join("")}</div>`}
 const fdt=t=>{if(!t)return"—";const d=new Date(t);return d.toLocaleString("ar-SA-u-nu-latn",{timeZone:"Asia/Riyadh",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})};
+/* ===== H: سجل حركات الموظفين (للمشرف) ===== */
+const HST={emp:null,self:false,rows:null,ld:false,err:"",more:false,at:0};
+const H_BN={tim:"تيماتيك والتعاميم",flt:"لوحة الرحلات",trc:"TRC",lc:"Load Control",qz:"تحدي التشغيل"};
+function hTxt(ev,d){d=d||"";const a=d?" · "+escT(d):"";return({login:"🔑 سجّل دخول"+a,open:"📲 فتح التطبيق",fg:"↩️ رجع للتطبيق"+(d?" بعد "+escT(d)+" د":""),bg:"💤 طلع من التطبيق",logout:"🚪 سجّل خروج",
+  board:"🧭 دخل "+escT(H_BN[d]||d),home:"🏠 رجع للرئيسية",ttab:d==="doc"?"🛂 فتح تبويب فحص وثائق الراكب":"📢 فتح تبويب التعاميم",cs:"📋 فتح Coordination Sheet"+a,form:"📝 فتح نموذج"+a,
+  ls:"⚖︎ فتح Load Sheet"+a,dc:"🔢 فتح أكواد التأخير"+(d?" · "+escT((typeof DC_NAME!=="undefined"&&DC_NAME[d])||d):""),trk:"✈️ فتح تتبع رحلة"+a,acct:"👤 فتح صفحة الحساب",
+  radio:"📻 فتح الراديو",talk:"🎙️ تكلّم بالراديو"+(d?" "+escT(d)+" ث":""),bcsend:"📣 أرسل تنبيه مكتوب "+escT(d),qzgo:"🏆 بدأ أسئلة التحدي"})[ev]||escT(ev)+a}
+const hDay=t=>new Date(t).toLocaleDateString("ar-SA-u-nu-latn-ca-gregory",{timeZone:"Asia/Riyadh",weekday:"long",day:"numeric",month:"long"});
+const hTm=t=>new Date(t).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit",hour12:false});
+function hHtml(){const emps=((ADM&&ADM.emps)||[]).slice().sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"ar"));
+  let o=`<div class="hx"><div class="amsg">كل دخول وكل حركة للموظف داخل التطبيق بالترتيب: أي لوحة دخل، الراديو، التحدي، النماذج، ومتى طلع ورجع. اضغط على اسم الموظف تشوف حركاته هو بس.</div>
+    <div class="hx-f"><select id="aHsel"><option value="">كل الموظفين</option>${emps.map(e=>`<option value="${escT(e.emp)}" ${HST.emp===e.emp?"selected":""}>${escT(e.name||e.emp)} · ${escT(e.emp)}</option>`).join("")}</select>
+    <label><input type="checkbox" id="aHme" ${HST.self?"checked":""}>حركاتي</label><button class="abtn" id="aHre">${HST.ld?"…":"🔄 تحديث"}</button></div>`;
+  if(HST.err)o+=`<div class="amsg">${escT(HST.err)}</div>`;
+  if(!HST.rows)return o+(HST.err?"":'<div class="amsg">جاري التحميل…</div>')+"</div>";
+  if(!HST.rows.length)return o+'<div class="amsg">ما فيه حركات مسجّلة لين الحين. الحركات تبدأ تنسجل من أول ما يفتح الموظف التطبيق بعد هذا التحديث.</div></div>';
+  let last="";HST.rows.forEach(r=>{const dy=hDay(r.at);if(dy!==last){last=dy;o+=`<div class="hx-d">${escT(dy)}</div>`}
+    o+=`<div class="hx-r"><time>${hTm(r.at)}</time>${HST.emp?"":`<button data-hf="${escT(r.emp)}">${escT(r.name||r.emp)}</button>`}<span>${hTxt(r.ev,r.d)}</span></div>`});
+  if(HST.more)o+=`<button class="abtn" id="aHmore">${HST.ld?"…":"تحميل الأقدم"}</button>`;
+  return o+"</div>"}
+function hPaint(){const el=$("aH");if(!el)return;el.innerHTML=hHtml();
+  const s=$("aHsel");if(s)s.onchange=()=>{HST.emp=s.value||null;HST.rows=null;hLoad()};
+  const m=$("aHme");if(m)m.onchange=()=>{HST.self=m.checked;HST.rows=null;hLoad()}}
+async function hLoad(more){if(HST.ld)return;HST.ld=true;HST.err="";hPaint();
+  try{const L=HST.rows&&HST.rows[HST.rows.length-1];
+    const j=await rpc("ajf_act_list",{p_token:AUTH.tok,p_device:AUTH.dev,p_emp:HST.emp,p_before:more&&L?L.at:null,p_self:HST.self});
+    if(j.s==="out"){HST.ld=false;authOut();return}if(j.s!=="ok")throw new Error(j.s);
+    const r=j.rows||[];HST.rows=more?(HST.rows||[]).concat(r):r;HST.more=r.length>=250;HST.at=Date.now()}
+  catch(e){HST.err=/404/.test(String(e&&e.message))?"السجل يحتاج تفعيل مرة وحدة: شغّل ملف supabase/activity.sql في Supabase (SQL Editor ← Run).":"تعذّر التحميل، تأكد من الاتصال."}
+  HST.ld=false;hPaint()}
+setInterval(()=>{const a=$("adm");if(admSec==="h"&&a&&!a.hidden&&!document.hidden&&!HST.ld&&HST.rows&&HST.rows.length<=250)hLoad()},30e3);
 async function admCall(action,arg){const j=await rpc("ajf_admin",{p_token:AUTH.tok,p_device:AUTH.dev,p_action:action,p_arg:arg||{}});if(j.s==="out"){authOut();throw new Error("out")}return j}
-async function openAcct(){$("adm").hidden=false;$("admS").textContent=AUTH.me?(AUTH.me.name||"")+" · "+AUTH.me.emp:"";await admRender()}
+async function openAcct(){ajfAct("acct");$("adm").hidden=false;$("admS").textContent=AUTH.me?(AUTH.me.name||"")+" · "+AUTH.me.emp:"";await admRender()}
 async function admRender(cached){const me=AUTH.me||{};let hA=`<div class="adm-s"><h3><span>${escT(me.name||"")}<span class="chip">${escT(me.emp||"")}</span>${me.title?`<small class="a-ttl" dir="ltr">${escT(me.title)}</small>`:""}${me.admin?'<span class="chip a">مشرف</span>':""}</span><button class="abtn n" id="aOut">تسجيل خروج</button></h3><div class="amsg">حسابك معتمد ✅ تبقى متصل على هذا الجوال. لو غيّرت جوالك أو انمسحت بيانات Safari، ادخل برقمك الوظيفي والرقم السري بدون انتظار موافقة، والجوال القديم يطلع تلقائياً. الأفضل تفتح التطبيق دايماً من أيقونته في الشاشة الرئيسية.</div></div>`;
   let h=`<div class="adm-s" data-k="push" id="aPushS"><h3>🔔 تنبيهات وصول الرحلات</h3><div class="amsg" id="aPushM">…</div></div>`;
   if(!me.admin){$("admB").innerHTML=hA+h;admBind();return}
@@ -1332,7 +1387,8 @@ async function admRender(cached){const me=AUTH.me||{};let hA=`<div class="adm-s"
   const q=norm(admQ),list=emps.filter(e=>!q||norm(e.name+" "+e.emp+" "+(e.title||"")).includes(q));
   h+=`<div class="adm-s" data-k="emps"><h3>الموظفين <span class="chip">${emps.length}</span></h3><input id="aQ" type="search" placeholder="بحث بالاسم أو الرقم" value="${escT(admQ)}">${list.map(e=>{const ap=e.devices.filter(d=>d.status==="approved").length;const st=!e.active?'<span class="chip w">موقوف</span>':e.locked?'<span class="chip w">مقفل مؤقتاً</span>':!e.activated?'<span class="chip">لم يفعّل</span>':ap?'<span class="chip g">فعّال</span>':'<span class="chip w">بدون جوال معتمد</span>';
     const o=admEmp===e.emp;return`<div class="emp"><button data-op="${escT(e.emp)}"><span><b>${escT(e.name||"—")}</b> <span class="chip">${escT(e.emp)}</span>${e.admin?'<span class="chip a">مشرف</span>':""}${e.title?`<small class="a-ttl" dir="ltr">${escT(e.title)}</small>`:""}</span><span>${st}</span></button>${o?`<div class="more">${e.devices.length?e.devices.map(d=>`<div class="req"><small>${escT(d.label)} · ${{approved:"✅ معتمد",pending:"⏳ بانتظار",rejected:"⛔ مرفوض"}[d.status]}${d.auto?" · 🔄 تغيير جوال تلقائي":""} · آخر دخول ${fdt(d.seen)}</small><div class="row">${d.status!=="approved"?`<button class="abtn y" data-dv="${d.id}" data-st="approved">اعتماد</button>`:""}${d.status!=="rejected"?`<button class="abtn n" data-dv="${d.id}" data-st="rejected">رفض</button>`:""}<button class="abtn" data-dv="${d.id}" data-st="delete" data-cf="1">حذف الجوال</button></div></div>`).join(""):'<div class="amsg">ما سجّل دخول من أي جوال.</div>'}
-      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">${e.activated?`<button class="abtn" data-ac="reset_pass" data-e="${escT(e.emp)}" data-cf="1">إعادة تعيين الرقم السري</button>`:""}${e.locked?`<button class="abtn" data-ac="unlock" data-e="${escT(e.emp)}">فك القفل</button>`:""}${!e.admin?`<button class="abtn ${CSPERM.includes(e.emp)?"n":"y"}" data-csp="${escT(e.emp)}" data-v="${!CSPERM.includes(e.emp)}">${CSPERM.includes(e.emp)?"سحب صلاحية الكوردنيتر شيت":"إعطاء صلاحية الكوردنيتر شيت"}</button><button class="abtn ${DCP.includes(e.emp)?"n":"y"}" data-dcp="${escT(e.emp)}" data-v="${!DCP.includes(e.emp)}">${DCP.includes(e.emp)?"سحب صلاحية فحص الوثائق":"إعطاء صلاحية فحص الوثائق"}</button>`:""}${e.emp!==ADM.me?`<button class="abtn ${e.active?"n":"y"}" data-ac="active" data-e="${escT(e.emp)}" data-v="${!e.active}" ${e.active?'data-cf="1"':""}>${e.active?"إيقاف":"تفعيل"}</button><button class="abtn" data-ac="set_admin" data-e="${escT(e.emp)}" data-v="${!e.admin}" data-cf="1">${e.admin?"إلغاء الإشراف":"جعله مشرف"}</button><button class="abtn n" data-ac="delete" data-e="${escT(e.emp)}" data-cf="1">حذف</button>`:""}</div></div>`:""}</div>`}).join("")||'<div class="amsg">ما فيه نتائج.</div>'}</div>`;
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="abtn a" data-hgo="${escT(e.emp)}">🕘 سجل حركاته (H)</button>${e.activated?`<button class="abtn" data-ac="reset_pass" data-e="${escT(e.emp)}" data-cf="1">إعادة تعيين الرقم السري</button>`:""}${e.locked?`<button class="abtn" data-ac="unlock" data-e="${escT(e.emp)}">فك القفل</button>`:""}${!e.admin?`<button class="abtn ${CSPERM.includes(e.emp)?"n":"y"}" data-csp="${escT(e.emp)}" data-v="${!CSPERM.includes(e.emp)}">${CSPERM.includes(e.emp)?"سحب صلاحية الكوردنيتر شيت":"إعطاء صلاحية الكوردنيتر شيت"}</button><button class="abtn ${DCP.includes(e.emp)?"n":"y"}" data-dcp="${escT(e.emp)}" data-v="${!DCP.includes(e.emp)}">${DCP.includes(e.emp)?"سحب صلاحية فحص الوثائق":"إعطاء صلاحية فحص الوثائق"}</button>`:""}${e.emp!==ADM.me?`<button class="abtn ${e.active?"n":"y"}" data-ac="active" data-e="${escT(e.emp)}" data-v="${!e.active}" ${e.active?'data-cf="1"':""}>${e.active?"إيقاف":"تفعيل"}</button><button class="abtn" data-ac="set_admin" data-e="${escT(e.emp)}" data-v="${!e.admin}" data-cf="1">${e.admin?"إلغاء الإشراف":"جعله مشرف"}</button><button class="abtn n" data-ac="delete" data-e="${escT(e.emp)}" data-cf="1">حذف</button>`:""}</div></div>`:""}</div>`}).join("")||'<div class="amsg">ما فيه نتائج.</div>'}</div>`;
+  h+=`<div class="adm-s" data-k="h"><div id="aH">${hHtml()}</div></div>`;
   const B=$("admB"),sc=[...B.querySelectorAll(".adm-shb")].map(x=>x.scrollTop);
   B.innerHTML=hA+admTiles({pend:pend.length,emps:emps.length,sw:(h.match(/data-k="sw"[\s\S]*?<span class="chip">(\d+)/)||[])[1],csp:CSPERM.length,dcp:DCP.length,mvt:mailList((MVT_MAIL||{}).to).length})
     +`<div class="adm-sh${admSec?" on":""}" id="admSh" data-shx="sec"><div class="adm-shc"><div class="adm-shh"><b id="admShT"></b><button data-shx="sec" aria-label="إغلاق">✕</button></div><div class="adm-shb">${h}</div></div></div>`
@@ -1345,7 +1401,7 @@ async function admRender(cached){const me=AUTH.me||{};let hA=`<div class="adm-s"
       const r=m.querySelector(":scope>.row");if(r&&r.children.length){const hh=document.createElement("div");hh.className="es-h";hh.textContent="⚙️ الصلاحيات والإجراءات";r.before(hh)}
       es.querySelector(".adm-shb").appendChild(m)}else admEmp=null}
   B.querySelectorAll(".adm-shb").forEach((x,i)=>{if(sc[i])x.scrollTop=sc[i]});
-  admBind();
+  admBind();if(admSec==="h"){hPaint();if(!HST.rows||Date.now()-HST.at>20e3)hLoad()}
   const aq=$("aQ");if(aq)aq.oninput=()=>{admQ=aq.value;clearTimeout(aq._t);aq._t=setTimeout(()=>{const p=aq.selectionStart;admRender(true).then(()=>{const n=$("aQ");if(n){n.focus();try{n.setSelectionRange(p,p)}catch(e){}}})},300)}}
 async function pushPaint(){const S=$("aPushS");if(!S)return;const st=await pushState(),M=$("aPushM");if(!M)return;M.textContent=PU_TXT[st];
   S.querySelectorAll(".abtn").forEach(b=>b.remove());if(st!=="on"&&st!=="off")return;
@@ -1362,12 +1418,15 @@ async function pushPaint(){const S=$("aPushS");if(!S)return;const st=await pushS
     try{const j=await rpc("ajf_ata_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_day:iso(TODAY),p_flight:"PUSHTEST",p_t:fmt(NOW.mins)});
       if(j.s!=="ok")throw new Error(j.s);t2.textContent="✅ انطلب — اقفل الجوال، يوصلك خلال دقيقة"}
     catch(e){t2.disabled=false;t2.textContent="تعذّر الطلب، جرّب مرة ثانية"}}}
-function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.dataset.c!=="1"){o.dataset.c="1";o.textContent="متأكد؟ اضغط مرة ثانية";return}try{await rpc("ajf_logout",{p_token:AUTH.tok})}catch(e){}authOut()};
+function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.dataset.c!=="1"){o.dataset.c="1";o.textContent="متأكد؟ اضغط مرة ثانية";return}ajfAct("logout");try{await actFlush()}catch(e){}try{await rpc("ajf_logout",{p_token:AUTH.tok})}catch(e){}authOut()};
   const B=$("admB");B.onclick=async ev=>{if(ev.target.classList&&ev.target.classList.contains("adm-sh")){if(ev.target.id==="admEs")admEmp=null;else{admSec=null;admEmp=null}admRender(true);return}
     const t=ev.target.closest("button");if(!t||t.id==="aOut"||t.id==="aPush")return;
     if(t.dataset.sec){admSec=t.dataset.sec;admEmp=null;admRender(true);return}
     if(t.dataset.shx){if(t.dataset.shx==="emp")admEmp=null;else{admSec=null;admEmp=null}admRender(true);return}
     if(t.dataset.op){admEmp=t.dataset.op;admRender(true);return}
+    if(t.dataset.hgo){admSec="h";admEmp=null;HST.emp=t.dataset.hgo;HST.rows=null;admRender(true);return}
+    if(t.dataset.hf){HST.emp=t.dataset.hf;HST.rows=null;hLoad();return}
+    if(t.id==="aHre"){hLoad();return}if(t.id==="aHmore"){hLoad(true);return}
     if(t.dataset.cf==="1"&&t.dataset.c!=="1"){t.dataset.c="1";t._txt=t.textContent;t.textContent="متأكد؟";setTimeout(()=>{if(t.isConnected){t.dataset.c="";t.textContent=t._txt}},3000);return}
     try{t.disabled=true;
       if(t.id==="aMvtGo"){const v={to:mailList($("aMvtTo").value),cc:mailList($("aMvtCc").value)};const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"mvt_xy",p_v:v});
@@ -1385,7 +1444,7 @@ function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.d
       await admRender()}catch(e){t.disabled=false}}}
 /* التشغيل بعد تحميل باقي السكربتات (تحتاج $ و escT) */
 addEventListener("DOMContentLoaded",()=>{$("acctBtn").onclick=openAcct;$("admBack").onclick=()=>{if(admEmp||admSec){if(admEmp)admEmp=null;else admSec=null;admRender(true);return}$("adm").hidden=true};
-  if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{acctPaint(0);authCheck();setTimeout(pushOffer,4000);if(/[?&]acct/.test(location.search))openAcct()}
+  if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{ajfAct("open",devLabel());acctPaint(0);authCheck();setTimeout(pushOffer,4000);if(/[?&]acct/.test(location.search))openAcct()}
   let acT=0;setInterval(()=>{if(document.hidden)return;const adm=AUTH.me&&AUTH.me.admin;if(adm||Date.now()-acT>3*60e3){acT=Date.now();authCheck()}},45e3);document.addEventListener("visibilitychange",()=>{if(!document.hidden)authCheck()})});
 </script>
 <script>
@@ -1741,7 +1800,7 @@ const planeSvg=deg=>`<svg width="34" height="34" viewBox="0 0 24 24" style="tran
 function closeTrack(){$("trk").hidden=true;clearInterval(trkTimer)}
 $("trkBack").onclick=closeTrack;
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("trk").hidden)closeTrack()});
-async function openTrack(f,date){
+async function openTrack(f,date){ajfAct("trk",f&&f.n);
   const el=$("trk");el.hidden=false;
   const isToday=iso(date)===iso(TODAY);
   const LV=isToday&&LIVE.date===iso(TODAY)?LIVE.flights:{};
@@ -2078,7 +2137,7 @@ function csData(f,date){
   for(const path in V){const p=path.split(".");let o=d;for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]&&typeof o[p[i]]==="object"?o[p[i]]:{};o[p[p.length-1]]=p[0]==="chk"?V[path]==="1":V[path]}
   return d;
 }
-function openCS(f,date){
+function openCS(f,date){ajfAct("cs",f&&f.n);
   csCur={f,date};$("cs").hidden=false;$("csT").textContent="Coordination Sheet";
   $("csS").textContent=(f.ino?f.ino+" "+f.iata+"→AJF · ":"")+f.n+" AJF→"+f.iata+" · "+dLabel(date);
   renderCS();$("cs").scrollTop=0;csSync(true);
@@ -2294,7 +2353,7 @@ function fmRender(){const F=fmCur,V=fmVals(),B=$("fmBody");B.style.setProperty("
   /* النص الطويل (مثل خط السير) يصغر لين يظهر كامل داخل خانته */
   requestAnimationFrame(()=>B.querySelectorAll(".fm-c.on").forEach(el=>{if(el.scrollWidth>el.clientWidth+1){const f=parseFloat(el.style.getPropertyValue("--fs"))||0;
     if(f)el.style.setProperty("--fs",f*Math.max(.35,(el.clientWidth-2)/el.scrollWidth))}}))}
-async function openForm(id){const F=FORMS.find(x=>x.id===id);if(!F||!csCur)return;fmCur=F;fmZoom=1;fmSigMode=false;fmSigDel=null;fmSigSel=null;$("fmSig").classList.remove("on");$("fmSig").hidden=$("fmSigNew").hidden=!csCan();$("fm").hidden=false;$("fmAll").hidden=!(F.y||F.ya)||!csCan();$("fmT").textContent=F.t;$("fmS").textContent=F.code;
+async function openForm(id){const F=FORMS.find(x=>x.id===id);if(!F||!csCur)return;ajfAct("form",(csCur.f&&csCur.f.n||"")+" · "+(F.t||id));fmCur=F;fmZoom=1;fmSigMode=false;fmSigDel=null;fmSigSel=null;$("fmSig").classList.remove("on");$("fmSig").hidden=$("fmSigNew").hidden=!csCan();$("fm").hidden=false;$("fmAll").hidden=!(F.y||F.ya)||!csCan();$("fmT").textContent=F.t;$("fmS").textContent=F.code;
   $("fmBody").innerHTML=`<div class="fm-msg">جاري فتح النموذج…</div>`;
   try{await Promise.all(F.p.map(P=>fmImg(P.f)));fmRender()}
   catch(e){$("fmBody").innerHTML=`<div class="fm-msg">${/404|PGRST202/.test(e.message)?"النماذج تحتاج تفعيل مرة وحدة من المشرف (ملف ajf_forms_key.sql في Supabase).":e.message==="out"?"سجّل دخولك أول.":"تعذّر فتح النموذج. تأكد من الاتصال وجرّب مرة ثانية."}</div>`}}
@@ -2712,7 +2771,7 @@ const lcMine=()=>!!(AUTH.me&&String(AUTH.me.emp)==="15024232");
 const lcModeUI=()=>{const mine=lcMine();if(LCSTY==="2"&&!mine&&AUTH.me){LCSTY="1";try{localStorage.setItem("ajf_lc_hand","1")}catch(e){}}
   document.querySelectorAll("#lcMode button").forEach(b=>{if(b.dataset.m==="2")b.hidden=!mine;b.classList.toggle("on",b.dataset.m===LCSTY)})};lcModeUI();
 document.querySelectorAll("#lcMode button").forEach(b=>b.onclick=()=>{LCSTY=b.dataset.m;LCHAND=LCSTY!=="0";try{localStorage.setItem("ajf_lc_hand",LCSTY)}catch(e){}lcModeUI();if(LCTAB==="in")LCTAB="ls";lcRender()});
-async function openLC(){if(!csCur||!/^SV/i.test(csCur.f.n))return;lcModeUI();$("lc").hidden=false;const{f,date}=csCur;$("lcS").textContent=f.n+" AJF→"+f.iata+" · "+fmDate(date);LCTAB="in";
+async function openLC(){if(!csCur||!/^SV/i.test(csCur.f.n))return;ajfAct("ls",csCur.f.n);lcModeUI();$("lc").hidden=false;const{f,date}=csCur;$("lcS").textContent=f.n+" AJF→"+f.iata+" · "+fmDate(date);LCTAB="in";
   $("lcBody").innerHTML=`<div class="fm-msg">جاري التحميل…</div>`;
   try{await lcData();lcRender()}catch(e){$("lcBody").innerHTML=`<div class="fm-msg">${/404|PGRST202/.test(e.message)?"تحتاج تفعيل النماذج من المشرف.":e.message==="out"?"سجّل دخولك أول.":"تعذّر التحميل. تأكد من الاتصال."}</div>`}}
 $("lcBack").onclick=()=>{$("lc").hidden=true;if(csCur&&!$("cs").hidden)renderCS()};
@@ -3262,7 +3321,7 @@ function renderDC(){
   }
   $("dcB").innerHTML=h||'<div class="tu-n" style="text-align:center">ما فيه نتائج. جرّب كلمة ثانية أو رقم الكود.</div>';
 }
-function openDC(cb,air){dcCb=cb||null;dcAir=air||"SV";$("dcS").textContent=cb?"اختر الكود لإضافته لسبب التأخير":DC_NAME[dcAir];
+function openDC(cb,air){dcCb=cb||null;dcAir=air||"SV";ajfAct("dc",dcAir);$("dcS").textContent=cb?"اختر الكود لإضافته لسبب التأخير":DC_NAME[dcAir];
   $("dcSgs").textContent=DC_AIRS[dcAir][3];$("dcT2").hidden=true;$("dcT2").textContent=dcAir==="SV"?"تأخير تبعي (T)":"تأخير تبعي (r)";if(dcT&&dcAir!==openDC.last){dcT=false;$("dcT2").setAttribute("aria-pressed",false)}openDC.last=dcAir;
   $("dc").hidden=false;$("dcB").innerHTML='<div class="tu-n" style="text-align:center">…</div>';loadDC(dcAir).then(()=>{$("dcT2").hidden=!(dcAir==="SV"||dcG()&&DC.react);renderDC()}).catch(e=>{$("dcB").innerHTML=DC_DB.has(dcAir)&&/rpc 404|none/.test(String(e&&e.message))?'<div class="tu-n">دليل '+escT(DC_LONG[dcAir])+' ما تفعّل للحين. يتفعّل بعد ما يشغّل المشرف ملف delay_guides.sql في Supabase.</div>':'<div class="tu-n">تعذّر تحميل الأكواد، تأكد من الاتصال.</div>'})}
 $("dcBack").onclick=()=>{$("dc").hidden=true};
@@ -3713,14 +3772,14 @@ function portal(card,B,mid){
   requestAnimationFrame(()=>requestAnimationFrame(()=>p.classList.add("full")));
   setTimeout(()=>{card.classList.remove("press");mid();p.classList.add("bye");setTimeout(()=>p.remove(),400)},620);
 }
-function openBoard(id,card){const B=BOARDS.find(x=>x.id===id);if(!B)return;
+function openBoard(id,card){const B=BOARDS.find(x=>x.id===id);if(!B)return;ajfAct("board",id);
   portal(card,B,()=>{$("hub").hidden=true;BOARD=id;
     if(id==="flt"){$("bd").hidden=true;scrollTo(0,0);const w=document.querySelector(".wrap");if(!reduce){w.classList.remove("in");void w.offsetWidth;w.classList.add("in")}return}
     const b=$("bd");b.style.setProperty("--c",B.c);b.classList.remove("out");$("bdT").textContent=B.t;$("bdS").textContent=B.s;b.hidden=false;$("bdB").scrollTop=0;bdDay=0;
     bdRender();if(!reduce){b.classList.remove("in");void b.offsetWidth;b.classList.add("in")}
     if(id==="qz")return;
     if(id==="tim"){circLoad(true);dcpLoad().then(()=>{if(BOARD==="tim")bdRender()})}else csSync(true).then(()=>{if(BOARD===id)bdRender()})})}
-function boardBack(){const b=$("bd");
+function boardBack(){const b=$("bd");ajfAct("home");
   const go=()=>{b.hidden=true;b.classList.remove("out");hubShow(true)};
   if(b.hidden||reduce){go();return}b.classList.add("out");setTimeout(go,260)}
 let bdDay=0;
@@ -3758,7 +3817,7 @@ async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e
 const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
-let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=4").catch(e=>{qzP=null;throw e}));
+let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=5").catch(e=>{qzP=null;throw e}));
 let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=16")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;
@@ -3770,7 +3829,7 @@ function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&A
 async function cfgSet(k,v){const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:k,p_v:v});if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s)}
 $("bdB").addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const{d,list}=bdFlights();const fOf=n=>list.find(f=>f.n===n);
   if(t.dataset.day!=null){bdDay=+t.dataset.day;bdRender();return}
-  if(t.dataset.ttab){TIMTAB=t.dataset.ttab;bdRender();return}
+  if(t.dataset.ttab){TIMTAB=t.dataset.ttab;ajfAct("ttab",TIMTAB);bdRender();return}
   if(t.dataset.dcair){openDC(null,t.dataset.dcair);return}
   if(t.dataset.trc){const f=fOf(t.dataset.trc);if(f)openCS(f,d);return}
   if(t.dataset.ls){const f=fOf(t.dataset.ls);if(f){csCur={f,date:d};openLC()}return}
@@ -3815,6 +3874,6 @@ function bootShow(){const b=$("boot");if(!b||!AUTH.tok)return;
 window.bootShow=bootShow;
 try{if(AUTH.tok&&!DEMO)bootShow();else hubShow(true)}catch(e){console.error(e);try{hubShow(true)}catch(x){}}
 </script>
-<script src="radio.js?v=12" defer></script>
+<script src="radio.js?v=13" defer></script>
 </body>
 </html>
