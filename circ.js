@@ -245,21 +245,27 @@ async function reindex(btn){if(!confirm("إعادة قراءة كل ملفات P
   catch(e){btn.textContent=errTxt(e)}btn.disabled=false;S.q.trim()?search():recent()}
 
 /* ---------- المساعد ---------- */
-/* النص اللي قبل رقم المصدر (الجملة المستشهد عليها) — نستخدمه لتظليل البند داخل الملف */
-const ctxBefore=(s,off)=>{const pre=s.slice(Math.max(0,off-400),off).replace(/\[[^\[\]]{0,40}\]/g," ").replace(/<[^>]+>/g," ");
-  const seg=pre.split(/\n|•|،|[.!؟:](?:\s|$)/).map(x=>x.trim()).filter(Boolean);let t=seg.pop()||"";if(t.length<25&&seg.length)t=seg.pop()+" "+t;return t.slice(-220).replace(/"/g,"&quot;")};
-function fmtAns(t){let h=E(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ");
-  h=h.replace(/\[(\d{1,2}[^\[\]<]{0,40})\]/g,(m,ins,off,str)=>{const hlT=ctxBefore(str,off),acc=[];
-    ins.split(/[,،]/).map(x=>x.trim()).forEach(x=>{const d=x.match(/^(\d{1,2})$/),p=x.match(/^(?:ص|صفحة|صفحه|p\.?|page)\s*(\d{1,4})$/i);
-      if(d&&!(acc.length&&acc[acc.length-1].p&&+d[1]>9))acc.push({n:+d[1]});else if(p&&acc.length&&acc[acc.length-1].n)acc[acc.length-1].p=p[1];else if(x)acc.push({t:x})});
-    return acc.map(a=>a.n?`<button class="ax-c" data-asrc="${a.n-1}"${a.p?` data-pg="${a.p}"`:""} data-hl="${hlT}">${a.n}${a.p?" · ص"+a.p:""}</button>`:a.t).join("")});return h.replace(/\n/g,"<br>")}
+/* "4، ص 251، «نص منسوخ»، 7، ؟" → وحدات مصادر: رقم + صفحة + النص المنسوخ (للتحقق والتظليل) */
+function citeUnits(inner){const Q=[];const t=String(inner).replace(/«([^»]*)»/g,(m,q)=>"\u0001"+(Q.push(q.trim())-1)+"\u0001");const U=[];
+  t.split(/[,،]/).forEach(tok=>{tok=tok.trim();let m;const u=U[U.length-1];
+    if((m=tok.match(/^\u0001(\d+)\u0001$/))){if(u)u.q=Q[+m[1]]}
+    else if((m=tok.match(/^(?:ص|صفحة|صفحه|p\.?|page)\s*(\d{1,4})$/i))){if(u)u.p=m[1]}
+    else if(/^[؟?]$/.test(tok)){if(u)u.bad=1}
+    else if(/^\d{1,2}$/.test(tok)&&!(u&&u.p&&!u.q&&+tok>9))U.push({n:+tok,p:"",q:""})});return U}
+const CITE_RX=/\[(\d{1,2}(?:[^\[\]]{0,700}?))\]/g;
+function fmtAns(t){let h=E(t).replace(/^\s*#{1,4}\s*(.+)$/gm,"<b>$1</b>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ");
+  h=h.replace(CITE_RX,(m,inner)=>{const U=citeUnits(inner);if(!U.length)return m;
+    return U.map(u=>{const bad=u.bad,old=!u.q&&!u.bad;
+      return`<button class="ax-c${bad?" bad":""}" data-asrc="${u.n-1}"${u.p?` data-pg="${u.p}"`:""}${u.q?` data-q="${u.q}"`:""}${u.bad?` data-bad="1"`:""}${old?` data-old="1"`:""}>${u.n}${u.p&&!u.bad?" · ص"+u.p:""}${u.bad?" ⚠︎":""}</button>`}).join("")});
+  return h.replace(/\n/g,"<br>")}
 /* المصادر اللي ذكرها الجواب فقط */
-const cited=t=>{const c=new Set();(String(t).match(/\[(\d{1,2}[^\[\]]{0,40})\]/g)||[]).forEach(m=>m.replace(/[\[\]]/g,"").split(/[,،]/).forEach(n=>{n=n.trim();if(/^\d{1,2}$/.test(n))c.add(+n-1)}));return c}
+const cited=t=>{const c=new Set();String(t).replace(CITE_RX,(m,inner)=>{citeUnits(inner).forEach(u=>c.add(u.n-1));return m});return c}
 /* المحادثة: كل الأسئلة والأجوبة مربوطة ببعض لين يضغط "محادثة جديدة" — وتنحفظ على الجوال */
 function thSave(){try{localStorage.setItem("ajf_ax_th",JSON.stringify((S.th||[]).slice(-8)))}catch(e){}}
 function thHTML(){const T=S.th||[];if(!T.length&&!S.abusy&&!S.aerr)return"";
   return`<div class="ax-th">${T.length?`<div class="ax-top"><small>المحادثة (${T.length})</small><button class="ax-new" id="axNew">＋ محادثة جديدة</button></div>`:""}`+T.map((t,ti)=>{const cs=cited(t.a);
-    return`<div class="ax-q">${E(t.q)}</div><div class="ax-a">${fmtAns(t.a).replace(/data-asrc="(\d+)"/g,`data-asrc="${ti}:$1"`)}</div>`+
+    const fa=fmtAns(t.a),nb=(fa.match(/data-bad="1"/g)||[]).length;
+    return`<div class="ax-q">${E(t.q)}</div><div class="ax-a">${fa.replace(/data-asrc="(\d+)"/g,`data-asrc="${ti}:$1"`)}</div>`+(nb?`<p class="tx-note" style="color:#ffb4a6">⚠︎ ${nb} معلومة ما انلقى لها نص يثبتها في التعميم — لا تعتمد عليها قبل ما تتأكد.</p>`:"")+
       ((t.src||[]).some((r,i)=>!cs.size||cs.has(i))?`<div class="ax-s"><small>المصادر:</small>${(t.src||[]).map((r,i)=>{if(cs.size&&!cs.has(i))return"";const a=AI(r);return`<button class="ax-sr" data-asrc="${ti}:${i}"><i>${i+1}</i><span>${E(a&&a.t||r.title)}</span>${r.has_file?"<em>📄</em>":""}</button>`}).join("")}</div>`:"")}).join("")+
     (S.abusy?`<div class="ax-q">${E(S.pending||"")}</div><div class="bd-empty">… المساعد يقرأ التعاميم ويجهز الجواب (عادة 10–25 ثانية)</div>`:"")+
     (S.aerr?`<div class="bd-empty">${S.aerr}</div>`:"")+
@@ -283,27 +289,23 @@ function vwCss(){if(document.getElementById("cxvCss"))return;const st=document.c
 .cxv-h b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cxv button,.cxv a.cxv-x{min-width:40px;height:40px;padding:0 10px;border-radius:11px;border:1px solid var(--line,#3a2e24);background:transparent;color:inherit;font:600 14px system-ui;display:inline-grid;place-items:center;text-decoration:none}
 .cxv button:disabled{opacity:.35}.cxv-f span{min-width:96px;text-align:center;font:700 14px var(--mono,monospace)}
-.cxv-n{padding:7px 12px;font-size:13px;line-height:1.5;background:#3b2a10;color:#ffdc8f;text-align:center}
+.cxv-n{padding:8px 12px;font-size:13px;line-height:1.55;background:#3b2a10;color:#ffdc8f;text-align:center;max-height:30vh;overflow:auto}.cxv-n.warn{background:#4a1612;color:#ffc9bf}.cxv-n q{display:block;margin-top:4px;font-style:italic;color:#fff3d6;quotes:'«' '»'}
 .cxv-b{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:#2b2520}
 .cxv-p{position:relative;margin:8px auto;background:#fff;box-shadow:0 2px 14px #000a}.cxv-p canvas{display:block;width:100%;height:100%}
 .cxv-m{position:absolute;background:rgba(255,212,0,.42);mix-blend-mode:multiply;border-radius:3px;box-shadow:0 0 0 2px rgba(235,150,0,.85);animation:cxvF 1s ease 2}
 @keyframes cxvF{50%{background:rgba(255,140,0,.6)}}
 .cxv [hidden]{display:none!important}
 .cxv-l{text-align:center;margin-top:30vh;font:15px/1.7 system-ui;color:#ddd;padding:0 20px}`;document.head.appendChild(st)}
-/* كلمات الجملة + مرادفاتها (عربي/إنجليزي) */
-const VGEN=new Set("طيران راكب ركاب الراكب مسافر خدمه شركه يقبل يتم يجب حال حاله نهائيا لاي عمر وال".split(" "));
-function vwGroups(t){const words=NORM(t).split(" ").filter(w=>w.length>2&&!STOP.has(w)&&!VGEN.has(w)&&!VGEN.has(arStem(w)));
-  return qGroups(words.join(" ")).groups.slice(0,24).map((g,i)=>{const w=words[i],f=new Set();g.forEach(a=>{const n=a.n;if(n!==w&&(n.length<4||VGEN.has(n)))return;if(n.length>2)f.add(n);const st=isAr(n)?arStem(n):enStem(n);if(st.length>2)f.add(st)});return[...f]}).filter(g=>g.length)}
-const gScore=(txt,G)=>{let s=0;for(const g of G)if(g.some(w=>txt.includes(w)))s++;return s};
-/* أنسب صفحة: صفحة المساعد إذا فيها كلام البند، وإلا الأقرب لنص الجملة */
-function vwPick(ft,pg,G){const P={};const a=String(ft||"").split(/\[صفحة (\d+)\]/);for(let i=1;i<a.length;i+=2)P[+a[i]]=NORM(a[i+1]||"");
-  const ks=Object.keys(P).map(Number);if(!ks.length||!G.length)return pg||1;
-  const sc=k=>P[k]==null?-1:gScore(P[k],G);let best=0,bs=0;ks.forEach(k=>{const v=sc(k);if(v>bs){bs=v;best=k}});
-  if(pg){if(P[pg]==null)return pg;let m=pg,ms=sc(pg);[pg-1,pg+1].forEach(k=>{if(sc(k)>ms+1){m=k;ms=sc(k)}});return ms===0&&bs>=2?best:m}
-  return bs>0?best:1}
+/* صفحات النص المقروء من الملف */
+function vwPages(ft){const a=String(ft||"").split(/\[صفحة (\d+)\]/),P=[];for(let i=1;i<a.length;i+=2)P.push({p:+a[i],n:" "+NORM(a[i+1]||"")+" "});return P}
+/* نحدد صفحة النص المنسوخ بالضبط (أو تقريبياً إذا القراءة من PDF فيها اختلاف بسيط) */
+function vwLocate(P,q){q=NORM(q);if(q.length<8||!P.length)return 0;
+  for(const x of P)if(x.n.includes(q))return x.p;for(let i=0;i+1<P.length;i++)if((P[i].n+P[i+1].n).replace(/\s+/g," ").includes(q))return P[i].p;
+  const w=q.split(" ").filter(x=>x.length>1);if(w.length<4)return 0;const G=[];for(let i=0;i+3<=w.length;i++)G.push(w.slice(i,i+3).join(" "));
+  let best=0,bp=0;P.forEach(x=>{let h=0;G.forEach(g=>{if(x.n.includes(g))h++});const r=h/G.length;if(r>best){best=r;bp=x.p}});return best>=.6?bp:0}
 function vwClose(){const o=document.getElementById("cxv");if(o)o.remove();document.documentElement.style.overflow="";VW.tok++;try{VW.doc&&VW.doc.destroy()}catch(e){}VW.doc=null}
 async function viewFile(id,o){o=o||{};vwCss();vwClose();const tok=++VW.tok;
-  Object.assign(VW,{pg:1,n:0,z:1,G:vwGroups(o.hl),url:"",title:o.title||"التعميم"});
+  Object.assign(VW,{pg:1,n:0,z:1,q:o.q||"",o,url:"",title:o.title||"التعميم"});
   const ov=document.createElement("div");ov.id="cxv";ov.className="cxv";
   ov.innerHTML=`<div class="cxv-h"><button data-v="x" aria-label="إغلاق">✕</button><b>${E(VW.title)}</b><button data-v="zo">−</button><button data-v="zi">＋</button></div>
     <div class="cxv-n" hidden></div><div class="cxv-b"><p class="cxv-l">… جاري فتح صفحة التعميم${o.pg?" (ص "+E(o.pg)+")":""}</p></div>
@@ -313,9 +315,9 @@ async function viewFile(id,o){o=o||{};vwCss();vwClose();const tok=++VW.tok;
     if(v==="x")vwClose();else if(v==="pv"&&VW.pg>1){VW.pg--;vwRender(1)}else if(v==="nx"&&VW.pg<VW.n){VW.pg++;vwRender(1)}
     else if(v==="zi"&&VW.z<3){VW.z=Math.min(3,VW.z+.5);vwRender(0)}else if(v==="zo"&&VW.z>1){VW.z=Math.max(1,VW.z-.5);vwRender(0)}});
   try{const[g,u,lib]=await Promise.all([R("ajf_circ_get",{p_id:id}).catch(()=>null),F({action:"get",path:id+".pdf"}),pdfLib()]);if(tok!==VW.tok)return;
-    VW.url=u.url;const pg=vwPick(g&&g.row&&g.row.ftext,+o.pg||0,VW.G);
+    VW.url=u.url;const ft=g&&g.row?String(g.row.body||"")+"\n\n"+String(g.row.ftext||""):"";const lp=o.q?vwLocate(vwPages(ft),o.q):0;VW.found=!!lp;const pg=lp||+o.pg||1;
     const doc=await lib.getDocument({url:u.url,cMapUrl:PDFJS+"cmaps/",cMapPacked:true}).promise;if(tok!==VW.tok){doc.destroy();return}
-    VW.doc=doc;VW.n=doc.numPages;VW.pg=Math.min(Math.max(1,pg),VW.n);VW.asked=+o.pg||0;
+    VW.doc=doc;VW.n=doc.numPages;VW.pg=Math.min(Math.max(1,pg),VW.n);
     const a=ov.querySelector(".cxv-x");a.href=u.url+"#page="+VW.pg;a.hidden=false;await vwRender(1,1)}
   catch(e){if(tok!==VW.tok)return;ov.querySelector(".cxv-b").innerHTML=`<p class="cxv-l">${e.message==="lib"?"تعذّر تحميل عارض الملفات — تأكد من الإنترنت":E(errTxt(e))}</p>`}}
 async function vwRender(scroll,first){const ov=document.getElementById("cxv");if(!ov||!VW.doc)return;const tok=VW.tok,rt=VW.rt=(VW.rt||0)+1;
@@ -327,19 +329,23 @@ async function vwRender(scroll,first){const ov=document.getElementById("cxv");if
   await page.render({canvasContext:cv.getContext("2d"),viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:null}).promise;if(tok!==VW.tok||rt!==VW.rt)return;
   const box=document.createElement("div");box.className="cxv-p";box.style.width=vp.width+"px";box.style.height=vp.height+"px";box.appendChild(cv);
   body.innerHTML="";body.appendChild(box);
-  /* تظليل أسطر البند */
+  /* تظليل النص المنسوخ نفسه: نلقى أقرب تتابع لكلماته في أسطر الصفحة */
   let top=null,hit=0;
-  if(VW.G.length){try{const tc=await page.getTextContent();const L=[];
+  if(VW.q){try{const tc=await page.getTextContent();const L=[];
     for(const it of tc.items){if(!it.str||!it.str.trim())continue;const y=it.transform[5];let l=L.find(x=>Math.abs(x.y-y)<=3);if(!l)L.push(l={y,it:[],s:""});l.it.push(it);l.s+=" "+it.str}
-    L.forEach(l=>{l.sc=Math.max(gScore(NORM(l.s),VW.G),gScore(NORM([...l.s].reverse().join("")),VW.G))});
-    const best=Math.max(0,...L.map(l=>l.sc));const th=best>=3?Math.max(2,Math.ceil(best*.6)):best;
-    const sel=best?L.filter(l=>l.sc>=th).sort((a,b)=>b.sc-a.sc).slice(0,6):[];
-    sel.forEach(l=>{let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;l.it.forEach(it=>{const m=pdfjsLib.Util.transform(vp.transform,it.transform),h=Math.hypot(m[2],m[3]);
-        x1=Math.min(x1,m[4]);x2=Math.max(x2,m[4]+it.width*vp.scale);y1=Math.min(y1,m[5]-h);y2=Math.max(y2,m[5]+h*.25)});
-      const d=document.createElement("i");d.className="cxv-m";d.style.cssText=`left:${x1-3}px;top:${y1-2}px;width:${x2-x1+6}px;height:${y2-y1+4}px`;box.appendChild(d);hit++;top=top==null?y1:Math.min(top,y1)})}catch(e){}}
+    L.sort((a,b)=>b.y-a.y);const qw=NORM(VW.q).split(" ").filter(Boolean),QS=new Set(qw);
+    const W=[];L.forEach((l,li)=>{const a=NORM(l.s).split(" "),b=NORM([...l.s].reverse().join("")).split(" ");const sc=x=>x.filter(w=>QS.has(w)).length;(sc(b)>sc(a)?b:a).forEach(w=>w&&W.push({w,li}))});
+    let bs=0,bi=-1;const n=qw.length;for(let i=0;i<W.length;i++){let h=0;const seen=new Set();for(let j=i;j<Math.min(W.length,i+n+2);j++)if(QS.has(W[j].w)&&!seen.has(W[j].w)){seen.add(W[j].w);h++}if(h>bs){bs=h;bi=i}}
+    if(bi>=0&&bs>=Math.max(3,Math.ceil(QS.size*.6))){const sel=new Set();for(let j=bi;j<Math.min(W.length,bi+n+2);j++)if(QS.has(W[j].w))sel.add(W[j].li);
+      [...sel].map(i=>L[i]).forEach(l=>{let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;l.it.forEach(it=>{const m=pdfjsLib.Util.transform(vp.transform,it.transform),h=Math.hypot(m[2],m[3]);
+          x1=Math.min(x1,m[4]);x2=Math.max(x2,m[4]+it.width*vp.scale);y1=Math.min(y1,m[5]-h);y2=Math.max(y2,m[5]+h*.25)});
+        const d=document.createElement("i");d.className="cxv-m";d.style.cssText=`left:${x1-3}px;top:${y1-2}px;width:${x2-x1+6}px;height:${y2-y1+4}px`;box.appendChild(d);hit++;top=top==null?y1:Math.min(top,y1)})}}catch(e){}}
   body.scrollTop=scroll?(top!=null?Math.max(0,top-90):0):ratio*body.scrollHeight;
-  const n=ov.querySelector(".cxv-n");if(first){n.hidden=false;
-    n.textContent=hit?`📍 ص ${VW.pg} — المظلّل بالأصفر هو البند المذكور`:VW.asked?`📍 ص ${VW.pg} — البند في هذي الصفحة`:`📍 أقرب صفحة لكلام المساعد: ص ${VW.pg}`}
+  const n=ov.querySelector(".cxv-n");if(first){n.hidden=false;n.className="cxv-n"+(VW.found?"":" warn");const o=VW.o||{};
+    n.innerHTML=VW.found?`📍 ص ${VW.pg} — ${hit?"المظلّل بالأصفر":"في هذي الصفحة"} النص اللي اعتمد عليه المساعد:<q dir="auto">${E(VW.q)}</q>`
+      :o.q?`⚠︎ ما لقيت هذا النص في الملف — المعلومة غير مؤكدة، لا تعتمد عليها قبل ما تتأكد:<q dir="auto">${E(o.q)}</q>`
+      :o.bad?`⚠︎ المساعد ما أعطى نص من التعميم يثبت هذي المعلومة — غير مؤكدة، تأكد بنفسك.`
+      :`هذا جواب قديم بدون موضع محدد — اضغط «محادثة جديدة» واسأل مرة ثانية عشان يفتح على البند نفسه.`}
   else n.hidden=true}
 
 /* ---------- فتح الملف ---------- */
@@ -359,7 +365,7 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(t.dataset.u!=null){S.up[+t.dataset.u][t.dataset.k]=t.value}});
   el.addEventListener("change",e=>{const t=e.target;if(t.id==="cxFiles"){addFiles([...t.files]);t.value=""}if(t.dataset.u!=null)S.up[+t.dataset.u][t.dataset.k]=t.value});
   el.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;e.stopPropagation();
-    if(b.dataset.open){const r=(S.rows||[]).concat(S.list||[]).find(x=>x.id===b.dataset.open),ai=r&&AI(r);viewFile(b.dataset.open,{hl:S.q,title:r&&(ai&&ai.t||r.title)});return}
+    if(b.dataset.open){const r=(S.rows||[]).concat(S.list||[]).find(x=>x.id===b.dataset.open),ai=r&&AI(r);viewFile(b.dataset.open,{title:r&&(ai&&ai.t||r.title)});return}
     if(b.dataset.full){showFull(b.dataset.full,b);return}
     if(b.id==="cxMore"){recent(true);return}
     if(b.id==="cxReidx"){reindex(b);return}
@@ -367,10 +373,10 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(b.id==="axGo"){ask();return}
     if(b.id==="axNew"){S.th=[];S.aerr="";S.aq="";thSave();try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();return}
     if(b.dataset.asrc){const[ti,i]=b.dataset.asrc.split(":").map(Number);const r=((S.th||[])[ti]||{}).src;const x=r&&r[i];if(!x||!x.has_file)return;
-      let pg=b.dataset.pg,h=b.dataset.hl;
-      /* زر المصدر تحت الجواب: نفتح على أول موضع ذكره المساعد من هذا الملف */
-      if(!pg&&!h){const a=b.closest(".ax-s"),p=a&&a.previousElementSibling,c=p&&(p.querySelector(`.ax-c[data-asrc="${ti}:${i}"][data-pg]`)||p.querySelector(`.ax-c[data-asrc="${ti}:${i}"]`));if(c){pg=c.dataset.pg;h=c.dataset.hl}}
-      const ai=AI(x);viewFile(x.id,{pg,hl:h,title:ai&&ai.t||x.title});return}
+      let c=b;
+      /* زر المصدر تحت الجواب: نفتح على أول نص مؤكد ذكره المساعد من هذا الملف */
+      if(!b.classList.contains("ax-c")){const a=b.closest(".ax-s"),p=a&&a.previousElementSibling,k=`.ax-c[data-asrc="${ti}:${i}"]`;c=p&&(p.querySelector(k+"[data-q]:not([data-bad])")||p.querySelector(k))||b}
+      const ai=AI(x);viewFile(x.id,{pg:c.dataset.pg,q:c.dataset.q,bad:c.dataset.bad,title:ai&&ai.t||x.title});return}
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
     if(b.dataset.urm!=null){S.up.splice(+b.dataset.urm,1);paintUp();return}
@@ -410,7 +416,7 @@ async function related(ctx,el){if(!el||!AUTH.tok)return;
   if(RELC.has(q)){const c=RELC.get(q);el.innerHTML=c.h;return c.r}
   el.innerHTML=head+`<div class="bd-empty">… جاري البحث في التعاميم (عادة 10–25 ثانية)</div>`;
   try{const j=await F({action:"ask",q});
-    const t=String(j.answer||"").replace(/\s*\[[^\[\]]{1,40}\]/g,"").replace(/\*\*خارج التعاميم[\s\S]*$/,"").trim()||"لا يوجد تعميم يخص هذا الراكب.";
+    const t=String(j.answer||"").replace(/\s*\[[^\[\]]{1,700}\]/g,"").replace(/\*\*خارج التعاميم[\s\S]*$/,"").trim()||"لا يوجد تعميم يخص هذا الراكب.";
     const none=/لا يوجد تعميم|ما فيه تعميم|ما فيه تعاميم/.test(t)&&t.length<160;
     const h=head+`<div class="ci cx"><div class="cx-sum">${none?"✓ لا يوجد تعميم يخص هذا الراكب":fmtAns(t)}</div><p class="tx-note">خلاصة آلية من التعاميم — للتفاصيل اسأل مساعد التعاميم.</p></div>`;
     /* r: نص الخلاصة للمساعد الذكي تحت التحليل (يُبنى عليه الحكم) — none: ما فيه تعميم يخصه */
@@ -420,5 +426,5 @@ const MO={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC
 function parseTd(s){const m=String(s).replace(/O/g,"0").match(/^(\d{2})([A-Z0]{3})(\d{2})$/);if(!m)return null;const mo=MO[m[2].replace(/0/g,"O")];return mo==null?null:new Date(Date.UTC(2000+ +m[3],mo,+m[1]))}
 
 window.CIRCM={mount:(el,q)=>{bind(el);mount(el,q)},related,count:async()=>{const j=await R("ajf_circ_list",{p_offset:0,p_limit:1});return{n:j.n,last:j.rows[0]&&j.rows[0].id}},
-  _t:{vwPick,vwGroups,ctxBefore,qGroups,indexText,NORM,SK,guessDate,pdfText,fmtAns,cited}};
+  _t:{citeUnits,vwLocate,vwPages,qGroups,indexText,NORM,SK,guessDate,pdfText,fmtAns,cited}};
 })();

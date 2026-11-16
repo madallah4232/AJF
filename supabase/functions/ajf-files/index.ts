@@ -39,11 +39,13 @@ const SK = (w: string) => { if (isAr(w)) { const s = arStem(w), k = s.replace(/[
 // تقسيم الملف لأجزاء (~3500 حرف) عند حدود الفقرات/الصفحات — للأدلة الكبيرة
 async function chunkify(sb: any, c: { id: string; body: string; ftext: string }) {
   const t = (String(c.body || "") + "\n\n" + String(c.ftext || "")).trim();
-  const parts: string[] = []; let cur = "";
+  const parts: string[] = []; let cur = "", pg = 0;
   for (const para of t.split(/\n{2,}/)) {
-    if (cur.length + para.length > 3500 && cur.length > 800) { parts.push(cur); cur = cur.slice(-300); }
+    const mk = () => (pg ? `[صفحة ${pg}] ` : "");
+    if (cur.length + para.length > 3500 && cur.length > 800) { parts.push(cur); cur = mk() + cur.slice(-300); }
     cur += (cur ? "\n\n" : "") + para;
-    while (cur.length > 5000) { parts.push(cur.slice(0, 3500)); cur = cur.slice(3200); }
+    const pm = [...para.matchAll(/\[صفحة (\d+)\]/g)]; if (pm.length) pg = +pm[pm.length - 1][1];
+    while (cur.length > 5000) { parts.push(cur.slice(0, 3500)); cur = mk() + cur.slice(3200); }
   }
   if (cur.trim()) parts.push(cur);
   await sb.from("ajf_circ_chunk").delete().eq("cid", c.id);
@@ -61,10 +63,64 @@ const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (ال�
 1) **الخلاصة** في سطر: يُقبل / يُقبل بشروط / لا يُقبل / الإجراء المطلوب.
 2) **المطلوب من الراكب** • نقاط.
 3) **تحقق منه أنت** • نقاط (وثائق، أنظمة، مراسلة محطة...).
-بعد كل معلومة من تعميم اكتب رقمه بين قوسين مثل [1] أو [1, 3]، وإذا المقتطف فيه رقم صفحة مثل [صفحة 214] اذكره بعد الرقم مثل [2، ص 214] حتى يرجع له الموظف.
+التوثيق إلزامي ودقيق: بعد كل معلومة من تعميم اكتب مصدرها بهذا الشكل بالضبط: [رقم التعميم، «نص منسوخ حرفياً من التعميم يثبت المعلومة»] مثل [2، «Unaccompanied minors are not accepted»].
+- النص بين «» لازم يكون منسوخ حرف بحرف من نص التعميم المرفق (نفس الكلمات والإملاء وبلغته الأصلية: إنجليزي إذا الأصل إنجليزي)، من 6 إلى 20 كلمة، ومن الجملة نفسها اللي فيها المعلومة — مو من عنوان أو فهرس.
+- لا تكتب رقم صفحة (النظام يحددها تلقائياً من النص المنسوخ).
+- كل معلومة لها مصدر خاص فيها؛ لا تحط نفس المصدر على معلومات مختلفة إلا إذا النص المنسوخ يثبتها.
+- إذا ما لقيت في نص التعاميم جملة تثبت المعلومة بوضوح، لا تنسبها لأي تعميم أبداً وحطها تحت **خارج التعاميم (تأكد من TIMATIC)**. لا تخلط سياسة شركة طيران بشركة ثانية، ولا تستنتج أرقام (أعمار، أوزان، مدد) غير مكتوبة حرفياً.
 إذا يحتاج الجواب معلومة مو موجودة في التعاميم (مثل تأشيرة دخول دولة لجنسية معينة)، اذكر ما تعرفه بإيجاز تحت عنوان **خارج التعاميم (تأكد من TIMATIC)** ولا تنسبه لتعميم.
 هذي محادثة متصلة: إذا رسالة الموظف توضيح أو تصحيح أو تكملة لسؤال سابق، اربطها بما قبلها وجاوب السؤال الأصلي بعد التوضيح، ولا تبدأ موضوع جديد ولا تكرر جواب سابق بدون داعي. إذا ما فهمت قصده اسأله سؤال توضيحي واحد قصير.
 لا تقل "ما لقيت" إذا فيه تعميم ينطبق ولو جزئياً. وإذا فعلاً ما فيه أي تعميم له علاقة قل ذلك بسطر واحد ثم أعط التوجيه العام المفيد تحت "خارج التعاميم".`;
+
+
+// ---------- التحقق من المصادر: كل [رقم، «نص»] لازم النص يكون موجود فعلاً في التعميم — ونحدد صفحته الحقيقية ----------
+function pagesOf(full: string) {
+  const a = String(full || "").split(/\[صفحة (\d+)\]/); const P: { p: number; n: string }[] = [];
+  if (a[0].trim()) P.push({ p: 0, n: " " + NORM(a[0]) + " " });
+  for (let i = 1; i < a.length; i += 2) P.push({ p: +a[i], n: " " + NORM(a[i + 1] || "") + " " });
+  return P;
+}
+function locate(P: { p: number; n: string }[], quote: string): { p: number; ok: boolean } | null {
+  const q = NORM(quote); if (q.length < 8) return null;
+  for (const x of P) if (x.n.includes(q)) return { p: x.p, ok: true };
+  for (let i = 0; i + 1 < P.length; i++) if ((P[i].n + P[i + 1].n).replace(/\s+/g, " ").includes(q)) return { p: P[i].p, ok: true };
+  // تقريبي: أغلب كلمات النص متتالية في نفس الصفحة (اختلاف بسيط في القراءة من PDF)
+  const w = q.split(" ").filter((x) => x.length > 1); if (w.length < 4) return null;
+  const grams: string[] = []; for (let i = 0; i + 3 <= w.length; i++) grams.push(w.slice(i, i + 3).join(" "));
+  let best = 0, bp = 0;
+  for (const x of P) { let h = 0; for (const g of grams) if (x.n.includes(g)) h++; const r = h / grams.length; if (r > best) { best = r; bp = x.p; } }
+  return best >= 0.6 ? { p: bp, ok: true } : null;
+}
+// "4، ص 251، «نص»، 7" → [{n:4,q:"نص"},{n:7}]
+function citeUnits(inner: string) {
+  const Q: string[] = []; const t = inner.replace(/«([^»]*)»/g, (_m, q) => "\u0001" + (Q.push(q.trim()) - 1) + "\u0001");
+  const U: { n: number; q: string }[] = [];
+  for (let tok of t.split(/[،,]/)) { tok = tok.trim(); let m;
+    if ((m = tok.match(/^\u0001(\d+)\u0001$/))) { if (U.length) U[U.length - 1].q = Q[+m[1]]; }
+    else if (/^\d{1,2}$/.test(tok)) U.push({ n: +tok, q: "" });
+  }
+  return U;
+}
+async function verifyCites(sb: any, ans: string, rows: Record<string, any>[]) {
+  const re = /\[([^\[\]]{1,700}?)\]/g; const need = new Set<string>();
+  for (const m of ans.matchAll(re)) { const n = m[1].match(/^\s*(\d{1,2})/); if (n && rows[+n[1] - 1] && /«/.test(m[1])) need.add(rows[+n[1] - 1].id); }
+  const full = new Map<string, ReturnType<typeof pagesOf>>();
+  if (need.size) { const { data } = await sb.from("ajf_circ").select("id,body,ftext").in("id", [...need]); (data || []).forEach((r: any) => full.set(r.id, pagesOf(String(r.body || "") + "\n\n" + String(r.ftext || "")))); }
+  let ok = 0, bad = 0;
+  const outTxt = ans.replace(re, (m, inner) => {
+    if (!/^\s*\d{1,2}\s*([،,]|$)/.test(inner) && !/^\s*\d{1,2}\s*$/.test(inner)) return m;
+    const parts: string[] = [];
+    for (const u of citeUnits(inner)) {
+      const r = rows[u.n - 1]; if (!r) continue;
+      if (!u.q) { bad++; parts.push(`${u.n}، ؟`); continue; }
+      const P = full.get(r.id); const L = P ? locate(P, u.q) : null;
+      if (L && L.ok) { ok++; parts.push(`${u.n}، ${L.p ? "ص " + L.p + "، " : ""}«${u.q}»`); }
+      else { bad++; parts.push(`${u.n}، ؟، «${u.q}»`); }
+    }
+    return parts.length ? parts.map((p) => `[${p}]`).join("") : m;
+  });
+  return { text: outTxt, ok, bad };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -119,7 +175,9 @@ Deno.serve(async (req) => {
         (texts.has(r.id) ? `النص:\n${texts.get(r.id)}` : pick.has(r.id) ? `مقتطفات من أجزاء الدليل الأقرب للسؤال (الدليل كامل ${r.n} حرف):\n${pick.get(r.id)!.join("\n…\n")}` : "(دليل كبير: ما فيه أجزاء مطابقة للسؤال، عندك ملخصه فقط)")).join("\n\n-----\n\n");
       const hist = H.map((t) => `الموظف: ${t.q}\nأنت: ${t.a}`).join("\n\n");
       const ans = await gem(`التعاميم والملفات المرفوعة (${rows.length}):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`, SYS_ASK, false, true);
-      return out({ s: "ok", answer: ans, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
+      let fin = ans, vs = { ok: 0, bad: 0 };
+      try { const v = await verifyCites(sb, ans, rows); fin = v.text; vs = { ok: v.ok, bad: v.bad }; } catch (_) { /* لو فشل التحقق نرجع الجواب كما هو */ }
+      return out({ s: "ok", answer: fin, ver: vs, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
   if (!admin) return out({ s: "denied" });
