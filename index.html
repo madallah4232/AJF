@@ -2707,9 +2707,12 @@ $("lcBody").addEventListener("change",e=>{const el=e.target.closest("[data-l]");
 $("lcBody").addEventListener("input",e=>{if(e.target.closest("[data-l]"))clearTimeout(lcUpd.t),lcUpd.t=setTimeout(()=>{const el=e.target;const k=el.dataset.l;
   const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]=CSV[iso(date)+"_"+f.n]||{};const ov=V["lc."+k];V["lc."+k]=el.value.trim();if(!V["lc."+k])delete V["lc."+k];lcUpd();if(ov!=null)V["lc."+k]=ov;else delete V["lc."+k]},250)});
 document.querySelectorAll("#lc .lc-tabs button").forEach(b=>b.onclick=()=>{LCTAB=b.dataset.t;lcRender()});
-const lcModeUI=()=>document.querySelectorAll("#lcMode button").forEach(b=>b.classList.toggle("on",b.dataset.m===LCSTY));lcModeUI();
+/* خط Madallah خاص بمدالله فقط (الرقم الوظيفي 15024232) — مخفي عن باقي الموظفين */
+const lcMine=()=>!!(AUTH.me&&String(AUTH.me.emp)==="15024232");
+const lcModeUI=()=>{const mine=lcMine();if(LCSTY==="2"&&!mine&&AUTH.me){LCSTY="1";try{localStorage.setItem("ajf_lc_hand","1")}catch(e){}}
+  document.querySelectorAll("#lcMode button").forEach(b=>{if(b.dataset.m==="2")b.hidden=!mine;b.classList.toggle("on",b.dataset.m===LCSTY)})};lcModeUI();
 document.querySelectorAll("#lcMode button").forEach(b=>b.onclick=()=>{LCSTY=b.dataset.m;LCHAND=LCSTY!=="0";try{localStorage.setItem("ajf_lc_hand",LCSTY)}catch(e){}lcModeUI();if(LCTAB==="in")LCTAB="ls";lcRender()});
-async function openLC(){if(!csCur||!/^SV/i.test(csCur.f.n))return;$("lc").hidden=false;const{f,date}=csCur;$("lcS").textContent=f.n+" AJF→"+f.iata+" · "+fmDate(date);LCTAB="in";
+async function openLC(){if(!csCur||!/^SV/i.test(csCur.f.n))return;lcModeUI();$("lc").hidden=false;const{f,date}=csCur;$("lcS").textContent=f.n+" AJF→"+f.iata+" · "+fmDate(date);LCTAB="in";
   $("lcBody").innerHTML=`<div class="fm-msg">جاري التحميل…</div>`;
   try{await lcData();lcRender()}catch(e){$("lcBody").innerHTML=`<div class="fm-msg">${/404|PGRST202/.test(e.message)?"تحتاج تفعيل النماذج من المشرف.":e.message==="out"?"سجّل دخولك أول.":"تعذّر التحميل. تأكد من الاتصال."}</div>`}}
 $("lcBack").onclick=()=>{$("lc").hidden=true;if(csCur&&!$("cs").hidden)renderCS()};
@@ -2766,7 +2769,7 @@ function lcPut(x,key,v){if(v==null||v==="")return;const r=LSL[key];if(!r)return;
 const lcPK=(t,R)=>t!=="ls"&&R.A.C&&R.A.C.bal&&R.A.C.bal.v==="321"?t+"321":t;
 async function lcBase(P){const src=await (P.k2?lcImg2:fmImg)(P.f),img=new Image();img.src=src;await img.decode();const cv=document.createElement("canvas");cv.width=P.W;cv.height=P.H;
   const x=cv.getContext("2d");x.drawImage(img,0,0,P.W,P.H);return cv}
-async function lcPage(t,R){if(LCHAND)try{await document.fonts.load('40px "Patrick Hand"')}catch(e){}if(LCSTY==="2")try{await lcMyLoad()}catch(e){}const pk=lcPK(t,R),P=LCPG[pk],cv=await lcBase(P),x=lcCtx(cv);({ls:lcDrawLS,bc:lcDrawBC,lir:lcDrawLIR,bc321:lcDrawBC321,lir321:lcDrawLIR321})[pk](x,R);return cv}
+async function lcPage(t,R){if(LCSTY==="2"&&!lcMine())LCSTY="1",lcModeUI();if(LCHAND)try{await document.fonts.load('40px "Patrick Hand"')}catch(e){}if(LCSTY==="2")try{await lcMyLoad()}catch(e){}const pk=lcPK(t,R),P=LCPG[pk],cv=await lcBase(P),x=lcCtx(cv);({ls:lcDrawLS,bc:lcDrawBC,lir:lcDrawLIR,bc321:lcDrawBC321,lir321:lcDrawLIR321})[pk](x,R);return cv}
 function lcDrawLS(x,R){const s=R.s,{f,date}=R,dd=lcDD(date),r0=v=>v==null?"":String(Math.round(v)),ix=v=>v==null?"":(Math.round(v*100)/100).toFixed(2);
   const P=(k,v)=>lcPut(x,k,v);
   P("adr",s("adr"));P("org",s("org"));P("rch",s("rch"));P("ini",s("ini"));P("flt",f.n);P("reg",R.A.reg.replace("-",""));P("ver",R.A.C?R.A.C.ver:"");P("crw",R.A.crew);
