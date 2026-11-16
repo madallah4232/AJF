@@ -2740,6 +2740,12 @@ function lcPoly(x,P,w=3.2){if(P.length<2)return;const Q=[];let h=(Math.round(P[0
   x.save();x.lineWidth=LCHAND?w*.9:w;x.lineCap="round";x.lineJoin="round";x.globalAlpha=LCHAND?.92:1;x.beginPath();x.moveTo(Q[0][0],Q[0][1]);
   if(LCHAND)for(let i=1;i<Q.length-1;i++){const mx=(Q[i][0]+Q[i+1][0])/2,my=(Q[i][1]+Q[i+1][1])/2;x.quadraticCurveTo(Q[i][0],Q[i][1],mx,my)}
   x.lineTo(Q[Q.length-1][0],Q[Q.length-1][1]);x.stroke();x.restore()}
+/* شطب يدوي: مسار مأخوذ من خط مدالله المرسوم باليد (بداية فيها لفّة خفيفة، تموّج بسيط، سماكة تتغيّر، ونقطة حبر في النهاية) */
+const LCSTK=[[0,0,1.4],[.04,-.003,1.25],[.07,-.004,1.15],[.1,-.001,1.1],[.14,.0025,1.05],[.18,.0018,1.1],[.22,.0033,1.1],[.26,.0042,1],[.3,.0045,1],[.34,.0026,1.05],[.38,.0018,1],[.42,.0044,.95],[.46,.0068,.95],[.5,.0072,1],[.54,.0071,.95],[.58,.0074,.95],[.62,.006,1],[.66,.004,1],[.7,.0025,.95],[.74,.0006,.95],[.78,-.0007,.95],[.82,-.0009,.9],[.86,0,.85],[.9,.0013,.9],[.94,.004,.9],[.97,.0055,.95],[.985,.005,1.1],[1,0,1.9]];
+function lcStrike(x,ax,ay,bx,by,seed=0){const L=Math.hypot(bx-ax,by-ay),ux=(bx-ax)/L,uy=(by-ay)/L,amp=L*(2+seed*.35),w0=2.3;
+  const P=LCSTK.map(([t,d,w])=>[ax+ux*L*t-uy*d*amp,ay+uy*L*t+ux*d*amp,w]);x.save();x.lineCap="round";x.lineJoin="round";x.globalAlpha=.93;
+  for(let i=0;i<P.length-1;i++){x.lineWidth=w0*(P[i][2]+P[i+1][2])/2;x.beginPath();x.moveTo(P[i][0],P[i][1]);x.lineTo(P[i+1][0],P[i+1][1]);x.stroke()}
+  x.beginPath();x.ellipse(bx,by,w0*1.15,w0*.95,Math.atan2(uy,ux),0,7);x.fill();x.restore()}
 function lcTrail(x,start,rows,steps,ix){const P=[[ix(start[0]),start[1]]];
   steps.forEach(([i0,i1],j)=>{const[y0,y1]=rows[j],x0=ix(i0),x1=ix(i1);if(Math.abs(x1-x0)<.5){P.push([x0,y1]);return}
     if(rows[j][2]!=null){P.push([x0,rows[j][2]],[x1,rows[j][2]]);return}
@@ -2769,7 +2775,7 @@ function lcDrawLS(x,R){const s=R.s,{f,date}=R,dd=lcDD(date),r0=v=>v==null?"":Str
   P("dow",r0(R.dow));P("doi",ix(R.doi));P("tof",r0(R.tof));P("ow",r0(R.ow));
   P("mzfw",r0(R.mzfw));P("mlw",r0(R.mlw));P("rtof",r0(R.tof));P("trip",r0(R.trip));P("a",r0(R.a));P("b",r0(R.b));P("c",r0(R.c));
   if(R.low>=0){const L="abc"[R.low];P("ow"+L,r0(R.ow));P("atl"+L,r0(R.atl));
-    x.lineWidth=3.3;x.lineCap="round";[[762,418,124,102],[898,418,127,102],[1034,418,126,102]].forEach((q,i)=>{if(i===R.low)return;x.beginPath();x.moveTo(q[0]+3,q[1]+q[3]-3);x.lineTo(q[0]+q[2]-3,q[1]+3);x.stroke()})}
+    x.lineWidth=3.3;x.lineCap="round";[[762,418,124,102],[898,418,127,102],[1034,418,126,102]].forEach((q,i)=>{if(i===R.low)return;if(LCHAND){lcStrike(x,q[0]+4,q[1]+q[3]-4,q[0]+q[2]-4,q[1]+5,i);return}x.beginPath();x.moveTo(q[0]+3,q[1]+q[3]-3);x.lineTo(q[0]+q[2]-3,q[1]+3);x.stroke()})}
   P("dest",s("dest"));P("pm",R.M);P("pf",R.F);P("pc",R.Cc);P("pi",R.I);
   const cpI={"1":"1","2":"2","3":"3","4":"4","5":"5"};LCCPT.forEach(c=>{const q=R.cp[c];if(q.bag)P("b"+cpI[c],q.bag);if(q.cgo)P("c"+cpI[c],q.cgo);if(q.mail)P("m"+cpI[c],q.mail);P("t"+cpI[c],q.tot||0)});
   P("bT",r0(R.bag));if(R.cgo)P("cT",r0(R.cgo));if(R.mail)P("mT",r0(R.mail));P("tT",r0(R.bag+R.cgo+R.mail));
