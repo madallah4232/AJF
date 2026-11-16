@@ -14,17 +14,24 @@ const out = (b: unknown, st = 200) => new Response(JSON.stringify(b), { status: 
 // ---------- المساعد الذكي (Gemini) — المفتاح في Secrets باسم GEMINI_KEY ----------
 const GK = Deno.env.get("GEMINI_KEY") || "";
 const GM = (Deno.env.get("GEMINI_MODEL") || "gemini-flash-lite-latest,gemini-3.5-flash-lite").split(",");
-const GM_STRONG = (Deno.env.get("GEMINI_MODEL_ASK") || "gemini-3.5-flash,gemini-flash-lite-latest").split(",");
+const GM_STRONG = (Deno.env.get("GEMINI_MODEL_ASK") || "gemini-3.5-flash,gemini-flash-latest,gemini-flash-lite-latest").split(",");
+// كل نموذج: محاولتين إذا كان مزحوم (429/5xx) أو تأخر، ثم ننتقل للي بعده — بدل ما نطلع "مشغول" من أول رفض
 async function gem(text: string, sys: string, json = false, strong = false): Promise<string> {
   let last = "";
   for (const m of (strong ? GM_STRONG : GM)) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.trim()}:generateContent`, {
-      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GK }, signal: AbortSignal.timeout(50000),
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text }] }],
-        generationConfig: { temperature: 0.2, ...(json ? { responseMimeType: "application/json" } : {}) } }),
-    });
-    if (r.ok) { const j = await r.json(); return (j.candidates?.[0]?.content?.parts || []).map((x: { text?: string }) => x.text || "").join(""); }
-    last = r.status + " " + (await r.text()).slice(0, 200);
+    for (let t = 0; t < 2; t++) {
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.trim()}:generateContent`, {
+          method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GK }, signal: AbortSignal.timeout(40000),
+          body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text }] }],
+            generationConfig: { temperature: 0.2, ...(json ? { responseMimeType: "application/json" } : {}) } }),
+        });
+        if (r.ok) { const j = await r.json(); const o = (j.candidates?.[0]?.content?.parts || []).map((x: { text?: string }) => x.text || "").join(""); if (o.trim()) return o; last = m + " empty"; break; }
+        last = m + " " + r.status + " " + (await r.text()).slice(0, 160);
+        if (r.status !== 429 && r.status < 500) break;
+      } catch (e) { last = m + " " + String(e).slice(0, 120); break; }
+      if (t === 0) await new Promise((ok) => setTimeout(ok, 2500));
+    }
   }
   throw new Error("gemini " + last);
 }
@@ -63,12 +70,11 @@ const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (ال�
 1) **الخلاصة** في سطر: يُقبل / يُقبل بشروط / لا يُقبل / الإجراء المطلوب.
 2) **المطلوب من الراكب** • نقاط.
 3) **تحقق منه أنت** • نقاط (وثائق، أنظمة، مراسلة محطة...).
-التوثيق إلزامي ودقيق: بعد كل معلومة من تعميم اكتب مصدرها بهذا الشكل بالضبط: [رقم التعميم، «نص منسوخ حرفياً من التعميم يثبت المعلومة»] مثل [2، «Unaccompanied minors are not accepted»].
-- النص بين «» لازم يكون منسوخ حرف بحرف من نص التعميم المرفق (نفس الكلمات والإملاء وبلغته الأصلية: إنجليزي إذا الأصل إنجليزي)، من 6 إلى 20 كلمة، ومن الجملة نفسها اللي فيها المعلومة — مو من عنوان أو فهرس.
-- لا تترجم النص المنسوخ ولا تعيد صياغته ولا تختصره: إذا التعميم عربي انسخ بالعربي، وإذا إنجليزي انسخ بالإنجليزي كما هو.
-- لا تكتب رقم صفحة (النظام يحددها تلقائياً من النص المنسوخ).
-- كل معلومة لها مصدر خاص فيها؛ لا تحط نفس المصدر على معلومات مختلفة إلا إذا النص المنسوخ يثبتها.
-- إذا ما لقيت في نص التعاميم جملة تثبت المعلومة بوضوح، لا تنسبها لأي تعميم أبداً وحطها تحت **خارج التعاميم (تأكد من TIMATIC)**. لا تخلط سياسة شركة طيران بشركة ثانية، ولا تستنتج أرقام (أعمار، أوزان، مدد) غير مكتوبة حرفياً.
+جاوب من التعاميم بكل التفاصيل اللي تخص الحالة (أعمار، شروط، نماذج، رسوم، إجراءات) مثل ما هي مكتوبة، ولا تختصر أو تعمم إذا التعميم فيه تفصيل.
+التوثيق: بعد كل معلومة من تعميم اكتب مصدرها هكذا: [رقم التعميم، «جملة قصيرة منسوخة كما هي من نص التعميم المرفق»] مثل [2، «Unaccompanied minors are not accepted»].
+- انسخ الجملة من النص نفسه بلغتها الأصلية (إنجليزي إذا الأصل إنجليزي) بدون ترجمة ولا إعادة صياغة، ومن الموضع اللي فيه المعلومة — مو من عنوان أو فهرس. لا تكتب رقم صفحة (النظام يحددها تلقائياً).
+- إذا ما قدرت تنسخ جملة اكتب الرقم فقط مثل [2] — ولا تحذف أي معلومة من التعميم بسبب التوثيق أبداً.
+- لا تخلط سياسة شركة طيران بشركة ثانية، ولا تخترع أرقام (أعمار، أوزان، مدد) غير مكتوبة في التعاميم.
 إذا يحتاج الجواب معلومة مو موجودة في التعاميم (مثل تأشيرة دخول دولة لجنسية معينة)، اذكر ما تعرفه بإيجاز تحت عنوان **خارج التعاميم (تأكد من TIMATIC)** ولا تنسبه لتعميم.
 هذي محادثة متصلة: إذا رسالة الموظف توضيح أو تصحيح أو تكملة لسؤال سابق، اربطها بما قبلها وجاوب السؤال الأصلي بعد التوضيح، ولا تبدأ موضوع جديد ولا تكرر جواب سابق بدون داعي. إذا ما فهمت قصده اسأله سؤال توضيحي واحد قصير.
 لا تقل "ما لقيت" إذا فيه تعميم ينطبق ولو جزئياً. وإذا فعلاً ما فيه أي تعميم له علاقة قل ذلك بسطر واحد ثم أعط التوجيه العام المفيد تحت "خارج التعاميم".`;
@@ -129,16 +135,16 @@ function topPages(P: { p: number; r: string; n: string }[], words: string, k = 3
 // المساعد نسخ نص مو موجود حرفياً: نعطيه صفحات الدليل الأقرب ونطلب منه ينسخ الجملة الفعلية منها، ثم نتحقق منها مرة ثانية
 async function repairCites(items: { key: number; claim: string; quote: string; pages: { p: number; r: string }[] }[]) {
   if (!items.length) return new Map<number, string>();
-  const body = items.map((it) => `### بند ${it.key}\nالمعلومة في الجواب: ${it.claim}\nالنص اللي كتبه المساعد (غير موجود حرفياً): ${it.quote}\n` +
+  const body = items.map((it) => `### بند ${it.key}\nالمعلومة في الجواب: ${it.claim}\n${it.quote ? "النص اللي كتبه المساعد (غير موجود حرفياً): " + it.quote + "\n" : ""}` +
     it.pages.map((x) => `--- [صفحة ${x.p}] ---\n${String(x.r).slice(0, 5000)}`).join("\n")).join("\n\n");
   const j = JSON.parse(await gem(`${body}\n\n=====\nلكل بند: ابحث في صفحات الدليل المرفقة تحته عن الجملة اللي تثبت المعلومة نفسها، وانسخها حرف بحرف كما هي في الصفحة (6 إلى 25 كلمة، بنفس لغتها، بدون تعديل ولا ترجمة ولا اختصار). إذا ما فيه جملة تثبت المعلومة فعلاً حط "". أرجع JSON بالشكل {"r":[{"k":رقم البند,"q":"النص المنسوخ"}]}`,
     "تنسخ نصوص حرفية من مستند لإثبات معلومات. لا تخترع ولا تعيد صياغة.", true));
   const m = new Map<number, string>(); for (const x of (Array.isArray(j.r) ? j.r : [])) if (x && typeof x.q === "string" && x.q.trim()) m.set(+x.k, x.q.trim());
   return m;
 }
-async function verifyCites(sb: any, ans: string, rows: Record<string, any>[]) {
+async function verifyCites(sb: any, ans: string, rows: Record<string, any>[], t0 = Date.now()) {
   const re = /\[([^\[\]]{1,700}?)\]/g; const need = new Set<string>();
-  for (const m of ans.matchAll(re)) { const n = m[1].match(/^\s*(\d{1,2})/); if (n && rows[+n[1] - 1] && /«/.test(m[1])) need.add(rows[+n[1] - 1].id); }
+  for (const m of ans.matchAll(re)) { const n = m[1].match(/^\s*(\d{1,2})/); if (n && rows[+n[1] - 1]) need.add(rows[+n[1] - 1].id); }
   const full = new Map<string, ReturnType<typeof pagesOf>>();
   if (need.size) { const { data } = await sb.from("ajf_circ").select("id,body,ftext").in("id", [...need]); (data || []).forEach((r: any) => full.set(r.id, pagesOf(String(r.body || "") + "\n\n" + String(r.ftext || "")))); }
   const idx = new Map(rows.map((r, i) => [r.id, i + 1]));
@@ -152,8 +158,8 @@ async function verifyCites(sb: any, ans: string, rows: Record<string, any>[]) {
     const L2: U[] = [];
     for (const u0 of citeUnits(inner)) {
       const r = rows[u0.n - 1]; if (!r) continue; const u: U = { n: u0.n, q: u0.q, s: "" };
-      if (!u.q) { u.bad = true; L2.push(u); continue; }
-      const P = full.get(r.id); const L = P ? locate(P, u.q) : null;
+      const P = full.get(r.id);
+      if (!u.q) { u.bad = true; L2.push(u); if (P) { const pg = topPages(P, claim); if (pg.length) fix.push({ key: fix.length + 1, u, claim, pages: pg }); } continue; } const L = P ? locate(P, u.q) : null;
       if (L && L.ok) { u.p = L.p; L2.push(u); continue; }
       const o = findAny(u.q, r.id); if (o) { u.n = o.n; u.p = o.p; L2.push(u); continue; }
       const N = P ? nearest(P, u.q) : null;
@@ -165,7 +171,8 @@ async function verifyCites(sb: any, ans: string, rows: Record<string, any>[]) {
   }
   // المرحلة 2: اللي ما انلقى — نطلب النص الفعلي من صفحاته ونتحقق منه
   fix = fix.slice(0, 6);
-  if (fix.length) {
+  // التصحيح طلب إضافي للمساعد: نسويه بس إذا الوقت يسمح (عشان ما يتأخر الجواب أو يطلع "مشغول")
+  if (fix.length && Date.now() - t0 < 40000) {
     try {
       const R = await repairCites(fix.map((f) => ({ key: f.key, claim: f.claim, quote: f.u.q, pages: f.pages })));
       for (const f of fix) {
@@ -204,6 +211,7 @@ Deno.serve(async (req) => {
     if (!GK) return out({ s: "nokey" });
     const q = String(a.q || "").slice(0, 600).trim();
     if (q.length < 2) return out({ s: "bad" });
+    const t0 = Date.now();
     try {
       const H = (Array.isArray(a.h) ? a.h : []).slice(-6).map((t: any) => ({ q: String(t.q || "").slice(0, 600), a: String(t.a || "").slice(0, 2500) }));
       // سؤال متابعة/توضيح: نكتبه كسؤال كامل يجمع تفاصيل المحادثة، ونبحث ونجاوب على أساسه
@@ -238,7 +246,7 @@ Deno.serve(async (req) => {
       const hist = H.map((t) => `الموظف: ${t.q}\nأنت: ${t.a}`).join("\n\n");
       const ans = await gem(`التعاميم والملفات المرفوعة (${rows.length}):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`, SYS_ASK, false, true);
       let fin = ans, vs = { ok: 0, bad: 0 };
-      try { const v = await verifyCites(sb, ans, rows); fin = v.text; vs = { ok: v.ok, bad: v.bad }; } catch (_) { /* لو فشل التحقق نرجع الجواب كما هو */ }
+      try { const v = await verifyCites(sb, ans, rows, t0); fin = v.text; vs = { ok: v.ok, bad: v.bad }; } catch (_) { /* لو فشل التحقق نرجع الجواب كما هو */ }
       return out({ s: "ok", answer: fin, ver: vs, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
