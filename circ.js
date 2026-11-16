@@ -251,12 +251,13 @@ function citeUnits(inner){const Q=[];const t=String(inner).replace(/«([^»]*)»
     if((m=tok.match(/^\u0001(\d+)\u0001$/))){if(u)u.q=Q[+m[1]]}
     else if((m=tok.match(/^(?:ص|صفحة|صفحه|p\.?|page)\s*(\d{1,4})$/i))){if(u)u.p=m[1]}
     else if(/^[؟?]$/.test(tok)){if(u)u.bad=1}
+    else if(tok==="≈"){if(u)u.ap=1}
     else if(/^\d{1,2}$/.test(tok)&&!(u&&u.p&&!u.q&&+tok>9))U.push({n:+tok,p:"",q:""})});return U}
 const CITE_RX=/\[(\d{1,2}(?:[^\[\]]{0,700}?))\]/g;
 function fmtAns(t){let h=E(t).replace(/^\s*#{1,4}\s*(.+)$/gm,"<b>$1</b>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ");
   h=h.replace(CITE_RX,(m,inner)=>{const U=citeUnits(inner);if(!U.length)return m;
     return U.map(u=>{const bad=u.bad,old=!u.q&&!u.bad;
-      return`<button class="ax-c${bad?" bad":""}" data-asrc="${u.n-1}"${u.p?` data-pg="${u.p}"`:""}${u.q?` data-q="${u.q}"`:""}${u.bad?` data-bad="1"`:""}${old?` data-old="1"`:""}>${u.n}${u.p&&!u.bad?" · ص"+u.p:""}${u.bad?" ⚠︎":""}</button>`}).join("")});
+      return`<button class="ax-c${bad?" bad":u.ap?" ap":""}" data-asrc="${u.n-1}"${u.p?` data-pg="${u.p}"`:""}${u.q?` data-q="${u.q}"`:""}${u.bad?` data-bad="1"`:""}${u.ap?` data-ap="1"`:""}${old?` data-old="1"`:""}>${u.n}${u.p&&!u.bad?" · ص"+u.p:""}${u.bad?" ⚠︎":u.ap?" ≈":""}</button>`}).join("")});
   return h.replace(/\n/g,"<br>")}
 /* المصادر اللي ذكرها الجواب فقط */
 const cited=t=>{const c=new Set();String(t).replace(CITE_RX,(m,inner)=>{citeUnits(inner).forEach(u=>c.add(u.n-1));return m});return c}
@@ -319,6 +320,9 @@ async function viewFile(id,o){o=o||{};vwCss();vwClose();const tok=++VW.tok;
     VW.url=u.url;const ft=g&&g.row?String(g.row.body||"")+"\n\n"+String(g.row.ftext||""):"";const lp=o.q?vwLocate(vwPages(ft),o.q):0;VW.found=!!lp;const pg=lp||+o.pg||1;
     const doc=await lib.getDocument({url:u.url,cMapUrl:PDFJS+"cmaps/",cMapPacked:true}).promise;if(tok!==VW.tok){doc.destroy();return}
     VW.doc=doc;VW.n=doc.numPages;VW.pg=Math.min(Math.max(1,pg),VW.n);
+    if(!lp&&!+o.pg){const n=ov.querySelector(".cxv-n");n.hidden=false;n.className="cxv-n warn";n.innerHTML=vwNote(o,false,0,0);
+      ov.querySelector(".cxv-f span").textContent=`${VW.n} صفحة`;ov.querySelector(".cxv-b").innerHTML=`<p class="cxv-l">ما قدرت أحدد مكان هذي المعلومة في الملف.<br>اعتبرها غير مؤكدة وتأكد من المشرف أو من الدليل.<br><br><button data-v="go1">اعرض الملف من البداية</button></p>`;
+      ov.querySelector(".cxv-b").onclick=e=>{if(e.target.closest('[data-v="go1"]'))vwRender(1,1)};const a=ov.querySelector(".cxv-x");a.href=u.url;a.hidden=false;return}
     const a=ov.querySelector(".cxv-x");a.href=u.url+"#page="+VW.pg;a.hidden=false;await vwRender(1,1)}
   catch(e){if(tok!==VW.tok)return;ov.querySelector(".cxv-b").innerHTML=`<p class="cxv-l">${e.message==="lib"?"تعذّر تحميل عارض الملفات — تأكد من الإنترنت":E(errTxt(e))}</p>`}}
 async function vwRender(scroll,first){const ov=document.getElementById("cxv");if(!ov||!VW.doc)return;const tok=VW.tok,rt=VW.rt=(VW.rt||0)+1;
@@ -342,15 +346,11 @@ async function vwRender(scroll,first){const ov=document.getElementById("cxv");if
           x1=Math.min(x1,m[4]);x2=Math.max(x2,m[4]+it.width*vp.scale);y1=Math.min(y1,m[5]-h);y2=Math.max(y2,m[5]+h*.25)});
         const d=document.createElement("i");d.className="cxv-m";d.style.cssText=`left:${x1-3}px;top:${y1-2}px;width:${x2-x1+6}px;height:${y2-y1+4}px`;box.appendChild(d);hit++;top=top==null?y1:Math.min(top,y1)})}}catch(e){}}
   body.scrollTop=scroll?(top!=null?Math.max(0,top-90):0):ratio*body.scrollHeight;
-  const n=ov.querySelector(".cxv-n");if(first){n.hidden=false;n.className="cxv-n"+(VW.found?"":" warn");const o=VW.o||{};
-    n.innerHTML=VW.found?`📍 ص ${VW.pg} — ${hit?"المظلّل بالأصفر":"في هذي الصفحة"} النص اللي اعتمد عليه المساعد:<q dir="auto">${E(VW.q)}</q>`
-      :o.q?`⚠︎ ما لقيت هذا النص في الملف — المعلومة غير مؤكدة، لا تعتمد عليها قبل ما تتأكد:<q dir="auto">${E(o.q)}</q>`
-      :o.bad?`⚠︎ المساعد ما أعطى نص من التعميم يثبت هذي المعلومة — غير مؤكدة، تأكد بنفسك.`
-      :`هذا جواب قديم بدون موضع محدد — اضغط «محادثة جديدة» واسأل مرة ثانية عشان يفتح على البند نفسه.`}
-  else n.hidden=true}
+  const n=ov.querySelector(".cxv-n");if(first){n.hidden=false;const o=VW.o||{};
+    n.className="cxv-n"+(VW.found&&!o.ap?"":" warn");n.innerHTML=vwNote(o,VW.found,hit,VW.pg)}  else n.hidden=true}
 
 /* تعميم مكتوب (بدون ملف PDF): نعرض نصه ونظلّل الجملة اللي اعتمد عليها المساعد */
-function vwNote(o,found,hit,pg){return found?`📍 ${pg?"ص "+pg+" — ":""}${hit?"المظلّل بالأصفر":"في هذا التعميم"} النص اللي اعتمد عليه المساعد:<q dir="auto">${E(o.q)}</q>`
+function vwNote(o,found,hit,pg){return found&&o.ap?`⚠︎ ${pg?"ص "+pg+" — ":""}صياغة المساعد مختلفة عن الدليل. ${hit?"المظلّل بالأصفر":"هذا"} هو النص الفعلي — اقرأه وقارنه بالجواب قبل ما تعتمد:<q dir="auto">${E(o.q)}</q>`:found?`📍 ${pg?"ص "+pg+" — ":""}${hit?"المظلّل بالأصفر":"في هذا التعميم"} النص اللي اعتمد عليه المساعد:<q dir="auto">${E(o.q)}</q>`
   :o.q?`⚠︎ ما لقيت هذا النص في التعميم — المعلومة غير مؤكدة، لا تعتمد عليها قبل ما تتأكد:<q dir="auto">${E(o.q)}</q>`
   :o.bad?`⚠︎ المساعد ما أعطى نص من التعميم يثبت هذي المعلومة — غير مؤكدة، تأكد بنفسك.`
   :`هذا الجواب بدون موضع محدد — اضغط «محادثة جديدة» واسأل مرة ثانية عشان يحدد البند.`}
@@ -368,7 +368,7 @@ async function viewText(id,o){o=o||{};vwCss();vwClose();const tok=++VW.tok;
     const body=ov.querySelector(".cxv-b");
     body.innerHTML=`<div class="cxv-t" dir="auto">${lines.map((l,i)=>sel.has(i)?`<mark>${E(l)}</mark>`:E(l)).join("<br>")}</div>`;
     const m=body.querySelector("mark");if(m)body.scrollTop=Math.max(0,m.offsetTop-90);
-    const n=ov.querySelector(".cxv-n");n.hidden=false;n.className="cxv-n"+(sel.size?"":(o.q||o.bad?" warn":""));n.innerHTML=vwNote(o,!!sel.size,sel.size,0)}
+    const n=ov.querySelector(".cxv-n");n.hidden=false;n.className="cxv-n"+(sel.size&&!o.ap?"":(o.q||o.bad?" warn":""));n.innerHTML=vwNote(o,!!sel.size,sel.size,0)}
   catch(e){if(tok!==VW.tok)return;ov.querySelector(".cxv-b").innerHTML=`<p class="cxv-l">${E(errTxt(e))}</p>`}}
 /* ---------- فتح الملف ---------- */
 async function openFile(id,btn){
@@ -398,7 +398,7 @@ function bind(el){if(el.__cx)return;el.__cx=1;
       let c=b;
       /* زر المصدر تحت الجواب: نفتح على أول نص مؤكد ذكره المساعد من هذا الملف */
       if(!b.classList.contains("ax-c")){const a=b.closest(".ax-s"),p=a&&a.previousElementSibling,k=`.ax-c[data-asrc="${ti}:${i}"]`;c=p&&(p.querySelector(k+"[data-q]:not([data-bad])")||p.querySelector(k))||b}
-      const ai=AI(x);(x.has_file?viewFile:viewText)(x.id,{pg:c.dataset.pg,q:c.dataset.q,bad:c.dataset.bad,title:ai&&ai.t||x.title});return}
+      const ai=AI(x);(x.has_file?viewFile:viewText)(x.id,{pg:c.dataset.pg,q:c.dataset.q,bad:c.dataset.bad,ap:c.dataset.ap,title:ai&&ai.t||x.title});return}
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
     if(b.dataset.urm!=null){S.up.splice(+b.dataset.urm,1);paintUp();return}

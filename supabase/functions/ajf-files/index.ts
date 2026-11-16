@@ -65,6 +65,7 @@ const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (ال�
 3) **تحقق منه أنت** • نقاط (وثائق، أنظمة، مراسلة محطة...).
 التوثيق إلزامي ودقيق: بعد كل معلومة من تعميم اكتب مصدرها بهذا الشكل بالضبط: [رقم التعميم، «نص منسوخ حرفياً من التعميم يثبت المعلومة»] مثل [2، «Unaccompanied minors are not accepted»].
 - النص بين «» لازم يكون منسوخ حرف بحرف من نص التعميم المرفق (نفس الكلمات والإملاء وبلغته الأصلية: إنجليزي إذا الأصل إنجليزي)، من 6 إلى 20 كلمة، ومن الجملة نفسها اللي فيها المعلومة — مو من عنوان أو فهرس.
+- لا تترجم النص المنسوخ ولا تعيد صياغته ولا تختصره: إذا التعميم عربي انسخ بالعربي، وإذا إنجليزي انسخ بالإنجليزي كما هو.
 - لا تكتب رقم صفحة (النظام يحددها تلقائياً من النص المنسوخ).
 - كل معلومة لها مصدر خاص فيها؛ لا تحط نفس المصدر على معلومات مختلفة إلا إذا النص المنسوخ يثبتها.
 - إذا ما لقيت في نص التعاميم جملة تثبت المعلومة بوضوح، لا تنسبها لأي تعميم أبداً وحطها تحت **خارج التعاميم (تأكد من TIMATIC)**. لا تخلط سياسة شركة طيران بشركة ثانية، ولا تستنتج أرقام (أعمار، أوزان، مدد) غير مكتوبة حرفياً.
@@ -75,9 +76,9 @@ const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (ال�
 
 // ---------- التحقق من المصادر: كل [رقم، «نص»] لازم النص يكون موجود فعلاً في التعميم — ونحدد صفحته الحقيقية ----------
 function pagesOf(full: string) {
-  const a = String(full || "").split(/\[صفحة (\d+)\]/); const P: { p: number; n: string }[] = [];
-  if (a[0].trim()) P.push({ p: 0, n: " " + NORM(a[0]) + " " });
-  for (let i = 1; i < a.length; i += 2) P.push({ p: +a[i], n: " " + NORM(a[i + 1] || "") + " " });
+  const a = String(full || "").split(/\[صفحة (\d+)\]/); const P: { p: number; n: string; r: string }[] = [];
+  if (a[0].trim()) P.push({ p: 0, n: " " + NORM(a[0]) + " ", r: a[0] });
+  for (let i = 1; i < a.length; i += 2) P.push({ p: +a[i], n: " " + NORM(a[i + 1] || "") + " ", r: a[i + 1] || "" });
   return P;
 }
 function locate(P: { p: number; n: string }[], quote: string): { p: number; ok: boolean } | null {
@@ -90,6 +91,24 @@ function locate(P: { p: number; n: string }[], quote: string): { p: number; ok: 
   let best = 0, bp = 0;
   for (const x of P) { let h = 0; for (const g of grams) if (x.n.includes(g)) h++; const r = h / grams.length; if (r > best) { best = r; bp = x.p; } }
   return best >= 0.6 ? { p: bp, ok: true } : null;
+}
+// المساعد غيّر الصياغة: نلقى أقرب مقطع فعلي في الملف (أغلب كلمات النص في نفس المكان) ونرجع نصه الأصلي كما هو
+const QSTOP = new Set("the a an of to for and or in on at by is are be with from as that this it shall must will not any".split(" "));
+function nearest(P: { p: number; r: string }[], quote: string): { p: number; t: string } | null {
+  const QS = new Set(NORM(quote).split(" ").filter((w) => w.length > 2 && !QSTOP.has(w)).map(SK)); if (QS.size < 4) return null;
+  const L = NORM(quote).split(" ").length + 6; let best = 0, bp = -1, bi = 0;
+  P.forEach((x, pi) => {
+    const tok = String(x.r).split(/\s+/).filter(Boolean), nw = tok.map((t) => NORM(t).split(" ").filter(Boolean).map(SK));
+    const cnt = new Map<string, number>(); let hits = 0;
+    const add = (i: number, d: number) => { for (const w of nw[i]) if (QS.has(w)) { const c = (cnt.get(w) || 0) + d; cnt.set(w, c); if (d > 0 && c === 1) hits++; if (d < 0 && c === 0) hits--; } };
+    for (let i = 0; i < tok.length; i++) { add(i, 1); if (i >= L) add(i - L, -1); if (hits > best) { best = hits; bp = pi; bi = Math.max(0, i - L + 1); } }
+  });
+  if (bp < 0 || best < 5 || best / QS.size < 0.45) return null;
+  const tok = String(P[bp].r).split(/\s+/).filter(Boolean);
+  // نقص الأطراف اللي ما فيها كلمات من النص
+  let a = bi, b = Math.min(tok.length, bi + L) - 1; const has = (i: number) => NORM(tok[i]).split(" ").some((w) => QS.has(SK(w)));
+  while (a < b && !has(a)) a++; while (b > a && !has(b)) b--;
+  return { p: P[bp].p, t: tok.slice(a, b + 1).join(" ").replace(/[«»\[\]]/g, "").slice(0, 400) };
 }
 // "4، ص 251، «نص»، 7" → [{n:4,q:"نص"},{n:7}]
 function citeUnits(inner: string) {
@@ -115,7 +134,9 @@ async function verifyCites(sb: any, ans: string, rows: Record<string, any>[]) {
       if (!u.q) { bad++; parts.push(`${u.n}، ؟`); continue; }
       const P = full.get(r.id); const L = P ? locate(P, u.q) : null;
       if (L && L.ok) { ok++; parts.push(`${u.n}، ${L.p ? "ص " + L.p + "، " : ""}«${u.q}»`); }
-      else { bad++; parts.push(`${u.n}، ؟، «${u.q}»`); }
+      else { const N = P ? nearest(P, u.q) : null;
+        if (N) { ok++; parts.push(`${u.n}، ${N.p ? "ص " + N.p + "، " : ""}≈، «${N.t}»`); }
+        else { bad++; parts.push(`${u.n}، ؟، «${u.q}»`); } }
     }
     return parts.length ? parts.map((p) => `[${p}]`).join("") : m;
   });
