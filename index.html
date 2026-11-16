@@ -2813,7 +2813,7 @@ function lcDrawBC(x,R){const B=R.bal,{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y,s,
    const P=lcTrail(x,[R.doi,905],[[905,932],...rw],[[R.doi,R.doi],...st],ix);lcPoly(x,P)}
   B.steps.forEach(([n,q],j)=>{const[y0,y1]=rows[j];t(262,(y0+y1)/2+6,String(Math.round(q)),10)});
   if(B.litow!=null){const x0=ix(B.lizfw),x1=ix(B.litow),m=1322;t(372,1312,(B.ftf>0?"+":"")+B.ftf,9);
-    x.setLineDash([8,6]);ln(x0,1350,x0,gy(R.zfw));ln(x1,m,x1,gy(R.tow));x.setLineDash([]);
+    if(LCHAND){lcPoly(x,[[x0,1350],[x0,gy(R.zfw)]]);lcPoly(x,[[x1,m],[x1,gy(R.tow)]])}else{x.setLineDash([8,6]);ln(x0,1350,x0,gy(R.zfw));ln(x1,m,x1,gy(R.tow));x.setLineDash([])}
     [[B.lizfw,R.zfw,"ZFW"],[B.litow,R.tow,"TOW"]].forEach(([I_,w,lab])=>{const X=ix(I_),Y=gy(w);x.beginPath();x.arc(X,Y,8,0,7);x.fill();t(X+14,Y-6,lab,8)})}
   if(B.mt!=null)t(190,1540,`TOW ${B.mt.toFixed(1)} %`,12);if(B.mz!=null)t(190,1565,`ZFW ${B.mz.toFixed(1)} %`,10);
   if(B.st!=null)t(190,1730,`${Math.abs(B.st).toFixed(1)} ${B.st<0?"DN":"UP"}`,12);t(110,1610,`LIZFW ${B.lizfw.toFixed(1)}  LITOW ${B.litow==null?"-":B.litow.toFixed(1)}`,8)}
@@ -2838,7 +2838,7 @@ function lcDrawBC321(x,R){const B=R.bal,{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y
    const P=lcTrail(x,[R.doi,895],[[895,S[0]],...rw],[[R.doi,R.doi],...st],ix);lcPoly(x,P)}
   B.steps.forEach(([n,q],j)=>t(330,(S[j]+S[j+1])/2+9,String(Math.round(q)),9));
   if(B.litow!=null){
-    x.setLineDash([8,6]);ln(gx(B.lizfw),1400,gx(B.lizfw),gy(R.zfw));ln(gx(B.litow),1400,gx(B.litow),gy(R.tow));x.setLineDash([]);
+    if(LCHAND){lcPoly(x,[[gx(B.lizfw),1400],[gx(B.lizfw),gy(R.zfw)]]);lcPoly(x,[[gx(B.litow),1400],[gx(B.litow),gy(R.tow)]])}else{x.setLineDash([8,6]);ln(gx(B.lizfw),1400,gx(B.lizfw),gy(R.zfw));ln(gx(B.litow),1400,gx(B.litow),gy(R.tow));x.setLineDash([])}
     [[B.lizfw,R.zfw,"ZFW"],[B.litow,R.tow,"TOW"]].forEach(([I_,w,lab])=>{const X=gx(I_),Y=gy(w);x.beginPath();x.arc(X,Y,8,0,7);x.fill();t(X+14,Y-6,lab,8)})}
   if(B.mt!=null)t(150,1600,`TOW ${B.mt.toFixed(1)} %`,12);if(B.mz!=null)t(150,1630,`ZFW ${B.mz.toFixed(1)} %`,10);
   t(150,1658,`LIZFW ${B.lizfw.toFixed(1)}  LITOW ${B.litow==null?"-":B.litow.toFixed(1)}`,6);
