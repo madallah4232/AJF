@@ -245,9 +245,14 @@ async function reindex(btn){if(!confirm("إعادة قراءة كل ملفات P
   catch(e){btn.textContent=errTxt(e)}btn.disabled=false;S.q.trim()?search():recent()}
 
 /* ---------- المساعد ---------- */
+/* النص اللي قبل رقم المصدر (الجملة المستشهد عليها) — نستخدمه لتظليل البند داخل الملف */
+const ctxBefore=(s,off)=>{const pre=s.slice(Math.max(0,off-400),off).replace(/\[[^\[\]]{0,40}\]/g," ").replace(/<[^>]+>/g," ");
+  const seg=pre.split(/\n|•|،|[.!؟:](?:\s|$)/).map(x=>x.trim()).filter(Boolean);let t=seg.pop()||"";if(t.length<25&&seg.length)t=seg.pop()+" "+t;return t.slice(-220).replace(/"/g,"&quot;")};
 function fmtAns(t){let h=E(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ");
-  h=h.replace(/\[(\d{1,2}[^\[\]<]{0,40})\]/g,(m,ins)=>ins.split(/[,،]/).map(x=>x.trim()).reduce((acc,x)=>{const d=x.match(/^(\d{1,2})$/),p=x.match(/^(?:ص|صفحة|p\.?)\s*(\d{1,4})$/i);
-      if(d)acc.push(`<button class="ax-c" data-asrc="${+d[1]-1}">${d[1]}</button>`);else if(p&&acc.length)acc[acc.length-1]=acc[acc.length-1].replace("</button>",` · ص${p[1]}</button>`);else acc.push(E(x));return acc},[]).join(""));return h.replace(/\n/g,"<br>")}
+  h=h.replace(/\[(\d{1,2}[^\[\]<]{0,40})\]/g,(m,ins,off,str)=>{const hlT=ctxBefore(str,off),acc=[];
+    ins.split(/[,،]/).map(x=>x.trim()).forEach(x=>{const d=x.match(/^(\d{1,2})$/),p=x.match(/^(?:ص|صفحة|صفحه|p\.?|page)\s*(\d{1,4})$/i);
+      if(d&&!(acc.length&&acc[acc.length-1].p&&+d[1]>9))acc.push({n:+d[1]});else if(p&&acc.length&&acc[acc.length-1].n)acc[acc.length-1].p=p[1];else if(x)acc.push({t:x})});
+    return acc.map(a=>a.n?`<button class="ax-c" data-asrc="${a.n-1}"${a.p?` data-pg="${a.p}"`:""} data-hl="${hlT}">${a.n}${a.p?" · ص"+a.p:""}</button>`:a.t).join("")});return h.replace(/\n/g,"<br>")}
 /* المصادر اللي ذكرها الجواب فقط */
 const cited=t=>{const c=new Set();(String(t).match(/\[(\d{1,2}[^\[\]]{0,40})\]/g)||[]).forEach(m=>m.replace(/[\[\]]/g,"").split(/[,،]/).forEach(n=>{n=n.trim();if(/^\d{1,2}$/.test(n))c.add(+n-1)}));return c}
 /* المحادثة: كل الأسئلة والأجوبة مربوطة ببعض لين يضغط "محادثة جديدة" — وتنحفظ على الجوال */
@@ -269,6 +274,74 @@ async function sumAll(btn){btn.disabled=true;try{let all=[],off=0;for(;;){const 
       try{await F({action:"sum",id:r.id})}catch(e){bad++;if(e.message==="nokey"){btn.textContent="مفتاح Gemini ناقص";btn.disabled=false;return}await new Promise(o=>setTimeout(o,4000))}}
     btn.textContent=`✓ تلخّص ${todo.length-bad} تعميم${bad?" — تعذّر "+bad+" (جرّب مرة ثانية)":""}`}catch(e){btn.textContent=errTxt(e)}btn.disabled=false;S.q.trim()?search():recent()}
 
+/* ---------- عارض التعميم: يفتح على صفحة البند نفسه ويظلّله بالأصفر ---------- */
+const VW={doc:null,pg:1,n:0,z:1,G:[],tok:0,url:"",title:""};
+function vwCss(){if(document.getElementById("cxvCss"))return;const st=document.createElement("style");st.id="cxvCss";st.textContent=`
+.cxv{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;background:#120d09;direction:rtl;color:var(--ink,#f3e9dc)}
+.cxv-h,.cxv-f{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--panel,#1c1510);border-bottom:1px solid var(--line,#3a2e24)}
+.cxv-h{padding-top:calc(env(safe-area-inset-top) + 8px)}.cxv-f{border:0;border-top:1px solid var(--line,#3a2e24);justify-content:center;padding-bottom:calc(env(safe-area-inset-bottom) + 8px)}
+.cxv-h b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cxv button,.cxv a.cxv-x{min-width:40px;height:40px;padding:0 10px;border-radius:11px;border:1px solid var(--line,#3a2e24);background:transparent;color:inherit;font:600 14px system-ui;display:inline-grid;place-items:center;text-decoration:none}
+.cxv button:disabled{opacity:.35}.cxv-f span{min-width:96px;text-align:center;font:700 14px var(--mono,monospace)}
+.cxv-n{padding:7px 12px;font-size:13px;line-height:1.5;background:#3b2a10;color:#ffdc8f;text-align:center}
+.cxv-b{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:#2b2520}
+.cxv-p{position:relative;margin:8px auto;background:#fff;box-shadow:0 2px 14px #000a}.cxv-p canvas{display:block;width:100%;height:100%}
+.cxv-m{position:absolute;background:rgba(255,212,0,.42);mix-blend-mode:multiply;border-radius:3px;box-shadow:0 0 0 2px rgba(235,150,0,.85);animation:cxvF 1s ease 2}
+@keyframes cxvF{50%{background:rgba(255,140,0,.6)}}
+.cxv [hidden]{display:none!important}
+.cxv-l{text-align:center;margin-top:30vh;font:15px/1.7 system-ui;color:#ddd;padding:0 20px}`;document.head.appendChild(st)}
+/* كلمات الجملة + مرادفاتها (عربي/إنجليزي) */
+const VGEN=new Set("طيران راكب ركاب الراكب مسافر خدمه شركه يقبل يتم يجب حال حاله نهائيا لاي عمر وال".split(" "));
+function vwGroups(t){const words=NORM(t).split(" ").filter(w=>w.length>2&&!STOP.has(w)&&!VGEN.has(w)&&!VGEN.has(arStem(w)));
+  return qGroups(words.join(" ")).groups.slice(0,24).map((g,i)=>{const w=words[i],f=new Set();g.forEach(a=>{const n=a.n;if(n!==w&&(n.length<4||VGEN.has(n)))return;if(n.length>2)f.add(n);const st=isAr(n)?arStem(n):enStem(n);if(st.length>2)f.add(st)});return[...f]}).filter(g=>g.length)}
+const gScore=(txt,G)=>{let s=0;for(const g of G)if(g.some(w=>txt.includes(w)))s++;return s};
+/* أنسب صفحة: صفحة المساعد إذا فيها كلام البند، وإلا الأقرب لنص الجملة */
+function vwPick(ft,pg,G){const P={};const a=String(ft||"").split(/\[صفحة (\d+)\]/);for(let i=1;i<a.length;i+=2)P[+a[i]]=NORM(a[i+1]||"");
+  const ks=Object.keys(P).map(Number);if(!ks.length||!G.length)return pg||1;
+  const sc=k=>P[k]==null?-1:gScore(P[k],G);let best=0,bs=0;ks.forEach(k=>{const v=sc(k);if(v>bs){bs=v;best=k}});
+  if(pg){if(P[pg]==null)return pg;let m=pg,ms=sc(pg);[pg-1,pg+1].forEach(k=>{if(sc(k)>ms+1){m=k;ms=sc(k)}});return ms===0&&bs>=2?best:m}
+  return bs>0?best:1}
+function vwClose(){const o=document.getElementById("cxv");if(o)o.remove();document.documentElement.style.overflow="";VW.tok++;try{VW.doc&&VW.doc.destroy()}catch(e){}VW.doc=null}
+async function viewFile(id,o){o=o||{};vwCss();vwClose();const tok=++VW.tok;
+  Object.assign(VW,{pg:1,n:0,z:1,G:vwGroups(o.hl),url:"",title:o.title||"التعميم"});
+  const ov=document.createElement("div");ov.id="cxv";ov.className="cxv";
+  ov.innerHTML=`<div class="cxv-h"><button data-v="x" aria-label="إغلاق">✕</button><b>${E(VW.title)}</b><button data-v="zo">−</button><button data-v="zi">＋</button></div>
+    <div class="cxv-n" hidden></div><div class="cxv-b"><p class="cxv-l">… جاري فتح صفحة التعميم${o.pg?" (ص "+E(o.pg)+")":""}</p></div>
+    <div class="cxv-f"><button data-v="pv">› السابقة</button><span>—</span><button data-v="nx">التالية ‹</button><a class="cxv-x" hidden target="_blank" rel="noopener">الملف كامل ↗</a></div>`;
+  document.body.appendChild(ov);document.documentElement.style.overflow="hidden";
+  ov.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const v=b.dataset.v;
+    if(v==="x")vwClose();else if(v==="pv"&&VW.pg>1){VW.pg--;vwRender(1)}else if(v==="nx"&&VW.pg<VW.n){VW.pg++;vwRender(1)}
+    else if(v==="zi"&&VW.z<3){VW.z=Math.min(3,VW.z+.5);vwRender(0)}else if(v==="zo"&&VW.z>1){VW.z=Math.max(1,VW.z-.5);vwRender(0)}});
+  try{const[g,u,lib]=await Promise.all([R("ajf_circ_get",{p_id:id}).catch(()=>null),F({action:"get",path:id+".pdf"}),pdfLib()]);if(tok!==VW.tok)return;
+    VW.url=u.url;const pg=vwPick(g&&g.row&&g.row.ftext,+o.pg||0,VW.G);
+    const doc=await lib.getDocument({url:u.url,cMapUrl:PDFJS+"cmaps/",cMapPacked:true}).promise;if(tok!==VW.tok){doc.destroy();return}
+    VW.doc=doc;VW.n=doc.numPages;VW.pg=Math.min(Math.max(1,pg),VW.n);VW.asked=+o.pg||0;
+    const a=ov.querySelector(".cxv-x");a.href=u.url+"#page="+VW.pg;a.hidden=false;await vwRender(1,1)}
+  catch(e){if(tok!==VW.tok)return;ov.querySelector(".cxv-b").innerHTML=`<p class="cxv-l">${e.message==="lib"?"تعذّر تحميل عارض الملفات — تأكد من الإنترنت":E(errTxt(e))}</p>`}}
+async function vwRender(scroll,first){const ov=document.getElementById("cxv");if(!ov||!VW.doc)return;const tok=VW.tok,rt=VW.rt=(VW.rt||0)+1;
+  const body=ov.querySelector(".cxv-b"),pgEl=ov.querySelector(".cxv-f span");pgEl.textContent=`ص ${VW.pg} / ${VW.n}`;
+  ov.querySelector('[data-v="pv"]').disabled=VW.pg<=1;ov.querySelector('[data-v="nx"]').disabled=VW.pg>=VW.n;
+  const ratio=body.scrollHeight?body.scrollTop/body.scrollHeight:0;
+  const page=await VW.doc.getPage(VW.pg),w0=page.getViewport({scale:1}).width,vp=page.getViewport({scale:Math.max(.3,(body.clientWidth-16)/w0*VW.z)});
+  const dpr=Math.min(window.devicePixelRatio||1,2),cv=document.createElement("canvas");cv.width=Math.floor(vp.width*dpr);cv.height=Math.floor(vp.height*dpr);
+  await page.render({canvasContext:cv.getContext("2d"),viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:null}).promise;if(tok!==VW.tok||rt!==VW.rt)return;
+  const box=document.createElement("div");box.className="cxv-p";box.style.width=vp.width+"px";box.style.height=vp.height+"px";box.appendChild(cv);
+  body.innerHTML="";body.appendChild(box);
+  /* تظليل أسطر البند */
+  let top=null,hit=0;
+  if(VW.G.length){try{const tc=await page.getTextContent();const L=[];
+    for(const it of tc.items){if(!it.str||!it.str.trim())continue;const y=it.transform[5];let l=L.find(x=>Math.abs(x.y-y)<=3);if(!l)L.push(l={y,it:[],s:""});l.it.push(it);l.s+=" "+it.str}
+    L.forEach(l=>{l.sc=Math.max(gScore(NORM(l.s),VW.G),gScore(NORM([...l.s].reverse().join("")),VW.G))});
+    const best=Math.max(0,...L.map(l=>l.sc));const th=best>=3?Math.max(2,Math.ceil(best*.6)):best;
+    const sel=best?L.filter(l=>l.sc>=th).sort((a,b)=>b.sc-a.sc).slice(0,6):[];
+    sel.forEach(l=>{let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;l.it.forEach(it=>{const m=pdfjsLib.Util.transform(vp.transform,it.transform),h=Math.hypot(m[2],m[3]);
+        x1=Math.min(x1,m[4]);x2=Math.max(x2,m[4]+it.width*vp.scale);y1=Math.min(y1,m[5]-h);y2=Math.max(y2,m[5]+h*.25)});
+      const d=document.createElement("i");d.className="cxv-m";d.style.cssText=`left:${x1-3}px;top:${y1-2}px;width:${x2-x1+6}px;height:${y2-y1+4}px`;box.appendChild(d);hit++;top=top==null?y1:Math.min(top,y1)})}catch(e){}}
+  body.scrollTop=scroll?(top!=null?Math.max(0,top-90):0):ratio*body.scrollHeight;
+  const n=ov.querySelector(".cxv-n");if(first){n.hidden=false;
+    n.textContent=hit?`📍 ص ${VW.pg} — المظلّل بالأصفر هو البند المذكور`:VW.asked?`📍 ص ${VW.pg} — البند في هذي الصفحة`:`📍 أقرب صفحة لكلام المساعد: ص ${VW.pg}`}
+  else n.hidden=true}
+
 /* ---------- فتح الملف ---------- */
 async function openFile(id,btn){
   /* iOS يمنع فتح نافذة بعد انتظار، فنفتحها أول ثم نحط الرابط */
@@ -286,14 +359,18 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(t.dataset.u!=null){S.up[+t.dataset.u][t.dataset.k]=t.value}});
   el.addEventListener("change",e=>{const t=e.target;if(t.id==="cxFiles"){addFiles([...t.files]);t.value=""}if(t.dataset.u!=null)S.up[+t.dataset.u][t.dataset.k]=t.value});
   el.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;e.stopPropagation();
-    if(b.dataset.open){openFile(b.dataset.open,b);return}
+    if(b.dataset.open){const r=(S.rows||[]).concat(S.list||[]).find(x=>x.id===b.dataset.open),ai=r&&AI(r);viewFile(b.dataset.open,{hl:S.q,title:r&&(ai&&ai.t||r.title)});return}
     if(b.dataset.full){showFull(b.dataset.full,b);return}
     if(b.id==="cxMore"){recent(true);return}
     if(b.id==="cxReidx"){reindex(b);return}
     if(b.id==="cxSumAll"){sumAll(b);return}
     if(b.id==="axGo"){ask();return}
     if(b.id==="axNew"){S.th=[];S.aerr="";S.aq="";thSave();try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();return}
-    if(b.dataset.asrc){const[ti,i]=b.dataset.asrc.split(":").map(Number);const r=((S.th||[])[ti]||{}).src;const x=r&&r[i];if(x&&x.has_file)openFile(x.id,b);return}
+    if(b.dataset.asrc){const[ti,i]=b.dataset.asrc.split(":").map(Number);const r=((S.th||[])[ti]||{}).src;const x=r&&r[i];if(!x||!x.has_file)return;
+      let pg=b.dataset.pg,h=b.dataset.hl;
+      /* زر المصدر تحت الجواب: نفتح على أول موضع ذكره المساعد من هذا الملف */
+      if(!pg&&!h){const a=b.closest(".ax-s"),p=a&&a.previousElementSibling,c=p&&(p.querySelector(`.ax-c[data-asrc="${ti}:${i}"][data-pg]`)||p.querySelector(`.ax-c[data-asrc="${ti}:${i}"]`));if(c){pg=c.dataset.pg;h=c.dataset.hl}}
+      const ai=AI(x);viewFile(x.id,{pg,hl:h,title:ai&&ai.t||x.title});return}
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
     if(b.dataset.urm!=null){S.up.splice(+b.dataset.urm,1);paintUp();return}
@@ -343,5 +420,5 @@ const MO={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC
 function parseTd(s){const m=String(s).replace(/O/g,"0").match(/^(\d{2})([A-Z0]{3})(\d{2})$/);if(!m)return null;const mo=MO[m[2].replace(/0/g,"O")];return mo==null?null:new Date(Date.UTC(2000+ +m[3],mo,+m[1]))}
 
 window.CIRCM={mount:(el,q)=>{bind(el);mount(el,q)},related,count:async()=>{const j=await R("ajf_circ_list",{p_offset:0,p_limit:1});return{n:j.n,last:j.rows[0]&&j.rows[0].id}},
-  _t:{qGroups,indexText,NORM,SK,guessDate,pdfText,fmtAns,cited}};
+  _t:{vwPick,vwGroups,ctxBefore,qGroups,indexText,NORM,SK,guessDate,pdfText,fmtAns,cited}};
 })();
