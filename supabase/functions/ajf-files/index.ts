@@ -35,6 +35,21 @@ async function gem(text: string, sys: string, json = false, strong = false): Pro
   }
   throw new Error("gemini " + last);
 }
+// ---------- بصمة المعنى (Gemini embeddings — مجاني) للبحث بالمعنى بدل تطابق الكلمات ----------
+const EM = Deno.env.get("GEMINI_EMBED_MODEL") || "gemini-embedding-001";
+class Busy extends Error {}
+async function embed(texts: string[], task: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY"): Promise<number[][]> {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${EM}:batchEmbedContents`, {
+    method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GK }, signal: AbortSignal.timeout(30000),
+    body: JSON.stringify({ requests: texts.map((t) => ({ model: "models/" + EM, content: { parts: [{ text: t.slice(0, 7000) }] }, taskType: task, outputDimensionality: 768 })) }),
+  });
+  if (r.status === 429) throw new Busy("embed 429");
+  if (!r.ok) throw new Error("embed " + r.status + " " + (await r.text()).slice(0, 160));
+  const j = await r.json(); const E = (j.embeddings || []).map((e: { values: number[] }) => e.values);
+  if (E.length !== texts.length) throw new Error("embed count");
+  return E;
+}
+const vstr = (v: number[]) => "[" + v.map((x) => +x.toFixed(6)).join(",") + "]";
 // نفس توحيد النص في التطبيق (circ.js) عشان البحث يطابق
 const AN = (s: string) => String(s || "").normalize("NFKC").toLowerCase().replace(/[\u064B-\u0652\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/ؤ/g, "و").replace(/ئ/g, "ي").replace(/ء/g, "")
   .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
@@ -62,7 +77,7 @@ async function chunkify(sb: any, c: { id: string; body: string; ftext: string })
 }
 const SYS_SUM = "أنت مساعد لموظفي الخدمات الأرضية في مطار سعودي. تلخّص التعاميم التشغيلية بالعربي الفصيح المبسط. لا تخترع معلومة غير موجودة في النص.";
 const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (الخدمات الأرضية السعودية) في مطار الجوف AJF: كاونتر، بوابة، تحكم بالحمولة، مشرفين.
-عندك كل التعاميم والملفات المرفوعة للمحطة. اقرأها كاملة وافهمها مثل خبير، ثم جاوب سؤال الموظف بذكاء:
+عندك أقرب الأجزاء لسؤال الموظف من كل التعاميم والأدلة المرفوعة للمحطة (النظام بحث فيها كلها بالمعنى). اقرأها كاملة وافهمها مثل خبير، ثم جاوب سؤال الموظف بذكاء:
 - افهم وضع الراكب من السؤال: الجنسية، المسار ومحطات الترانزيت (مثلاً: الجوف → القصيم → أبوظبي)، شركة الطيران، نوع الحجز، أي مشكلة.
 - طبّق التعاميم على حالته حتى لو التعميم ما ذكر جنسيته أو حالته بالحرف: إذا التعميم عن الترانزيت في أبوظبي والراكب مواصل عبر أبوظبي فهو ينطبق عليه.
 - اربط الأسماء بالرموز: أبوظبي=AUH، الجوف=AJF، القصيم=ELQ، الرياض=RUH، جدة=JED، دبي=DXB، أمريكا=USA... والعربي بالإنجليزي.
@@ -172,7 +187,7 @@ async function verifyCites(sb: any, ans: string, rows: Record<string, any>[], t0
   // المرحلة 2: اللي ما انلقى — نطلب النص الفعلي من صفحاته ونتحقق منه
   fix = fix.slice(0, 6);
   // التصحيح طلب إضافي للمساعد: نسويه بس إذا الوقت يسمح (عشان ما يتأخر الجواب أو يطلع "مشغول")
-  if (fix.length && Date.now() - t0 < 40000) {
+  if (fix.length && Date.now() - t0 < 25000) {
     try {
       const R = await repairCites(fix.map((f) => ({ key: f.key, claim: f.claim, quote: f.u.q, pages: f.pages })));
       for (const f of fix) {
@@ -197,6 +212,28 @@ Deno.serve(async (req) => {
   let a: Record<string, string> = {};
   try { a = await req.json(); } catch { return out({ s: "bad" }, 400); }
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  // التجهيز التلقائي كل دقيقة (من Supabase نفسه بمفتاح داخلي): يقسّم الملفات اللي ما تقسمت، ويحسب بصمة المعنى للأجزاء الجديدة
+  if (a.action === "embed_tick") {
+    const { data: K } = await sb.from("ajf_sec").select("v").eq("k", "cron_k").single();
+    if (!K || !a.key || a.key !== K.v || !GK) return out({ s: "denied" });
+    const t0 = Date.now(); let done = 0, chunked = 0;
+    try {
+      const { data: meta } = await sb.rpc("ajf_circ_meta");
+      for (const c of ((meta || []) as any[]).filter((r) => !r.chunks && r.n > 0).slice(0, 2)) {
+        const { data: f } = await sb.from("ajf_circ").select("id,body,ftext").eq("id", c.id).single(); if (f) { await chunkify(sb, f); chunked++; }
+      }
+      const T = new Map(((meta || []) as any[]).map((r) => [r.id, r.title]));
+      // الحد المجاني: ~30 ألف توكن بالدقيقة — دفعة وحدة صغيرة كل دقيقة
+      {
+        const { data: P } = await sb.from("ajf_circ_chunk").select("cid,n,txt").is("emb", null).limit(15);
+        if (P && P.length) {
+        const V = await embed(P.map((x: any) => `title: ${T.get(x.cid) || ""} | text: ${String(x.txt).slice(0, 4000)}`), "RETRIEVAL_DOCUMENT");
+        for (let i = 0; i < P.length; i++) await sb.from("ajf_circ_chunk").update({ emb: vstr(V[i]) }).eq("cid", P[i].cid).eq("n", P[i].n);
+        done += P.length; }
+      }
+    } catch (e) { return out({ s: e instanceof Busy ? "busy" : "err", done, chunked, e: String(e).slice(0, 200) }); }
+    return out({ s: "ok", done, chunked });
+  }
   const { data: me } = await sb.rpc("ajf_me", { p_token: a.token || "", p_device: a.device || "" });
   if (!me || !me.emp || me.s === "out") return out({ s: "out" });
   const admin = !!me.admin, B = sb.storage.from("circ");
@@ -214,37 +251,50 @@ Deno.serve(async (req) => {
     const t0 = Date.now();
     try {
       const H = (Array.isArray(a.h) ? a.h : []).slice(-6).map((t: any) => ({ q: String(t.q || "").slice(0, 600), a: String(t.a || "").slice(0, 2500) }));
-      // سؤال متابعة/توضيح: نكتبه كسؤال كامل يجمع تفاصيل المحادثة، ونبحث ونجاوب على أساسه
-      let full = q;
-      if (H.length) {
-        try { full = (await gem(`المحادثة السابقة:\n${H.map((t, i) => `(${i + 1}) الموظف: ${t.q}\nالمساعد: ${t.a.slice(0, 800)}`).join("\n\n")}\n\nرسالة الموظف الجديدة: ${q}\n\nإذا الرسالة الجديدة تكملة أو توضيح أو تصحيح أو سؤال متابعة لما قبلها، أعد كتابتها كسؤال واحد كامل مستقل يجمع كل التفاصيل المهمة (الراكب، الجنسية، المسار، الحالة...) مع التوضيح الجديد. وإذا موضوعها جديد تماماً أعدها كما هي. اكتب السؤال فقط.`, "تعيد صياغة سؤال المتابعة كسؤال كامل. سطر واحد.")).trim().slice(0, 800) || q; } catch { full = q; }
-      }
-      // التعاميم الصغيرة كاملة، والأدلة الكبيرة: الأجزاء الأقرب للسؤال من كامل صفحاتها
+      // 1) طلب واحد سريع: السؤال كامل (لو متابعة) + صيغته بالإنجليزي بمصطلحات الأدلة + كلمات بحث
+      let full = q, en = "", kw: string[] = [];
+      try {
+        const j = JSON.parse(await gem(`${H.length ? "المحادثة السابقة:\n" + H.map((t, i) => `(${i + 1}) الموظف: ${t.q}\nالمساعد: ${t.a.slice(0, 600)}`).join("\n\n") + "\n\n" : ""}رسالة موظف الخدمات الأرضية الآن: ${q}\n\nأرجع JSON بالشكل {"full":"...","en":"...","kw":[...]}:\n- full: السؤال كامل ومستقل بالعربي (إذا الرسالة تكملة أو توضيح لما قبلها اجمع فيه كل التفاصيل المهمة: الراكب، العمر، الجنسية، المسار، شركة الطيران...؛ وإذا موضوع جديد اكتبه كما هو).\n- en: نفس السؤال بالإنجليزي بالمصطلحات المستخدمة في أدلة الخدمات الأرضية وشركات الطيران (مثل unaccompanied minor, young passenger, UMNR, NOTOC, dangerous goods, INAD, deportee, WCHR, load sheet, check-in closure).\n- kw: 8 إلى 16 كلمة أو عبارة بحث قصيرة عربي وإنجليزي، مع اسم ورمز شركة الطيران إذا مذكورة.`, "تجهز سؤال للبحث في أدلة تشغيل طيران. JSON فقط.", true));
+        full = String(j.full || q).slice(0, 800) || q; en = String(j.en || "").slice(0, 800); kw = Array.isArray(j.kw) ? j.kw.map(String) : [];
+      } catch { /* نكمل بالسؤال كما هو */ }
       const { data: meta } = await sb.rpc("ajf_circ_meta");
       const M = (meta || []) as Record<string, any>[];
-      const small = M.filter((r) => r.n <= 25000 || !r.chunks);
-      const big = M.filter((r) => !(r.n <= 25000 || !r.chunks));
-      const texts = new Map<string, string>();
-      if (small.length) {
-        const { data: st } = await sb.from("ajf_circ").select("id,body,ftext").in("id", small.map((r) => r.id));
-        (st || []).forEach((r: any) => texts.set(r.id, (String(r.body || "") + "\n" + String(r.ftext || "")).slice(0, 60000)));
-      }
-      const pick = new Map<string, string[]>();
-      if (big.length) {
-        let kw: string[] = [];
-        try { const j = JSON.parse(await gem(`سؤال موظف خدمات أرضية: ${full}\nأعطني JSON بالشكل {"kw":[...]} فيه 10 إلى 20 كلمة أو عبارة قصيرة للبحث في أدلة تشغيل طيران مكتوبة بالإنجليزي غالباً وبعضها عربي: المصطلحات الفنية الإنجليزية المستخدمة في أدلة الخدمات الأرضية (مثل boarding, PRM, WCHR, MAAS, misconnection, deportee, INAD, dangerous goods, load sheet)، ومرادفاتها، وترجمتها العربية، وأسماء الدول والمطارات ورموزها. بدون شرح.`, "تستخرج كلمات بحث فقط.", true)); kw = Array.isArray(j.kw) ? j.kw : []; } catch { /* */ }
-        kw = [...new Set([...kw.map(String), ...NORM(full).split(" ").filter((w) => w.length > 2)])].slice(0, 26);
+      const byId = new Map(M.map((r) => [r.id, r]));
+      // 2) البحث بالمعنى في كل التعاميم والأدلة + البحث بالكلمات (للأرقام والرموز مثل XY أو SV)
+      const hits: { cid: string; n: number; txt: string; s: number }[] = [];
+      try {
+        const V = await embed([full, en || full], "RETRIEVAL_QUERY");
+        const R = await Promise.all(V.map((v) => sb.rpc("ajf_chunk_match", { p_q: vstr(v), p_k: 24 })));
+        R.forEach((r, qi) => ((r.data || []) as any[]).forEach((c, i) => hits.push({ cid: c.cid, n: c.n, txt: c.txt, s: i + qi * 0.5 })));
+      } catch { /* لو البصمة ما جهزت أو مزحومة نعتمد على البحث بالكلمات */ }
+      {
+        kw = [...new Set([...kw, ...NORM(full).split(" ").filter((w) => w.length > 2)])].slice(0, 24);
         const groups = kw.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 2);
-        const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: 40 });
-        const bigIds = new Set(big.map((r) => r.id)); let tot = 0;
-        for (const c of (ch || []) as any[]) { if (!bigIds.has(c.cid) || tot > 160000) continue; tot += c.txt.length; (pick.get(c.cid) || pick.set(c.cid, []).get(c.cid)!).push(c.txt); }
+        const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: hits.length ? 12 : 30 });
+        ((ch || []) as any[]).forEach((c, i) => hits.push({ cid: c.cid, n: c.n, txt: c.txt, s: (hits.length ? 6 : 0) + i * 1.5 }));
       }
-      const rows = M.filter((r) => texts.has(r.id) || pick.has(r.id) || r.ai);
-      if (!rows.length) return out({ s: "ok", answer: "ما فيه تعاميم مرفوعة للحين.", src: [] });
-      const docs = rows.map((r, i) => `[${i + 1}] العنوان: ${r.title}\nالتاريخ: ${r.cd || ""}\n${r.ai ? "ملخص: " + r.ai + "\n" : ""}` +
-        (texts.has(r.id) ? `النص:\n${texts.get(r.id)}` : pick.has(r.id) ? `مقتطفات من أجزاء الدليل الأقرب للسؤال (الدليل كامل ${r.n} حرف):\n${pick.get(r.id)!.join("\n…\n")}` : "(دليل كبير: ما فيه أجزاء مطابقة للسؤال، عندك ملخصه فقط)")).join("\n\n-----\n\n");
+      // 3) نرتب ونجمع: التعميم الصغير يروح كامل، والدليل الكبير أقرب أجزائه فقط — بحد أقصى ~70 ألف حرف عشان يكون سريع
+      hits.sort((x, y) => x.s - y.s);
+      const seen = new Set<string>(), texts = new Map<string, string>(), pick = new Map<string, string[]>(), order: string[] = []; let tot = 0;
+      const smallIds: string[] = [];
+      for (const h of hits) {
+        const key = h.cid + ":" + h.n; if (seen.has(key)) continue; seen.add(key);
+        const r = byId.get(h.cid); if (!r) continue;
+        if (!order.includes(h.cid)) { if (order.length >= 10) continue; order.push(h.cid); }
+        if (r.n <= 25000) { if (!smallIds.includes(h.cid)) { smallIds.push(h.cid); tot += r.n; } continue; }
+        if (tot > 70000) continue; tot += h.txt.length; (pick.get(h.cid) || pick.set(h.cid, []).get(h.cid)!).push(h.txt);
+      }
+      if (smallIds.length) {
+        const { data: st } = await sb.from("ajf_circ").select("id,body,ftext").in("id", smallIds);
+        (st || []).forEach((r: any) => texts.set(r.id, (String(r.body || "") + "\n" + String(r.ftext || "")).slice(0, 25000)));
+      }
+      const rows = order.map((id) => byId.get(id)!).filter((r) => texts.has(r.id) || pick.has(r.id));
+      if (!M.length) return out({ s: "ok", answer: "ما فيه تعاميم مرفوعة للحين.", src: [] });
+      const docs = rows.length ? rows.map((r, i) => `[${i + 1}] العنوان: ${r.title}\nالتاريخ: ${r.cd || ""}\n` +
+        (texts.has(r.id) ? `النص كامل:\n${texts.get(r.id)}` : `أقرب أجزاء الدليل للسؤال (من كامل صفحاته، و[صفحة N] تبين رقم الصفحة):\n${pick.get(r.id)!.join("\n…\n")}`)).join("\n\n-----\n\n")
+        : "(ما فيه أي جزء من التعاميم له علاقة بالسؤال)";
       const hist = H.map((t) => `الموظف: ${t.q}\nأنت: ${t.a}`).join("\n\n");
-      const ans = await gem(`التعاميم والملفات المرفوعة (${rows.length}):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`, SYS_ASK, false, true);
+      const ans = await gem(`أقرب ما في التعاميم والأدلة المرفوعة لسؤال الموظف (تم البحث في كل الملفات بالمعنى):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`, SYS_ASK, false, true);
       let fin = ans, vs = { ok: 0, bad: 0 };
       try { const v = await verifyCites(sb, ans, rows, t0); fin = v.text; vs = { ok: v.ok, bad: v.bad }; } catch (_) { /* لو فشل التحقق نرجع الجواب كما هو */ }
       return out({ s: "ok", answer: fin, ver: vs, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
@@ -365,7 +415,8 @@ Deno.serve(async (req) => {
     // مجموع أحجام الملفات المرفوعة (للتنبيه قبل الوصول لحد 1GB)
     const { data } = await sb.from("ajf_circ").select("file_size");
     const used = (data || []).reduce((t: number, r: { file_size: number | null }) => t + (r.file_size || 0), 0);
-    return out({ s: "ok", used, n: (data || []).length });
+    const { data: es } = await sb.rpc("ajf_emb_stat").then((x: any) => x, () => ({ data: null }));
+    return out({ s: "ok", used, n: (data || []).length, emb: es || null });
   }
   return out({ s: "bad" });
 });

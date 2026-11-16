@@ -206,7 +206,7 @@ async function recent(more){S.err="";try{const j=await R("ajf_circ_list",{p_offs
 
 /* ---------- رفع الملفات (للمشرف) ---------- */
 function paintUp(){const el=root&&root.querySelector("#cxUp");if(!el)return;if(!S.up.length&&!S.usage){el.innerHTML="";return}
-  const u=S.usage?`<div class="cx-use"><i style="width:${Math.min(100,S.usage.used/1073741824*100).toFixed(1)}%"></i><span>المساحة المستخدمة ${kb(S.usage.used||0)} من 1GB · ${S.usage.n} تعميم</span></div>`:"";
+  const u=S.usage?`<div class="cx-use"><i style="width:${Math.min(100,S.usage.used/1073741824*100).toFixed(1)}%"></i><span>المساحة المستخدمة ${kb(S.usage.used||0)} من 1GB · ${S.usage.n} تعميم</span></div>`+(S.usage.emb&&S.usage.emb.total?`<p class="m">🧠 تجهيز البحث بالمعنى: ${S.usage.emb.done>=S.usage.emb.total?"جاهز ✓":`${S.usage.emb.done} من ${S.usage.emb.total} جزء (${Math.floor(S.usage.emb.done/S.usage.emb.total*100)}%) — يكمل لحاله في الخلفية`}</p>`:""):"";
   if(!S.up.length){el.innerHTML=u;return}
   const ready=S.up.filter(x=>x.st==="ready").length;
   el.innerHTML=u+`<div class="cx-q">${S.up.map((x,i)=>`<div class="cx-qi ${x.st}"><div class="h"><b>📄 ${E(x.file.name)}</b><small>${kb(x.file.size)}${x.pages?" · "+x.pages+" ص":""}${x.ocr?" · مصوّر":""}${x.lang==="en"?" · English":x.lang==="ar"?" · عربي":""}</small></div>
