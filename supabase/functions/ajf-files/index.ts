@@ -19,15 +19,19 @@ const GM_STRONG = (Deno.env.get("GEMINI_MODEL_ASK") || "gemini-3.5-flash,gemini-
 async function gem(text: string, sys: string, json = false, strong = false): Promise<string> {
   let last = "";
   for (const m of (strong ? GM_STRONG : GM)) {
+    // التفكير الطويل هو أكبر سبب للبطء: نخليه قليل (وإذا النموذج ما يدعم الإعداد نعيد بدونه)
+    let think = true;
     for (let t = 0; t < 2; t++) {
+      const tc = !think ? {} : /2\.5/.test(m) ? { thinkingConfig: { thinkingBudget: strong ? 1024 : 0 } } : { thinkingConfig: { thinkingLevel: "low" } };
       try {
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.trim()}:generateContent`, {
           method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GK }, signal: AbortSignal.timeout(40000),
           body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text }] }],
-            generationConfig: { temperature: 0.2, ...(json ? { responseMimeType: "application/json" } : {}) } }),
+            generationConfig: { temperature: 0.2, ...tc, ...(json ? { responseMimeType: "application/json" } : {}) } }),
         });
         if (r.ok) { const j = await r.json(); const o = (j.candidates?.[0]?.content?.parts || []).map((x: { text?: string }) => x.text || "").join(""); if (o.trim()) return o; last = m + " empty"; break; }
-        last = m + " " + r.status + " " + (await r.text()).slice(0, 160);
+        const et = (await r.text()).slice(0, 300); last = m + " " + r.status + " " + et.slice(0, 160);
+        if (r.status === 400 && think && /think/i.test(et)) { think = false; t--; continue; }
         if (r.status !== 429 && r.status < 500) break;
       } catch (e) { last = m + " " + String(e).slice(0, 120); break; }
       if (t === 0) await new Promise((ok) => setTimeout(ok, 2500));
@@ -157,11 +161,11 @@ async function repairCites(items: { key: number; claim: string; quote: string; p
   const m = new Map<number, string>(); for (const x of (Array.isArray(j.r) ? j.r : [])) if (x && typeof x.q === "string" && x.q.trim()) m.set(+x.k, x.q.trim());
   return m;
 }
-async function verifyCites(sb: any, ans: string, rows: Record<string, any>[], t0 = Date.now()) {
-  const re = /\[([^\[\]]{1,700}?)\]/g; const need = new Set<string>();
-  for (const m of ans.matchAll(re)) { const n = m[1].match(/^\s*(\d{1,2})/); if (n && rows[+n[1] - 1]) need.add(rows[+n[1] - 1].id); }
+// التحقق يكون على نفس النص اللي قرأه المساعد (مو الدليل كامل 2MB) — أسرع بكثير وما يثقل الخادم
+async function verifyCites(_sb: any, ans: string, rows: Record<string, any>[], t0 = Date.now(), given = new Map<string, string>()) {
+  const re = /\[([^\[\]]{1,700}?)\]/g;
   const full = new Map<string, ReturnType<typeof pagesOf>>();
-  if (need.size) { const { data } = await sb.from("ajf_circ").select("id,body,ftext").in("id", [...need]); (data || []).forEach((r: any) => full.set(r.id, pagesOf(String(r.body || "") + "\n\n" + String(r.ftext || "")))); }
+  for (const r of rows) if (given.has(r.id)) full.set(r.id, pagesOf(given.get(r.id)!));
   const idx = new Map(rows.map((r, i) => [r.id, i + 1]));
   // المرحلة 1: نحدد كل مصدر — بالتعميم المذكور، أو بتعميم ثاني من المذكورين لو المساعد غلط بالرقم
   type U = { n: number; q: string; s: string; p?: number; ap?: boolean; bad?: boolean };
@@ -248,7 +252,7 @@ Deno.serve(async (req) => {
     if (!GK) return out({ s: "nokey" });
     const q = String(a.q || "").slice(0, 600).trim();
     if (q.length < 2) return out({ s: "bad" });
-    const t0 = Date.now();
+    const t0 = Date.now(); const tm: Record<string, number> = {};
     try {
       const H = (Array.isArray(a.h) ? a.h : []).slice(-6).map((t: any) => ({ q: String(t.q || "").slice(0, 600), a: String(t.a || "").slice(0, 2500) }));
       // 1) طلب واحد سريع: السؤال كامل (لو متابعة) + صيغته بالإنجليزي بمصطلحات الأدلة + كلمات بحث
@@ -257,6 +261,7 @@ Deno.serve(async (req) => {
         const j = JSON.parse(await gem(`${H.length ? "المحادثة السابقة:\n" + H.map((t, i) => `(${i + 1}) الموظف: ${t.q}\nالمساعد: ${t.a.slice(0, 600)}`).join("\n\n") + "\n\n" : ""}رسالة موظف الخدمات الأرضية الآن: ${q}\n\nأرجع JSON بالشكل {"full":"...","en":"...","kw":[...]}:\n- full: السؤال كامل ومستقل بالعربي (إذا الرسالة تكملة أو توضيح لما قبلها اجمع فيه كل التفاصيل المهمة: الراكب، العمر، الجنسية، المسار، شركة الطيران...؛ وإذا موضوع جديد اكتبه كما هو).\n- en: نفس السؤال بالإنجليزي بالمصطلحات المستخدمة في أدلة الخدمات الأرضية وشركات الطيران (مثل unaccompanied minor, young passenger, UMNR, NOTOC, dangerous goods, INAD, deportee, WCHR, load sheet, check-in closure).\n- kw: 8 إلى 16 كلمة أو عبارة بحث قصيرة عربي وإنجليزي، مع اسم ورمز شركة الطيران إذا مذكورة.`, "تجهز سؤال للبحث في أدلة تشغيل طيران. JSON فقط.", true));
         full = String(j.full || q).slice(0, 800) || q; en = String(j.en || "").slice(0, 800); kw = Array.isArray(j.kw) ? j.kw.map(String) : [];
       } catch { /* نكمل بالسؤال كما هو */ }
+      tm.prep = Date.now() - t0;
       const { data: meta } = await sb.rpc("ajf_circ_meta");
       const M = (meta || []) as Record<string, any>[];
       const byId = new Map(M.map((r) => [r.id, r]));
@@ -293,11 +298,15 @@ Deno.serve(async (req) => {
       const docs = rows.length ? rows.map((r, i) => `[${i + 1}] العنوان: ${r.title}\nالتاريخ: ${r.cd || ""}\n` +
         (texts.has(r.id) ? `النص كامل:\n${texts.get(r.id)}` : `أقرب أجزاء الدليل للسؤال (من كامل صفحاته، و[صفحة N] تبين رقم الصفحة):\n${pick.get(r.id)!.join("\n…\n")}`)).join("\n\n-----\n\n")
         : "(ما فيه أي جزء من التعاميم له علاقة بالسؤال)";
+      const given = new Map<string, string>(rows.map((r) => [r.id, texts.has(r.id) ? texts.get(r.id)! : pick.get(r.id)!.join("\n\n")]));
+      tm.search = Date.now() - t0;
       const hist = H.map((t) => `الموظف: ${t.q}\nأنت: ${t.a}`).join("\n\n");
       const ans = await gem(`أقرب ما في التعاميم والأدلة المرفوعة لسؤال الموظف (تم البحث في كل الملفات بالمعنى):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`, SYS_ASK, false, true);
+      tm.answer = Date.now() - t0;
       let fin = ans, vs = { ok: 0, bad: 0 };
-      try { const v = await verifyCites(sb, ans, rows, t0); fin = v.text; vs = { ok: v.ok, bad: v.bad }; } catch (_) { /* لو فشل التحقق نرجع الجواب كما هو */ }
-      return out({ s: "ok", answer: fin, ver: vs, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
+      try { const v = await verifyCites(sb, ans, rows, t0, given); fin = v.text; vs = { ok: v.ok, bad: v.bad }; } catch (_) { /* لو فشل التحقق نرجع الجواب كما هو */ }
+      tm.total = Date.now() - t0;
+      return out({ s: "ok", answer: fin, ver: vs, tm, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
   if (!admin) return out({ s: "denied" });
