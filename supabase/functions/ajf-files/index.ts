@@ -33,7 +33,7 @@ const AN = (s: string) => String(s || "").normalize("NFKC").toLowerCase().replac
   .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
 const NORM = (s: string) => AN(s).replace(/لا/g, "ال").replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim();
 const isAr = (w: string) => /[\u0600-\u06FF]/.test(w);
-const enStem = (w: string) => w.length <= 4 ? w : w.replace(/(ations?|ings?|ments?|ness|ies|ied|ers?|ed|es|s)$/, (m) => (m === "ies" || m === "ied" ? "y" : ""));
+const enStem = (w: string) => { if (w.length <= 4) return w; w = w.replace(/(ations?|ings?|ments?|ness|ies|ied|ers?|ed|es|s)$/, (m) => (m === "ies" || m === "ied" ? "y" : "")); return w.length > 4 ? w.replace(/e$/, "") : w; };
 const arStem = (w: string) => { w = w.replace(/^(وال|بال|فال|كال|لل|ال)/, ""); if (w.length > 4) w = w.replace(/(ات|ين|ون|ها|هم|يه|يا)$/, ""); return w; };
 const SK = (w: string) => { if (isAr(w)) { const s = arStem(w), k = s.replace(/[اوي]/g, "").replace(/ه$/, ""); return k.length >= 2 ? k : s; } return enStem(w); };
 // تقسيم الملف لأجزاء (~3500 حرف) عند حدود الفقرات/الصفحات — للأدلة الكبيرة
@@ -120,25 +120,66 @@ function citeUnits(inner: string) {
   }
   return U;
 }
+// أقرب صفحات للمعلومة (كلمات النص المنسوخ + جملة الجواب) — للتصحيح التلقائي
+function topPages(P: { p: number; r: string; n: string }[], words: string, k = 3) {
+  const QS = new Set(NORM(words).split(" ").filter((w) => w.length > 2 && !QSTOP.has(w)).map(SK)); if (QS.size < 3) return [];
+  return P.map((x) => { const st = new Set(x.n.split(" ").filter(Boolean).map(SK)); let h = 0; QS.forEach((w) => { if (st.has(w)) h++; }); return { x, h }; })
+    .filter((o) => o.h >= Math.min(4, QS.size)).sort((a, b) => b.h - a.h).slice(0, k).map((o) => o.x);
+}
+// المساعد نسخ نص مو موجود حرفياً: نعطيه صفحات الدليل الأقرب ونطلب منه ينسخ الجملة الفعلية منها، ثم نتحقق منها مرة ثانية
+async function repairCites(items: { key: number; claim: string; quote: string; pages: { p: number; r: string }[] }[]) {
+  if (!items.length) return new Map<number, string>();
+  const body = items.map((it) => `### بند ${it.key}\nالمعلومة في الجواب: ${it.claim}\nالنص اللي كتبه المساعد (غير موجود حرفياً): ${it.quote}\n` +
+    it.pages.map((x) => `--- [صفحة ${x.p}] ---\n${String(x.r).slice(0, 5000)}`).join("\n")).join("\n\n");
+  const j = JSON.parse(await gem(`${body}\n\n=====\nلكل بند: ابحث في صفحات الدليل المرفقة تحته عن الجملة اللي تثبت المعلومة نفسها، وانسخها حرف بحرف كما هي في الصفحة (6 إلى 25 كلمة، بنفس لغتها، بدون تعديل ولا ترجمة ولا اختصار). إذا ما فيه جملة تثبت المعلومة فعلاً حط "". أرجع JSON بالشكل {"r":[{"k":رقم البند,"q":"النص المنسوخ"}]}`,
+    "تنسخ نصوص حرفية من مستند لإثبات معلومات. لا تخترع ولا تعيد صياغة.", true));
+  const m = new Map<number, string>(); for (const x of (Array.isArray(j.r) ? j.r : [])) if (x && typeof x.q === "string" && x.q.trim()) m.set(+x.k, x.q.trim());
+  return m;
+}
 async function verifyCites(sb: any, ans: string, rows: Record<string, any>[]) {
   const re = /\[([^\[\]]{1,700}?)\]/g; const need = new Set<string>();
   for (const m of ans.matchAll(re)) { const n = m[1].match(/^\s*(\d{1,2})/); if (n && rows[+n[1] - 1] && /«/.test(m[1])) need.add(rows[+n[1] - 1].id); }
   const full = new Map<string, ReturnType<typeof pagesOf>>();
   if (need.size) { const { data } = await sb.from("ajf_circ").select("id,body,ftext").in("id", [...need]); (data || []).forEach((r: any) => full.set(r.id, pagesOf(String(r.body || "") + "\n\n" + String(r.ftext || "")))); }
-  let ok = 0, bad = 0;
+  const idx = new Map(rows.map((r, i) => [r.id, i + 1]));
+  // المرحلة 1: نحدد كل مصدر — بالتعميم المذكور، أو بتعميم ثاني من المذكورين لو المساعد غلط بالرقم
+  type U = { n: number; q: string; s: string; p?: number; ap?: boolean; bad?: boolean };
+  const cites: { m: string; U: U[] }[] = []; let fix: { key: number; u: U; claim: string; pages: { p: number; r: string }[] }[] = [];
+  const findAny = (q: string, prefer: string) => { for (const [id, P] of full) { if (id === prefer) continue; const L = locate(P, q); if (L && L.ok) return { n: idx.get(id)!, p: L.p }; } return null; };
+  for (const m of ans.matchAll(re)) {
+    const inner = m[1]; if (!/^\s*\d{1,2}\s*([،,]|$)/.test(inner) && !/^\s*\d{1,2}\s*$/.test(inner)) continue;
+    const claim = ans.slice(Math.max(0, (m.index || 0) - 260), m.index || 0).split(/\n|\]/).filter((x) => x.trim()).pop() || "";
+    const L2: U[] = [];
+    for (const u0 of citeUnits(inner)) {
+      const r = rows[u0.n - 1]; if (!r) continue; const u: U = { n: u0.n, q: u0.q, s: "" };
+      if (!u.q) { u.bad = true; L2.push(u); continue; }
+      const P = full.get(r.id); const L = P ? locate(P, u.q) : null;
+      if (L && L.ok) { u.p = L.p; L2.push(u); continue; }
+      const o = findAny(u.q, r.id); if (o) { u.n = o.n; u.p = o.p; L2.push(u); continue; }
+      const N = P ? nearest(P, u.q) : null;
+      if (N) { u.p = N.p; u.q = N.t; u.ap = true; L2.push(u); continue; }
+      u.bad = true; L2.push(u);
+      if (P) { const pg = topPages(P, u.q + " " + claim); if (pg.length) fix.push({ key: fix.length + 1, u, claim, pages: pg }); }
+    }
+    cites.push({ m: m[0], U: L2 });
+  }
+  // المرحلة 2: اللي ما انلقى — نطلب النص الفعلي من صفحاته ونتحقق منه
+  fix = fix.slice(0, 6);
+  if (fix.length) {
+    try {
+      const R = await repairCites(fix.map((f) => ({ key: f.key, claim: f.claim, quote: f.u.q, pages: f.pages })));
+      for (const f of fix) {
+        const q = R.get(f.key); if (!q) continue; const P = full.get(rows[f.u.n - 1].id)!; const L = locate(P, q);
+        if (L && L.ok) { f.u.q = q; f.u.p = L.p; f.u.bad = false; f.u.ap = true; }
+      }
+    } catch (_) { /* لو فشل التصحيح تبقى غير مؤكدة */ }
+  }
+  let ok = 0, bad = 0, ci = 0;
   const outTxt = ans.replace(re, (m, inner) => {
     if (!/^\s*\d{1,2}\s*([،,]|$)/.test(inner) && !/^\s*\d{1,2}\s*$/.test(inner)) return m;
-    const parts: string[] = [];
-    for (const u of citeUnits(inner)) {
-      const r = rows[u.n - 1]; if (!r) continue;
-      if (!u.q) { bad++; parts.push(`${u.n}، ؟`); continue; }
-      const P = full.get(r.id); const L = P ? locate(P, u.q) : null;
-      if (L && L.ok) { ok++; parts.push(`${u.n}، ${L.p ? "ص " + L.p + "، " : ""}«${u.q}»`); }
-      else { const N = P ? nearest(P, u.q) : null;
-        if (N) { ok++; parts.push(`${u.n}، ${N.p ? "ص " + N.p + "، " : ""}≈، «${N.t}»`); }
-        else { bad++; parts.push(`${u.n}، ؟، «${u.q}»`); } }
-    }
-    return parts.length ? parts.map((p) => `[${p}]`).join("") : m;
+    const c = cites[ci++]; if (!c || c.m !== m || !c.U.length) return m;
+    return c.U.map((u) => { if (u.bad) { bad++; return u.q ? `[${u.n}، ؟، «${u.q}»]` : `[${u.n}، ؟]`; } ok++;
+      return `[${u.n}، ${u.p ? "ص " + u.p + "، " : ""}${u.ap ? "≈، " : ""}«${u.q}»]`; }).join("");
   });
   return { text: outTxt, ok, bad };
 }
