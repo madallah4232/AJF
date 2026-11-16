@@ -295,6 +295,7 @@ function vwCss(){if(document.getElementById("cxvCss"))return;const st=document.c
 .cxv-m{position:absolute;background:rgba(255,212,0,.42);mix-blend-mode:multiply;border-radius:3px;box-shadow:0 0 0 2px rgba(235,150,0,.85);animation:cxvF 1s ease 2}
 @keyframes cxvF{50%{background:rgba(255,140,0,.6)}}
 .cxv [hidden]{display:none!important}
+.cxv-t{background:#fffaf0;color:#1b130c;margin:8px;padding:14px 16px;border-radius:10px;font:15px/1.9 system-ui;white-space:pre-wrap;word-break:break-word}.cxv-t mark{background:#ffd84d;color:#000;border-radius:3px;box-shadow:0 0 0 2px #e89a00}
 .cxv-l{text-align:center;margin-top:30vh;font:15px/1.7 system-ui;color:#ddd;padding:0 20px}`;document.head.appendChild(st)}
 /* صفحات النص المقروء من الملف */
 function vwPages(ft){const a=String(ft||"").split(/\[صفحة (\d+)\]/),P=[];for(let i=1;i<a.length;i+=2)P.push({p:+a[i],n:" "+NORM(a[i+1]||"")+" "});return P}
@@ -348,6 +349,27 @@ async function vwRender(scroll,first){const ov=document.getElementById("cxv");if
       :`هذا جواب قديم بدون موضع محدد — اضغط «محادثة جديدة» واسأل مرة ثانية عشان يفتح على البند نفسه.`}
   else n.hidden=true}
 
+/* تعميم مكتوب (بدون ملف PDF): نعرض نصه ونظلّل الجملة اللي اعتمد عليها المساعد */
+function vwNote(o,found,hit,pg){return found?`📍 ${pg?"ص "+pg+" — ":""}${hit?"المظلّل بالأصفر":"في هذا التعميم"} النص اللي اعتمد عليه المساعد:<q dir="auto">${E(o.q)}</q>`
+  :o.q?`⚠︎ ما لقيت هذا النص في التعميم — المعلومة غير مؤكدة، لا تعتمد عليها قبل ما تتأكد:<q dir="auto">${E(o.q)}</q>`
+  :o.bad?`⚠︎ المساعد ما أعطى نص من التعميم يثبت هذي المعلومة — غير مؤكدة، تأكد بنفسك.`
+  :`هذا الجواب بدون موضع محدد — اضغط «محادثة جديدة» واسأل مرة ثانية عشان يحدد البند.`}
+async function viewText(id,o){o=o||{};vwCss();vwClose();const tok=++VW.tok;
+  const ov=document.createElement("div");ov.id="cxv";ov.className="cxv";
+  ov.innerHTML=`<div class="cxv-h"><button data-v="x" aria-label="إغلاق">✕</button><b>${E(o.title||"التعميم")}</b></div><div class="cxv-n" hidden></div><div class="cxv-b"><p class="cxv-l">… جاري فتح التعميم</p></div>`;
+  document.body.appendChild(ov);document.documentElement.style.overflow="hidden";
+  ov.addEventListener("click",e=>{const b=e.target.closest("button");if(b&&b.dataset.v==="x")vwClose()});
+  try{const g=await R("ajf_circ_get",{p_id:id});if(tok!==VW.tok)return;const r=g.row||{};
+    const lines=[r.body,r.ftext].filter(Boolean).join("\n\n").split("\n");
+    const qw=o.q?NORM(o.q).split(" ").filter(Boolean):[],QS=new Set(qw);let sel=new Set();
+    if(QS.size){const sc=lines.map(l=>{const w=new Set(NORM(l).split(" "));let h=0;QS.forEach(x=>{if(w.has(x))h++});return h});
+      let best=0,bi=-1;for(let i=0;i<lines.length;i++){const w=new Set();for(let j=i;j<Math.min(lines.length,i+3);j++)NORM(lines[j]).split(" ").forEach(x=>QS.has(x)&&w.add(x));if(w.size>best){best=w.size;bi=i}}
+      if(bi>=0&&best>=Math.max(3,Math.ceil(QS.size*.6)))for(let j=bi;j<Math.min(lines.length,bi+3);j++)if(sc[j])sel.add(j)}
+    const body=ov.querySelector(".cxv-b");
+    body.innerHTML=`<div class="cxv-t" dir="auto">${lines.map((l,i)=>sel.has(i)?`<mark>${E(l)}</mark>`:E(l)).join("<br>")}</div>`;
+    const m=body.querySelector("mark");if(m)body.scrollTop=Math.max(0,m.offsetTop-90);
+    const n=ov.querySelector(".cxv-n");n.hidden=false;n.className="cxv-n"+(sel.size?"":(o.q||o.bad?" warn":""));n.innerHTML=vwNote(o,!!sel.size,sel.size,0)}
+  catch(e){if(tok!==VW.tok)return;ov.querySelector(".cxv-b").innerHTML=`<p class="cxv-l">${E(errTxt(e))}</p>`}}
 /* ---------- فتح الملف ---------- */
 async function openFile(id,btn){
   /* iOS يمنع فتح نافذة بعد انتظار، فنفتحها أول ثم نحط الرابط */
@@ -372,11 +394,11 @@ function bind(el){if(el.__cx)return;el.__cx=1;
     if(b.id==="cxSumAll"){sumAll(b);return}
     if(b.id==="axGo"){ask();return}
     if(b.id==="axNew"){S.th=[];S.aerr="";S.aq="";thSave();try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();return}
-    if(b.dataset.asrc){const[ti,i]=b.dataset.asrc.split(":").map(Number);const r=((S.th||[])[ti]||{}).src;const x=r&&r[i];if(!x||!x.has_file)return;
+    if(b.dataset.asrc){const[ti,i]=b.dataset.asrc.split(":").map(Number);const r=((S.th||[])[ti]||{}).src;const x=r&&r[i];if(!x){alert("ما لقيت هذا المصدر — اضغط «محادثة جديدة» واسأل مرة ثانية");return}
       let c=b;
       /* زر المصدر تحت الجواب: نفتح على أول نص مؤكد ذكره المساعد من هذا الملف */
       if(!b.classList.contains("ax-c")){const a=b.closest(".ax-s"),p=a&&a.previousElementSibling,k=`.ax-c[data-asrc="${ti}:${i}"]`;c=p&&(p.querySelector(k+"[data-q]:not([data-bad])")||p.querySelector(k))||b}
-      const ai=AI(x);viewFile(x.id,{pg:c.dataset.pg,q:c.dataset.q,bad:c.dataset.bad,title:ai&&ai.t||x.title});return}
+      const ai=AI(x);(x.has_file?viewFile:viewText)(x.id,{pg:c.dataset.pg,q:c.dataset.q,bad:c.dataset.bad,title:ai&&ai.t||x.title});return}
     if(b.id==="cxUpGo"){uploadAll();return}
     if(b.id==="cxUpClr"){S.up=[];paintUp();return}
     if(b.dataset.urm!=null){S.up.splice(+b.dataset.urm,1);paintUp();return}
