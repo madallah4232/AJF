@@ -1,6 +1,6 @@
 -- سجل الحركات (H): كل دخول وكل حركة للموظف داخل التطبيق (أي لوحة فتح، الراديو، التحدي، النماذج…) مع اسمه ووقته
 -- شغّل هذا الملف مرة واحدة في Supabase: SQL Editor ← New query ← الصق ← Run
--- ما يمسح أي شي موجود. يشوفه المشرف فقط. السجل يحتفظ بآخر 60 يوم ويمسح الأقدم تلقائياً.
+-- ما يمسح أي شي موجود. يشوفه مدالله فقط (حتى المشرفين لا). السجل يحتفظ بآخر 60 يوم ويمسح الأقدم تلقائياً.
 
 create table if not exists public.ajf_act(
   id bigserial primary key,
@@ -34,14 +34,14 @@ begin
   return jsonb_build_object('s','ok','n',n);
 end $$;
 
--- للمشرف فقط: آخر الحركات (الكل أو موظف واحد)، 250 حركة في كل صفحة
+-- لمدالله فقط (15024232) — حتى المشرفين ما يشوفونه: آخر الحركات (الكل أو موظف واحد)، 250 حركة في كل صفحة
 create or replace function public.ajf_act_list(p_token text, p_device text, p_emp text default null, p_before timestamptz default null, p_self boolean default true)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare e public.employees; res jsonb;
 begin
   e := ajf__who(p_token, p_device);
   if e.emp is null then return jsonb_build_object('s','out'); end if;
-  if not e.is_admin then return jsonb_build_object('s','denied'); end if;
+  if e.emp <> '15024232' then return jsonb_build_object('s','denied'); end if;
   select coalesce(jsonb_agg(x order by x.at desc, x.id desc), '[]'::jsonb) into res from (
     select a.id, a.at, a.emp, m.name, m.title, a.ev, a.d
     from ajf_act a left join employees m on m.emp = a.emp
