@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23110b07'/%3E%3Cpath fill='%23e89a55' d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Patrick+Hand&display=swap" rel="stylesheet">
 <style>
 /* Layout idea: a night-shift departures board — live "next departure" up top, a week strip that reads as a pressure chart, a day timeline, then the board itself. */
 :root{
@@ -406,6 +406,7 @@ mark{background:color-mix(in oklab,var(--amber) 30%,transparent);color:inherit;b
 .fm-list button{display:grid;gap:2px;text-align:start;padding:11px 13px;border-radius:12px;background:var(--raise);border:1px solid var(--line);color:var(--ink)}
 .lc-tabs{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--line);overflow-x:auto}
 .lc-tabs button{flex:1;height:36px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font:700 13px var(--body);white-space:nowrap;padding:0 10px}
+.lc-mode{display:flex;gap:6px;padding:0 14px 8px;border-bottom:1px solid var(--line)}.lc-mode button{flex:1;height:32px;border-radius:9px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font:700 12.5px var(--body)}.lc-mode button.on{background:#14298c;color:#fff;border-color:#14298c}
 .lc-tabs button.on{background:var(--amber);color:#1a1205;border-color:var(--amber)}
 .lc-body{overflow:auto;overscroll-behavior:contain;min-height:0}
 .lc-g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -1137,6 +1138,7 @@ body,.bd,.hub{background:var(--felt),var(--night)}
     <span class="cs-saved" id="lcSaved"></span>
   </div>
   <div class="lc-tabs"><button data-t="in" class="on">البيانات</button><button data-t="ls">Load Sheet</button><button data-t="bc">Balance</button><button data-t="lir">LIR</button></div>
+  <div class="lc-mode" id="lcMode"><button data-m="0">🖨️ مطبوع</button><button data-m="1">✍︎ يدوي</button></div>
   <div class="lc-body" id="lcBody"></div>
   <div class="cs-bar"><button class="p" id="lcPdf">PDF · إرسال الثلاثة</button></div>
 </div>
@@ -2692,6 +2694,8 @@ $("lcBody").addEventListener("change",e=>{const el=e.target.closest("[data-l]");
 $("lcBody").addEventListener("input",e=>{if(e.target.closest("[data-l]"))clearTimeout(lcUpd.t),lcUpd.t=setTimeout(()=>{const el=e.target;const k=el.dataset.l;
   const{f,date}=csCur,V=CSV[iso(date)+"_"+f.n]=CSV[iso(date)+"_"+f.n]||{};const ov=V["lc."+k];V["lc."+k]=el.value.trim();if(!V["lc."+k])delete V["lc."+k];lcUpd();if(ov!=null)V["lc."+k]=ov;else delete V["lc."+k]},250)});
 document.querySelectorAll("#lc .lc-tabs button").forEach(b=>b.onclick=()=>{LCTAB=b.dataset.t;lcRender()});
+const lcModeUI=()=>document.querySelectorAll("#lcMode button").forEach(b=>b.classList.toggle("on",(b.dataset.m==="1")===LCHAND));lcModeUI();
+document.querySelectorAll("#lcMode button").forEach(b=>b.onclick=()=>{LCHAND=b.dataset.m==="1";try{localStorage.setItem("ajf_lc_hand",LCHAND?"1":"0")}catch(e){}lcModeUI();if(LCTAB==="in")LCTAB="ls";lcRender()});
 async function openLC(){if(!csCur||!/^SV/i.test(csCur.f.n))return;$("lc").hidden=false;const{f,date}=csCur;$("lcS").textContent=f.n+" AJF→"+f.iata+" · "+fmDate(date);LCTAB="in";
   $("lcBody").innerHTML=`<div class="fm-msg">جاري التحميل…</div>`;
   try{await lcData();lcRender()}catch(e){$("lcBody").innerHTML=`<div class="fm-msg">${/404|PGRST202/.test(e.message)?"تحتاج تفعيل النماذج من المشرف.":e.message==="out"?"سجّل دخولك أول.":"تعذّر التحميل. تأكد من الاتصال."}</div>`}}
@@ -2699,7 +2703,17 @@ $("lcBack").onclick=()=>{$("lc").hidden=true;if(csCur&&!$("cs").hidden)renderCS(
 /* ---------- رسم النماذج ---------- */
 const LCPG={bc321:{f:"b321-1.bin",W:1771,H:2456,mm:[224.8,311.8],k2:1},lir321:{f:"l321-1.bin",W:2339,H:1654,mm:[297,210],k2:1},ls:{f:"lcs-1.bin",W:1241,H:1754,mm:[210,297]},bc:{f:"lcb-1.bin",W:1701,H:2386,mm:[216,303]},lir:{f:"lcl-1.bin",W:2339,H:1653,mm:[297,210]}};
 const LCINK="#14298c";
-function lcCtx(cv){const x=cv.getContext("2d");x.fillStyle=LCINK;x.strokeStyle=LCINK;x.textBaseline="alphabetic";x.direction="ltr";return x}
+function lcCtx(cv){const x=cv.getContext("2d");x.fillStyle=LCINK;x.strokeStyle=LCINK;x.textBaseline="alphabetic";x.direction="ltr";if(LCHAND)lcHandify(x);return x}
+/* نسخة يدوي: نفس الأرقام والأماكن، بس الكتابة بخط يد وكل حرف فيه ميلان واهتزاز خفيف (ثابت — المعاينة والـ PDF نفس الشكل) */
+let LCHAND=false;try{LCHAND=localStorage.getItem("ajf_lc_hand")==="1"}catch(e){}
+function lcHandify(x){const fill=x.fillText.bind(x);
+  x.fillText=function(s,X,Y){s=String(s);if(!s)return;const f0=x.font,al=x.textAlign,m=/(\d+(?:\.\d+)?)px/.exec(f0),px=m?+m[1]:16;
+    x.font=`${(px*1.14).toFixed(1)}px "Patrick Hand",Helvetica,Arial,sans-serif`;const w=x.measureText(s).width;
+    let sx=al==="center"?X-w/2:(al==="right"||al==="end")?X-w:X,h=(Math.round(X*7+Y*13)^s.length*2654435761)>>>0;const rnd=()=>{h=(h*1103515245+12345)>>>0;return(h>>>8)/16777216};
+    x.textAlign="left";x.lineWidth=Math.min(1.6,Math.max(.6,px*.035));const base=(rnd()-.5)*px*.06;
+    for(const c of s){const cw=x.measureText(c).width;x.save();x.translate(sx,Y+base+(rnd()-.5)*px*.09);x.rotate((rnd()-.5)*.09);x.globalAlpha=.86+rnd()*.14;
+      fill(c,0,0);if(c.trim())x.strokeText(c,0,0);x.restore();sx+=cw+(rnd()-.5)*px*.04}
+    x.font=f0;x.textAlign=al}}
 const lcFont=(x,px)=>{x.font=`700 ${px}px Helvetica,Arial,sans-serif`};
 function lcFree(x,v,r,pt2px,maxPt=10){const[X,Y,w,h]=r,L=String(v).split("\n");lcFont(x,100);const mw=Math.max(...L.map(l=>x.measureText(l).width))/100||1;
   let fs=Math.min(h*.72/L.length*(L.length>1?.8:1),(w-6)/mw,maxPt*pt2px);const lh=fs*1.15,top=Y+h/2-lh*L.length/2+fs*.95;lcFont(x,fs);x.textAlign="left";
@@ -2716,7 +2730,7 @@ function lcPut(x,key,v){if(v==null||v==="")return;const r=LSL[key];if(!r)return;
 const lcPK=(t,R)=>t!=="ls"&&R.A.C&&R.A.C.bal&&R.A.C.bal.v==="321"?t+"321":t;
 async function lcBase(P){const src=await (P.k2?lcImg2:fmImg)(P.f),img=new Image();img.src=src;await img.decode();const cv=document.createElement("canvas");cv.width=P.W;cv.height=P.H;
   const x=cv.getContext("2d");x.drawImage(img,0,0,P.W,P.H);return cv}
-async function lcPage(t,R){const pk=lcPK(t,R),P=LCPG[pk],cv=await lcBase(P),x=lcCtx(cv);({ls:lcDrawLS,bc:lcDrawBC,lir:lcDrawLIR,bc321:lcDrawBC321,lir321:lcDrawLIR321})[pk](x,R);return cv}
+async function lcPage(t,R){if(LCHAND)try{await document.fonts.load('40px "Patrick Hand"')}catch(e){}const pk=lcPK(t,R),P=LCPG[pk],cv=await lcBase(P),x=lcCtx(cv);({ls:lcDrawLS,bc:lcDrawBC,lir:lcDrawLIR,bc321:lcDrawBC321,lir321:lcDrawLIR321})[pk](x,R);return cv}
 function lcDrawLS(x,R){const s=R.s,{f,date}=R,dd=lcDD(date),r0=v=>v==null?"":String(Math.round(v)),ix=v=>v==null?"":(Math.round(v*100)/100).toFixed(2);
   const P=(k,v)=>lcPut(x,k,v);
   P("adr",s("adr"));P("org",s("org"));P("rch",s("rch"));P("ini",s("ini"));P("flt",f.n);P("reg",R.A.reg.replace("-",""));P("ver",R.A.C?R.A.C.ver:"");P("crw",R.A.crew);
@@ -2799,7 +2813,7 @@ function lcDrawLIR321(x,R){const{f,date}=R,dd=lcDD(date),k=200/72,t=(X,Y,s,pt=10
   t(64,748,(BL?`CMPT 1+2: ${T("1")+T("2")} KG (MAX ${BL.c12})   CMPT 3+4: ${T("3")+T("4")} KG (MAX ${BL.c34})   CMPT 5: ${T("5")} KG (MAX ${BL.cpt["5"][1]})   `:"")+`NOTOC: ${R.s("notoc")}`,8,400)}
 /* PDF: الثلاثة في ملف واحد */
 let lcReady=null;
-async function lcPDF(){const b=$("lcPdf"),t0="PDF · إرسال الثلاثة",{f,date}=csCur,name=`LoadControl ${f.n} ${iso(date)}.pdf`;
+async function lcPDF(){const b=$("lcPdf"),t0="PDF · إرسال الثلاثة",{f,date}=csCur,name=`LoadControl ${f.n} ${iso(date)}${LCHAND?" HAND":""}.pdf`;
   const share=async file=>{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}
     const u=URL.createObjectURL(file),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),6e4)};
   if(lcReady&&lcReady.name===name){const fl=lcReady;try{await share(fl);lcReady=null;b.textContent=t0}catch(e){}return}
