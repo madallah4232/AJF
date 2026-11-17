@@ -66,6 +66,8 @@ const CSS=`
 .qa-st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.qa-st div{background:var(--raise);border-radius:12px;padding:8px 4px}.qa-st b{display:block;font:700 18px var(--mono)}.qa-st span{font-size:11.5px;color:var(--muted)}
 .qa-m{font-size:12.5px;color:var(--muted);line-height:1.7}
 .qa-tp{background:var(--raise);color:var(--ink);border:1px solid var(--line);color-scheme:dark;width:auto!important;display:inline-block;padding:2px 6px!important;font-size:12px!important;border-radius:8px!important;margin-inline-end:4px}
+.qz-du{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:10px;width:100%;text-align:start;color:var(--ink);font:inherit;cursor:pointer}
+.qz-du>span{font-size:28px}.qz-du b{display:block;font:700 16px var(--display)}.qz-du small{color:var(--muted);font-size:12.5px}.qz-du em{font-style:normal;color:var(--muted);font-size:20px}.qz-du:active{transform:scale(.98)}
 .qz-lb .r.qe{cursor:pointer}.qz-lb .r.qe:active{transform:scale(.98)}
 .qe-q p{margin:6px 0 10px;font-size:14.5px;line-height:1.7}.qe-h{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
 .qe-o{display:grid;gap:6px;margin-bottom:6px}.qe-o div{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:11px;background:var(--raise);border:1px solid var(--line);font-size:13.5px}
@@ -90,7 +92,12 @@ function hubSave(){try{const r=ST&&ST.round;let t="",b="";
 async function load(){ST=await call("ajf_qz_state");hubSave();return ST}
 async function loadBoard(){try{const j=await call("ajf_qz_board",{p_scope:BT});BD=j.s==="ok"?j.rows:[]}catch(e){BD=null}}
 
-function mount(el){css();root=el;VIEW="home";root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;
+let DUI=null,duP=null;
+function duPeek(){call("ajf_du_list").then(j=>{if(j.s!=="ok")return;DUI={inv:(j.inv||[]).filter(x=>x.in).length,live:(j.live||[]).filter(x=>x.ph!=="wait").length};paint()}).catch(()=>{})}
+function duOpen(){VIEW="duel";root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;
+  (window.DU?Promise.resolve():duP||(duP=ldJs("duel.js?v=1").catch(e=>{duP=null;throw e}))).then(()=>{if(VIEW==="duel")DU.mount(root,()=>{VIEW="home";paint();duPeek()})})
+    .catch(()=>{VIEW="home";paint();alert("تعذّر التحميل، تأكد من الإنترنت")})}
+function mount(el){css();root=el;VIEW="home";duPeek();root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;
   Promise.all([load(),loadBoard()]).then(paint).catch(e=>{if(root)root.innerHTML=`<div class="bd-empty">${/rpc 404/.test(e&&e.message)?"🏁 التحدي قيد التجهيز، قريباً بإذن الله":"تعذّر التحميل، تأكد من الإنترنت"}</div>`});
   clearInterval(tick);tick=setInterval(()=>{if(!root||!root.isConnected){clearInterval(tick);return}if(!document.hidden&&VIEW==="home"&&!cur)paint()},30000)}
 
@@ -102,6 +109,8 @@ function paint(){if(!root||VIEW!=="home")return;const r=ST&&ST.round,T=(ST&&ST.t
       <div class="qz-dots">${Array.from({length:r.per},(_,i)=>`<i class="${T[i]?T[i].ok?"ok":"no":""}"></i>`).join("")}</div>
       <div class="qz-sum"><span>اليوم <b>${okn}/${r.per}</b></span><span>الجولة <b>${tot.ok||0}/${tot.n||0}</b></span></div>
       <button class="qz-go" id="qzStart" ${done?"disabled":""}>${done?"✓ خلصت أسئلة اليوم":d?"كمّل الأسئلة ("+(d+1)+" من "+r.per+")":"ابدأ أسئلة اليوم"}</button></div>`}
+  /* ⚔️ تحديات الزملاء (duel.js) */
+  h+=`<button class="qz-card qz-du" id="qzDu"><span>⚔️</span><div><b>تحديات الزملاء</b><small>${DUI&&DUI.inv?"📨 عندك "+DUI.inv+" "+(DUI.inv>1?"دعوات":"دعوة")+" تحدي":DUI&&DUI.live?"🔴 "+DUI.live+" تحدي مباشر الحين":"تحدّى زميلك بأسئلة التعاميم، والكل يتابع"}</small></div><em>‹</em></button>`;
   h+=`<details class="qz-card qz-rules"><summary>📜 قوانين التحدي</summary><ul>
     <li>كل يوم ${r?r.per:10} أسئلة من التعاميم ودليل العمليات، ولكل سؤال 4 خيارات.</li>
     <li>عندك ${r?r.secs:30} ثانية لكل سؤال، وإذا خلص الوقت ينحسب خطأ.</li>
@@ -120,6 +129,7 @@ function paint(){if(!root||VIEW!=="home")return;const r=ST&&ST.round,T=(ST&&ST.t
   const s=root.querySelector("#qzStart");if(s)s.onclick=()=>{try{window.ajfAct&&ajfAct("qzgo")}catch(e){}openQuiz()};
   root.querySelectorAll("[data-qb]").forEach(b=>b.onclick=async()=>{BT=b.dataset.qb;BD=undefined;paint();await loadBoard();paint()});
   const a=root.querySelector("#qzAdm");if(a)a.onclick=()=>{VIEW="adm";admPaint()};
+  const du=root.querySelector("#qzDu");if(du)du.onclick=duOpen;
   root.querySelectorAll("[data-qemp]").forEach(b=>b.onclick=()=>empOpen(b.dataset.qemp))}
 
 /* ---------- المشرف: تفاصيل إجابات موظف (supabase/quiz_emp.sql) ---------- */
