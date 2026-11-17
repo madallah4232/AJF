@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-17T22:46:45Z",
+  "fetched": "2026-11-17T23:43:23Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-17T23:00:20.805Z",
+      "obsTime": 1794956400,
+      "reportTime": "2026-11-17T23:00:00.000Z",
+      "temp": 16,
+      "dewp": 2,
+      "wdir": 40,
+      "wspd": 4,
+      "visib": "6+",
+      "altim": 1019,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 172300Z 04004KT CAVOK 16/02 Q1019 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-17T22:00:27.089Z",
@@ -44,39 +66,17 @@
       "cover": "CAVOK",
       "clouds": [],
       "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-17T20:00:18.258Z",
-      "obsTime": 1794945600,
-      "reportTime": "2026-11-17T20:00:00.000Z",
-      "temp": 19,
-      "dewp": 3,
-      "wdir": 50,
-      "wspd": 4,
-      "visib": "6+",
-      "altim": 1019,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 172000Z 05004KT CAVOK 19/03 Q1019 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "CAVOK",
-      "clouds": [],
-      "fltCat": "VFR"
     }
   ],
   "taf": [
     {
       "icaoId": "OESK",
-      "dbPopTime": "2026-11-17T11:01:26.924Z",
-      "bulletinTime": "2026-11-17T11:00:00.000Z",
-      "issueTime": "2026-11-17T11:00:00.000Z",
-      "validTimeFrom": 1794916800,
-      "validTimeTo": 1795024800,
-      "rawTAF": "TAF OESK 171100Z 1712/1818 09008KT CAVOK BECMG 1802/1804 03010KT",
+      "dbPopTime": "2026-11-17T23:03:51.620Z",
+      "bulletinTime": "2026-11-17T23:00:00.000Z",
+      "issueTime": "2026-11-17T23:00:00.000Z",
+      "validTimeFrom": 1794960000,
+      "validTimeTo": 1795068000,
+      "rawTAF": "TAF OESK 172300Z 1800/1906 VRB03KT CAVOK BECMG 1806/1808 06010KT 9999 FEW040",
       "mostRecent": 1,
       "remarks": "",
       "lat": 29.785,
@@ -86,13 +86,13 @@
       "name": "Al-Jouf Arpt",
       "fcsts": [
         {
-          "timeFrom": 1794916800,
-          "timeTo": 1794967200,
+          "timeFrom": 1794960000,
+          "timeTo": 1794981600,
           "timeBec": null,
           "fcstChange": null,
           "probability": null,
-          "wdir": 90,
-          "wspd": 8,
+          "wdir": "VRB",
+          "wspd": 3,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
@@ -113,12 +113,12 @@
           "temp": []
         },
         {
-          "timeFrom": 1794967200,
-          "timeTo": 1795024800,
-          "timeBec": 1794974400,
+          "timeFrom": 1794981600,
+          "timeTo": 1795068000,
+          "timeBec": 1794988800,
           "fcstChange": "BECMG",
           "probability": null,
-          "wdir": 30,
+          "wdir": 60,
           "wspd": 10,
           "wgst": null,
           "wshearHgt": null,
@@ -131,8 +131,8 @@
           "notDecoded": null,
           "clouds": [
             {
-              "cover": "NSC",
-              "base": null,
+              "cover": "FEW",
+              "base": 4000,
               "type": null
             }
           ],
