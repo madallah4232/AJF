@@ -343,7 +343,7 @@ begin
       'my', case when pl then (select array_position(dq.perm, x.pick) - 1 from ajf_duel_a x where x.duel = d.id and x.n = p.n and x.emp = e.emp) end,
       'mydone', pl and exists (select 1 from ajf_duel_a x where x.duel = d.id and x.n = p.n and x.emp = e.emp));
     if not hide then
-      cur := cur || jsonb_build_object('right', array_position(dq.perm, q.a) - 1, 'why', q.why, 'src', q.src_title,
+      cur := cur || jsonb_build_object('right', array_position(dq.perm, q.a) - 1, 'why', q.why, 'src', q.src_title, 'page', q.page,
         'pa', (select jsonb_build_object('pick', array_position(dq.perm, x.pick) - 1, 'ok', x.ok, 'ms', x.ms, 'why', x.why) from ajf_duel_a x where x.duel = d.id and x.n = p.n and x.emp = d.a),
         'pb', (select jsonb_build_object('pick', array_position(dq.perm, x.pick) - 1, 'ok', x.ok, 'ms', x.ms, 'why', x.why) from ajf_duel_a x where x.duel = d.id and x.n = p.n and x.emp = d.b));
     end if;
@@ -351,7 +351,7 @@ begin
 
   -- بعد النهاية: كل الأسئلة وأجوبتها عشان الكل يستفيد
   if p.ph = 'done' then
-    select coalesce(jsonb_agg(jsonb_build_object('n', z.n, 'q', q2.q, 'why', q2.why, 'src', q2.src_title,
+    select coalesce(jsonb_agg(jsonb_build_object('n', z.n, 'q', q2.q, 'why', q2.why, 'src', q2.src_title, 'page', q2.page,
         'o', (select jsonb_agg(q2.o->>(z.perm[i]) order by i) from generate_subscripts(z.perm, 1) i),
         'right', array_position(z.perm, q2.a) - 1,
         'pa', (select jsonb_build_object('pick', array_position(z.perm, x.pick) - 1, 'ok', x.ok, 'ms', x.ms) from ajf_duel_a x where x.duel = d.id and x.n = z.n and x.emp = d.a),
