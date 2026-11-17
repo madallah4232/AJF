@@ -113,9 +113,31 @@ LC:"مراقبة الحمولة (لود كنترول)",TRC:"منسق الدور�
 ICAO:"منظمة الطيران المدني الدولي (إيكاو)",AHM:"دليل المناولة الأرضية من أياتا",SOP:"إجراءات التشغيل القياسية",
 PIC:"قائد الطائرة (الكابتن)",NOTAM:"إشعار رسمي للطيارين",METAR:"تقرير الطقس الحالي في المطار",TAF:"توقعات الطقس للمطار",
 AOG:"طائرة متوقفة بسبب عطل",MEL:"قائمة الأعطال المسموح الطيران بها",SGS:"الشركة السعودية للخدمات الأرضية"};
+/* كلمات وعبارات إنجليزية شائعة في الأسئلة (بدون حساسية للأحرف) */
+const GLW={"cute":"نظام أجهزة الكاونتر المشتركة بين شركات الطيران","sita":"شركة أنظمة الاتصالات وتقنية المعلومات للطيران","amadeus":"نظام الحجز وإجراءات السفر",
+"backup procedure":"الإجراء البديل وقت تعطل النظام","backup":"البديل الاحتياطي","primary link failure":"انقطاع الاتصال الأساسي","failure":"عطل أو انقطاع","procedure":"إجراء",
+"carts and dollies":"عربات نقل العفش والحاويات","carts":"عربات نقل العفش","dollies":"عربات نقل الحاويات","check-in":"إنهاء إجراءات السفر","boarding pass":"بطاقة صعود الطائرة",
+"boarding":"صعود الركاب للطائرة","gate closure":"إغلاق البوابة","final call":"النداء الأخير","gate":"بوابة الصعود","ramp":"ساحة الطائرات","apron":"ساحة وقوف الطائرات",
+"pushback":"دفع الطائرة للخلف من موقفها","push back":"دفع الطائرة للخلف من موقفها","offload":"تنزيل (راكب أو عفش) من الرحلة","headcount":"عدّ الركاب داخل الطائرة",
+"load sheet":"ورقة الوزن والاتزان للرحلة","loadsheet":"ورقة الوزن والاتزان للرحلة","load control":"مراقبة الحمولة","weight and balance":"الوزن والاتزان","trim":"اتزان الطائرة",
+"belt loader":"سير تحميل العفش","high loader":"رافعة تحميل الحاويات","chocks":"مصدات العجلات","chock":"مصد العجلة","cones":"أقماع السلامة حول الطائرة",
+"marshaller":"موجّه الطائرة بالإشارات","wing walker":"مراقب طرف الجناح وقت التحريك","jet bridge":"الجسر المتحرك للطائرة","ambulift":"سيارة رافعة لذوي الإعاقة",
+"standby":"راكب احتياط ينتظر مقعد","overbooking":"حجز أكثر من المقاعد","upgrade":"ترقية الدرجة","no show":"راكب ما حضر","denied boarding":"منع الراكب من الصعود",
+"excess baggage":"وزن عفش زائد","bag tag":"بطاقة العفش","cabin baggage":"حقيبة المقصورة","hand baggage":"حقيبة اليد","checked baggage":"العفش المشحون","baggage":"العفش","hold":"عنبر الطائرة",
+"dangerous goods":"بضائع خطرة","power bank":"شاحن متنقل","lithium":"بطاريات ليثيوم","safety":"السلامة","ppe":"معدات الحماية الشخصية","ground operations manual":"دليل العمليات الأرضية",
+"ground handling":"الخدمات الأرضية","turnaround":"تجهيز الطائرة بين الوصول والإقلاع","delay code":"رمز سبب التأخير","delay":"تأخير","cancellation":"إلغاء","compensation":"تعويض",
+"captain":"قائد الطائرة","crew":"طاقم الطائرة","cabin crew":"طاقم الضيافة","refuelling":"تزويد الوقود","fuelling":"تزويد الوقود","fuel":"وقود","deplaning":"نزول الركاب من الطائرة",
+"disembarkation":"نزول الركاب","embarkation":"صعود الركاب","unruly":"راكب مشاغب","medif":"نموذج اللياقة الطبية للسفر","stretcher":"نقالة طبية","infant":"رضيع","seat":"مقعد","exit row":"صف مخرج الطوارئ",
+"visa":"تأشيرة","passport":"جواز السفر","iqama":"الإقامة","travel document":"وثيقة السفر","ticket":"تذكرة","manual":"دليل","circular":"تعميم","accepted":"معتمد","eff":"ساري من تاريخ"};
 const GLRX=new RegExp("(?<![A-Za-z])("+Object.keys(GL).sort((a,b)=>b.length-a.length).join("|")+")(?![A-Za-z])","g");
-function glH(...txt){const f=new Set();txt.flat().forEach(t=>{String(t||"").replace(GLRX,m=>{f.add(m);return m})});if(!f.size)return"";
-  return`<div class="qz-gl"><b>📖 معاني الرموز</b>${[...f].map(k=>`<div><span dir="ltr">${k}</span>${E(GL[k])}</div>`).join("")}</div>`}
+const GLWX=new RegExp("(?<![A-Za-z])("+Object.keys(GLW).sort((a,b)=>b.length-a.length).map(k=>k.replace(/[-]/g,"\\-")).join("|")+")(?![A-Za-z])","gi");
+/* gl: شرح الكلمات اللي جهّزه Gemini لهذا السؤال (أولوية)، وبعده القاموس الثابت */
+function glH(gl,...txt){const out=new Map();(Array.isArray(gl)?gl:[]).forEach(x=>{if(x&&x.t&&x.ar&&!out.has(x.t.toLowerCase()))out.set(x.t.toLowerCase(),[x.t,x.ar])});
+  const all=txt.flat().map(t=>String(t||"")).join(" \n ");
+  all.replace(GLRX,m=>{if(!out.has(m.toLowerCase()))out.set(m.toLowerCase(),[m,GL[m]]);return m});
+  all.replace(GLWX,m=>{const k=m.toLowerCase();if(![...out.keys()].some(o=>o===k||o.includes(k)))out.set(k,[m,GLW[k]]);return m});
+  if(!out.size)return"";
+  return`<div class="qz-gl"><b>📖 معاني الكلمات الإنجليزية</b>${[...out.values()].map(([k,v])=>`<div><span dir="ltr">${E(k)}</span>${E(v)}</div>`).join("")}</div>`}
 window.QZ_GL=glH;
 const fdate=t=>{try{return new Date(t).toLocaleDateString("ar-SA-u-ca-gregory-nu-latn",{weekday:"long",day:"numeric",month:"long",timeZone:"Asia/Riyadh"})}catch(e){return""}};
 const secs=ms=>(Math.round((ms||0)/100)/10).toFixed(1)+"ث";
@@ -129,7 +151,7 @@ async function loadBoard(){try{const j=await call("ajf_qz_board",{p_scope:BT});B
 let DUI=null,duP=null;
 function duPeek(){call("ajf_du_list").then(j=>{if(j.s!=="ok")return;DUI={inv:(j.inv||[]).filter(x=>x.in).length,live:(j.live||[]).filter(x=>x.ph!=="wait").length};paint()}).catch(()=>{})}
 function duOpen(){VIEW="duel";root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;
-  (window.DU?Promise.resolve():duP||(duP=ldJs("duel.js?v=5").catch(e=>{duP=null;throw e}))).then(()=>{if(VIEW==="duel")DU.mount(root,()=>{VIEW="home";paint();duPeek()})})
+  (window.DU?Promise.resolve():duP||(duP=ldJs("duel.js?v=6").catch(e=>{duP=null;throw e}))).then(()=>{if(VIEW==="duel")DU.mount(root,()=>{VIEW="home";paint();duPeek()})})
     .catch(()=>{VIEW="home";paint();alert("تعذّر التحميل، تأكد من الإنترنت")})}
 function mount(el){css();root=el;VIEW="home";const go=window.QZ_GO==="duel";window.QZ_GO=null;duPeek();root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;if(go)duOpen();
   Promise.all([load(),loadBoard()]).then(paint).catch(e=>{if(root)root.innerHTML=`<div class="bd-empty">${/rpc 404/.test(e&&e.message)?"🏁 التحدي قيد التجهيز، قريباً بإذن الله":"تعذّر التحميل، تأكد من الإنترنت"}</div>`});
@@ -190,7 +212,7 @@ function empPaint(){if(!root||VIEW!=="emp")return;const D=EMP||{},R=D.rows||[];l
       h+=`<div class="qz-card qe-q"><div class="qe-h"><span>سؤال ${x.n} · ${LV[x.d]||""}</span><span>${st}${x.ans?" · "+secs(x.ms):""}</span></div><p>${E(x.q)}</p>
         <div class="qe-o">${(x.o||[]).map((t,i)=>`<div class="${i===x.right?"r":i===x.pick?"w":""}"><b>${LT[i]}</b><span>${E(t)}</span>${i===x.right?"<i>✓ الصحيح</i>":i===x.pick?(D.mine?"<i>✗ اختيارك</i>":"<i>✗ اختياره</i>"):""}</div>`).join("")}</div>
         <div class="qe-ans">✅ الجواب الصحيح: ${E((x.o||[])[x.right]||"")}</div>
-        ${x.why?`<div class="qa-m">💡 ${E(x.why)}</div>`:""}${x.src?`<div class="qa-m">📄 المرجع: ${E(x.src)}${x.page?" · صفحة "+E(x.page):""}</div>`:""}${glH(x.q,x.o,x.why)}</div>`})}
+        ${x.why?`<div class="qa-m">💡 ${E(x.why)}</div>`:""}${x.src?`<div class="qa-m">📄 المرجع: ${E(x.src)}${x.page?" · صفحة "+E(x.page):""}</div>`:""}${glH(x.gl,x.q,x.o,x.why)}</div>`})}
   root.innerHTML=`<div class="qz">${h}</div>`;root.querySelector("#qeBack").onclick=()=>{VIEW="home";EMP=null;paint()}}
 
 /* ---------- شاشة السؤال ---------- */
@@ -224,7 +246,7 @@ function showRes(c,r){if(!ov)return;c.done=true;
   ov.querySelectorAll("[data-o]").forEach(b=>{const k=+b.dataset.o;b.disabled=true;if(k===r.right)b.classList.add("ok");else if(k===r.pick&&!r.ok)b.classList.add("no")});
   const H=r.ok?"✓ إجابة صحيحة":r.why==="time"?"⏱ انتهى الوقت":r.why==="left"?"🚪 خرجت من التطبيق":r.why==="net"?"⚠️ تعذّر إرسال الإجابة":"✕ إجابة خاطئة";
   const sub=r.ok?"خلال "+secs(r.ms):r.why==="left"?"انحسب السؤال خطأ لأنك طلعت من التطبيق والسؤال مفتوح.":r.why==="net"?"تأكد من الإنترنت. الوقت يُحسب في الخادم.":"";
-  const R=document.getElementById("qzRes");if(R)R.innerHTML=`<div class="qzo-r ${r.ok?"ok":"no"}"><b class="h">${H}</b>${sub?`<div>${E(sub)}</div>`:""}${r.exp?`<div>💡 ${E(r.exp)}</div>`:""}${r.src?`<small>📄 المصدر: ${E(r.src)}${r.page?" · صفحة "+E(r.page):""}</small>`:""}${glH(cur&&cur.qt,cur&&cur.qo,r.exp)}</div>`;
+  const R=document.getElementById("qzRes");if(R)R.innerHTML=`<div class="qzo-r ${r.ok?"ok":"no"}"><b class="h">${H}</b>${sub?`<div>${E(sub)}</div>`:""}${r.exp?`<div>💡 ${E(r.exp)}</div>`:""}${r.src?`<small>📄 المصدر: ${E(r.src)}${r.page?" · صفحة "+E(r.page):""}</small>`:""}${glH(r.gl,cur&&cur.qt,cur&&cur.qo,r.exp)}</div>`;
   const last=c.n>=c.of,A=document.getElementById("qzAct");
   if(A){A.innerHTML=last?`<button class="p" id="qzX">عرض النتيجة</button>`:`<button id="qzX">أكمل لاحقاً</button><button class="p" id="qzN">السؤال التالي ←</button>`;
     A.querySelector("#qzX").onclick=ovClose;const n=A.querySelector("#qzN");if(n)n.onclick=next}
@@ -240,6 +262,7 @@ document.addEventListener("visibilitychange",async()=>{if(document.hidden){leave
 addEventListener("pagehide",leaveNow);
 
 /* ---------- إدارة الأسئلة (المشرف) ---------- */
+let AGL="",AGLB=false;
 let ATOP="mix",AT="pending",AL=undefined,AOFF=0,AED=null,ASRC=null,AGEN=false,AMSG="";
 async function admLoad(){try{const j=await call("ajf_qz_admin",{p_action:"list",p_arg:{st:AT,off:AOFF}});AL=j.s==="ok"?j:{n:0,rows:[]}}catch(e){AL=null}}
 async function srcLoad(){if(ASRC)return;try{const j=await call("ajf_circ_list",{p_offset:0,p_limit:100});ASRC=j.s==="ok"?j.rows:[]}catch(e){ASRC=[]}}
@@ -267,6 +290,8 @@ function admPaint(){if(!root||VIEW!=="adm")return;const a=(ST&&ST.adm)||{},r=ST&
     <select id="qaN">${[5,10,15].map(n=>`<option value="${n}" ${n===10?"selected":""}>${n} أسئلة</option>`).join("")}</select>
     <button class="qz-go" id="qaGen" style="margin:0" ${AGEN?"disabled":""}>${AGEN?"… جاري التوليد (قرابة 30 ثانية)":"توليد الأسئلة"}</button>
     <div class="qa-m">الأسئلة الجديدة تروح لـ "بانتظار الاعتماد" وما تظهر للموظفين لين تعتمدها.${AMSG?"<br><b style='color:var(--ink)'>"+E(AMSG)+"</b>":""}</div></div>
+  <div class="qz-card qa-f"><b>📖 شرح الكلمات الإنجليزية</b><div class="qa-m">يجهّز شرح عربي مختصر لكل كلمة إنجليزية في الأسئلة القديمة (مثل CUTE و Backup). الأسئلة الجديدة تنولّد مع شرحها تلقائياً.${AGL?"<br><b style='color:var(--ink)'>"+E(AGL)+"</b>":""}</div>
+    <button class="qz-go" id="qaGl" ${AGLB?"disabled":""}>${AGLB?"جاري التجهيز…":"📖 تجهيز الشرح للأسئلة"}</button></div>
   <div class="qz-card qa-f"><b>🏁 الجولة</b><div class="qa-m">3 أيام · 10 أسئلة يومياً · 30 ثانية للسؤال<br>${r?`الجولة ${r.no}: ${r.ph==="on"?"شغّالة، اليوم "+r.day+" من "+r.days:r.ph==="wait"?"تبدأ "+E(fdate(r.starts)):r.ph==="stop"?"موقوفة":"انتهت"} · ${r.auto?"الجولة اللي بعدها تبدأ تلقائياً":"بدون تجديد تلقائي"}`:"ما فيه جولات للحين"}</div>
     <select id="qaDay"><option value="0">تبدأ اليوم</option><option value="1">تبدأ بكرة</option></select>
     <label><input type="checkbox" id="qaAuto" checked style="width:auto"> بعد ما تخلص الجولة تبدأ اللي بعدها تلقائياً</label>
@@ -278,6 +303,12 @@ function admPaint(){if(!root||VIEW!=="adm")return;const a=(ST&&ST.adm)||{},r=ST&
   ${AL&&AL.n>AOFF+AL.rows.length||AOFF?`<div class="qa-b">${AOFF?`<button id="qaPrev">السابق</button>`:""}${AL&&AL.n>AOFF+AL.rows.length?`<button id="qaNext">التالي (${AL.n-AOFF-AL.rows.length})</button>`:""}</div>`:""}</div>`;
   const $q=s=>root.querySelector(s),re=async()=>{await Promise.all([admLoad(),load()]);admPaint()};
   $q("#qaBack").onclick=()=>{VIEW="home";AED=null;paint()};
+  $q("#qaGl").onclick=async()=>{AGLB=true;AGL="";admPaint();let tot=0,j=null;
+    for(let i=0;i<60;i++){try{j=await edge({action:"qzgl"})}catch(e){j={s:/fn 404/.test(e.message)?"nofn":"net"}}
+      if(j.s!=="ok")break;tot+=j.done;AGL=`تم ${tot} سؤال · باقي ${j.left}`;admPaint();if(!j.left||!j.done)break}
+    AGL=j&&j.s==="ok"?(j.left?`تم ${tot} سؤال · باقي ${j.left}، اضغط مرة ثانية`:`✓ خلص: كل الأسئلة صار لها شرح (${tot} الحين)`):
+      j&&(j.s==="nofn"||j.s==="bad")?"لازم تحدّث الدالة ajf-files في Supabase أول":j&&j.s==="nokey"?"مفتاح Gemini غير موجود":j&&j.s==="err"?"لازم تشغّل ملف quiz_mine.sql أول":j&&j.s==="aierr"?"خدمة الذكاء الاصطناعي ما ردّت، جرّب بعد دقيقة":"تعذّر، تأكد من الإنترنت";
+    AGLB=false;admPaint()};
   $q("#qaGen").onclick=async()=>{AGEN=true;AMSG="";const src=$q("#qaSrc").value,n=+$q("#qaN").value;ATOP=$q("#qaTop").value;admPaint();
     try{const j=await edge({action:"quizgen",n,src,topic:ATOP==="mix"?"":ATOP});
       /* الأسئلة الجديدة تاخذ اختصاص المجال اللي انولّدت له */

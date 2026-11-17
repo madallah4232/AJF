@@ -9,6 +9,8 @@
 --   • الدردشة: اللاعب ما تطلع له رسائل المتفرجين اللي انكتبت وقت السؤال إلا بعد ما ينتهي، وما يقدر يكتب وقت السؤال.
 --   • المشرف (is_admin) ما يلعب لأنه يشوف الأجوبة وقت الاعتماد، بس يقدر يتابع ويدردش.
 
+alter table public.ajf_quiz_q add column if not exists gl jsonb;  -- شرح الكلمات الإنجليزية (quiz_mine.sql)
+
 -- st: invite بانتظار رد الخصم / ready مقبول (ينتظر البداية أو شغّال) / done انتهى / no رفض / void انلغى أو انتهت مهلته
 create table if not exists public.ajf_duel (
   id     bigserial primary key,
@@ -343,7 +345,7 @@ begin
       'my', case when pl then (select array_position(dq.perm, x.pick) - 1 from ajf_duel_a x where x.duel = d.id and x.n = p.n and x.emp = e.emp) end,
       'mydone', pl and exists (select 1 from ajf_duel_a x where x.duel = d.id and x.n = p.n and x.emp = e.emp));
     if not hide then
-      cur := cur || jsonb_build_object('right', array_position(dq.perm, q.a) - 1, 'why', q.why, 'src', q.src_title, 'page', q.page,
+      cur := cur || jsonb_build_object('right', array_position(dq.perm, q.a) - 1, 'why', q.why, 'src', q.src_title, 'page', q.page, 'gl', q.gl,
         'pa', (select jsonb_build_object('pick', array_position(dq.perm, x.pick) - 1, 'ok', x.ok, 'ms', x.ms, 'why', x.why) from ajf_duel_a x where x.duel = d.id and x.n = p.n and x.emp = d.a),
         'pb', (select jsonb_build_object('pick', array_position(dq.perm, x.pick) - 1, 'ok', x.ok, 'ms', x.ms, 'why', x.why) from ajf_duel_a x where x.duel = d.id and x.n = p.n and x.emp = d.b));
     end if;
@@ -351,7 +353,7 @@ begin
 
   -- بعد النهاية: كل الأسئلة وأجوبتها عشان الكل يستفيد
   if p.ph = 'done' then
-    select coalesce(jsonb_agg(jsonb_build_object('n', z.n, 'q', q2.q, 'why', q2.why, 'src', q2.src_title, 'page', q2.page,
+    select coalesce(jsonb_agg(jsonb_build_object('n', z.n, 'q', q2.q, 'why', q2.why, 'src', q2.src_title, 'page', q2.page, 'gl', q2.gl,
         'o', (select jsonb_agg(q2.o->>(z.perm[i]) order by i) from generate_subscripts(z.perm, 1) i),
         'right', array_position(z.perm, q2.a) - 1,
         'pa', (select jsonb_build_object('pick', array_position(z.perm, x.pick) - 1, 'ok', x.ok, 'ms', x.ms) from ajf_duel_a x where x.duel = d.id and x.n = z.n and x.emp = d.a),

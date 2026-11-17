@@ -39,6 +39,12 @@ async function gem(text: string, sys: string, json = false, strong = false): Pro
   }
   throw new Error("gemini " + last);
 }
+// شرح الكلمات الإنجليزية: [{t,ar}] نظيف ومحدود
+function glClean(v: unknown): { t: string; ar: string }[] {
+  const seen = new Set<string>();
+  return (Array.isArray(v) ? v : []).map((x: any) => ({ t: String(x?.t || "").trim().slice(0, 60), ar: String(x?.ar || "").trim().slice(0, 160) }))
+    .filter((x) => x.t && x.ar && /[A-Za-z]/.test(x.t) && !seen.has(x.t.toLowerCase()) && seen.add(x.t.toLowerCase())).slice(0, 15);
+}
 // ---------- بصمة المعنى (Gemini embeddings — مجاني) للبحث بالمعنى بدل تطابق الكلمات ----------
 const EM = Deno.env.get("GEMINI_EMBED_MODEL") || "gemini-embedding-001";
 class Busy extends Error {}
@@ -370,10 +376,11 @@ Deno.serve(async (req) => {
 - d: 1 سهل، 2 متوسط، 3 صعب — نوّع بينها.
 - why: سطر أو سطرين يشرح ليش الجواب صحيح حسب النص.
 - page: رقم الصفحة إذا ظاهر في النص مثل [صفحة 214]، وإلا "".
+- gl: كل كلمة أو عبارة أو اختصار بالإنجليزي ظاهر في q أو o أو why، مع شرح عربي مختصر (من 2 إلى 10 كلمات) يفهمه موظف ما يعرف إنجليزي. مثل {"t":"CUTE","ar":"نظام أجهزة الكاونتر المشتركة بين شركات الطيران"}. إذا ما فيه إنجليزي أرجع [].
 - rel: من 1 إلى 5، كم السؤال مفيد فعلاً لـ ${tRole} في الجوف (5 = موقف يتكرر ولازم يعرفه). كن صارم.
 - لا تكرر ولا تعيد صياغة هذه الأسئلة الموجودة:\n${avoid || "(ما فيه)"}
 - إذا النص ما فيه معلومات تنفع هذا المجال، أرجع قائمة فاضية. أسئلة أقل وقوية أفضل من كثيرة وضعيفة.
-أرجع JSON فقط: {"qs":[{"q":"...","o":["...","...","...","..."],"a":0,"d":1,"why":"...","page":"","rel":5}]}`;
+أرجع JSON فقط: {"qs":[{"q":"...","o":["...","...","...","..."],"a":0,"d":1,"why":"...","page":"","rel":5,"gl":[{"t":"...","ar":"..."}]}]}`;
       const j = JSON.parse(await gem(prompt, SYS_QZ, true, true));
       const seen = new Set((old || []).map((x: any) => NORM(x.q)));
       const rows: Record<string, unknown>[] = [];
@@ -384,10 +391,32 @@ Deno.serve(async (req) => {
         // نخلط الخيارات حتى الجواب الصحيح ما يكون دايم الأول
         const idx = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
         rows.push({ q: q.slice(0, 600), o: idx.map((i) => o[i].slice(0, 200)), a: idx.indexOf(ai), d: [1, 2, 3].includes(Number(x.d)) ? Number(x.d) : 2,
-          why: String(x.why || "").slice(0, 800), page: String(x.page || "").slice(0, 20), src_id: c.id, src_title: String(c.title || "").slice(0, 200), st: "pending", by_ai: true });
+          why: String(x.why || "").slice(0, 800), page: String(x.page || "").slice(0, 20), gl: glClean(x.gl), src_id: c.id, src_title: String(c.title || "").slice(0, 200), st: "pending", by_ai: true });
       }
       if (rows.length) { const { error } = await sb.from("ajf_quiz_q").insert(rows); if (error) return out({ s: "err", e: error.message }); }
       return out({ s: "ok", n: rows.length, src: c.title, topic: tName });
+    } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
+  }
+  // ---------- 📖 شرح الكلمات الإنجليزية بالعربي للأسئلة القديمة (20 سؤال كل مرة، والجوال يكرر لين تخلص) ----------
+  if (a.action === "qzgl") {
+    if (!GK) return out({ s: "nokey" });
+    try {
+      const { data: L, error } = await sb.from("ajf_quiz_q").select("id,q,o,why").is("gl", null).neq("st", "no").order("id").limit(20);
+      if (error) return out({ s: "err", e: error.message });
+      if (L && L.length) {
+        const list = (L as any[]).map((x) => `#${x.id}\nس: ${x.q}\nخيارات: ${(x.o || []).join(" | ")}\nشرح: ${x.why || ""}`).join("\n\n");
+        const j = JSON.parse(await gem(`لكل سؤال من هذه الأسئلة، طلّع كل كلمة أو عبارة أو اختصار بالإنجليزي ظاهر فيه (في السؤال أو الخيارات أو الشرح)، واكتب لها شرح عربي مختصر من 2 إلى 10 كلمات يفهمه موظف ما يعرف إنجليزي، بمعناها في شغل المطار والخدمات الأرضية.
+مثال: {"t":"CUTE","ar":"نظام أجهزة الكاونتر المشتركة بين شركات الطيران"}، {"t":"Backup procedure","ar":"الإجراء البديل وقت تعطل النظام"}.
+السؤال اللي ما فيه إنجليزي: gl = [].
+\n${list}\n\nأرجع JSON فقط: {"items":[{"id":123,"gl":[{"t":"...","ar":"..."}]}]}`, "أنت خبير في الخدمات الأرضية بالمطارات، تشرح المصطلحات الإنجليزية بالعربي بدقة واختصار.", true));
+        const got = new Map<number, unknown>(((j.items || []) as any[]).map((x) => [Number(x.id), x.gl]));
+        for (const x of L as any[]) {
+          if (!got.has(x.id)) continue;
+          await sb.from("ajf_quiz_q").update({ gl: glClean(got.get(x.id)) }).eq("id", x.id);
+        }
+      }
+      const { count } = await sb.from("ajf_quiz_q").select("id", { count: "exact", head: true }).is("gl", null).neq("st", "no");
+      return out({ s: "ok", done: (L || []).length, left: count || 0 });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
   if (a.action === "upload") {

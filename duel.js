@@ -219,7 +219,7 @@ function render(){const d=R&&R.d;if(!d||!ov)return;vPaint();
         return`<div class="h"><b>${x.n}. ${E(x.q)}</b><ol>${x.o.map((t,k)=>`<li class="${k===x.right?"ok":""}"><span>${LT[k]}) ${E(t)}</span><i class="duo-pk">${tag(k,x.pa)}${tag(k,x.pb)}</i></li>`).join("")}</ol>
           ${!x.pa||x.pa.pick==null||!x.pb||x.pb.pick==null?`<div class="du-m">${!x.pa||x.pa.pick==null?E(d.a.name)+" ما جاوب. ":""}${!x.pb||x.pb.pick==null?E(d.b.name)+" ما جاوب.":""}</div>`:""}
           <div class="qe-ans">✅ الجواب الصحيح: ${E(x.o[x.right]||"")}</div>
-          ${x.why?`<div class="du-m">💡 ${E(x.why)}</div>`:""}${x.src?`<div class="du-m">📄 المرجع: ${E(x.src)}${x.page?" · صفحة "+E(x.page):""}</div>`:""}${gl(x.q,x.o,x.why)}</div>`}).join("")}</div></details>`;return}
+          ${x.why?`<div class="du-m">💡 ${E(x.why)}</div>`:""}${x.src?`<div class="du-m">📄 المرجع: ${E(x.src)}${x.page?" · صفحة "+E(x.page):""}</div>`:""}${gl(x.gl,x.q,x.o,x.why)}</div>`}).join("")}</div></details>`;return}
   /* سؤال مفتوح أو عرض الجواب */
   const rev=d.ph==="rev",pa=c.pa,pb=c.pb,me=d.me,mine=me?c.my:null;
   const who=k=>[pa&&pa.pick===k?`<em>${E(d.a.name)}</em>`:"",pb&&pb.pick===k?`<em>${E(d.b.name)}</em>`:""].join("");
@@ -227,7 +227,7 @@ function render(){const d=R&&R.d;if(!d||!ov)return;vPaint();
     ${rev||d.ph==="q2"?"":`<div class="qzo-ring" id="duoRing"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="46"/><circle class="fg" cx="50" cy="50" r="46" style="animation-duration:${d.secs}s;animation-delay:-${Math.max(0,(srvNow()-new Date(d.t0))/1000).toFixed(1)}s"/></svg><b id="duoSec">${d.secs}</b></div>`}
     <div class="qzo-q">${E(c.q)}</div>
     <div class="qzo-o">${(c.o||[]).map((t,k)=>`<button data-o="${k}" ${!me||c.mydone||rev||d.ph==="q2"?"disabled":""} class="${rev?(k===c.right?"ok":k===mine?"no":""):k===mine?"pk":""}"><i>${LT[k]}</i><span>${E(t)}</span>${rev?`<span class="duo-pk">${who(k)}</span>`:""}</button>`).join("")}</div>
-    ${rev?`<div class="qzo-r ${me?(pa&&me==="a"?pa.ok:pb&&me==="b"?pb.ok:false)?"ok":"no":""}"><b class="h">${rev?res(d,pa,pb):""}</b>${c.why?`<div>💡 ${E(c.why)}</div>`:""}${c.src?`<small>📄 المرجع: ${E(c.src)}${c.page?" · صفحة "+E(c.page):""}</small>`:""}${gl(c.q,c.o,c.why)}</div>`
+    ${rev?`<div class="qzo-r ${me?(pa&&me==="a"?pa.ok:pb&&me==="b"?pb.ok:false)?"ok":"no":""}"><b class="h">${rev?res(d,pa,pb):""}</b>${c.why?`<div>💡 ${E(c.why)}</div>`:""}${c.src?`<small>📄 المرجع: ${E(c.src)}${c.page?" · صفحة "+E(c.page):""}</small>`:""}${gl(c.gl,c.q,c.o,c.why)}</div>`
       :me&&c.mydone?`<div class="du-m" style="text-align:center">✓ انرسل جوابك، انتظر نهاية الوقت</div>`:d.ph==="q2"?`<div class="du-m" style="text-align:center">⏳ انتهى الوقت…</div>`:!me?`<div class="du-m" style="text-align:center">👀 أنت متفرج</div>`:""}`;
   M.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>pick(+b.dataset.o))}
 function res(d,pa,pb){const f=(p,n)=>!p||p.pick==null?n+": ما جاوب":n+": "+(p.ok?"✓ صح ("+(p.ms/1000).toFixed(1)+"ث)":"✗ غلط");return E(f(pa,d.a.name)+" · "+f(pb,d.b.name))}

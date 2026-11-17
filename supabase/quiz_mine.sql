@@ -2,6 +2,18 @@
 -- شغّل هذا الملف مرة واحدة في Supabase: SQL Editor ← New query ← الصق ← Run. ما يمسح أي شي.
 -- يطلع بس الأسئلة اللي انقفلت (جاوبها أو خلص وقتها)، فما ينكشف سؤال مفتوح.
 
+-- 📖 شرح الكلمات الإنجليزية بالعربي لكل سؤال: [{"t":"CUTE","ar":"..."}] (يعبّيها Gemini)
+alter table public.ajf_quiz_q add column if not exists gl jsonb;
+
+-- نتيجة السؤال بعد الجواب في التحدي اليومي: نضيف شرح الكلمات الإنجليزية
+create or replace function public.ajf__qz_res(p_id bigint)
+returns jsonb language sql security definer set search_path = public as $$
+  select jsonb_build_object('s','ok', 'ok', a.ok, 'why', a.why, 'ms', a.ms, 'n', a.n,
+    'right', array_position(a.perm, q.a) - 1, 'pick', case when a.pick is null then null else array_position(a.perm, a.pick) - 1 end,
+    'exp', q.why, 'src', q.src_title, 'page', q.page, 'gl', q.gl)
+  from ajf_quiz_a a join ajf_quiz_q q on q.id = a.qid where a.id = p_id
+$$;
+
 create or replace function public.ajf_qz_mine(p_token text, p_device text)
 returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare e public.employees; res jsonb;
@@ -10,7 +22,7 @@ begin
   if e.emp is null then return jsonb_build_object('s','out'); end if;
   select coalesce(jsonb_agg(x order by x.rid desc, x.day desc, x.n), '[]'::jsonb) into res from (
     select a.rid, (select count(*) from ajf_quiz_round z where z.id <= a.rid) as rno, a.day, a.n, a.shown, a.ans, a.ok, a.ms,
-      q.q, q.d, q.why, q.src_title as src, q.page,
+      q.q, q.d, q.why, q.src_title as src, q.page, q.gl,
       (select jsonb_agg(q.o->p order by i) from unnest(a.perm) with ordinality t(p, i)) as o,
       array_position(a.perm, q.a) - 1 as right,
       case when a.pick is null then null else array_position(a.perm, a.pick) - 1 end as pick
@@ -32,7 +44,7 @@ begin
   if m.emp is null then return jsonb_build_object('s','bad'); end if;
   select coalesce(jsonb_agg(x order by x.rid desc, x.day desc, x.n), '[]'::jsonb) into res from (
     select a.rid, (select count(*) from ajf_quiz_round z where z.id <= a.rid) as rno, a.day, a.n, a.shown, a.ans, a.ok, a.ms,
-      q.q, q.d, q.why, q.src_title as src, q.page,
+      q.q, q.d, q.why, q.src_title as src, q.page, q.gl,
       (select jsonb_agg(q.o->p order by i) from unnest(a.perm) with ordinality t(p, i)) as o,
       array_position(a.perm, q.a) - 1 as right,
       case when a.pick is null then null else array_position(a.perm, a.pick) - 1 end as pick
