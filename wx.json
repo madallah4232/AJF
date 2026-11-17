@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-17T10:39:52Z",
+  "fetched": "2026-11-17T11:29:30Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-17T11:01:30.525Z",
+      "obsTime": 1794913200,
+      "reportTime": "2026-11-17T11:00:00.000Z",
+      "temp": 26,
+      "dewp": 3,
+      "wdir": 100,
+      "wspd": 2,
+      "visib": "6+",
+      "altim": 1019,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 171100Z 10002KT CAVOK 26/03 Q1019 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-17T10:04:10.111Z",
@@ -44,39 +66,17 @@
       "cover": "CAVOK",
       "clouds": [],
       "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-17T08:01:14.647Z",
-      "obsTime": 1794902400,
-      "reportTime": "2026-11-17T08:00:00.000Z",
-      "temp": 22,
-      "dewp": 3,
-      "wdir": 310,
-      "wspd": 2,
-      "visib": "6+",
-      "altim": 1021,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 170800Z 31002KT CAVOK 22/03 Q1021 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "CAVOK",
-      "clouds": [],
-      "fltCat": "VFR"
     }
   ],
   "taf": [
     {
       "icaoId": "OESK",
-      "dbPopTime": "2026-11-16T23:40:05.880Z",
-      "bulletinTime": "2026-11-16T23:00:00.000Z",
-      "issueTime": "2026-11-16T23:00:00.000Z",
-      "validTimeFrom": 1794873600,
-      "validTimeTo": 1794981600,
-      "rawTAF": "TAF OESK 162300Z 1700/1806 18006KT 9999 NSC BECMG 1708/1710 30008KT BECMG 1718/1720 36006KT",
+      "dbPopTime": "2026-11-17T11:01:26.924Z",
+      "bulletinTime": "2026-11-17T11:00:00.000Z",
+      "issueTime": "2026-11-17T11:00:00.000Z",
+      "validTimeFrom": 1794916800,
+      "validTimeTo": 1795024800,
+      "rawTAF": "TAF OESK 171100Z 1712/1818 09008KT CAVOK BECMG 1802/1804 03010KT",
       "mostRecent": 1,
       "remarks": "",
       "lat": 29.785,
@@ -86,39 +86,12 @@
       "name": "Al-Jouf Arpt",
       "fcsts": [
         {
-          "timeFrom": 1794873600,
-          "timeTo": 1794902400,
+          "timeFrom": 1794916800,
+          "timeTo": 1794967200,
           "timeBec": null,
           "fcstChange": null,
           "probability": null,
-          "wdir": 180,
-          "wspd": 6,
-          "wgst": null,
-          "wshearHgt": null,
-          "wshearDir": null,
-          "wshearSpd": null,
-          "visib": "6+",
-          "altim": null,
-          "vertVis": null,
-          "wxString": null,
-          "notDecoded": null,
-          "clouds": [
-            {
-              "cover": "NSC",
-              "base": null,
-              "type": null
-            }
-          ],
-          "icgTurb": [],
-          "temp": []
-        },
-        {
-          "timeFrom": 1794902400,
-          "timeTo": 1794938400,
-          "timeBec": 1794909600,
-          "fcstChange": "BECMG",
-          "probability": null,
-          "wdir": 300,
+          "wdir": 90,
           "wspd": 8,
           "wgst": null,
           "wshearHgt": null,
@@ -127,7 +100,7 @@
           "visib": "6+",
           "altim": null,
           "vertVis": null,
-          "wxString": null,
+          "wxString": "NSW",
           "notDecoded": null,
           "clouds": [
             {
@@ -140,13 +113,13 @@
           "temp": []
         },
         {
-          "timeFrom": 1794938400,
-          "timeTo": 1794981600,
-          "timeBec": 1794945600,
+          "timeFrom": 1794967200,
+          "timeTo": 1795024800,
+          "timeBec": 1794974400,
           "fcstChange": "BECMG",
           "probability": null,
-          "wdir": 360,
-          "wspd": 6,
+          "wdir": 30,
+          "wspd": 10,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
@@ -154,7 +127,7 @@
           "visib": "6+",
           "altim": null,
           "vertVis": null,
-          "wxString": null,
+          "wxString": "NSW",
           "notDecoded": null,
           "clouds": [
             {
