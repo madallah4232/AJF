@@ -97,8 +97,8 @@ function paint(){if(!root||VIEW!=="home")return;let h=`<button class="qz-adm" id
   const dn=L.done||[];if(dn.length)h+=`<div class="bd-sec"><span>🏁 النتائج</span><span style="font-size:12px">آخر 7 أيام</span></div>`+dn.map(x=>`<div class="du-r tap ${x.mine?"mine":""}" data-room="${x.id}">
     <span class="p ${x.w==="a"?"w":x.w==="b"?"l":""}">${x.w==="a"?"🏆 ":""}${E(x.a)}</span><span class="s">${x.rb} - ${x.ra}</span><span class="p ${x.w==="b"?"w":x.w==="a"?"l":""}">${x.w==="b"?"🏆 ":""}${E(x.b)}</span>
     <small>${x.w?"فاز "+E(x.w==="a"?x.a:x.b):"تعادل"} · صح ${E(x.a)} ${x.ca} و${E(x.b)} ${x.cb} من ${x.nq} · ${ago(x.fin)} · اضغط لمراجعة الأسئلة</small></div>`).join("");
-  const tp=L.top||[];if(tp.length)h+=`<div class="du-card"><div class="bd-sec" style="margin:0"><span>👑 أبطال التحديات</span><span style="font-size:12px">فوز-خسارة</span></div>
-    <div class="du-tb">${tp.slice(0,10).map((x,i)=>`<div class="t ${x.me?"me":""}"><span>${i<3?["🥇","🥈","🥉"][i]:i+1}</span><span>${E(x.name)}${x.streak>1?" 🔥"+x.streak:""}</span><b>${rec(x)}</b></div>`).join("")}</div></div>`;
+  const tp=L.top||[];if(tp.length)h+=`<div class="du-card"><div class="bd-sec" style="margin:0"><span>👑 أبطال التحديات</span><span style="font-size:12px">الأكثر صح، ثم الأسرع</span></div>
+    <div class="du-tb">${tp.slice(0,10).map((x,i)=>`<div class="t ${x.me?"me":""}"><span>${i<3?["🥇","🥈","🥉"][i]:i+1}</span><span>${E(x.name)}${x.streak>1?" 🔥"+x.streak:""}<small class="du-m" style="display:block">${x.p} ${x.p>2&&x.p<11?"تحديات":"تحدي"} · ${x.w} فوز</small></span><b>${x.c!=null?x.c+" صح · "+Math.round((x.ms||0)/1000)+" ث":"—"}</b></div>`).join("")}</div></div>`;
   h+=`<details class="du-card qz-rules"><summary>📜 قوانين التحديات</summary><ul>
     <li>تختار زميلك والمجال وعدد الأسئلة (5 = جولة، 10 = جولتين، 15 = ثلاث) ووقت كل سؤال.</li>
     <li>الأسئلة تنسحب عشوائياً من بنك الأسئلة المعتمد، وما يشوفها أحد قبل ما تطلع للاثنين بنفس اللحظة.</li>

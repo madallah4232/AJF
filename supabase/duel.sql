@@ -205,11 +205,15 @@ begin
         case when d.win = d.a then 'a' when d.win = d.b then 'b' end as w, e.emp in (d.a, d.b) as mine
       from ajf_duel d join employees ea on ea.emp = d.a join employees eb on eb.emp = d.b
       where d.st = 'done' and d.fin > now() - interval '7 days' order by d.fin desc limit 40) x), '[]'::jsonb),
-    'top', coalesce((select jsonb_agg(x order by x.w desc, x.l, x.name) from (
-      select m.name, (ajf__du_stats(m.emp)->>'w')::int as w, (ajf__du_stats(m.emp)->>'l')::int as l, (ajf__du_stats(m.emp)->>'d')::int as d,
-        (ajf__du_stats(m.emp)->>'streak')::int as streak, m.emp = e.emp as me
+    -- ترتيب الأبطال: الأكثر إجابات صحيحة في كل تحدياته، وعند التساوي الأسرع (مجموع ثواني الإجابات الصحيحة)
+    'top', coalesce((select jsonb_agg(x order by x.c desc, x.ms, x.name) from (
+      select m.name, m.emp = e.emp as me,
+        (select count(*) from ajf_duel_a a join ajf_duel d on d.id = a.duel where d.st = 'done' and a.emp = m.emp and a.ok) as c,
+        (select coalesce(sum(a.ms), 0) from ajf_duel_a a join ajf_duel d on d.id = a.duel where d.st = 'done' and a.emp = m.emp and a.ok) as ms,
+        (select count(*) from ajf_duel d where d.st = 'done' and m.emp in (d.a, d.b)) as p,
+        (ajf__du_stats(m.emp)->>'w')::int as w, (ajf__du_stats(m.emp)->>'streak')::int as streak
       from employees m where exists (select 1 from ajf_duel d where d.st = 'done' and m.emp in (d.a, d.b))
-      order by 2 desc limit 30) x), '[]'::jsonb));
+      order by 3 desc, 4 limit 30) x), '[]'::jsonb));
 end $$;
 
 -- الزملاء اللي أقدر أتحداهم + المجالات المشتركة والمصادر المتاحة لكل خصم يحسبها الجوال
