@@ -25,6 +25,7 @@ const CSS=`
 .du-f select,.du-f input{width:100%;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:15px var(--body);padding:0 10px;color-scheme:dark}
 .du-ch{display:flex;gap:6px;flex-wrap:wrap}.du-ch button{flex:1;min-width:60px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:700 14px var(--body)}
 .du-ch button.on{background:#d9b45a;color:#1a1205;border-color:#d9b45a}
+.du-cd{font:700 15px var(--mono);color:#d9b45a;white-space:nowrap}.du-cd.low{color:var(--warn)}
 .du-msg{font:600 13.5px var(--body);color:var(--amber);text-align:center;min-height:1em}
 .du-tb{display:grid;gap:5px}.du-tb .t{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;padding:7px 10px;border-radius:11px;background:var(--raise);font-size:13.5px}
 .du-tb .t.me{outline:2px solid #d9b45a}.du-tb .t b{font-family:var(--mono)}
@@ -60,21 +61,33 @@ const rDone=(ph,n,rd)=>ph==="done"||n>rd*5||(n===rd*5&&ph==="rev");
 const rw=(sc,ph,n)=>{let a=0,b=0;((sc&&sc.rounds)||[]).forEach(x=>{if(rDone(ph,n,x.rd)){if(x.w==="a")a++;else if(x.w==="b")b++}});return[a,b]};
 
 let root=null,back=null,L=null,VIEW="home",OPTS=null,F=null,MSG="",lt=null;
-function mount(el,onBack){css();root=el;back=onBack;VIEW="home";root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;load().then(paint);
-  clearInterval(lt);lt=setInterval(()=>{if(!root||!root.isConnected){clearInterval(lt);return}if(!document.hidden&&VIEW==="home"&&!R)load().then(paint)},15000)}
-async function load(){try{L=await call("ajf_du_list")}catch(e){L={s:/rpc 404|PGRST202|ajf_du_list/.test(e&&e.message||"")?"nosql":"net"}}return L}
+let PEND=new Set(),NOTE="",noteT=null,ct=null,cdKick=0;
+function mount(el,onBack){css();root=el;back=onBack;VIEW="home";root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;load().then(paint);sched();
+  /* عدّاد مهلة القبول (60 ثانية) */
+  clearInterval(ct);ct=setInterval(()=>{if(!root||!root.isConnected){clearInterval(ct);return}if(VIEW!=="home"||!L||L.s!=="ok")return;let z=0;
+    root.querySelectorAll("[data-exp]").forEach(b=>{const s=Math.max(0,Math.ceil((new Date(b.dataset.exp)-Date.now()-(L.dt||0))/1000));b.textContent="⏳ "+s+" ث";b.classList.toggle("low",s<=15);if(!s)z=1});
+    if(z&&Date.now()-cdKick>2500){cdKick=Date.now();load().then(paint)}},1000)}
+/* التحديث: كل 3 ثواني إذا فيه دعوة تنتظر، وإلا كل 15 ثانية */
+function sched(){clearTimeout(lt);lt=setTimeout(async()=>{if(!root||!root.isConnected)return;if(!document.hidden&&VIEW==="home"&&!R){await load();paint()}sched()},L&&L.inv&&L.inv.length?3000:15000)}
+async function load(){try{L=await call("ajf_du_list");L.dt=new Date(L.now)-Date.now()}catch(e){L={s:/rpc 404|PGRST202|ajf_du_list/.test(e&&e.message||"")?"nosql":"net"}}
+  if(L.s==="ok"){const live=new Set((L.live||[]).map(x=>x.id)),still=new Set((L.inv||[]).filter(x=>!x.in).map(x=>x.id));let open=0;
+    /* دعوتي انقبلت ← أدخل الغرفة على طول. ما انقبلت خلال المهلة ← تنبيه */
+    PEND.forEach(id=>{if(live.has(id)){if(!R&&VIEW==="home")open=id}else if(!still.has(id))note("⌛ انتهت مهلة الدعوة أو انرفضت")});
+    PEND=still;if(open)setTimeout(()=>roomOpen(open),0)}
+  return L}
+function note(t){NOTE=t;clearTimeout(noteT);noteT=setTimeout(()=>{NOTE="";paint()},6000)}
 
 function paint(){if(!root||VIEW!=="home")return;let h=`<button class="qz-adm" id="duBack">→ رجوع لتحدي التشغيل</button>`;
   if(!L||L.s!=="ok"){root.innerHTML=`<div class="du">${h}<div class="bd-empty">${L&&L.s==="nosql"?"⚔️ التحديات قيد التجهيز، قريباً بإذن الله":"تعذّر التحميل، تأكد من الإنترنت"}</div></div>`;root.querySelector("#duBack").onclick=back;return}
   const S=L.stats||{};
   h+=`<div class="du-card"><div class="du-h"><h3>⚔️ تحديات الزملاء</h3>${S.streak>1?`<span class="du-m">🔥 ${S.streak} انتصارات متتالية</span>`:""}</div>
     ${L.admin?"":`<div class="du-st"><div><b style="color:var(--go)">${S.w||0}</b><span>فوز</span></div><div><b style="color:var(--warn)">${S.l||0}</b><span>خسارة</span></div><div><b>${S.d||0}</b><span>تعادل</span></div><div><b>${L.left}</b><span>متبقي اليوم</span></div></div>`}
-    ${L.off?`<div class="du-msg">⏸ التحديات موقوفة مؤقتاً من المشرف</div>`:""}
+    ${L.off?`<div class="du-msg">⏸ التحديات موقوفة مؤقتاً من المشرف</div>`:""}${NOTE?`<div class="du-msg">${E(NOTE)}</div>`:""}
     ${L.admin?`<div class="du-m">أنت مشرف: تتابع الغرف وتدردش، لكن ما تلعب لأنك تشوف الأجوبة وقت الاعتماد.</div>
       <button class="du-go" id="duOff" style="${L.off?"":"background:var(--raise);color:var(--warn)"}">${L.off?"▶ تشغيل التحديات":"⏸ إيقاف التحديات (وقت الذروة)"}</button>`
       :`<button class="du-go" id="duNew" ${L.off||!L.left?"disabled":""}>${L.left?"⚔️ تحدي زميل":"خلصت تحدياتك اليوم (3)"}</button>`}</div>`;
   const inv=L.inv||[];if(inv.length)h+=`<div class="bd-sec"><span>📨 الدعوات</span></div>`+inv.map(x=>`<div class="du-card">
-    <div><b>${x.in?"⚔️ "+E(x.who)+" يتحداك":"بانتظار رد "+E(x.who)}</b><div class="du-m">${x.nq} أسئلة (${x.nq/5} ${x.nq>5?"جولات":"جولة"}) · ${x.secs} ثانية للسؤال · ${E(TPN[x.tp||""]||"")}${x.src?" · "+E(x.src):""}<br>${x.starts?"يبدأ الساعة "+E(hm(x.starts)):"يبدأ بعد دقيقة من القبول"} · ${ago(x.at)}</div></div>
+    <div class="du-h"><b>${x.in?"⚔️ "+E(x.who)+" يتحداك":"بانتظار رد "+E(x.who)}</b><b class="du-cd" data-exp="${E(x.exp)}">⏳ 60 ث</b></div><div><div class="du-m">${x.nq} أسئلة (${x.nq/5} ${x.nq>5?"جولات":"جولة"}) · ${x.secs} ثانية للسؤال · ${E(TPN[x.tp||""]||"")}${x.src?" · "+E(x.src):""}<br>${x.starts?"يبدأ الساعة "+E(hm(x.starts)):"يبدأ بعد دقيقة من القبول"}</div></div>
     <div class="du-b">${x.in?`<button class="g" data-dy="${x.id}">✓ قبول</button><button class="x" data-dn="${x.id}">✕ اعتذار</button>`:`<button class="x" data-dc="${x.id}">إلغاء الدعوة</button>`}</div></div>`).join("");
   const lv=L.live||[];h+=`<div class="bd-sec"><span>🏟 الغرف</span><span style="font-size:12px">مفتوحة للكل</span></div>`;
   h+=lv.length?lv.map(x=>{const on=x.ph!=="wait",sc=x.sc||{};return`<div class="du-r tap ${x.mine?"mine":""}" data-room="${x.id}">
@@ -92,7 +105,8 @@ function paint(){if(!root||VIEW!=="home")return;let h=`<button class="qz-adm" id
     <li>اللي يجاوب صح أكثر ياخذ الجولة، وعند التعادل الأسرع في إجاباته الصحيحة.</li>
     <li>إذا طلعت من التطبيق والسؤال مفتوح ينحسب خطأ.</li>
     <li>كل الغرف مفتوحة للمتابعة والدردشة. اللاعب ما يقدر يكتب وقت السؤال، ورسائل المتفرجين ما توصله إلا بعد ما يخلص السؤال.</li>
-    <li>3 تحديات باليوم، وما تقدر تتحدى نفس الزميل أكثر من مرة باليوم.</li></ul></details>`;
+    <li>3 تحديات باليوم (الدعوة اللي انرفضت أو انتهت مهلتها ما تنحسب)، وما تقدر تتحدى نفس الزميل أكثر من مرة باليوم.</li>
+    <li>الزميل عنده 60 ثانية يقبل الدعوة، وبعدها تنلغي تلقائياً.</li></ul></details>`;
   root.innerHTML=`<div class="du">${h}</div>`;
   const $=s=>root.querySelector(s);$("#duBack").onclick=back;
   const n=$("#duNew");if(n)n.onclick=()=>{act("dunew");VIEW="new";F={opp:"",tp:"",src:"",nq:5,secs:30,when:"now",tm:""};MSG="";newPaint();if(!OPTS)optsLoad()};
@@ -100,7 +114,7 @@ function paint(){if(!root||VIEW!=="home")return;let h=`<button class="qz-adm" id
   root.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>roomOpen(+b.dataset.room));
   root.querySelectorAll("[data-dy],[data-dn],[data-dc]").forEach(b=>b.onclick=async()=>{const id=+(b.dataset.dy||b.dataset.dn||b.dataset.dc),a=b.dataset.dy?"yes":b.dataset.dn?"no":"cancel";
     if(a==="cancel"&&!confirm("إلغاء الدعوة؟"))return;b.disabled=true;let j;try{j=await call("ajf_du_reply",{p_id:id,p_act:a})}catch(e){j={s:"net"}}
-    if(j.s!=="ok")alert({gone:"الدعوة ما عادت متاحة",off:"التحديات موقوفة مؤقتاً من المشرف",busy:"عندك أو عنده تحدي ثاني بنفس الوقت",net:"تعذّر، تأكد من الإنترنت"}[j.s]||"تعذّر");
+    if(j.s!=="ok")alert({gone:"الدعوة ما عادت متاحة (انتهت المهلة أو انلغت)",off:"التحديات موقوفة مؤقتاً من المشرف",busy:"عندك أو عنده تحدي ثاني بنفس الوقت",net:"تعذّر، تأكد من الإنترنت"}[j.s]||"تعذّر");
     await load();paint();if(j.s==="ok"&&a==="yes")roomOpen(id)})}
 
 /* ---------- تحدي جديد ---------- */
@@ -137,7 +151,7 @@ function newPaint(){if(!root||VIEW!=="new")return;let h=`<button class="qz-adm" 
       if(t<Date.now()+60e3)t+=864e5;st=new Date(t).toISOString()}
     const b=$("#fGo");b.disabled=true;MSG="";let j;
     try{j=await call("ajf_du_new",{p_opp:F.opp,p_tp:F.tp,p_src:F.src,p_nq:F.nq,p_secs:F.secs,p_start:st})}catch(e){j={s:"net"}}
-    if(j.s==="ok"){act("dusend");VIEW="home";await load();paint();return}
+    if(j.s==="ok"){act("dusend");PEND.add(j.id);VIEW="home";await load();paint();sched();return}
     MSG={limit:"خلصت تحدياتك اليوم (3)",pair:"سبق تحديت هذا الزميل اليوم، أو عندك دعوة له ما رد عليها",few:"الأسئلة المعتمدة ما تكفي ("+(j.n||0)+")",
       off:"التحديات موقوفة مؤقتاً من المشرف",time:"وقت البداية لازم يكون خلال 24 ساعة",busy:"عندك أو عنده تحدي ثاني بنفس الوقت",tp:"هذا المجال ما يخص زميلك",
       admin:"المشرف ما يلعب",net:"تعذّر الإرسال، تأكد من الإنترنت"}[j.s]||"تعذّر الإرسال";newPaint()}}

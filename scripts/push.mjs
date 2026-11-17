@@ -85,18 +85,27 @@ async function bcTick(N) {
   for (const x of rows || []) {
     if (!(await rpc("ajf_push_claim", { p_day: N.iso, p_flight: "BC", p_stage: String(x.id) }).catch(() => false))) continue;
     const body = String(x.body || "").slice(0, 300);
-    const msg = JSON.stringify({ title: (x.urgent ? "🚨 عاجل · " : "📢 ") + (x.name || "المشرف"), body, tag: "ajf-bc-" + x.id, url: "./?bc", ri: !!x.urgent });
+    // ⚔️ دعوة تحدي: تفتح صفحة التحديات مباشرة، وما لها فايدة بعد مهلة القبول (60 ثانية)
+    const du = body.startsWith("⚔️");
+    const msg = JSON.stringify(du ? { title: "⚔️ تحدي من " + (x.name || "زميلك"), body: body.replace(/^⚔️\s*/, ""), tag: "ajf-du-" + x.id, url: "./?duel", ri: true }
+      : { title: (x.urgent ? "🚨 عاجل · " : "📢 ") + (x.name || "المشرف"), body, tag: "ajf-bc-" + x.id, url: "./?bc", ri: !!x.urgent });
     const to = v2 && Array.isArray(x.to_emps) && x.to_emps.length ? new Set(x.to_emps.map(String)) : null;
     const subs = to ? (await rpc("ajf_push_targets_emp")).filter((s) => to.has(String(s.emp))) : await rpc(v2 ? "ajf_push_targets_emp" : "ajf_push_targets");
     let ok = 0;
     await Promise.all(subs.map(async (s) => {
-      try { await wp.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, msg, { TTL: 6 * 3600, urgency: "high", topic: ("bc" + x.id).slice(0, 32) }); ok++; }
+      try { await wp.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, msg, { TTL: du ? 75 : 6 * 3600, urgency: "high", topic: ("bc" + x.id).slice(0, 32) }); ok++; }
       catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await rpc("ajf_push_drop", { p_endpoint: s.endpoint }).catch(() => {}); else console.log("push: bc send", e.statusCode || e.message); }
     }));
     console.log(`push: BC ${x.id}${to ? " (موجّه)" : ""} → ${ok}/${subs.length}`);
   }
 }
-let busy = false;
+let busy = false, bcBusy = false, bcTimer = null;
+async function bcFast() {
+  if (bcBusy) return; bcBusy = true;
+  try { await bcTick({ iso: new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10) }); }
+  catch (e) { console.log("push: bc", e.message); }
+  finally { bcBusy = false; }
+}
 // 📻 أحد يتكلم على الراديو ← تنبيه على شاشة القفل لكل الموظفين المشتركين باسم المتكلم (يُفحص كل 5 ثواني)
 // مرة وحدة بس كل 10 دقائق مهما تكرر الكلام (طلب المشرف: كان يطلع مع كل ضغطة وهذا مزعج)
 const VC_GAP = 10 * 60e3;
@@ -137,8 +146,9 @@ export async function pushTick(state, N, fallbackFlights) {
     if (ready === null) ready = await init();
     if (!ready) return;
     if (!vcTimer) { vcTimer = setInterval(vcTick, 5000); vcTimer.unref?.(); vcTick(); }
+    // التنبيهات المكتوبة ودعوات التحدي تنفحص كل 5 ثواني (دعوة التحدي مهلتها 60 ثانية بس)
+    if (!bcTimer) { bcTimer = setInterval(bcFast, 5000); bcTimer.unref?.(); }
     await adminTick(N).catch((e) => console.log("push: admin", e.message));
-    await bcTick(N).catch((e) => console.log("push: bc", e.message));
     const F = await loadSched(fallbackFlights);
     // وقت الهبوط اللي اعتمده موظف من التطبيق يتقدّم على الرصد التلقائي
     const man = await rpc("ajf_ata_day", { p_day: N.iso }).catch(() => null);

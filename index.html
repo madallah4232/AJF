@@ -1447,7 +1447,7 @@ function admBind(){pushPaint();const o=$("aOut");if(o)o.onclick=async()=>{if(o.d
       await admRender()}catch(e){t.disabled=false}}}
 /* التشغيل بعد تحميل باقي السكربتات (تحتاج $ و escT) */
 addEventListener("DOMContentLoaded",()=>{$("acctBtn").onclick=openAcct;$("admBack").onclick=()=>{if(admEmp||admSec){if(admEmp)admEmp=null;else admSec=null;admRender(true);return}$("adm").hidden=true};
-  if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{ajfAct("open",devLabel());acctPaint(0);authCheck();setTimeout(pushOffer,4000);if(/[?&]acct/.test(location.search))openAcct()}
+  if(DEMO){/* الوضع التجريبي بدون دخول */}else if(!AUTH.tok)gateShow();else{ajfAct("open",devLabel());acctPaint(0);authCheck();setTimeout(pushOffer,4000);if(/[?&]acct/.test(location.search))openAcct();if(/[?&]duel/.test(location.search))setTimeout(duGo,300)}
   let acT=0;setInterval(()=>{if(document.hidden)return;const adm=AUTH.me&&AUTH.me.admin;if(adm||Date.now()-acT>3*60e3){acT=Date.now();authCheck()}},45e3);document.addEventListener("visibilitychange",()=>{if(!document.hidden)authCheck()})});
 </script>
 <script>
@@ -3775,6 +3775,9 @@ function portal(card,B,mid){
   requestAnimationFrame(()=>requestAnimationFrame(()=>p.classList.add("full")));
   setTimeout(()=>{card.classList.remove("press");mid();p.classList.add("bye");setTimeout(()=>p.remove(),400)},620);
 }
+/* ⚔️ تنبيه دعوة تحدي ← يفتح صفحة التحديات مباشرة */
+function duGo(){try{if(/[?&]duel/.test(location.search))history.replaceState(null,"",location.pathname)}catch(e){}if(!AUTH.tok)return;window.QZ_GO="duel";openBoard("qz")}
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{const u=e.data&&e.data.ajfOpen;if(u&&/[?&]duel/.test(u))duGo()});
 function openBoard(id,card){const B=BOARDS.find(x=>x.id===id);if(!B)return;ajfAct("board",id);
   portal(card,B,()=>{$("hub").hidden=true;BOARD=id;
     if(id==="flt"){$("bd").hidden=true;scrollTo(0,0);const w=document.querySelector(".wrap");if(!reduce){w.classList.remove("in");void w.offsetWidth;w.classList.add("in")}return}
@@ -3820,7 +3823,7 @@ async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e
 const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
-let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=6").catch(e=>{qzP=null;throw e}));
+let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=7").catch(e=>{qzP=null;throw e}));
 let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=22")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;

@@ -131,13 +131,13 @@ returns jsonb language sql stable set search_path = public as $$
     'rounds', (select coalesce(jsonb_agg(jsonb_build_object('rd', rd, 'a', oa, 'b', ob, 'w', w) order by rd), '[]'::jsonb) from w))
 $$;
 
--- ينهي التحديات اللي خلص وقتها، ويلغي الدعوات اللي فاتت مهلتها
+-- ينهي التحديات اللي خلص وقتها، ويلغي الدعوات اللي ما انقبلت خلال 60 ثانية
 create or replace function public.ajf__du_sweep()
 returns void language plpgsql security definer set search_path = public as $$
 declare d public.ajf_duel; s jsonb; w text;
 begin
   update ajf_duel set st = 'void', fin = now()
-    where st = 'invite' and ((starts is not null and now() > starts) or (starts is null and at < now() - interval '2 hours'));
+    where st = 'invite' and (at < now() - interval '60 seconds' or (starts is not null and now() > starts));
   for d in select * from ajf_duel where st = 'ready' and starts is not null and now() >= ajf__du_end(ajf_duel.*) for update skip locked loop
     s := ajf__du_score(d);
     w := case when (s->>'ra')::int > (s->>'rb')::int then d.a when (s->>'rb')::int > (s->>'ra')::int then d.b
@@ -190,14 +190,14 @@ begin
   if e.emp is null then return jsonb_build_object('s','out'); end if;
   perform ajf__du_sweep();
   return jsonb_build_object('s','ok', 'me', e.emp, 'admin', e.is_admin, 'off', ajf__du_off(), 'now', now(),
-    'left', greatest(0, 3 - (select count(*) from ajf_duel where a = e.emp and (at at time zone 'Asia/Riyadh')::date = v_day and st <> 'no')),
+    'left', greatest(0, 3 - (select count(*) from ajf_duel where a = e.emp and (at at time zone 'Asia/Riyadh')::date = v_day and st not in ('no','void'))),
     'stats', ajf__du_stats(e.emp),
     'live', coalesce((select jsonb_agg(jsonb_build_object('id', d.id, 'a', ea.name, 'b', eb.name, 'mine', e.emp in (d.a, d.b),
         'nq', d.nq, 'secs', d.secs, 'starts', d.starts, 'ph', (ajf__du_ph(d)).ph, 'n', (ajf__du_ph(d)).n,
         'v', (select count(*) from ajf_duel_v v where v.duel = d.id and v.seen > now() - interval '15 seconds'),
         'sc', case when now() >= d.starts then ajf__du_score(d) end) order by d.starts)
       from ajf_duel d join employees ea on ea.emp = d.a join employees eb on eb.emp = d.b where d.st = 'ready'), '[]'::jsonb),
-    'inv', coalesce((select jsonb_agg(jsonb_build_object('id', d.id, 'in', d.b = e.emp, 'who', case when d.b = e.emp then ea.name else eb.name end,
+    'inv', coalesce((select jsonb_agg(jsonb_build_object('id', d.id, 'in', d.b = e.emp, 'exp', d.at + interval '60 seconds', 'who', case when d.b = e.emp then ea.name else eb.name end,
         'nq', d.nq, 'secs', d.secs, 'starts', d.starts, 'src', d.src_t, 'tp', d.tp, 'at', d.at) order by d.id desc)
       from ajf_duel d join employees ea on ea.emp = d.a join employees eb on eb.emp = d.b where d.st = 'invite' and e.emp in (d.a, d.b)), '[]'::jsonb),
     'done', coalesce((select jsonb_agg(x order by x.fin desc) from (
@@ -243,7 +243,7 @@ begin
   if p_start is not null and (p_start < now() + interval '1 minute' or p_start > now() + interval '24 hours') then return jsonb_build_object('s','time'); end if;
   perform pg_advisory_xact_lock(hashtext('ajf_du_' || least(e.emp, o.emp) || greatest(e.emp, o.emp)));
   perform ajf__du_sweep();
-  if (select count(*) from ajf_duel where a = e.emp and (at at time zone 'Asia/Riyadh')::date = v_day and ajf_duel.st <> 'no') >= 3 then
+  if (select count(*) from ajf_duel where a = e.emp and (at at time zone 'Asia/Riyadh')::date = v_day and ajf_duel.st not in ('no','void')) >= 3 then
     return jsonb_build_object('s','limit'); end if;
   if exists (select 1 from ajf_duel where ((a = e.emp and b = o.emp) or (a = o.emp and b = e.emp))
              and (at at time zone 'Asia/Riyadh')::date = v_day and ajf_duel.st not in ('no','void')) then
@@ -268,7 +268,7 @@ begin
                    random() limit p_nq) x;
   perform ajf__du_notify(e, o.emp, '⚔️ ' || e.name || ' يتحداك: ' || p_nq || ' أسئلة · ' || p_secs || ' ثانية للسؤال'
     || case when p_start is null then '' else ' · يبدأ ' || to_char(p_start at time zone 'Asia/Riyadh', 'HH12:MI') || case when extract(hour from p_start at time zone 'Asia/Riyadh') < 12 then ' ص' else ' م' end end
-    || '. افتح تحدي التشغيل ← التحديات عشان تقبل أو ترفض.');
+    || '. عندك 60 ثانية تقبل، وبعدها ينلغي.');
   return jsonb_build_object('s','ok', 'id', did);
 end $$;
 

@@ -95,9 +95,9 @@ async function loadBoard(){try{const j=await call("ajf_qz_board",{p_scope:BT});B
 let DUI=null,duP=null;
 function duPeek(){call("ajf_du_list").then(j=>{if(j.s!=="ok")return;DUI={inv:(j.inv||[]).filter(x=>x.in).length,live:(j.live||[]).filter(x=>x.ph!=="wait").length};paint()}).catch(()=>{})}
 function duOpen(){VIEW="duel";root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;
-  (window.DU?Promise.resolve():duP||(duP=ldJs("duel.js?v=1").catch(e=>{duP=null;throw e}))).then(()=>{if(VIEW==="duel")DU.mount(root,()=>{VIEW="home";paint();duPeek()})})
+  (window.DU?Promise.resolve():duP||(duP=ldJs("duel.js?v=2").catch(e=>{duP=null;throw e}))).then(()=>{if(VIEW==="duel")DU.mount(root,()=>{VIEW="home";paint();duPeek()})})
     .catch(()=>{VIEW="home";paint();alert("تعذّر التحميل، تأكد من الإنترنت")})}
-function mount(el){css();root=el;VIEW="home";duPeek();root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;
+function mount(el){css();root=el;VIEW="home";const go=window.QZ_GO==="duel";window.QZ_GO=null;duPeek();root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;if(go)duOpen();
   Promise.all([load(),loadBoard()]).then(paint).catch(e=>{if(root)root.innerHTML=`<div class="bd-empty">${/rpc 404/.test(e&&e.message)?"🏁 التحدي قيد التجهيز، قريباً بإذن الله":"تعذّر التحميل، تأكد من الإنترنت"}</div>`});
   clearInterval(tick);tick=setInterval(()=>{if(!root||!root.isConnected){clearInterval(tick);return}if(!document.hidden&&VIEW==="home"&&!cur)paint()},30000)}
 
