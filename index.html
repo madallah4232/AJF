@@ -713,6 +713,17 @@ html:has(#hub:not([hidden])),body:has(#hub:not([hidden])){overflow:hidden}
 .hub-hi h2{margin:0;font:700 26px/1.25 var(--display)}
 .hub-hi h2 span{color:var(--amber)}
 .hub-hi p{margin:0;color:#dccab0;font-size:14px;line-height:1.7}
+.hub-hx{display:grid;gap:10px}
+/* شريط التعاميم: حركة transform فقط (على كرت الشاشة، بدون إعادة رسم) وتوقف تلقائياً لما تختفي الرئيسية */
+.tick{position:relative;z-index:1;overflow:hidden;border-radius:14px;background:rgba(17,11,7,.88);border:1px solid var(--line);padding:9px 0;margin-top:2px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.tick-tr{display:flex;width:max-content;animation:tkMv var(--d,60s) linear infinite}
+.tick:active .tick-tr{animation-play-state:paused}
+.tick-tr span{white-space:nowrap;padding:0 12px;font-size:13.5px;color:#dccab0}
+.tick-tr span b{color:var(--amber);font-weight:700;margin-inline-end:5px}
+.tick-tr i{font-style:normal;color:#6e5440;align-self:center}
+@keyframes tkMv{to{transform:translateX(50%)}}
+@media (prefers-reduced-motion:reduce){.tick{overflow-x:auto}}
 .hub-st{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
 .hub-st div{background:rgba(17,11,7,.55);border:1px solid var(--line);border-radius:14px;padding:9px 10px;display:grid;gap:2px;min-width:0}
 .hub-st b{font:700 17px var(--mono);direction:ltr;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1038,7 +1049,7 @@ body,.bd,.hub{background:var(--felt),var(--night)}
 <div class="hub" id="hub" aria-label="الرئيسية"><div class="hub-in">
   <div class="hub-top"><div class="lg"><img src="media/sgs-logo.png" alt="SGS"><div><small>مطار الجوف الدولي · AJF</small><b>بوابة العمليات</b></div></div>
     <div class="r"><span class="hub-clk" id="hubClk">--:--</span><button class="hub-ac" id="hubAcct" aria-label="الحساب"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button></div></div>
-  <div class="hub-hi" id="hubHi"></div>
+  <div class="hub-hi"><div class="hub-hx" id="hubHi"></div><div class="tick" id="hubTk" hidden></div></div>
   <div class="hub-g" id="hubG"></div>
   <div class="hub-f">SGS · Saudi Ground Services · AJF Station</div>
 </div></div>
@@ -3750,21 +3761,37 @@ function hiLite(txt,terms){let h=escT(txt);if(!terms||!terms.length)return h;
   const fl=t=>t.split("").map(ch=>({"ا":"[اأإآء]","ه":"[هة]","ي":"[يىئ]","و":"[وؤ]"})[ch]||ch.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("[\\u064B-\\u0652\\u0640]*");
   try{const re=new RegExp("("+terms.filter(t=>t.length>1).sort((a,b)=>b.length-a.length).map(fl).join("|")+")","gi");h=h.replace(re,"<mark>$1</mark>")}catch(e){}return h}
 function snip(b,terms){const N=cN(b);let p=-1;for(const t of terms){p=N.indexOf(t);if(p>=0)break}if(p<0)return b.slice(0,220);const a=Math.max(0,p-80);return(a?"…":"")+b.slice(a,a+260)+(a+260<b.length?"…":"")}
+/* ===== شريط التعاميم: آخر التعاميم + نقاط تذكير من ملخصاتها ===== */
+let TK=null,tkAt=0,tkSig="";try{const c=JSON.parse(localStorage.getItem("ajf_tick")||"null");if(c){TK=c.r;tkAt=c.a||0}}catch(e){}
+async function tickLoad(){if(DEMO||!AUTH.tok||Date.now()-tkAt<30*60e3)return;tkAt=Date.now();/* مرة كل نص ساعة فقط */
+  try{let j=await rpc("ajf_circ_tick",{p_token:AUTH.tok,p_device:AUTH.dev});
+    if(!j||j.s!=="ok")j=await rpc("ajf_circ_list",{p_token:AUTH.tok,p_device:AUTH.dev,p_offset:0,p_limit:8});
+    if(j.s==="out"){authOut();return}if(j.s!=="ok")return;
+    TK=(j.rows||[]).map(r=>({t:r.title,ai:r.ai||"",at:r.at}));try{localStorage.setItem("ajf_tick",JSON.stringify({r:TK,a:tkAt}))}catch(e){}tickPaint()}catch(e){}}
+function tickPaint(){const el=$("hubTk");if(!el)return;const R=TK||[];
+  const ai=r=>{try{const j=r.ai?JSON.parse(r.ai):null;return j||{}}catch(e){return{}}};
+  const items=[];R.slice(0,3).forEach((r,i)=>{const a=ai(r);items.push(["📢 "+(i?"تعميم:":"آخر تعميم:"),a.t||r.t])});
+  /* نقاط التذكير: من ملخص كل تعميم، تتبدّل كل يوم */
+  const pts=[];R.forEach(r=>{const a=ai(r);String(a.s||"").split(/\n|•/).map(x=>x.replace(/^[\s:\-–]+/,"").trim()).filter(x=>x.length>12&&x.length<170).forEach(x=>pts.push(x))});
+  const seed=Math.floor((Date.now()+108e5)/864e5);pts.sort((a,b)=>((a.length*31+seed)%17)-((b.length*31+seed)%17));
+  pts.slice(0,7).forEach(x=>items.push(["💡 تذكير:",x]));
+  const sig=JSON.stringify(items);if(sig===tkSig)return;tkSig=sig;/* ما نعيد رسم الشريط إلا لو تغيّر المحتوى */
+  if(!items.length){el.hidden=true;el.innerHTML="";return}
+  const one=items.map(([b,t])=>`<span><b>${b}</b>${escT(t)}</span><i>◆</i>`).join("");
+  const len=items.reduce((n,[b,t])=>n+b.length+t.length,0);
+  el.innerHTML=`<div class="tick-tr" style="--d:${Math.max(25,Math.round(len/4.5))}s">${one}${one}</div>`;el.hidden=false}
 function hubGreet(){const m=NOW.mins;return m<300?"مساء الخير":m<720?"صباح الخير":"مساء الخير"}
 function hubPaint(){
   const me=AUTH.me||{},first=String(me.name||"").trim().split(/\s+/)[0]||"";
   const fl=flightsOn(TODAY).filter(f=>!f.off&&(LV(TODAY).flights[f.n]||{}).s!=="canceled"),left=fl.filter(f=>toMin(f.t)>NOW.mins).length,nd=nextDeparture();
-  const cd=nd?(nd.left>=60?Math.floor(nd.left/60)+"س "+nd.left%60+"د":nd.left+"د"):"—";
-  $("hubHi").innerHTML=`<small>${DAYS[TODAY.getUTCDay()]} · ${dLabel(TODAY)}</small><h2>${hubGreet()}${first?"، <span>"+escT(first)+"</span>":""}</h2>${me.title?`<div class="hub-ttl" dir="ltr">${escT(me.name)} · ${escT(me.title)}</div>`:""}
-    <p>${left?`باقي <b>${left}</b> ${left>2&&left<11?"رحلات":"رحلة"} اليوم. السلامة أولاً، ومناوبة موفقة.`:"ما فيه رحلات متبقية اليوم. يومك سعيد."}</p>
-    <div class="hub-st"><div><b>${fl.length}</b><span>رحلات اليوم</span></div><div><b>${nd?nd.f.t:"—"}</b><span>${nd?escT(nd.f.n):"القادمة"}</span></div><div><b>${cd}</b><span>على الإقلاع</span></div></div>`;
+  $("hubHi").innerHTML=`<small>${DAYS[TODAY.getUTCDay()]} · ${dLabel(TODAY)}</small><h2>${hubGreet()}${first?"، <span>"+escT(first)+"</span>":""}</h2>${me.title?`<div class="hub-ttl" dir="ltr">${escT(me.name)} · ${escT(me.title)}</div>`:""}`;
   const sv=fl.filter(f=>/^SV/i.test(f.n)).length,seen=circSeen(),nw=CIRCN&&CIRCLAST&&CIRCLAST!==seen;
   const info={tim:[CIRCN?CIRCN+" تعميم":"",nw?"جديد":""],flt:[left+" متبقية",""],trc:[fl.length+" رحلة اليوم",""],lc:[sv+" رحلة سعودية",""],qz:(()=>{try{const q=JSON.parse(localStorage.getItem("ajf_qz_hub")||"null");return q&&q.k>Date.now()?[q.t,q.b]:["",""]}catch(e){return["",""]}})()};
   const g=$("hubG");if(!g.children.length)g.innerHTML=BOARDS.map(B=>`<button class="hub-c" data-b="${B.id}" style="--c:${B.c}"><div class="ic">${svgI(B.ic,24)}</div><div><b>${B.t}</b><span>${B.s}</span><span class="nf" style="color:${B.c}"></span></div><em></em></button>`).join("");
   BOARDS.forEach(B=>{const c=g.querySelector(`[data-b="${B.id}"]`);c.querySelector(".nf").textContent=info[B.id][0];c.querySelector("em").textContent=info[B.id][1]});
 }
 function hubClock(){const e=$("hubClk");if(e)e.textContent=fmt(NOW.mins)}
-function hubShow(anim){BOARD=null;const h=$("hub");h.hidden=false;h.classList.remove("away");hubPaint();hubClock();circLoad();
+function hubShow(anim){BOARD=null;const h=$("hub");h.hidden=false;h.classList.remove("away");hubPaint();hubClock();circLoad();tickPaint();tickLoad();
   if(anim&&!reduce){h.classList.remove("in");void h.offsetWidth;h.classList.add("in")}}
 /* البوابة: لون اللوحة يتمدد من البطاقة اللي ضغطها الموظف ثم يكشف اللوحة */
 function portal(card,B,mid){
