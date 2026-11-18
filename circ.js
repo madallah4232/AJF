@@ -109,6 +109,8 @@ function groupsBase(){if(GRP)return GRP;GRP=[];
   DICT.split("\n").forEach(add);
   try{(window.TIM&&TIM.countries||[]).forEach(c=>add(c.ar+" "+c.en+" "+c.a3))}catch(e){}
   (ADMSYN||[]).forEach(add);return GRP}
+/* شريط الرئيسية: المشرف يختار التعاميم الخاصة بمطار الجوف فقط (مفتاح tick) */
+let TKI=null;async function loadTk(){if(TKI)return;try{const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"tick"});TKI=j&&j.v&&Array.isArray(j.v.ids)?j.v.ids:[]}catch(e){TKI=[]}paintRes()}
 async function loadSyn(){if(ADMSYN)return;try{const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"syn"});ADMSYN=j&&j.v&&Array.isArray(j.v.l)?j.v.l:[];GRP=null}catch(e){ADMSYN=[]}}
 /* الكلمات + بدائلها → مجموعات للبحث */
 function qGroups(q){const words=NORM(q).split(" ").filter(w=>w.length>1&&!STOP.has(w));const G=groupsBase(),out=[],terms=[];
@@ -171,7 +173,7 @@ const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const S={th:(()=>{try{return JSON.parse(localStorage.getItem("ajf_ax_th")||"[]")}catch(e){return[]}})(),aq:(()=>{try{return localStorage.getItem("ajf_ax_q")||""}catch(e){return""}})(),ans:"",abusy:false,asrc:[],q:"",rows:null,list:null,n:0,busy:false,up:[],upBusy:false,usage:null,edit:null,err:""};
 let root=null,qT=null;
 function mount(el,q){root=el;if(q!=null)S.q=q;paint();loadSyn().then(()=>{if(S.q)search();else recent()});if(isAdm())F({action:"usage"}).then(j=>{S.usage=j;paintUp()}).catch(()=>{})}
-function paint(){if(!root)return;const adm=isAdm();
+function paint(){if(!root)return;const adm=isAdm();if(adm)loadTk();
   root.innerHTML=`<div class="ax"><div class="ax-h"><i>🤖</i><div><b>اسأل المساعد</b><small>اكتب سؤالك بالعربي، ويجاوبك من التعاميم المرفوعة</small></div></div>
     <div id="axA">${thHTML()}</div>
     <textarea id="axQ" rows="2" placeholder="${(S.th||[]).length?"اكتب سؤال متابعة أو توضيح…":"مثال: راكب مسافر أمريكا وش يحتاج؟ · الرحلة تأخرت بسبب الطقس وش نسوي؟"}">${E(S.aq||"")}</textarea>
@@ -193,7 +195,7 @@ function card(r,re,partial){const ed=S.edit===r.id;
   return`<div class="ci cx ${r.miss?"near":""}" data-id="${E(r.id)}"><div class="h"><div>${a&&a.t?`<b>${hl(a.t,re)}</b><small class="cx-en" dir="auto">${hl(r.title,re)}</small>`:`<b>${hl(r.title,re)}</b>`}<small>${r.cd?fDate(r.cd):fDate(r.at)}${r.lang==="en"?" · English":""}${r.pages?" · "+r.pages+" ص":""}${r.by_name?" · "+E(r.by_name):""}</small></div>${r.has_file?'<span class="cx-pdf">PDF</span>':""}</div>
     ${r.tags?`<div class="cx-tags">${r.tags.split(/[،,]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span>${hl(x,re)}</span>`).join("")}</div>`:""}
     ${a&&a.s?`<div class="cx-sum">${hl(a.s,re).replace(/\n/g,"<br>")}</div>`:""}<p class="sn ${a&&a.s?"en":""}">${hl(snip(r.txt,re),re)}</p>${r.miss?`<small class="cx-miss">فيه بعض كلماتك فقط</small>`:""}
-    <div class="cact">${r.has_file?`<button class="cx-open" data-open="${E(r.id)}">📄 فتح الملف</button>`:""}<button class="ed" data-full="${E(r.id)}">النص كامل</button>${isAdm()?`<button class="ed" data-edit="${E(r.id)}">تعديل</button><button class="x" data-del="${E(r.id)}">حذف</button>`:""}</div>
+    <div class="cact">${r.has_file?`<button class="cx-open" data-open="${E(r.id)}">📄 فتح الملف</button>`:""}<button class="ed" data-full="${E(r.id)}">النص كامل</button>${isAdm()?`${TKI?`<button class="ed" data-tk="${E(r.id)}" style="${TKI.includes(r.id)?"color:var(--amber);border-color:var(--amber)":""}">${TKI.includes(r.id)?"✓ في الشريط":"📌 للشريط"}</button>`:""}<button class="ed" data-edit="${E(r.id)}">تعديل</button><button class="x" data-del="${E(r.id)}">حذف</button>`:""}</div>
     ${ed?editForm(r):""}<div class="cx-full" id="full_${E(r.id)}" hidden></div></div>`}
 function editForm(r){return`<div class="ci-f cx-ed"><input data-f="title" value="${E(r.title)}" placeholder="العنوان"><input data-f="tags" value="${E(r.tags||"")}" placeholder="وسوم: كلمات بحث مفصولة بفاصلة"><input data-f="cd" type="date" value="${E((r.cd||"").slice(0,10))}">${r.has_file?"":`<textarea data-f="body" placeholder="نص التعميم">${E(r.body||"")}</textarea>`}<button data-save="${E(r.id)}">حفظ</button><span class="m" id="edM"></span></div>`}
 async function search(){const q=S.q.trim();if(!q){S.rows=null;recent();return}S.err="";S.rows=null;paintRes();
@@ -389,6 +391,10 @@ function bind(el){if(el.__cx)return;el.__cx=1;
   el.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;e.stopPropagation();
     if(b.dataset.open){const r=(S.rows||[]).concat(S.list||[]).find(x=>x.id===b.dataset.open),ai=r&&AI(r);viewFile(b.dataset.open,{title:r&&(ai&&ai.t||r.title)});return}
     if(b.dataset.full){showFull(b.dataset.full,b);return}
+    if(b.dataset.tk){const id=b.dataset.tk,r=(S.rows||[]).concat(S.list||[]).find(x=>x.id===id),on=TKI.includes(id);
+      if(!on&&!(AI(r||{})||{}).s){alert("هذا التعميم ما له ملخص عربي بعد — سوّ له ملخص أول عشان يطلع واضح في الشريط");return}
+      const nx=on?TKI.filter(x=>x!==id):[id,...TKI].slice(0,12);b.disabled=true;
+      try{await cfgSet("tick",{ids:nx});TKI=nx;try{localStorage.removeItem("ajf_tick2")}catch(x){}if(window.tickReset)tickReset()}catch(x){alert("تعذّر الحفظ، تأكد من الاتصال")}paintRes();return}
     if(b.id==="cxMore"){recent(true);return}
     if(b.id==="cxReidx"){reindex(b);return}
     if(b.id==="cxSumAll"){sumAll(b);return}

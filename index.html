@@ -721,6 +721,7 @@ html:has(#hub:not([hidden])),body:has(#hub:not([hidden])){overflow:hidden}
 .tick:active .tick-tr{animation-play-state:paused}
 .tick-tr span{white-space:nowrap;padding:0 12px;font-size:13.5px;color:#dccab0}
 .tick-tr span b{color:var(--amber);font-weight:700;margin-inline-end:5px}
+.tick-tr span.pt{padding:0 8px}
 .tick-tr i{font-style:normal;color:#6e5440;align-self:center}
 @keyframes tkMv{to{transform:translateX(50%)}}
 @media (prefers-reduced-motion:reduce){.tick{overflow-x:auto}}
@@ -3762,23 +3763,22 @@ function hiLite(txt,terms){let h=escT(txt);if(!terms||!terms.length)return h;
   try{const re=new RegExp("("+terms.filter(t=>t.length>1).sort((a,b)=>b.length-a.length).map(fl).join("|")+")","gi");h=h.replace(re,"<mark>$1</mark>")}catch(e){}return h}
 function snip(b,terms){const N=cN(b);let p=-1;for(const t of terms){p=N.indexOf(t);if(p>=0)break}if(p<0)return b.slice(0,220);const a=Math.max(0,p-80);return(a?"…":"")+b.slice(a,a+260)+(a+260<b.length?"…":"")}
 /* ===== شريط التعاميم: آخر التعاميم + نقاط تذكير من ملخصاتها ===== */
-let TK=null,tkAt=0,tkSig="";try{const c=JSON.parse(localStorage.getItem("ajf_tick")||"null");if(c){TK=c.r;tkAt=c.a||0}}catch(e){}
+let TK=null,tkAt=0,tkSig="";try{const c=JSON.parse(localStorage.getItem("ajf_tick2")||"null");if(c){TK=c.r;tkAt=c.a||0}}catch(e){}
 async function tickLoad(){if(DEMO||!AUTH.tok||Date.now()-tkAt<30*60e3)return;tkAt=Date.now();/* مرة كل نص ساعة فقط */
-  try{let j=await rpc("ajf_circ_tick",{p_token:AUTH.tok,p_device:AUTH.dev});
-    if(!j||j.s!=="ok")j=await rpc("ajf_circ_list",{p_token:AUTH.tok,p_device:AUTH.dev,p_offset:0,p_limit:8});
+  try{const j=await rpc("ajf_circ_tick",{p_token:AUTH.tok,p_device:AUTH.dev});
     if(j.s==="out"){authOut();return}if(j.s!=="ok")return;
-    TK=(j.rows||[]).map(r=>({t:r.title,ai:r.ai||"",at:r.at}));try{localStorage.setItem("ajf_tick",JSON.stringify({r:TK,a:tkAt}))}catch(e){}tickPaint()}catch(e){}}
+    TK=(j.rows||[]).map(r=>({t:r.title,ai:r.ai||""}));try{localStorage.setItem("ajf_tick2",JSON.stringify({r:TK,a:tkAt}))}catch(e){}tickPaint()}catch(e){}}
+window.tickReset=()=>{tkAt=0;TK=null;tkSig="";tickPaint();tickLoad()};
+/* يعرض فقط التعاميم اللي اختارها المشرف (الخاصة بمطار الجوف): عنوان التعميم ثم نقاطه مباشرة، وبعدها التعميم اللي بعده */
 function tickPaint(){const el=$("hubTk");if(!el)return;const R=TK||[];
   const ai=r=>{try{const j=r.ai?JSON.parse(r.ai):null;return j||{}}catch(e){return{}}};
-  const items=[];R.slice(0,3).forEach((r,i)=>{const a=ai(r);items.push(["📢 "+(i?"تعميم:":"آخر تعميم:"),a.t||r.t])});
-  /* نقاط التذكير: من ملخص كل تعميم، تتبدّل كل يوم */
-  const pts=[];R.forEach(r=>{const a=ai(r);String(a.s||"").split(/\n|•/).map(x=>x.replace(/^[\s:\-–]+/,"").trim()).filter(x=>x.length>12&&x.length<170).forEach(x=>pts.push(x))});
-  const seed=Math.floor((Date.now()+108e5)/864e5);pts.sort((a,b)=>((a.length*31+seed)%17)-((b.length*31+seed)%17));
-  pts.slice(0,7).forEach(x=>items.push(["💡 تذكير:",x]));
-  const sig=JSON.stringify(items);if(sig===tkSig)return;tkSig=sig;/* ما نعيد رسم الشريط إلا لو تغيّر المحتوى */
-  if(!items.length){el.hidden=true;el.innerHTML="";return}
-  const one=items.map(([b,t])=>`<span><b>${b}</b>${escT(t)}</span><i>◆</i>`).join("");
-  const len=items.reduce((n,[b,t])=>n+b.length+t.length,0);
+  const groups=[];R.forEach(r=>{const a=ai(r),t=String(a.t||"").trim();if(!t)return;
+    const pts=String(a.s||"").split(/\n|•/).map(x=>x.replace(/^[\s:\-–]+/,"").trim()).filter(x=>x.length>=15&&x.length<=180).slice(0,4);
+    if(pts.length)groups.push({t,pts})});
+  const sig=JSON.stringify(groups);if(sig===tkSig)return;tkSig=sig;/* ما نعيد رسم الشريط إلا لو تغيّر المحتوى */
+  if(!groups.length){el.hidden=true;el.innerHTML="";return}
+  const one=groups.map(g=>`<span><b>📢 ${escT(g.t)}:</b></span>`+g.pts.map(x=>`<span class="pt">• ${escT(x)}</span>`).join("")).join('<i>◆</i>')+'<i>◆</i>';
+  const len=groups.reduce((n,g)=>n+g.t.length+g.pts.join("").length,0);
   el.innerHTML=`<div class="tick-tr" style="--d:${Math.max(25,Math.round(len/4.5))}s">${one}${one}</div>`;el.hidden=false}
 function hubGreet(){const m=NOW.mins;return m<300?"مساء الخير":m<720?"صباح الخير":"مساء الخير"}
 function hubPaint(){
@@ -3851,7 +3851,7 @@ const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=11").catch(e=>{qzP=null;throw e}));
-let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=22")).catch(e=>{timP=null;throw e}));
+let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=23")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;
   if(!CIRC.length){L.innerHTML=`<div class="bd-empty">ما فيه تعاميم حالياً</div>`;return}
