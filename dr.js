@@ -158,7 +158,7 @@ const SK="ajf_dr";let S={};try{S=JSON.parse(localStorage.getItem(SK)||"{}")||{}}
 try{if(!localStorage.getItem("ajf_dr_v2")){for(const k in S)if(S[k])S[k].done={};localStorage.setItem(SK,JSON.stringify(S));localStorage.setItem("ajf_dr_v2","1")}}catch(e){}
 const sv=()=>{try{const keep=iso(addDays(TODAY,-20));for(const k in S)if(k<keep)delete S[k];localStorage.setItem(SK,JSON.stringify(S))}catch(e){}};
 const dS=k=>S[k]=S[k]||{e:{},x:[],skip:{},done:{}};
-let DAY=0,root=null,OPEN=null,RES=null,CP=null,PH=null;const PST={};
+let DAY=0,root=null,OPEN=null,RES=null,CP=null,C1=null,PH=null;const PST={};
 const dayD=()=>addDays(TODAY,-DAY),dayK=()=>iso(dayD());
 const HM=/^([01]\d|2[0-3]):[0-5]\d$/;const TMK=new Set(["sta","ata","std","atd"]);
 const numF=v=>/^\d+$/.test(String(v||"").trim())?+String(v).trim():String(v||"").trim();
@@ -201,18 +201,36 @@ const miss=r=>{const m=[];for(const k of["sta","ata","std","atd"])if(!HM.test(va
   if(!sum(["aj","ay","dj","dy"].map(k=>val(r,k))))m.push("الركاب");if(r.x&&(!val(r,"al")||!val(r,"fin")))m.push("بيانات الرحلة");return m};
 
 const DRCSS=`
-.dr{display:grid;gap:12px;padding-bottom:90px}
-.dr-c{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-.dr-c>summary{list-style:none;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;cursor:pointer}
+.dr{display:grid;gap:12px;padding-bottom:90px;min-width:0;max-width:100%;overflow-x:hidden}
+.dr *{box-sizing:border-box}
+.dr-hd{display:flex;justify-content:space-between;align-items:center;font:700 14px var(--display);color:var(--muted);padding:4px 2px 0}
+.dr-hd small{font:600 12px var(--body)}
+.dr-f{background:var(--panel);border:1px solid var(--line);border-inline-start:4px solid var(--line);border-radius:18px;overflow:hidden;min-width:0}
+.dr-f.w{border-inline-start-color:var(--amber)}.dr-f.ok{border-inline-start-color:var(--go)}.dr-f.dn{border-inline-start-color:#3b6fd6}.dr-f.skip{opacity:.5}
+.dr-c{min-width:0}
+.dr-c>summary{list-style:none;padding:12px 12px 10px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 10px;align-items:center;cursor:pointer}
+.dr-no{width:26px;height:26px;border-radius:50%;background:var(--raise);display:grid;place-items:center;font:700 13px var(--mono);color:var(--muted)}
+.dr-tm{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;direction:ltr}
+.dr-tm span{background:var(--raise);border-radius:9px;padding:4px 2px;text-align:center;font:600 13px var(--mono);color:var(--ink);white-space:nowrap;overflow:hidden}
+.dr-tm span i{display:block;font:600 10px var(--body);font-style:normal;color:var(--muted)}
+.dr-tm span.e{color:var(--muted)}
+.dr-dl{grid-column:1/-1;font-size:12px;color:var(--amber);direction:ltr;text-align:right}
+.dr-cp{border-top:1px dashed var(--line);padding:10px 12px;display:grid;gap:8px;background:color-mix(in oklab,var(--raise) 40%,var(--panel))}
+.dr-cp .row{display:flex;gap:8px}
+.dr-cp button{flex:1;min-height:44px;border-radius:12px;border:0;background:#d9b45a;color:#1a1205;font:700 14.5px var(--display);padding:6px}
+.dr-cp button.sec{background:var(--raise);color:var(--ink);border:1px solid var(--line)}
+.dr-cp button.mk{background:var(--go);color:#0f1a0f}
+.dr-cp .dr-h,.dr-cp .dr-warn{font-size:12px}
 .dr-c>summary::-webkit-details-marker{display:none}
-.dr-c .t{font:700 16px var(--display);direction:ltr;text-align:right}.dr-c .m{grid-column:1/-1;font-size:12.5px;color:var(--muted);direction:ltr;text-align:right;font-family:var(--mono)}
+.dr-c .t{font:700 16px var(--display);direction:ltr;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .dr-b{font:700 12px var(--body);padding:3px 9px;border-radius:9px;background:var(--raise);color:var(--muted);white-space:nowrap}
 .dr-b.ok{background:color-mix(in oklab,var(--go) 26%,var(--raise));color:var(--ink)}.dr-b.dn{background:#3b6fd6;color:#fff}.dr-b.w{color:var(--amber)}
-.dr-c.skip{opacity:.5}
 .dr-in{padding:0 12px 14px;display:grid;gap:12px}
 .dr-s{display:grid;gap:6px}.dr-s>b{font:700 13px var(--display);color:var(--muted)}
-.dr-g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.dr-g.g5{grid-template-columns:repeat(5,1fr)}.dr-g.g2{grid-template-columns:repeat(2,1fr)}.dr-g.g4{grid-template-columns:repeat(4,1fr)}
-.dr-g label{display:grid;gap:3px;font-size:11.5px;color:var(--muted);min-width:0}
+.dr-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-width:0}.dr-g.g5{grid-template-columns:repeat(5,minmax(0,1fr))}.dr-g.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.dr-g.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dr-g label{display:grid;gap:3px;font-size:11.5px;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.dr-g>button{min-width:0;padding:6px 4px!important;font-size:13px!important;overflow-wrap:anywhere}
+.dr-s{background:var(--bg,transparent);min-width:0}
 .dr-g input,.dr-g select{width:100%;min-width:0;height:42px;border-radius:11px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:600 15px var(--mono);padding:0 6px;text-align:center;direction:ltr;color-scheme:dark;-webkit-user-select:text;user-select:text}
 .dr-g input.au{color:#d9b45a;border-style:dashed}
 .dr-g input:focus{outline:2px solid #d9b45a;outline-offset:0}
@@ -233,12 +251,14 @@ function css(){if(document.getElementById("drCss"))return;const s=document.creat
 function inp(r,k,lbl,type){const v=val(r,k),au=isAuto(r,k);
   const t=type==="tm"?`type="text" inputmode="numeric" maxlength="5" placeholder="--:--"`:NUMK.has(k)?`type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0"`:`type="text" autocapitalize="characters" autocorrect="off" spellcheck="false"`;
   return`<label>${E(lbl)}<input ${t} data-dk="${k}" data-id="${E(r.id)}" value="${E(v)}" class="${au?"au":""}"></label>`}
-function card(r){const D=dS(dayK()),sk=!!D.skip[r.id],dn=D.done[r.id],ms=miss(r),dm=dlyMin(r),st=val(r,"st");
+function card(r,no){const D=dS(dayK()),sk=!!D.skip[r.id],dn=D.done[r.id],ms=miss(r),dm=dlyMin(r),st=val(r,"st");
+  const tc=(k,l)=>{const v=val(r,k);return`<span class="${v?"":"e"}"><i>${l}</i>${E(v||"—")}</span>`};
   const fl=(val(r,"al")||"?")+" "+(val(r,"fin")||"—")+(String(val(r,"fout"))!==String(val(r,"fin"))?"/"+(val(r,"fout")||"—"):"")+" · "+(val(r,"dest")||"—");
   const badge=sk?`<span class="dr-b">مستبعدة</span>`:dn?`<span class="dr-b dn">✔ انلصقت في الملف</span>`:ms.length?`<span class="dr-b w">ناقص ${ms.length}</span>`:`<span class="dr-b ok">✓ جاهزة</span>`;
   const sel=(k,opts)=>`<select data-dk="${k}" data-id="${E(r.id)}">${opts.map(o=>`<option ${val(r,k)===o?"selected":""}>${o}</option>`).join("")}</select>`;
-  return`<details class="dr-c ${sk?"skip":""}" data-card="${E(r.id)}" ${OPEN===r.id?"open":""}><summary><span class="t">${E(fl)}</span>${badge}
-    <span class="m">STA ${E(val(r,"sta")||"—")} · ATA ${E(val(r,"ata")||"—")} · STD ${E(val(r,"std")||"—")} · ATD ${E(val(r,"atd")||"—")}${st?" · "+st+(dm>0?" +"+dm+"m":""):""}</span></summary>
+  const cls=sk?"skip":dn?"dn":ms.length?"w":"ok";
+  return`<section class="dr-f ${cls}" data-f="${E(r.id)}"><details class="dr-c" data-card="${E(r.id)}" ${OPEN===r.id?"open":""}><summary><span class="dr-no">${no||"·"}</span><span class="t">${E(fl)}</span>${badge}
+    <div class="dr-tm">${tc("sta","STA")}${tc("ata","ATA")}${tc("std","STD")}${tc("atd","ATD")}</div>${st==="DLY"?`<div class="dr-dl">DLY${dm>0?" +"+dm+"m":""}</div>`:""}</summary>
     <div class="dr-in">
      ${r.x?`<div class="dr-s"><b>الرحلة</b><button class="dr-go sec" data-dphoto="${E(r.id)}" ${PST[r.id]&&PST[r.id].busy?"disabled":""}>📷 تعبئة من صورة بيانات الرحلة</button>
        ${PST[r.id]?`<div class="${PST[r.id].err?"dr-warn":"dr-h"}">${PST[r.id].busy?"⏳ يقرأ الصورة على جوالك… (أول مرة 10–20 ثانية)":E(PST[r.id].err||PST[r.id].msg||"")}</div>`:""}
@@ -248,26 +268,33 @@ function card(r){const D=dS(dayK()),sk=!!D.skip[r.id],dn=D.done[r.id],ms=miss(r)
        ${val(r,"dlyc")?`<div class="dr-h">كود التأخير في الشيت: <b dir="ltr">${E(val(r,"dlyc"))}</b></div>`:""}</div>
      <div class="dr-s"><b>ركاب الوصول</b><div class="dr-g">${FS.pa.map(([k,l])=>inp(r,k,l)).join("")}</div><div class="dr-tot" data-tot="a">Total IN ${sum(["aj","ay","ai"].map(k=>val(r,k)))}</div></div>
      <div class="dr-s"><b>ركاب المغادرة</b><div class="dr-g">${FS.pd.map(([k,l])=>inp(r,k,l)).join("")}</div><div class="dr-tot" data-tot="d">Total OUT ${sum(["dj","dy","di"].map(k=>val(r,k)))}</div></div>
-     <div class="dr-s"><b>العفش والشحن</b><div class="dr-g g5">${FS.bag.map(([k,l])=>inp(r,k,l)).join("")}</div></div>
+     <div class="dr-s"><b>العفش والشحن</b><div class="dr-g">${FS.bag.map(([k,l])=>inp(r,k,l)).join("")}</div></div>
      <div class="dr-s"><b>المعدات والخدمات</b><div class="dr-g g5">${FS.gse.map(([k,l])=>inp(r,k,l)).join("")}</div></div>
      ${ms.length&&!sk?`<div class="dr-warn">ناقص: ${ms.map(E).join("، ")}</div>`:""}
      <div class="dr-x"><button data-dskip="${E(r.id)}">${sk?"↩︎ رجّعها للتقرير":"استبعاد من التقرير"}</button>${r.x?`<button class="x" data-ddel="${E(r.id)}">حذف الرحلة</button>`:""}${dn?`<button data-dund="${E(r.id)}">إلغاء علامة «انلصقت»</button>`:""}</div>
-    </div></details>`}
+    </div></details>${cpBar(r)}</section>`}
+/* شريط النسخ الخاص بكل رحلة — تحت بطاقتها مباشرة */
+function cpBar(r){const D=dS(dayK());if(D.skip[r.id])return"";if(r.x&&!val(r,"fin"))return`<div class="dr-cp"><div class="dr-h">أدخل رقم الرحلة عشان تقدر تنسخها.</div></div>`;
+  const ms=miss(r),dn=D.done[r.id],cp=C1&&C1.k===dayK()&&C1.id===r.id;
+  if(cp)return`<div class="dr-cp"><div class="dr-h">✓ انسخ سطر الرحلة. في الإكسل: اضغط خانة <b>Day</b> بأول سطر فاضي ← لصق.</div>
+    <div class="row"><button class="mk" data-dmk="${E(r.id)}">✔ لصقتها — علّمها</button><button class="sec" data-dcp="${E(r.id)}">📋 نسخ مرة ثانية</button></div></div>`;
+  if(dn)return`<div class="dr-cp"><div class="row"><button class="sec" data-dcp="${E(r.id)}">📋 نسخ سطر الرحلة مرة ثانية</button></div></div>`;
+  return`<div class="dr-cp">${ms.length?`<div class="dr-warn">⚠️ ناقص: ${ms.map(E).join("، ")}</div>`:""}<div class="row"><button data-dcp="${E(r.id)}">📋 نسخ سطر هذي الرحلة</button></div></div>`}
+
 function paint(){if(!root)return;css();
   if(!own()){root.innerHTML=`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>التقرير اليومي خاص بالمشرف.</p></div>`;return}
   const L=list(),D=dS(dayK()),act=L.filter(r=>!D.skip[r.id]&&!(r.x&&!val(r,"fin"))),todo=act.filter(r=>!D.done[r.id]),inc=todo.filter(r=>miss(r).length);
   root.innerHTML=`<div class="dr">
     <div class="bd-days">${[2,1,0].map(i=>`<button data-drday="${i}" class="${i===DAY?"on":""}">${["اليوم","أمس","قبل أمس"][i]} · ${dLabel(addDays(TODAY,-i))}</button>`).join("")}</div>
     <div class="dr-h">جدول <b dir="ltr">Local Station Flight SKD</b>. الأرقام الذهبية المنقّطة تعبّت تلقائياً من اللوحة والكوردينيتر شيت، غيّر اللي يحتاج. الخانة الفاضية = 0.</div>
-    ${L.length?L.map(card).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`}
+    ${L.length?`<div class="dr-hd"><span>✈️ رحلات ${["اليوم","أمس","قبل أمس"][DAY]}</span><small>${L.length} رحلة · ${act.length-todo.length} انلصقت</small></div>`+L.map((r,i)=>card(r,i+1)).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`}
     <div class="dr-s"><b>📷 رحلة غير مجدولة من صورة</b><div class="dr-g">${Object.keys(XT).map(k=>`<button class="dr-go" style="min-height:46px;font-size:14px" data-dtype="${k}">${k}</button>`).join("")}</div></div>
     <button class="dr-go sec" id="drAdd">＋ رحلة إضافية يدوي (خاصة، VIP، SPA…)</button>
     ${RES?resBox():""}
     <div class="dr-box">
-      <b>📋 نسخ رحلات ${["اليوم","أمس","قبل أمس"][DAY]} للصقها في ملف AJF</b>
-      <div class="dr-h">${todo.length?`بينسخ ${todo.length} سطر بنفس ترتيب أعمدة جدول Local Station Flight SKD. التطبيق ما يلمس الملف أبداً — أنت اللي تلصق في الإكسل.`:"كل رحلات هذا اليوم معلّمة إنها انلصقت في الملف."}</div>
-      ${inc.length?`<div class="dr-warn">⚠️ فيها نواقص: ${inc.map(r=>E((val(r,"al")||"")+" "+(val(r,"fin")||""))+" ("+miss(r).join("، ")+")").join(" · ")}</div>`:""}
-      <button class="dr-go" id="drCopy" ${todo.length?"":"disabled"}>📋 نسخ ${todo.length} سطر</button>
+      <b>📋 أو انسخ كل الرحلات الباقية مرة وحدة</b>
+      <div class="dr-h">${todo.length?`${todo.length} رحلة ما انلصقت بعد${inc.length?` (منها ${inc.length} فيها نواقص)`:""}. نفس ترتيب أعمدة Local Station Flight SKD — التطبيق ما يلمس الملف أبداً.`:"كل رحلات هذا اليوم معلّمة إنها انلصقت في الملف."}</div>
+      <button class="dr-go sec" id="drCopy" ${todo.length?"":"disabled"}>📋 نسخ ${todo.length} سطر</button>
       ${CP&&CP.k===dayK()?`<div class="dr-box ok"><b>✓ انسخت ${CP.n} سطر</b>
         <div class="dr-h">1) افتح ملف AJF في الإكسل ← شيت Local Station Flight SKD.<br>2) انزل لأول سطر فاضي تحت آخر رحلة، واضغط مرة على خانة <b>Day</b> (العمود A).<br>3) اضغط على الخانة مرة ثانية ← <b>لصق</b>.<br>4) تأكد إن الأسطر نزلت صح، بعدها اضغط الزر تحت.</div>
         <button class="dr-go sec" id="drMark">✔ لصقتها في الملف — علّمها</button></div>`:""}
@@ -345,22 +372,25 @@ async function readPhoto(file,ph){const{id,k}=ph;PST[id]={busy:1};paint();
 function imgIn(){let f=document.getElementById("drImg");if(!f){f=document.createElement("input");f.type="file";f.accept="image/*";f.id="drImg";f.hidden=true;document.body.appendChild(f);
   f.addEventListener("change",()=>{const x=f.files&&f.files[0];if(x&&PH)readPhoto(x,PH)})}return f}
 function upd(id){/* تحديث ملخص البطاقة بدون إعادة رسم الخانات (عشان ما يطير الكيبورد) */
-  const c=root.querySelector(`[data-card="${CSS.escape(id)}"]`);if(!c)return;const r=list().find(x=>x.id===id);if(!r)return;
-  const tmp=document.createElement("div");tmp.innerHTML=card(r);const n=tmp.firstElementChild;
+  const c=root.querySelector(`[data-card="${CSS.escape(id)}"]`);if(!c)return;const Ls=list(),ix=Ls.findIndex(x=>x.id===id),r=Ls[ix];if(!r)return;
+  const tmp=document.createElement("div");tmp.innerHTML=card(r,ix+1);const n=tmp.firstElementChild;
   c.querySelector("summary").innerHTML=n.querySelector("summary").innerHTML;
+  const F=c.closest(".dr-f");if(F){F.className=n.className;const ob=F.querySelector(".dr-cp"),nb=n.querySelector(".dr-cp");if(ob&&nb)ob.replaceWith(nb);else if(ob)ob.remove();else if(nb)F.appendChild(nb)}
   ["a","d"].forEach(t=>{const o=c.querySelector(`[data-tot="${t}"]`),m=n.querySelector(`[data-tot="${t}"]`);if(o&&m)o.textContent=m.textContent});
   ["st","rsn","typ"].forEach(k=>{const el=c.querySelector(`[data-dk="${k}"]`);if(el&&el!==document.activeElement){el.value=val(r,k);if(el.tagName==="INPUT")el.className=isAuto(r,k)?"au":""}});
   const w=c.querySelector(".dr-warn"),nw=n.querySelector(".dr-warn");if(w&&!nw)w.remove();else if(w&&nw)w.innerHTML=nw.innerHTML;else if(!w&&nw)c.querySelector(".dr-x").before(nw)}
 function bind(){
   root.addEventListener("click",e=>{const t=e.target.closest("button");if(!t||!root.contains(t))return;const D=dS(dayK());
-    if(t.dataset.drday!=null){DAY=+t.dataset.drday;OPEN=null;RES=null;CP=null;paint();return}
+    if(t.dataset.drday!=null){DAY=+t.dataset.drday;OPEN=null;RES=null;CP=null;C1=null;paint();return}
+    if(t.dataset.dcp){const r=list().find(x=>x.id===t.dataset.dcp);if(!r)return;copyTxt(tsv([r])).then(ok=>{if(!ok){alert("تعذّر النسخ، جرّب مرة ثانية");return}C1={k:dayK(),id:r.id};CP=null;try{ajfAct("dr_copy1",dayK()+" "+r.id)}catch(e){}paint();const b=root.querySelector(`[data-dmk="${CSS.escape(r.id)}"]`);if(b)b.scrollIntoView({block:"center",behavior:"smooth"})});return}
+    if(t.dataset.dmk){D.done[t.dataset.dmk]=Date.now();sv();C1=null;paint();return}
     if(t.dataset.dtype||t.dataset.dphoto){let id=t.dataset.dphoto;if(!id){id="x"+Date.now().toString(36);D.x.push({id,stn:"AJF",...XT[t.dataset.dtype]});sv();OPEN=id}
       PH={id,k:dayK()};const f=imgIn();f.value="";f.click();if(t.dataset.dtype)setTimeout(paint,50);return}
     if(t.id==="drAdd"){const id="x"+Date.now().toString(36);D.x.push({id,stn:"AJF"});sv();OPEN=id;paint();const c=root.querySelector(`[data-card="${id}"] input`);if(c)c.focus();return}
     if(t.dataset.dskip){const id=t.dataset.dskip;if(D.skip[id])delete D.skip[id];else D.skip[id]=1;sv();paint();return}
     if(t.dataset.ddel){if(!confirm("حذف هذي الرحلة من التقرير؟"))return;const id=t.dataset.ddel;D.x=D.x.filter(x=>x.id!==id);delete D.e[id];delete D.skip[id];delete D.done[id];sv();paint();return}
     if(t.dataset.dund){delete D.done[t.dataset.dund];sv();paint();return}
-    if(t.id==="drCopy"){const L=list().filter(r=>!D.skip[r.id]&&!D.done[r.id]&&!(r.x&&!val(r,"fin")));if(!L.length)return;copyTxt(tsv(L)).then(ok=>{if(!ok){alert("تعذّر النسخ، جرّب مرة ثانية");return}CP={k:dayK(),ids:L.map(r=>r.id),n:L.length};try{ajfAct("dr_copy",dayK()+" "+L.length)}catch(e){}paint();const m=root.querySelector("#drMark");if(m)m.scrollIntoView({block:"center",behavior:"smooth"})});return}
+    if(t.id==="drCopy"){const L=list().filter(r=>!D.skip[r.id]&&!D.done[r.id]&&!(r.x&&!val(r,"fin")));if(!L.length)return;copyTxt(tsv(L)).then(ok=>{if(!ok){alert("تعذّر النسخ، جرّب مرة ثانية");return}CP={k:dayK(),ids:L.map(r=>r.id),n:L.length};C1=null;try{ajfAct("dr_copy",dayK()+" "+L.length)}catch(e){}paint();const m=root.querySelector("#drMark");if(m)m.scrollIntoView({block:"center",behavior:"smooth"})});return}
     if(t.id==="drMark"){if(CP){CP.ids.forEach(id=>{D.done[id]=Date.now()});sv();CP=null;paint()}return}
     if(t.id==="drGo"){RES=null;const f=root.querySelector("#drFile");f.value="";f.click();return}
     if(t.id==="drSave"){save();return}});
