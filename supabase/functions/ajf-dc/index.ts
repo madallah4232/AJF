@@ -61,6 +61,12 @@ const SYS_FRM = `أنت تقرأ صورة فيها بيانات رحلة طير�
 - dest: رمز IATA ثلاث حروف. الأولوية لوجهة المغادرة (TO / Outbound)، وإذا ما فيه مغادرة خذ مطار القدوم (FROM). حوّل ICAO لـ IATA (OEDR=DHA, OERK=RUH, OEJN=JED, OEDF=DMM, OEMA=MED, OESH=SHW, OEGN=GIZ, OEAB=AHB, OETB=TUU, OEHL=HAS, OEPA=AQI, OERF=RAH, OETF=TIF, OENG=EAM, OEBH=BHH, OEWJ=EJH, OEGS=ELQ, OEAO=ULH). إذا مطار مو في القائمة ومو متأكد من رمزه اكتب رمز ICAO كما هو).
 - الإيميل قد يكون فيه وقتين (LT محلي و UTC): خذ وقت LT المحلي و utc=false. utc=true فقط إذا ما فيه إلا UTC/Z.
 - ETA/STA = وقت الوصول المجدول، ETD/STD = وقت المغادرة المجدول.
+- رسائل الأسطول الملكي (ROYAL OPS) شكلها مثل: "SET UP ROYAL FLIGHT SV7057 EQPT 739 REG HZ-MF6" ثم سطر المسار "ETD JED 0720 AJF 0900/1000 JED 1135Z":
+  · رقم الرحلة بدون حروف الشركة (SV7057 ← fin و fout = 7057). EQPT = نوع الطائرة (739). REG = التسجيل (HZMF6).
+  · "AJF 0900/1000" يعني وصول AJF 09:00 ومغادرة AJF 10:00 (sta=09:00، std=10:00). إذا AJF بوقت واحد فقط: لو هي آخر محطة فهو وصول، ولو أول محطة فهو مغادرة.
+  · إذا أي وقت في سطر المسار منتهي بـ Z فكل أوقات السطر UTC (utc=true).
+  · dest = المطار اللي بعد AJF في المسار (هنا JED)، وإذا AJF آخر محطة فالمطار اللي قبلها.
+  · "SCTR AJF-JED 10 PAX" = ركاب المغادرة (dy=10)، و "SCTR JED-AJF" = ركاب الوصول (ay). "XX" يعني بدون رقم.
 - reg: تسجيل الطائرة بدون شرطة (مثل HZA4). typ: نوع الطائرة كما مكتوب (مثل A319 أو C550 أو 320).
 - sta وقت الوصول المجدول، std وقت المغادرة المجدول، بصيغة HH:MM. لا تكتب الأوقات الفعلية (ATA/ATD/ON BLOCK/OFF BLOCK).
 - utc: true إذا الأوقات مكتوبة UTC أو Z أو GMT، وإلا false.
