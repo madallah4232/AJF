@@ -121,7 +121,7 @@ const CAT={SV:"SV",XY:"XY",F3:"F3",SPA:"SPA",VIP:"VIP"};
 const SK="ajf_dr";let S={};try{S=JSON.parse(localStorage.getItem(SK)||"{}")||{}}catch(e){S={}}
 const sv=()=>{try{const keep=iso(addDays(TODAY,-20));for(const k in S)if(k<keep)delete S[k];localStorage.setItem(SK,JSON.stringify(S))}catch(e){}};
 const dS=k=>S[k]=S[k]||{e:{},x:[],skip:{},done:{}};
-let DAY=0,root=null,OPEN=null,RES=null;
+let DAY=0,root=null,OPEN=null,RES=null,CP=null;
 const dayD=()=>addDays(TODAY,-DAY),dayK=()=>iso(dayD());
 const HM=/^([01]\d|2[0-3]):[0-5]\d$/;const TMK=new Set(["sta","ata","std","atd"]);
 const numF=v=>/^\d+$/.test(String(v||"").trim())?+String(v).trim():String(v||"").trim();
@@ -198,7 +198,7 @@ function inp(r,k,lbl,type){const v=val(r,k),au=isAuto(r,k);
   return`<label>${E(lbl)}<input ${t} data-dk="${k}" data-id="${E(r.id)}" value="${E(v)}" class="${au?"au":""}"></label>`}
 function card(r){const D=dS(dayK()),sk=!!D.skip[r.id],dn=D.done[r.id],ms=miss(r),dm=dlyMin(r),st=val(r,"st");
   const fl=(val(r,"al")||"?")+" "+(val(r,"fin")||"—")+(String(val(r,"fout"))!==String(val(r,"fin"))?"/"+(val(r,"fout")||"—"):"")+" · "+(val(r,"dest")||"—");
-  const badge=sk?`<span class="dr-b">مستبعدة</span>`:dn?`<span class="dr-b dn">📤 مضافة للملف</span>`:ms.length?`<span class="dr-b w">ناقص ${ms.length}</span>`:`<span class="dr-b ok">✓ جاهزة</span>`;
+  const badge=sk?`<span class="dr-b">مستبعدة</span>`:dn?`<span class="dr-b dn">✔ انلصقت في الملف</span>`:ms.length?`<span class="dr-b w">ناقص ${ms.length}</span>`:`<span class="dr-b ok">✓ جاهزة</span>`;
   const sel=(k,opts)=>`<select data-dk="${k}" data-id="${E(r.id)}">${opts.map(o=>`<option ${val(r,k)===o?"selected":""}>${o}</option>`).join("")}</select>`;
   return`<details class="dr-c ${sk?"skip":""}" data-card="${E(r.id)}" ${OPEN===r.id?"open":""}><summary><span class="t">${E(fl)}</span>${badge}
     <span class="m">STA ${E(val(r,"sta")||"—")} · ATA ${E(val(r,"ata")||"—")} · STD ${E(val(r,"std")||"—")} · ATD ${E(val(r,"atd")||"—")}${st?" · "+st+(dm>0?" +"+dm+"m":""):""}</span></summary>
@@ -212,7 +212,7 @@ function card(r){const D=dS(dayK()),sk=!!D.skip[r.id],dn=D.done[r.id],ms=miss(r)
      <div class="dr-s"><b>العفش والشحن</b><div class="dr-g g5">${FS.bag.map(([k,l])=>inp(r,k,l)).join("")}</div></div>
      <div class="dr-s"><b>المعدات والخدمات</b><div class="dr-g g5">${FS.gse.map(([k,l])=>inp(r,k,l)).join("")}</div></div>
      ${ms.length&&!sk?`<div class="dr-warn">ناقص: ${ms.map(E).join("، ")}</div>`:""}
-     <div class="dr-x"><button data-dskip="${E(r.id)}">${sk?"↩︎ رجّعها للتقرير":"استبعاد من التقرير"}</button>${r.x?`<button class="x" data-ddel="${E(r.id)}">حذف الرحلة</button>`:""}${dn?`<button data-dund="${E(r.id)}">إلغاء علامة «مضافة»</button>`:""}</div>
+     <div class="dr-x"><button data-dskip="${E(r.id)}">${sk?"↩︎ رجّعها للتقرير":"استبعاد من التقرير"}</button>${r.x?`<button class="x" data-ddel="${E(r.id)}">حذف الرحلة</button>`:""}${dn?`<button data-dund="${E(r.id)}">إلغاء علامة «انلصقت»</button>`:""}</div>
     </div></details>`}
 function paint(){if(!root)return;css();
   if(!own()){root.innerHTML=`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>التقرير اليومي خاص بالمشرف.</p></div>`;return}
@@ -224,11 +224,13 @@ function paint(){if(!root)return;css();
     <button class="dr-go sec" id="drAdd">＋ رحلة إضافية (خاصة، VIP، SPA…)</button>
     ${RES?resBox():""}
     <div class="dr-box">
-      <b>📥 إضافة رحلات ${["اليوم","أمس","قبل أمس"][DAY]} للملف</b>
-      <div class="dr-h">${todo.length?`بتنضاف ${todo.length} رحلة في آخر جدول FlightSKD، وباقي جداول الملف ما تتغيّر. الرحلة المضافة من قبل بنفس التاريخ والرقم ما تتكرر.`:"كل رحلات هذا اليوم مضافة للملف."}</div>
+      <b>📋 نسخ رحلات ${["اليوم","أمس","قبل أمس"][DAY]} للصقها في ملف AJF</b>
+      <div class="dr-h">${todo.length?`بينسخ ${todo.length} سطر بنفس ترتيب أعمدة جدول Local Station Flight SKD. التطبيق ما يلمس الملف أبداً — أنت اللي تلصق في الإكسل.`:"كل رحلات هذا اليوم معلّمة إنها انلصقت في الملف."}</div>
       ${inc.length?`<div class="dr-warn">⚠️ فيها نواقص: ${inc.map(r=>E((val(r,"al")||"")+" "+(val(r,"fin")||""))+" ("+miss(r).join("، ")+")").join(" · ")}</div>`:""}
-      <button class="dr-go" id="drGo" ${todo.length?"":"disabled"}>اختر ملف الإكسل وأضف ${todo.length} رحلة</button>
-      <input type="file" id="drFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+      <button class="dr-go" id="drCopy" ${todo.length?"":"disabled"}>📋 نسخ ${todo.length} سطر</button>
+      ${CP&&CP.k===dayK()?`<div class="dr-box ok"><b>✓ انسخت ${CP.n} سطر</b>
+        <div class="dr-h">1) افتح ملف AJF في الإكسل ← شيت Local Station Flight SKD.<br>2) انزل لأول سطر فاضي تحت آخر رحلة، واضغط مرة على خانة <b>Day</b> (العمود A).<br>3) اضغط على الخانة مرة ثانية ← <b>لصق</b>.<br>4) تأكد إن الأسطر نزلت صح، بعدها اضغط الزر تحت.</div>
+        <button class="dr-go sec" id="drMark">✔ لصقتها في الملف — علّمها</button></div>`:""}
     </div></div>`}
 function resBox(){const r=RES;if(r.busy)return`<div class="dr-box"><b>⏳ جاري تجهيز الملف…</b><div class="dr-h">ملف كبير، ياخذ ثواني.</div></div>`;
   if(r.err)return`<div class="dr-box bad"><b>تعذّر تعديل الملف</b><div class="dr-h">${E(r.err)}</div></div>`;
@@ -255,6 +257,19 @@ async function save(){if(!RES||!RES.blob)return;const f=new File([RES.blob],RES.
   try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){if(e&&e.name==="AbortError")return}
   const u=URL.createObjectURL(RES.blob),a=document.createElement("a");a.href=u;a.download=RES.name;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},4000)}
 
+/* أسطر جاهزة للصق: نفس ترتيب أعمدة الجدول (A..AL). الأعمدة المحسوبة تنلصق كمعادلات الجدول نفسها، والتاريخ كمعادلة DATE (ما يتأثر بإعدادات الجوال) */
+const T="FlightSKD";
+const COLS=[r=>{const[y,m,d]=r.day.split("-").map(Number);return`=DATE(${y},${m},${d})`},r=>["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][+r.day.slice(5,7)-1],
+  ()=>`=ISOWEEKNUM(${T}[@Day])`,r=>r.stn,r=>r.al,r=>r.cat,r=>r.fin,r=>r.fout,r=>r.dest,r=>r.aj,r=>r.ay,r=>r.ai,
+  ()=>`=${T}[@[Arrival Pax (J|C)]]+${T}[@[Arrival Pax (Y|C)]]+${T}[@[Arrival Pax (INF)]]`,r=>r.dj,r=>r.dy,r=>r.di,
+  ()=>`=${T}[@[Departure Pax (J|C)]]+${T}[@[Departure Pax (Y|C)]]+${T}[@[Departure Pax (INF)]]`,r=>r.ab,r=>r.db,r=>r.reg,r=>r.typ,
+  r=>r.sta,r=>r.ata,r=>r.std,r=>r.atd,()=>`=MOD(${T}[@STD]-${T}[@STA],1)`,()=>`=MOD(${T}[@ATD]-${T}[@ATA],1)`,()=>`=${T}[@[Gain Time Departure]]-${T}[@[Actual Ground Time]]`,
+  r=>r.gpu,r=>r.acu,r=>r.asu,r=>r.ml,r=>r.wch,r=>r.cgo,r=>r.lb,r=>r.ns,r=>r.st,r=>r.rsn];
+function rowsOut(L){const k=dayK();return L.map(r=>{const o={day:k};for(const kk of["stn","al","cat","fin","fout","dest","reg","typ","sta","ata","std","atd","st","rsn"])o[kk]=val(r,kk);
+  for(const kk of NUMK)o[kk]=+val(r,kk)||0;o.stn=o.stn||"AJF";o.reg=regN(o.reg);return o})}
+const tsv=L=>rowsOut(L).map(o=>COLS.map(f=>String(f(o)==null?"":f(o)).replace(/[\t\r\n]/g," ")).join("\t")).join("\r\n");
+async function copyTxt(t){try{await navigator.clipboard.writeText(t);return true}catch(e){}
+  const a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.cssText="position:fixed;top:0;opacity:0";document.body.appendChild(a);a.select();a.setSelectionRange(0,t.length);let ok=false;try{ok=document.execCommand("copy")}catch(e){}a.remove();return ok}
 function upd(id){/* تحديث ملخص البطاقة بدون إعادة رسم الخانات (عشان ما يطير الكيبورد) */
   const c=root.querySelector(`[data-card="${CSS.escape(id)}"]`);if(!c)return;const r=list().find(x=>x.id===id);if(!r)return;
   const tmp=document.createElement("div");tmp.innerHTML=card(r);const n=tmp.firstElementChild;
@@ -264,11 +279,13 @@ function upd(id){/* تحديث ملخص البطاقة بدون إعادة رس�
   const w=c.querySelector(".dr-warn"),nw=n.querySelector(".dr-warn");if(w&&!nw)w.remove();else if(w&&nw)w.innerHTML=nw.innerHTML;else if(!w&&nw)c.querySelector(".dr-x").before(nw)}
 function bind(){
   root.addEventListener("click",e=>{const t=e.target.closest("button");if(!t||!root.contains(t))return;const D=dS(dayK());
-    if(t.dataset.drday!=null){DAY=+t.dataset.drday;OPEN=null;RES=null;paint();return}
+    if(t.dataset.drday!=null){DAY=+t.dataset.drday;OPEN=null;RES=null;CP=null;paint();return}
     if(t.id==="drAdd"){const id="x"+Date.now().toString(36);D.x.push({id,stn:"AJF"});sv();OPEN=id;paint();const c=root.querySelector(`[data-card="${id}"] input`);if(c)c.focus();return}
     if(t.dataset.dskip){const id=t.dataset.dskip;if(D.skip[id])delete D.skip[id];else D.skip[id]=1;sv();paint();return}
     if(t.dataset.ddel){if(!confirm("حذف هذي الرحلة من التقرير؟"))return;const id=t.dataset.ddel;D.x=D.x.filter(x=>x.id!==id);delete D.e[id];delete D.skip[id];delete D.done[id];sv();paint();return}
     if(t.dataset.dund){delete D.done[t.dataset.dund];sv();paint();return}
+    if(t.id==="drCopy"){const L=list().filter(r=>!D.skip[r.id]&&!D.done[r.id]);if(!L.length)return;copyTxt(tsv(L)).then(ok=>{if(!ok){alert("تعذّر النسخ، جرّب مرة ثانية");return}CP={k:dayK(),ids:L.map(r=>r.id),n:L.length};try{ajfAct("dr_copy",dayK()+" "+L.length)}catch(e){}paint();const m=root.querySelector("#drMark");if(m)m.scrollIntoView({block:"center",behavior:"smooth"})});return}
+    if(t.id==="drMark"){if(CP){CP.ids.forEach(id=>{D.done[id]=Date.now()});sv();CP=null;paint()}return}
     if(t.id==="drGo"){RES=null;const f=root.querySelector("#drFile");f.value="";f.click();return}
     if(t.id==="drSave"){save();return}});
   root.addEventListener("toggle",e=>{const d=e.target;if(d.matches&&d.matches("details.dr-c")){if(d.open)OPEN=d.dataset.card;else if(OPEN===d.dataset.card)OPEN=null}},true);
