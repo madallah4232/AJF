@@ -1074,7 +1074,7 @@ body,.bd,.hub{background:var(--felt),var(--night)}
     </div>
   </div>
 
-  <section class="next" id="next" aria-live="polite"></section>
+  <section class="next" id="next" aria-live="polite" hidden style="display:none"></section>
 
   <section class="wx" id="wx" aria-label="طقس الساحة"><canvas aria-hidden="true"></canvas><div class="wx-in"></div></section>
 
@@ -3641,8 +3641,7 @@ function renderWx(){
     <div class="wx-dial">${wxDial(c)}</div></div>
     <div class="wx-lv" data-lv="${lv}"><i></i><div><b>${WX_LVT[lv]}${hz[0]?" · "+hz[0].t:""}</b>${hz[0]&&hz[0].v?`<em class="wv">${hz[0].v}</em>`:""}<span>${ahead||(lv?"اتبع الإجراءات أدناه":"لا قيود طقس على المعدات والعمال الآن")}</span></div></div>
     <div class="wx-sl">الرياح المتوقعة (عقدة) · 12 ساعة · تقديري</div><div class="wx-strip" aria-label="الرياح المتوقعة خلال 12 ساعة">${strip}</div>${al?`<div class="wx-al">${al}</div>`:""}
-    ${c.obs||WX.taf?`<details class="wx-raw"><summary>النص الرسمي METAR / TAF</summary>${c.obs?`<code>${c.raw}</code>`:""}${WX.taf?`<code>${WX.taf}</code>`:""}</details>`:""}
-    <div class="wx-ft"><span>${c.obs?"الحالة الآن: METAR OESK":"الحالة الآن: تقديري"} · الساعات القادمة: نموذج Open-Meteo (تقديري) · تحدّث ${new Date(WX.at).toLocaleTimeString("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit"})} · حدود التنبيه حسب دليل SGS GOM 6.3.6 · القرار النهائي لمدير المناوبة وعمليات المطار</span></div>`;
+    `;
   wxScene(c,lv);
   /* تنبيه منبثق عند ارتفاع مستوى الخطر */
   const key=today+"_"+lv;let last="";try{last=localStorage.getItem("ajf_wxa")||""}catch(e){}
