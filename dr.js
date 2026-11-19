@@ -110,6 +110,7 @@ function append(buf,rows,fflate){
     Z["xl/workbook.xml"]=enc.encode(wb)}
   return{buf:added.length?fflate.zipSync(Z,{level:6}):null,added,skipped,last:rn,sheet:sh.name}}
 return{append,isoWeek}})();
+G.DRXL=XL;
 if(typeof module!=="undefined"&&module.exports){module.exports={XL};return}
 
 /* ===== واجهة التقرير اليومي ===== */
@@ -261,11 +262,14 @@ async function save(){if(!RES||!RES.blob)return;const f=new File([RES.blob],RES.
 
 /* أسطر جاهزة للصق: نفس ترتيب أعمدة الجدول (A..AL). الأعمدة المحسوبة تنلصق كمعادلات الجدول نفسها، والتاريخ كمعادلة DATE (ما يتأثر بإعدادات الجوال) */
 const T="FlightSKD";
-const COLS=[r=>{const[y,m,d]=r.day.split("-").map(Number);return`=DATE(${y},${m},${d})`},r=>["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][+r.day.slice(5,7)-1],
-  ()=>`=ISOWEEKNUM(${T}[@Day])`,r=>r.stn,r=>r.al,r=>r.cat,r=>r.fin,r=>r.fout,r=>r.dest,r=>r.aj,r=>r.ay,r=>r.ai,
-  ()=>`=${T}[@[Arrival Pax (J|C)]]+${T}[@[Arrival Pax (Y|C)]]+${T}[@[Arrival Pax (INF)]]`,r=>r.dj,r=>r.dy,r=>r.di,
-  ()=>`=${T}[@[Departure Pax (J|C)]]+${T}[@[Departure Pax (Y|C)]]+${T}[@[Departure Pax (INF)]]`,r=>r.ab,r=>r.db,r=>r.reg,r=>r.typ,
-  r=>r.sta,r=>r.ata,r=>r.std,r=>r.atd,()=>`=MOD(${T}[@STD]-${T}[@STA],1)`,()=>`=MOD(${T}[@ATD]-${T}[@ATA],1)`,()=>`=${T}[@[Gain Time Departure]]-${T}[@[Actual Ground Time]]`,
+/* إكسل الآيفون يلصق المعادلات كنص، فكل الخانات تنلصق قيم جاهزة محسوبة (نفس نتيجة معادلات الجدول) */
+const mn=v=>HM.test(v||"")?toMin(v):null,hh=m=>String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+const gd=(a,b)=>{const x=mn(a),y=mn(b);return x==null||y==null?null:((y-x)%1440+1440)%1440};
+const COLS=[r=>r.day,r=>["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][+r.day.slice(5,7)-1],
+  r=>XL.isoWeek(new Date(r.day+"T00:00:00Z")),r=>r.stn,r=>r.al,r=>r.cat,r=>r.fin,r=>r.fout,r=>r.dest,r=>r.aj,r=>r.ay,r=>r.ai,
+  r=>r.aj+r.ay+r.ai,r=>r.dj,r=>r.dy,r=>r.di,r=>r.dj+r.dy+r.di,r=>r.ab,r=>r.db,r=>r.reg,r=>r.typ,
+  r=>r.sta,r=>r.ata,r=>r.std,r=>r.atd,r=>{const g=gd(r.sta,r.std);return g==null?"":hh(g)},r=>{const g=gd(r.ata,r.atd);return g==null?"":hh(g)},
+  r=>{const a=gd(r.sta,r.std),b=gd(r.ata,r.atd);return a==null||b==null?"":+((a-b)/1440).toFixed(10)},
   r=>r.gpu,r=>r.acu,r=>r.asu,r=>r.ml,r=>r.wch,r=>r.cgo,r=>r.lb,r=>r.ns,r=>r.st,r=>r.rsn];
 function rowsOut(L){const k=dayK();return L.map(r=>{const o={day:k};for(const kk of["stn","al","cat","fin","fout","dest","reg","typ","sta","ata","std","atd","st","rsn"])o[kk]=val(r,kk);
   for(const kk of NUMK)o[kk]=+val(r,kk)||0;o.stn=o.stn||"AJF";o.reg=regN(o.reg);return o})}
