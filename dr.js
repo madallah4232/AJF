@@ -223,7 +223,7 @@ function card(r){const D=dS(dayK()),sk=!!D.skip[r.id],dn=D.done[r.id],ms=miss(r)
     </div></details>`}
 function paint(){if(!root)return;css();
   if(!own()){root.innerHTML=`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>التقرير اليومي خاص بالمشرف.</p></div>`;return}
-  const L=list(),D=dS(dayK()),act=L.filter(r=>!D.skip[r.id]),todo=act.filter(r=>!D.done[r.id]),inc=todo.filter(r=>miss(r).length);
+  const L=list(),D=dS(dayK()),act=L.filter(r=>!D.skip[r.id]&&!(r.x&&!val(r,"fin"))),todo=act.filter(r=>!D.done[r.id]),inc=todo.filter(r=>miss(r).length);
   root.innerHTML=`<div class="dr">
     <div class="bd-days">${[2,1,0].map(i=>`<button data-drday="${i}" class="${i===DAY?"on":""}">${["اليوم","أمس","قبل أمس"][i]} · ${dLabel(addDays(TODAY,-i))}</button>`).join("")}</div>
     <div class="dr-h">جدول <b dir="ltr">Local Station Flight SKD</b>. الأرقام الذهبية المنقّطة تعبّت تلقائياً من اللوحة والكوردينيتر شيت، غيّر اللي يحتاج. الخانة الفاضية = 0.</div>
@@ -290,7 +290,7 @@ const PERR={nofn:"دالة ajf-frm للحين ما انضافت في Supabase.",
 async function readPhoto(file,ph){const{id,k}=ph;PST[id]={busy:1};paint();
   try{const b64=await shrink(file);let r;
     try{r=await fetch(SB_URL+"/functions/v1/ajf-frm",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"frm",img:b64,mime:"image/jpeg"})})}catch(e){throw new Error("net")}
-    if(r.status===404)throw new Error("nofn");const j=await r.json().catch(()=>({s:"aierr"}));if(j.s!=="ok"||!j.d)throw new Error(j.s||"aierr");
+    if(r.status===404)throw new Error("nofn");const j=await r.json().catch(()=>({s:"aierr"}));if(j.s!=="ok"||!j.d){const er=new Error(j.s||"aierr");er.det=j.e||"";throw er}
     const d=j.d,D=dS(k),o=D.e[id]=D.e[id]||{},put=(kk,v)=>{if(v==null)return;v=String(v).trim();if(v===""||v==="0"&&NUMK.has(kk))return;o[kk]=v};
     const tm=v=>{const m=/^(\d{1,2})[:.]?(\d{2})/.exec(String(v||"").trim());if(!m)return"";let x=+m[1]*60+ +m[2];if(d.utc===true)x=(x+180)%1440;return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0")};
     const x0=D.x.find(z=>z.id===id);if(!(x0&&x0.al))put("al",String(d.al||"").toUpperCase());["fin","fout","dest"].forEach(kk=>put(kk,String(d[kk]||"").toUpperCase()));put("reg",regN(d.reg));put("typ",String(d.typ||"").toUpperCase());
@@ -299,7 +299,7 @@ async function readPhoto(file,ph){const{id,k}=ph;PST[id]={busy:1};paint();
     if(!o.fout&&o.fin)o.fout=o.fin;if(!o.fin&&o.fout)o.fin=o.fout;
     const x=D.x.find(z=>z.id===id);if(x&&!o.cat&&(o.al||x.al)==="SPA")o.cat="SPA";
     sv();PST[id]={msg:"✓ تعبّت من الصورة — راجعها، وأضف ATA وATD"+(d.utc===true?" (الأوقات كانت UTC وتحوّلت لتوقيت السعودية)":"")+(d.note?" · "+d.note:"")};OPEN=id}
-  catch(e){console.error(e);PST[id]={err:PERR[e.message]||PERR.aierr}}
+  catch(e){console.error(e);PST[id]={err:(PERR[e.message]||PERR.aierr)+(e.det?" — التفاصيل: "+String(e.det).slice(0,220):"")}}
   if(dayK()===k)paint()}
 /* حقل اختيار الصورة برا الصفحة عشان ما ينمسح لما تنعاد الرسمة */
 function imgIn(){let f=document.getElementById("drImg");if(!f){f=document.createElement("input");f.type="file";f.accept="image/*";f.id="drImg";f.hidden=true;document.body.appendChild(f);
@@ -320,7 +320,7 @@ function bind(){
     if(t.dataset.dskip){const id=t.dataset.dskip;if(D.skip[id])delete D.skip[id];else D.skip[id]=1;sv();paint();return}
     if(t.dataset.ddel){if(!confirm("حذف هذي الرحلة من التقرير؟"))return;const id=t.dataset.ddel;D.x=D.x.filter(x=>x.id!==id);delete D.e[id];delete D.skip[id];delete D.done[id];sv();paint();return}
     if(t.dataset.dund){delete D.done[t.dataset.dund];sv();paint();return}
-    if(t.id==="drCopy"){const L=list().filter(r=>!D.skip[r.id]&&!D.done[r.id]);if(!L.length)return;copyTxt(tsv(L)).then(ok=>{if(!ok){alert("تعذّر النسخ، جرّب مرة ثانية");return}CP={k:dayK(),ids:L.map(r=>r.id),n:L.length};try{ajfAct("dr_copy",dayK()+" "+L.length)}catch(e){}paint();const m=root.querySelector("#drMark");if(m)m.scrollIntoView({block:"center",behavior:"smooth"})});return}
+    if(t.id==="drCopy"){const L=list().filter(r=>!D.skip[r.id]&&!D.done[r.id]&&!(r.x&&!val(r,"fin")));if(!L.length)return;copyTxt(tsv(L)).then(ok=>{if(!ok){alert("تعذّر النسخ، جرّب مرة ثانية");return}CP={k:dayK(),ids:L.map(r=>r.id),n:L.length};try{ajfAct("dr_copy",dayK()+" "+L.length)}catch(e){}paint();const m=root.querySelector("#drMark");if(m)m.scrollIntoView({block:"center",behavior:"smooth"})});return}
     if(t.id==="drMark"){if(CP){CP.ids.forEach(id=>{D.done[id]=Date.now()});sv();CP=null;paint()}return}
     if(t.id==="drGo"){RES=null;const f=root.querySelector("#drFile");f.value="";f.click();return}
     if(t.id==="drSave"){save();return}});
