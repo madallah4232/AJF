@@ -3,7 +3,11 @@
    الصوت مضغوط 8kHz μ-law على دفعات نص ثانية، ويوصل للي فاتحين التطبيق فقط (الآيفون يقطع الاتصال لما يتقفل الجوال).
    التنبيهات المكتوبة: تنحفظ في ajf_bc، تطلع فوراً للي فاتحين التطبيق، ووسيط ADS-B يرسلها Web Push لشاشة القفل خلال ~30 ثانية.
    الإرسال والتكلم للمشرف ومن يعطيه صلاحية (مفتاح bcp). يعتمد على: $, escT, AUTH, rpc, authOut, DEMO, swReady من index.html */
+/* 🔒 الراديو مقفول مؤقتاً عن الكل بطلب المشرف (2026-11-19) — لا زر ولا صفحة ولا اتصال ولا تنبيهات.
+   للفتح: خلّ RADIO_LOCK=false هنا وفي scripts/push.mjs */
+const RADIO_LOCK=true;
 (function(){
+if(RADIO_LOCK)return;
 if(typeof DEMO!=="undefined"&&DEMO)return;
 const RT_URL=SB_URL.replace(/^http/,"ws")+"/realtime/v1/websocket?apikey="+encodeURIComponent(SB_KEY)+"&vsn=1.0.0";
 const RATE=8000,CHUNK=4000,MAX_SEC=90;

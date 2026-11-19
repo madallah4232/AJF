@@ -76,6 +76,9 @@ async function adminTick(N) {
     catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await rpc("ajf_push_drop", { p_endpoint: x.endpoint }).catch(() => {}); else console.log("push: admin send", e.statusCode || e.message); }
   }
 }
+// 🔒 الراديو ورسائله مقفولة مؤقتاً بطلب المشرف (2026-11-19): لا تنبيه كلام ولا رسائل مكتوبة على شاشة القفل.
+// دعوات التحدي ⚔️ تبقى شغالة. للفتح: RADIO_LOCK = false (وفي radio.js)
+const RADIO_LOCK = true;
 // 📻 تنبيهات المشرف المكتوبة (من صفحة الراديو في التطبيق) ← كل الموظفين المشتركين، حتى والجوال مقفل
 async function bcTick(N) {
   // ajf_bc_due2 ترجع المستلمين (للتنبيه الموجّه لموظفين محددين)؛ لو ما انضاف ملف bc_to.sql نرجع للقديمة (لكل الموظفين فقط)
@@ -85,6 +88,7 @@ async function bcTick(N) {
   for (const x of rows || []) {
     if (!(await rpc("ajf_push_claim", { p_day: N.iso, p_flight: "BC", p_stage: String(x.id) }).catch(() => false))) continue;
     const body = String(x.body || "").slice(0, 300);
+    if (RADIO_LOCK && !body.startsWith("⚔️")) continue;
     // ⚔️ دعوة تحدي: تفتح صفحة التحديات مباشرة، وما لها فايدة بعد مهلة القبول (60 ثانية)
     const du = body.startsWith("⚔️");
     const msg = JSON.stringify(du ? { title: "⚔️ تحدي من " + (x.name || "زميلك"), body: body.replace(/^⚔️\s*/, ""), tag: "ajf-du-" + x.id, url: "./?duel", ri: true }
@@ -111,6 +115,7 @@ async function bcFast() {
 const VC_GAP = 10 * 60e3;
 let vcBusy = false, vcTimer = null, vcLast = 0;
 async function vcTick() {
+  if (RADIO_LOCK) return;
   if (vcBusy) return; vcBusy = true;
   try {
     const since = new Date(Date.now() - 90e3).toISOString();
