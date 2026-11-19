@@ -3820,7 +3820,9 @@ function boardBack(){const b=$("bd");ajfAct("home");
   const go=()=>{b.hidden=true;b.classList.remove("out");hubShow(true)};
   if(b.hidden||reduce){go();return}b.classList.add("out");setTimeout(go,260)}
 let bdDay=0;
-function bdFlights(){const d=hubDays()[bdDay];return{d,list:flightsOn(d).filter(f=>!f.off)}}
+/* شركات تظهر في لوحة الرحلات فقط، ومستبعدة من كل النماذج (TRC وLC والتقرير اليومي): العربية للطيران G9 */
+const NOFORM=["G9"];const formOk=f=>!NOFORM.includes(String(f.n).slice(0,2));
+function bdFlights(){const d=hubDays()[bdDay];return{d,list:flightsOn(d).filter(f=>!f.off&&formOk(f))}}
 /* أمس يمين واليوم يسار (ترتيب زمني من اليمين) — data-day: 0 اليوم، 1 أمس */
 const bdDaysH=()=>`<div class="bd-days">${[1,0].map(i=>`<button data-day="${i}" class="${i===bdDay?"on":""}">${["اليوم","أمس"][i]} · ${dLabel(hubDays()[i])}</button>`).join("")}</div>`;
 const fmN=(V,id)=>Object.keys(V).filter(k=>k.startsWith("f."+id+".")).length;
@@ -3857,7 +3859,7 @@ async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e
 const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
-let drP=null;const drLoad=()=>window.DR?Promise.resolve():drP||(drP=ldJs("dr.js?v=4").catch(e=>{drP=null;throw e}));
+let drP=null;const drLoad=()=>window.DR?Promise.resolve():drP||(drP=ldJs("dr.js?v=5").catch(e=>{drP=null;throw e}));
 let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=11").catch(e=>{qzP=null;throw e}));
 let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=23")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();

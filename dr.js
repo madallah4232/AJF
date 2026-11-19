@@ -141,7 +141,7 @@ const NUMK=new Set([...FS.pa,...FS.pd,...FS.bag,...FS.gse].map(x=>x[0]));
 
 /* رحلات اليوم من اللوحة + الرحلات الإضافية اللي يضيفها */
 function list(){const d=dayD(),k=iso(d),D=dS(k),lv=LV(d).flights;
-  const sch=flightsOn(d).filter(f=>!f.off&&!(lv[f.n]&&lv[f.n].s==="canceled")).map(f=>({id:f.n,f}));
+  const sch=flightsOn(d).filter(f=>!f.off&&(typeof formOk!=="function"||formOk(f))&&!(lv[f.n]&&lv[f.n].s==="canceled")).map(f=>({id:f.n,f}));
   const L=sch.concat(D.x.map(x=>({id:x.id,x})));
   return L.map(r=>({...r,a:auto(r,d)})).sort((p,q)=>(val(p,"sta")||val(p,"std")||"99").localeCompare(val(q,"sta")||val(q,"std")||"99"))}
 function auto(r,d){if(!r.f)return{stn:"AJF"};const f=r.f,cd=(()=>{try{return csData(f,d)}catch(e){return null}})()||{pa:{},pd:{},act:{}};
