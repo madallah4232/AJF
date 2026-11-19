@@ -3790,7 +3790,7 @@ function hubPaint(){
   $("hubHi").innerHTML=`<small>${DAYS[TODAY.getUTCDay()]} · ${dLabel(TODAY)}</small><h2>${hubGreet()}${first?"، <span>"+escT(first)+"</span>":""}</h2>${me.title?`<div class="hub-ttl" dir="ltr">${escT(me.name)} · ${escT(me.title)}</div>`:""}`;
   const sv=fl.filter(f=>/^SV/i.test(f.n)).length,seen=circSeen(),nw=CIRCN&&CIRCLAST&&CIRCLAST!==seen;
   const info={tim:[CIRCN?CIRCN+" تعميم":"",nw?"جديد":""],flt:[left+" متبقية",""],trc:[fl.length+" رحلة اليوم",""],lc:[sv+" رحلة سعودية",""],qz:(()=>{try{const q=JSON.parse(localStorage.getItem("ajf_qz_hub")||"null");return q&&q.k>Date.now()?[q.t,q.b]:["",""]}catch(e){return["",""]}})()};
-  info.dr=["",""];const BL=BOARDS.filter(B=>!B.own);/* التقرير اليومي مخفي عن الكل (حتى يعتمده المالك) — يفتح للمالك فقط من الرابط ?dr */
+  info.dr=["",""];const BL=BOARDS.filter(B=>!B.own||drOwn());/* التقرير اليومي: يظهر في الرئيسية للمالك فقط (15024232) */
   const g=$("hubG");if(g.children.length!==BL.length)g.innerHTML=BL.map(B=>`<button class="hub-c" data-b="${B.id}" style="--c:${B.c}"><div class="ic">${svgI(B.ic,24)}</div><div><b>${B.t}</b><span>${B.s}</span><span class="nf" style="color:${B.c}"></span></div><em></em></button>`).join("");
   BL.forEach(B=>{const c=g.querySelector(`[data-b="${B.id}"]`);c.querySelector(".nf").textContent=info[B.id][0];c.querySelector("em").textContent=info[B.id][1]});
 }
