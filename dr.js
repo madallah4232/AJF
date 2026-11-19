@@ -281,15 +281,15 @@ function rowsOut(L){const k=dayK();return L.map(r=>{const o={day:k};for(const kk
 const tsv=L=>rowsOut(L).map(o=>COLS.map(f=>String(f(o)==null?"":f(o)).replace(/[\t\r\n]/g," ")).join("\t")).join("\r\n");
 async function copyTxt(t){try{await navigator.clipboard.writeText(t);return true}catch(e){}
   const a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.cssText="position:fixed;top:0;opacity:0";document.body.appendChild(a);a.select();a.setSelectionRange(0,t.length);let ok=false;try{ok=document.execCommand("copy")}catch(e){}a.remove();return ok}
-/* 📷 قراءة صورة بيانات الرحلة (Gemini عبر دالة ajf-dc) — يعبّي كل شي ماعدا ATA وATD، والصورة ما تنحفظ */
+/* 📷 قراءة صورة بيانات الرحلة (Gemini عبر دالة ajf-frm) — يعبّي كل شي ماعدا ATA وATD، والصورة ما تنحفظ */
 function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const M=1600,sc=Math.min(1,M/Math.max(im.naturalWidth,im.naturalHeight)),
   c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);
   ok(c.toDataURL("image/jpeg",.85).split(",")[1])};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error("img"))};im.src=u})}
-const PERR={nofn:"دالة ajf-dc غير موجودة في Supabase.",bad:"لازم تحدّث دالة ajf-dc في Supabase عشان قراءة الصور تشتغل.",nokey:"مفتاح Gemini ناقص في Supabase.",denied:"قراءة الصور للمشرف فقط.",
+const PERR={nofn:"دالة ajf-frm للحين ما انضافت في Supabase.",bad:"الصورة كبيرة أو ما انقرأت، جرّب صورة ثانية.",nokey:"مفتاح Gemini ناقص في Supabase.",denied:"قراءة الصور للمشرف فقط.",
   out:"انتهت الجلسة، سجّل دخول من جديد.",aierr:"المساعد مشغول أو ما قدر يقرأ الصورة، جرّب مرة ثانية بصورة أوضح.",img:"ما قدرت أفتح الصورة، جرّب صورة ثانية.",net:"تأكد من الإنترنت وجرّب مرة ثانية."};
 async function readPhoto(file,ph){const{id,k}=ph;PST[id]={busy:1};paint();
   try{const b64=await shrink(file);let r;
-    try{r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"frm",img:b64,mime:"image/jpeg"})})}catch(e){throw new Error("net")}
+    try{r=await fetch(SB_URL+"/functions/v1/ajf-frm",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"frm",img:b64,mime:"image/jpeg"})})}catch(e){throw new Error("net")}
     if(r.status===404)throw new Error("nofn");const j=await r.json().catch(()=>({s:"aierr"}));if(j.s!=="ok"||!j.d)throw new Error(j.s||"aierr");
     const d=j.d,D=dS(k),o=D.e[id]=D.e[id]||{},put=(kk,v)=>{if(v==null)return;v=String(v).trim();if(v===""||v==="0"&&NUMK.has(kk))return;o[kk]=v};
     const tm=v=>{const m=/^(\d{1,2})[:.]?(\d{2})/.exec(String(v||"").trim());if(!m)return"";let x=+m[1]*60+ +m[2];if(d.utc===true)x=(x+180)%1440;return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0")};
