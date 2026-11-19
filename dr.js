@@ -109,7 +109,39 @@ function append(buf,rows,fflate){
     wb=/<calcPr\b/.test(wb)?wb.replace(/<calcPr\b([^>]*?)(\/?)>/,(m,a,s)=>`<calcPr${a.replace(/\sfullCalcOnLoad="[^"]*"/,"")} fullCalcOnLoad="1"${s}>`):wb.replace(/<\/sheets>(\s*<definedNames>[\s\S]*?<\/definedNames>)?/,m=>m+'<calcPr fullCalcOnLoad="1"/>');
     Z["xl/workbook.xml"]=enc.encode(wb)}
   return{buf:added.length?fflate.zipSync(Z,{level:6}):null,added,skipped,last:rn,sheet:sh.name}}
-return{append,isoWeek}})();
+/* قراءة نص رسالة رحلة غير مجدولة (بعد OCR على الجوال): إيميل SPA (Service Request) أو رسالة ROYAL OPS */
+const ICAO={OEDR:"DHA",OERK:"RUH",OEJN:"JED",OEDF:"DMM",OEMA:"MED",OESH:"SHW",OEGN:"GIZ",OEAB:"AHB",OETB:"TUU",OEHL:"HAS",OEPA:"AQI",OERF:"RAH",OETF:"TIF",OENG:"EAM",OEBH:"BHH",OEWJ:"EJH",OEGS:"ELQ",OEAO:"ULH",OESK:"AJF"};
+function parseFlt(raw){
+  let t=String(raw||"").toUpperCase().replace(/[‐-―]/g,"-").replace(/[|]/g," ");
+  const d={},hm=x=>{const m=/(\d{1,2})[:.](\d{2})/.exec(x||"");return m&&+m[1]<24&&+m[2]<60?String(m[1]).padStart(2,"0")+":"+m[2]:""};
+  const hm4=x=>{x=String(x||"").replace(/O/g,"0");return/^\d{4}$/.test(x)&&+x.slice(0,2)<24&&+x.slice(2)<60?x.slice(0,2)+":"+x.slice(2):""};
+  const ap=x=>{x=String(x||"").replace(/[^A-Z]/g,"");if(x.length===4&&ICAO[x])return ICAO[x];return x.length===3?x:x.length===4?x:""};
+  const reg=/(?:REGISTRATION|\bREG)[:\s]+([A-Z0-9-]{3,8})/.exec(t);if(reg)d.reg=reg[1].replace(/-/g,"");
+  const typ=/(?:AIRCRAFT TYPE|\bEQPT)[:\s]+([A-Z0-9]{2,5})/.exec(t);if(typ)d.typ=typ[1];
+  const roy=/ROYAL\s+FLIGHT\s+([A-Z]{2})?\s*(\d{3,5})/.exec(t);
+  if(roy){d.al="ROYAL FLEET";d.fin=d.fout=roy[2];
+    /* سطر المسار: ETD JED 0720 AJF 0900/1000 JED 1135Z */
+    const line=t.split(/\n/).find(l=>/\bAJF\b/.test(l)&&/\b[A-Z]{3}\s+[0-9O]{4}/.test(l))||"";
+    const P=[...line.matchAll(/\b([A-Z]{3})\s+([0-9O]{4})(?:\s*\/\s*([0-9O]{4}))?(Z)?/g)].map(m=>({s:m[1],a:hm4(m[2]),b:m[3]?hm4(m[3]):"",z:!!m[4]}));
+    const utc=/\d{4}Z\b/.test(line),i=P.findIndex(p=>p.s==="AJF");
+    if(i>=0){const p=P[i];if(p.b){d.sta=p.a;d.std=p.b}else if(i===P.length-1)d.sta=p.a;else d.std=p.a;
+      d.dest=(P[i+1]||P[i-1]||{}).s||"";d.utc=utc}
+    for(const m of t.matchAll(/SCTR\s+([A-Z]{3})\s*-\s*([A-Z]{3})[^\n]*?(\d{1,3})\s*PAX/g)){if(m[1]==="AJF")d.dy=+m[3];else if(m[2]==="AJF")d.ay=+m[3]}
+    return d}
+  /* إيميل SPA: Inbound / Outbound */
+  const ref=/REF\s*(?:NUMBER|NO)?[:.\s]+([A-Z]{3}\s*-\s*)?(\d{3,7})/.exec(t);
+  const io=t.search(/OUTBOUND/),IN=io>0?t.slice(0,io):t,OUT=io>0?t.slice(io):"";
+  const fn=b=>{const m=/FLIGHT\s*(?:NUMBER|NO)[:.\s]+([A-Z0-9-]{2,10})/.exec(b);return m&&/\d/.test(m[1])?m[1].replace(/^[A-Z]{2,3}(?=\d)/,""):""};
+  d.fin=fn(IN)||(ref?ref[2]:"");d.fout=fn(OUT)||d.fin;if(!d.fin&&d.fout)d.fin=d.fout;
+  const tm=(b,k)=>{const m=new RegExp(k+"[:\\s][^\\n]*").exec(b);if(!m)return["",false];const L=m[0],lt=/(\d{1,2}:\d{2})\s*\(?\s*LT/.exec(L);
+    if(lt)return[hm(lt[1]),false];const z=/UTC|\dZ\b|GMT/.test(L);return[hm(L),z]};
+  const[a1,u1]=tm(IN,"(?:ETA|STA)"),[b1,u2]=tm(OUT||IN,"(?:ETD|STD)");d.sta=a1;d.std=b1;d.utc=!!(u1||u2)&&!/\(\s*LT/.test(t);
+  const to=/\bTO[:\s]+([A-Z]{3,4})(?:\s*\/\s*([A-Z]{3,4}))?/.exec(OUT),fr=/\bFROM[:\s]+([A-Z]{3,4})(?:\s*\/\s*([A-Z]{3,4}))?/.exec(IN);
+  const pick=m=>{if(!m)return"";const c=[m[1],m[2]].filter(Boolean);const i3=c.find(x=>x.length===3);return i3||ap(c[0])};
+  d.dest=pick(to)||pick(fr);
+  const px=b=>{const m=/\bPAX[:\s]+(\d{1,3})/.exec(b);return m?+m[1]:0};d.ay=px(IN);d.dy=px(OUT);
+  return d}
+return{append,isoWeek,parseFlt}})();
 G.DRXL=XL;
 if(typeof module!=="undefined"&&module.exports){module.exports={XL};return}
 
@@ -209,7 +241,7 @@ function card(r){const D=dS(dayK()),sk=!!D.skip[r.id],dn=D.done[r.id],ms=miss(r)
     <span class="m">STA ${E(val(r,"sta")||"—")} · ATA ${E(val(r,"ata")||"—")} · STD ${E(val(r,"std")||"—")} · ATD ${E(val(r,"atd")||"—")}${st?" · "+st+(dm>0?" +"+dm+"m":""):""}</span></summary>
     <div class="dr-in">
      ${r.x?`<div class="dr-s"><b>الرحلة</b><button class="dr-go sec" data-dphoto="${E(r.id)}" ${PST[r.id]&&PST[r.id].busy?"disabled":""}>📷 تعبئة من صورة بيانات الرحلة</button>
-       ${PST[r.id]?`<div class="${PST[r.id].err?"dr-warn":"dr-h"}">${PST[r.id].busy?"⏳ يقرأ الصورة… (10–30 ثانية)":E(PST[r.id].err||PST[r.id].msg||"")}</div>`:""}
+       ${PST[r.id]?`<div class="${PST[r.id].err?"dr-warn":"dr-h"}">${PST[r.id].busy?"⏳ يقرأ الصورة على جوالك… (أول مرة 10–20 ثانية)":E(PST[r.id].err||PST[r.id].msg||"")}</div>`:""}
        <div class="dr-g">${[FS.hd[0],FS.hd[1],FS.hd[4]].map(([k,l])=>inp(r,k,l)).join("")}</div><div class="dr-g g2">${FS.hd.slice(2,4).map(([k,l])=>inp(r,k,l)).join("")}</div></div>`:""}
      <div class="dr-s"><b>التشغيل</b><div class="dr-g g2">${FS.ops.slice(0,2).map(([k,l,t])=>inp(r,k,l,t)).join("")}</div><div class="dr-g g4">${FS.ops.slice(2).map(([k,l,t])=>inp(r,k,l,t)).join("")}</div>
        <div class="dr-g g2"><label>Status ${sel("st",["","OT","DLY"])}</label><label>Reason for delay ${sel("rsn",["","OT","NOT SGS","SGS"])}</label></div>
@@ -281,17 +313,25 @@ function rowsOut(L){const k=dayK();return L.map(r=>{const o={day:k};for(const kk
 const tsv=L=>rowsOut(L).map(o=>COLS.map(f=>String(f(o)==null?"":f(o)).replace(/[\t\r\n]/g," ")).join("\t")).join("\r\n");
 async function copyTxt(t){try{await navigator.clipboard.writeText(t);return true}catch(e){}
   const a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.cssText="position:fixed;top:0;opacity:0";document.body.appendChild(a);a.select();a.setSelectionRange(0,t.length);let ok=false;try{ok=document.execCommand("copy")}catch(e){}a.remove();return ok}
-/* 📷 قراءة صورة بيانات الرحلة (Gemini عبر دالة ajf-frm) — يعبّي كل شي ماعدا ATA وATD، والصورة ما تنحفظ */
-function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const M=1600,sc=Math.min(1,M/Math.max(im.naturalWidth,im.naturalHeight)),
-  c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);
-  ok(c.toDataURL("image/jpeg",.85).split(",")[1])};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error("img"))};im.src=u})}
-const PERR={nofn:"دالة ajf-frm للحين ما انضافت في Supabase.",bad:"الصورة كبيرة أو ما انقرأت، جرّب صورة ثانية.",nokey:"مفتاح Gemini ناقص في Supabase.",denied:"قراءة الصور للمشرف فقط.",
-  out:"انتهت الجلسة، سجّل دخول من جديد.",aierr:"المساعد مشغول أو ما قدر يقرأ الصورة، جرّب مرة ثانية بصورة أوضح.",img:"ما قدرت أفتح الصورة، جرّب صورة ثانية.",net:"تأكد من الإنترنت وجرّب مرة ثانية."};
+/* 📷 قراءة صورة بيانات الرحلة على الجوال نفسه (Tesseract) — الصورة ما تطلع من الجوال أبداً، وما تنحفظ.
+   يعبّي كل شي ماعدا ATA وATD. يفهم إيميل SPA (Service Request) ورسائل ROYAL OPS */
+const TESS=window.TESS_BASE||"https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/";
+let TW=null,TWP=null;
+const ldS=u=>new Promise((ok,no)=>{if(window.Tesseract)return ok();const x=document.createElement("script");x.src=u;x.onload=ok;x.onerror=()=>no(new Error("lib"));document.head.appendChild(x)});
+async function tw(){if(TW)return TW;if(TWP)return TWP;TWP=(async()=>{await ldS(TESS+"tesseract.min.js");const o={};if(window.TESS_LOCAL)Object.assign(o,window.TESS_LOCAL);
+  TW=await Tesseract.createWorker("eng",1,o);await TW.setParameters({preserve_interword_spaces:"1"});return TW})();try{return await TWP}catch(e){TWP=null;throw e}}
+/* تجهيز الصورة: تكبير الصغيرة، رمادي، وقلب الألوان إذا الإيميل بالوضع الداكن */
+function prep(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const w0=im.naturalWidth,h0=im.naturalHeight,
+  sc=Math.min(2400/Math.max(w0,h0),Math.max(1,1500/w0)),c=document.createElement("canvas");c.width=Math.round(w0*sc);c.height=Math.round(h0*sc);
+  const g=c.getContext("2d",{willReadFrequently:true});g.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);
+  const D=g.getImageData(0,0,c.width,c.height),px=D.data;let sum=0;for(let i=0;i<px.length;i+=4){const y=.299*px[i]+.587*px[i+1]+.114*px[i+2];px[i]=px[i+1]=px[i+2]=y;sum+=y}
+  if(sum/(px.length/4)<110)for(let i=0;i<px.length;i+=4)px[i]=px[i+1]=px[i+2]=255-px[i];g.putImageData(D,0,0);ok(c)};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error("img"))};im.src=u})}
+const PERR={img:"ما قدرت أفتح الصورة، جرّب صورة ثانية.",lib:"أول مرة يحتاج إنترنت عشان يحمّل برنامج القراءة، تأكد من الاتصال وجرّب.",none:"ما لقيت بيانات رحلة في الصورة. صوّر الإيميل كامل وواضح (من REF لين Outbound).",aierr:"ما قدرت أقرأ الصورة، جرّب صورة أوضح."};
 async function readPhoto(file,ph){const{id,k}=ph;PST[id]={busy:1};paint();
-  try{const b64=await shrink(file);let r;
-    try{r=await fetch(SB_URL+"/functions/v1/ajf-frm",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"frm",img:b64,mime:"image/jpeg"})})}catch(e){throw new Error("net")}
-    if(r.status===404)throw new Error("nofn");const j=await r.json().catch(()=>({s:"aierr"}));if(j.s!=="ok"||!j.d){const er=new Error(j.s||"aierr");er.det=j.e||"";throw er}
-    const d=j.d,D=dS(k),o=D.e[id]=D.e[id]||{},put=(kk,v)=>{if(v==null)return;v=String(v).trim();if(v===""||v==="0"&&NUMK.has(kk))return;o[kk]=v};
+  try{const lim=(p,ms,e)=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no(new Error(e)),ms))]);
+    const cv=await prep(file),w=await lim(tw(),90000,"lib"),rr=await lim(w.recognize(cv),90000,"aierr"),d=XL.parseFlt(rr.data.text||"");
+    if(!d.reg&&!d.fin&&!d.sta&&!d.std)throw new Error("none");
+    const D=dS(k),o=D.e[id]=D.e[id]||{},put=(kk,v)=>{if(v==null)return;v=String(v).trim();if(v===""||v==="0"&&NUMK.has(kk))return;o[kk]=v};
     const tm=v=>{const m=/^(\d{1,2})[:.]?(\d{2})/.exec(String(v||"").trim());if(!m)return"";let x=+m[1]*60+ +m[2];if(d.utc===true)x=(x+180)%1440;return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0")};
     const x0=D.x.find(z=>z.id===id);if(!(x0&&x0.al))put("al",String(d.al||"").toUpperCase());["fin","fout","dest"].forEach(kk=>put(kk,String(d[kk]||"").toUpperCase()));put("reg",regN(d.reg));put("typ",String(d.typ||"").toUpperCase());
     put("sta",tm(d.sta));put("std",tm(d.std));
@@ -299,7 +339,7 @@ async function readPhoto(file,ph){const{id,k}=ph;PST[id]={busy:1};paint();
     if(!o.fout&&o.fin)o.fout=o.fin;if(!o.fin&&o.fout)o.fin=o.fout;
     const x=D.x.find(z=>z.id===id);if(x&&!o.cat&&(o.al||x.al)==="SPA")o.cat="SPA";
     sv();PST[id]={msg:"✓ تعبّت من الصورة — راجعها، وأضف ATA وATD"+(d.utc===true?" (الأوقات كانت UTC وتحوّلت لتوقيت السعودية)":"")+(d.note?" · "+d.note:"")};OPEN=id}
-  catch(e){console.error(e);PST[id]={err:(PERR[e.message]||PERR.aierr)+(e.det?" — التفاصيل: "+String(e.det).slice(0,220):"")}}
+  catch(e){console.error(e);PST[id]={err:PERR[e.message]||PERR.aierr}}
   if(dayK()===k)paint()}
 /* حقل اختيار الصورة برا الصفحة عشان ما ينمسح لما تنعاد الرسمة */
 function imgIn(){let f=document.getElementById("drImg");if(!f){f=document.createElement("input");f.type="file";f.accept="image/*";f.id="drImg";f.hidden=true;document.body.appendChild(f);
