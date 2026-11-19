@@ -1,5 +1,6 @@
 // ajf-dc — المساعد الذكي لأكواد التأخير (كل شركة على دليلها فقط) + مساعد فحص وثائق الراكب (kind:"tim")
 //          + تحويل كلام الراديو لنص (kind:"stt") ويحفظه مع البث في جدول ajf_bc
+//          + قراءة صورة بيانات رحلة (SPA/خاصة) للتقرير اليومي (kind:"frm") — للمالك فقط، والصورة ما تنحفظ
 // التحديث: Edge Functions ← ajf-dc ← Code ← امسح الكود والصق هذا الملف كامل ← Deploy
 // الإعداد: Edge Functions ← Deploy a new function ← الاسم ajf-dc ← الصق هذا الملف ← Deploy
 //          ثم من إعدادات الدالة: أطفئ "Verify JWT" (التطبيق يتحقق بالرقم الوظيفي والجلسة)
@@ -45,6 +46,34 @@ async function gemAudio(b64: string): Promise<string> {
         generationConfig: { temperature: 0 } }),
     });
     if (r.ok) { const j = await r.json(); return (j.candidates?.[0]?.content?.parts || []).map((x: { text?: string }) => x.text || "").join("").trim(); }
+    last = r.status + " " + (await r.text()).slice(0, 200);
+  }
+  throw new Error("gemini " + last);
+}
+
+// قراءة صورة بيانات رحلة للتقرير اليومي (Local Station Flight SKD)
+const SYS_FRM = `أنت تقرأ صورة فيها بيانات رحلة طيران (خاصة أو SPA أو VIP أو تشارتر) وصلت مطار الجوف AJF وغادرت منه.
+أرجع JSON فقط بهذي المفاتيح (أي معلومة مو موجودة في الصورة خلّها "" أو 0 — لا تخمّن أبداً):
+{"al":"","fin":"","fout":"","dest":"","reg":"","typ":"","sta":"","std":"","utc":false,"aj":0,"ay":0,"ai":0,"dj":0,"dy":0,"di":0,"ab":0,"db":0,"cgo":0,"note":""}
+- al: رمز المشغّل إذا مكتوب (مثل SPA)، وإلا "".
+- fin رقم رحلة الوصول، fout رقم رحلة المغادرة، كما هي مكتوبة بالضبط (مثل 55028-3). إذا رقم واحد للرحلتين حطه في الاثنين.
+- dest: رمز IATA ثلاث حروف للمطار الثاني (القادمة منه أو المغادرة له، غير AJF/OESK). إذا مكتوب ICAO حوّله لـ IATA إذا متأكد.
+- reg: تسجيل الطائرة بدون شرطة (مثل HZA4). typ: نوع الطائرة كما مكتوب (مثل A319 أو C550 أو 320).
+- sta وقت الوصول المجدول، std وقت المغادرة المجدول، بصيغة HH:MM. لا تكتب الأوقات الفعلية (ATA/ATD/ON BLOCK/OFF BLOCK).
+- utc: true إذا الأوقات مكتوبة UTC أو Z أو GMT، وإلا false.
+- aj/ay/ai ركاب الوصول (أعمال، سياحي، رضع)، dj/dy/di ركاب المغادرة. إذا مكتوب عدد ركاب بدون درجة حطه في ay أو dy. الطاقم ما ينحسب.
+- ab/db عدد قطع عفش الوصول/المغادرة، cgo الشحن بالكيلو.
+- note: سطر قصير بالعربي إذا فيه شي غير واضح، وإلا "".`;
+async function gemImg(b64: string, mime: string): Promise<string> {
+  let last = "";
+  for (const m of GM) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.trim()}:generateContent`, {
+      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GK }, signal: AbortSignal.timeout(50000),
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: SYS_FRM }] },
+        contents: [{ role: "user", parts: [{ inline_data: { mime_type: mime, data: b64 } }, { text: "اقرأ بيانات الرحلة من الصورة." }] }],
+        generationConfig: { temperature: 0, responseMimeType: "application/json" } }),
+    });
+    if (r.ok) { const j = await r.json(); const o = (j.candidates?.[0]?.content?.parts || []).map((x: { text?: string }) => x.text || "").join("").trim(); if (o) return o; last = m + " empty"; continue; }
     last = r.status + " " + (await r.text()).slice(0, 200);
   }
   throw new Error("gemini " + last);
@@ -138,6 +167,17 @@ Deno.serve(async (req) => {
       if (!t || t === "—" || t === "-") t = "";
       if (t) await sb.from("ajf_bc").update({ body: t }).eq("id", id);
       return out({ s: "ok", text: t });
+    } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
+  }
+  if (a.kind === "frm") {
+    if (String(me.emp) !== "15024232") return out({ s: "denied" });
+    const img = String(a.img || ""), mime = /^image\/(jpeg|png|webp|heic|heif)$/.test(String(a.mime || "")) ? String(a.mime) : "image/jpeg";
+    if (img.length < 1000 || img.length > 7_000_000) return out({ s: "bad" });
+    try {
+      const t = await gemImg(img, mime);
+      let d: Record<string, unknown> = {};
+      try { d = JSON.parse(t.replace(/^```(json)?|```$/g, "").trim()); } catch { return out({ s: "aierr", e: "json" }); }
+      return out({ s: "ok", d });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
   if (a.kind === "tim") {

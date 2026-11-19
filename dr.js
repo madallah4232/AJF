@@ -124,7 +124,7 @@ const SK="ajf_dr";let S={};try{S=JSON.parse(localStorage.getItem(SK)||"{}")||{}}
 try{if(!localStorage.getItem("ajf_dr_v2")){for(const k in S)if(S[k])S[k].done={};localStorage.setItem(SK,JSON.stringify(S));localStorage.setItem("ajf_dr_v2","1")}}catch(e){}
 const sv=()=>{try{const keep=iso(addDays(TODAY,-20));for(const k in S)if(k<keep)delete S[k];localStorage.setItem(SK,JSON.stringify(S))}catch(e){}};
 const dS=k=>S[k]=S[k]||{e:{},x:[],skip:{},done:{}};
-let DAY=0,root=null,OPEN=null,RES=null,CP=null;
+let DAY=0,root=null,OPEN=null,RES=null,CP=null,PH=null;const PST={};
 const dayD=()=>addDays(TODAY,-DAY),dayK=()=>iso(dayD());
 const HM=/^([01]\d|2[0-3]):[0-5]\d$/;const TMK=new Set(["sta","ata","std","atd"]);
 const numF=v=>/^\d+$/.test(String(v||"").trim())?+String(v).trim():String(v||"").trim();
@@ -206,7 +206,9 @@ function card(r){const D=dS(dayK()),sk=!!D.skip[r.id],dn=D.done[r.id],ms=miss(r)
   return`<details class="dr-c ${sk?"skip":""}" data-card="${E(r.id)}" ${OPEN===r.id?"open":""}><summary><span class="t">${E(fl)}</span>${badge}
     <span class="m">STA ${E(val(r,"sta")||"—")} · ATA ${E(val(r,"ata")||"—")} · STD ${E(val(r,"std")||"—")} · ATD ${E(val(r,"atd")||"—")}${st?" · "+st+(dm>0?" +"+dm+"m":""):""}</span></summary>
     <div class="dr-in">
-     ${r.x?`<div class="dr-s"><b>الرحلة</b><div class="dr-g g5">${FS.hd.map(([k,l])=>inp(r,k,l)).join("")}</div></div>`:""}
+     ${r.x?`<div class="dr-s"><b>الرحلة</b><button class="dr-go sec" data-dphoto="${E(r.id)}" ${PST[r.id]&&PST[r.id].busy?"disabled":""}>📷 تعبئة من صورة بيانات الرحلة</button>
+       ${PST[r.id]?`<div class="${PST[r.id].err?"dr-warn":"dr-h"}">${PST[r.id].busy?"⏳ يقرأ الصورة… (10–30 ثانية)":E(PST[r.id].err||PST[r.id].msg||"")}</div>`:""}
+       <div class="dr-g">${[FS.hd[0],FS.hd[1],FS.hd[4]].map(([k,l])=>inp(r,k,l)).join("")}</div><div class="dr-g g2">${FS.hd.slice(2,4).map(([k,l])=>inp(r,k,l)).join("")}</div></div>`:""}
      <div class="dr-s"><b>التشغيل</b><div class="dr-g g2">${FS.ops.slice(0,2).map(([k,l,t])=>inp(r,k,l,t)).join("")}</div><div class="dr-g g4">${FS.ops.slice(2).map(([k,l,t])=>inp(r,k,l,t)).join("")}</div>
        <div class="dr-g g2"><label>Status ${sel("st",["","OT","DLY"])}</label><label>Reason for delay ${sel("rsn",["","OT","NOT SGS","SGS"])}</label></div>
        ${val(r,"dlyc")?`<div class="dr-h">كود التأخير في الشيت: <b dir="ltr">${E(val(r,"dlyc"))}</b></div>`:""}</div>
@@ -224,7 +226,8 @@ function paint(){if(!root)return;css();
     <div class="bd-days">${[2,1,0].map(i=>`<button data-drday="${i}" class="${i===DAY?"on":""}">${["اليوم","أمس","قبل أمس"][i]} · ${dLabel(addDays(TODAY,-i))}</button>`).join("")}</div>
     <div class="dr-h">جدول <b dir="ltr">Local Station Flight SKD</b>. الأرقام الذهبية المنقّطة تعبّت تلقائياً من اللوحة والكوردينيتر شيت، غيّر اللي يحتاج. الخانة الفاضية = 0.</div>
     ${L.length?L.map(card).join(""):`<div class="bd-empty">ما فيه رحلات بهذا اليوم</div>`}
-    <button class="dr-go sec" id="drAdd">＋ رحلة إضافية (خاصة، VIP، SPA…)</button>
+    <button class="dr-go" id="drSpa">📷 رحلة SPA من صورة</button>
+    <button class="dr-go sec" id="drAdd">＋ رحلة إضافية يدوي (خاصة، VIP، SPA…)</button>
     ${RES?resBox():""}
     <div class="dr-box">
       <b>📋 نسخ رحلات ${["اليوم","أمس","قبل أمس"][DAY]} للصقها في ملف AJF</b>
@@ -276,6 +279,29 @@ function rowsOut(L){const k=dayK();return L.map(r=>{const o={day:k};for(const kk
 const tsv=L=>rowsOut(L).map(o=>COLS.map(f=>String(f(o)==null?"":f(o)).replace(/[\t\r\n]/g," ")).join("\t")).join("\r\n");
 async function copyTxt(t){try{await navigator.clipboard.writeText(t);return true}catch(e){}
   const a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.cssText="position:fixed;top:0;opacity:0";document.body.appendChild(a);a.select();a.setSelectionRange(0,t.length);let ok=false;try{ok=document.execCommand("copy")}catch(e){}a.remove();return ok}
+/* 📷 قراءة صورة بيانات الرحلة (Gemini عبر دالة ajf-dc) — يعبّي كل شي ماعدا ATA وATD، والصورة ما تنحفظ */
+function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const M=1600,sc=Math.min(1,M/Math.max(im.naturalWidth,im.naturalHeight)),
+  c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);
+  ok(c.toDataURL("image/jpeg",.85).split(",")[1])};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error("img"))};im.src=u})}
+const PERR={nofn:"دالة ajf-dc غير موجودة في Supabase.",bad:"لازم تحدّث دالة ajf-dc في Supabase عشان قراءة الصور تشتغل.",nokey:"مفتاح Gemini ناقص في Supabase.",denied:"قراءة الصور للمشرف فقط.",
+  out:"انتهت الجلسة، سجّل دخول من جديد.",aierr:"المساعد مشغول أو ما قدر يقرأ الصورة، جرّب مرة ثانية بصورة أوضح.",img:"ما قدرت أفتح الصورة، جرّب صورة ثانية.",net:"تأكد من الإنترنت وجرّب مرة ثانية."};
+async function readPhoto(file,ph){const{id,k}=ph;PST[id]={busy:1};paint();
+  try{const b64=await shrink(file);let r;
+    try{r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"frm",img:b64,mime:"image/jpeg"})})}catch(e){throw new Error("net")}
+    if(r.status===404)throw new Error("nofn");const j=await r.json().catch(()=>({s:"aierr"}));if(j.s!=="ok"||!j.d)throw new Error(j.s||"aierr");
+    const d=j.d,D=dS(k),o=D.e[id]=D.e[id]||{},put=(kk,v)=>{if(v==null)return;v=String(v).trim();if(v===""||v==="0"&&NUMK.has(kk))return;o[kk]=v};
+    const tm=v=>{const m=/^(\d{1,2})[:.]?(\d{2})/.exec(String(v||"").trim());if(!m)return"";let x=+m[1]*60+ +m[2];if(d.utc===true)x=(x+180)%1440;return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0")};
+    ["al","fin","fout","dest"].forEach(kk=>put(kk,String(d[kk]||"").toUpperCase()));put("reg",regN(d.reg));put("typ",String(d.typ||"").toUpperCase());
+    put("sta",tm(d.sta));put("std",tm(d.std));
+    ["aj","ay","ai","dj","dy","di","ab","db","cgo"].forEach(kk=>{const n=parseInt(d[kk],10);if(n>0)o[kk]=String(n)});
+    if(!o.fout&&o.fin)o.fout=o.fin;if(!o.fin&&o.fout)o.fin=o.fout;
+    const x=D.x.find(z=>z.id===id);if(x&&!o.cat&&(o.al||x.al)==="SPA")o.cat="SPA";
+    sv();PST[id]={msg:"✓ تعبّت من الصورة — راجعها، وأضف ATA وATD"+(d.utc===true?" (الأوقات كانت UTC وتحوّلت لتوقيت السعودية)":"")+(d.note?" · "+d.note:"")};OPEN=id}
+  catch(e){console.error(e);PST[id]={err:PERR[e.message]||PERR.aierr}}
+  if(dayK()===k)paint()}
+/* حقل اختيار الصورة برا الصفحة عشان ما ينمسح لما تنعاد الرسمة */
+function imgIn(){let f=document.getElementById("drImg");if(!f){f=document.createElement("input");f.type="file";f.accept="image/*";f.id="drImg";f.hidden=true;document.body.appendChild(f);
+  f.addEventListener("change",()=>{const x=f.files&&f.files[0];if(x&&PH)readPhoto(x,PH)})}return f}
 function upd(id){/* تحديث ملخص البطاقة بدون إعادة رسم الخانات (عشان ما يطير الكيبورد) */
   const c=root.querySelector(`[data-card="${CSS.escape(id)}"]`);if(!c)return;const r=list().find(x=>x.id===id);if(!r)return;
   const tmp=document.createElement("div");tmp.innerHTML=card(r);const n=tmp.firstElementChild;
@@ -286,6 +312,8 @@ function upd(id){/* تحديث ملخص البطاقة بدون إعادة رس�
 function bind(){
   root.addEventListener("click",e=>{const t=e.target.closest("button");if(!t||!root.contains(t))return;const D=dS(dayK());
     if(t.dataset.drday!=null){DAY=+t.dataset.drday;OPEN=null;RES=null;CP=null;paint();return}
+    if(t.id==="drSpa"||t.dataset.dphoto){let id=t.dataset.dphoto;if(!id){id="x"+Date.now().toString(36);D.x.push({id,stn:"AJF",al:"SPA",cat:"SPA"});sv();OPEN=id}
+      PH={id,k:dayK()};const f=imgIn();f.value="";f.click();if(!t.dataset.dphoto)setTimeout(paint,50);return}
     if(t.id==="drAdd"){const id="x"+Date.now().toString(36);D.x.push({id,stn:"AJF"});sv();OPEN=id;paint();const c=root.querySelector(`[data-card="${id}"] input`);if(c)c.focus();return}
     if(t.dataset.dskip){const id=t.dataset.dskip;if(D.skip[id])delete D.skip[id];else D.skip[id]=1;sv();paint();return}
     if(t.dataset.ddel){if(!confirm("حذف هذي الرحلة من التقرير؟"))return;const id=t.dataset.ddel;D.x=D.x.filter(x=>x.id!==id);delete D.e[id];delete D.skip[id];delete D.done[id];sv();paint();return}
