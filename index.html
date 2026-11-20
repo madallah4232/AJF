@@ -3821,7 +3821,7 @@ function portal(card,B,mid){
   setTimeout(()=>{card.classList.remove("press");mid();p.classList.add("bye");setTimeout(()=>p.remove(),400)},620);
 }
 /* ⚔️ تنبيه دعوة تحدي ← يفتح صفحة التحديات مباشرة */
-function duGo(){try{if(/[?&]duel/.test(location.search))history.replaceState(null,"",location.pathname)}catch(e){}if(!AUTH.tok)return;window.QZ_GO="duel";openBoard("qz")}
+function duGo(){if(!window.AJF_DUEL_ON){try{history.replaceState(null,"",location.pathname)}catch(e){}return}try{if(/[?&]duel/.test(location.search))history.replaceState(null,"",location.pathname)}catch(e){}if(!AUTH.tok)return;window.QZ_GO="duel";openBoard("qz")}
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{const u=e.data&&e.data.ajfOpen;if(u&&/[?&]duel/.test(u))duGo()});
 function openBoard(id,card){const B=BOARDS.find(x=>x.id===id);if(!B)return;ajfAct("board",id);
   portal(card,B,()=>{$("hub").hidden=true;BOARD=id;
@@ -3874,7 +3874,7 @@ const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 let drP=null;const drLoad=()=>window.DR?Promise.resolve():drP||(drP=ldJs("dr.js?v=16").catch(e=>{drP=null;throw e}));
-let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=11").catch(e=>{qzP=null;throw e}));
+let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=12").catch(e=>{qzP=null;throw e}));
 let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=27")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;

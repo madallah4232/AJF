@@ -153,7 +153,7 @@ function duPeek(){call("ajf_du_list").then(j=>{if(j.s!=="ok")return;DUI={inv:(j.
 function duOpen(){VIEW="duel";root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;
   (window.DU?Promise.resolve():duP||(duP=ldJs("duel.js?v=6").catch(e=>{duP=null;throw e}))).then(()=>{if(VIEW==="duel")DU.mount(root,()=>{VIEW="home";paint();duPeek()})})
     .catch(()=>{VIEW="home";paint();alert("تعذّر التحميل، تأكد من الإنترنت")})}
-function mount(el){css();root=el;VIEW="home";const go=window.QZ_GO==="duel";window.QZ_GO=null;duPeek();root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;if(go)duOpen();
+function mount(el){css();root=el;VIEW="home";window.QZ_GO=null;/* تحديات الزملاء مقفلة بطلب المشرف (2026-11-21) */root.innerHTML=`<div class="bd-empty">جاري التحميل…</div>`;
   Promise.all([load(),loadBoard()]).then(paint).catch(e=>{if(root)root.innerHTML=`<div class="bd-empty">${/rpc 404/.test(e&&e.message)?"🏁 التحدي قيد التجهيز، قريباً بإذن الله":"تعذّر التحميل، تأكد من الإنترنت"}</div>`});
   clearInterval(tick);tick=setInterval(()=>{if(!root||!root.isConnected){clearInterval(tick);return}if(!document.hidden&&VIEW==="home"&&!cur)paint()},30000)}
 
@@ -167,7 +167,7 @@ function paint(){if(!root||VIEW!=="home")return;const r=ST&&ST.round,T=(ST&&ST.t
       <button class="qz-go" id="qzStart" ${done?"disabled":""}>${done?"✓ خلصت أسئلة اليوم":d?"كمّل الأسئلة ("+(d+1)+" من "+r.per+")":"ابدأ أسئلة اليوم"}</button></div>`}
   h+=`<button class="qz-card qz-du" id="qzMine"><span>📚</span><div><b>أسئلتي وأجوبتها</b><small>راجع كل سؤال جاوبته: الجواب الصحيح والشرح والمرجع ومعاني الرموز</small></div><em>‹</em></button>`;
   /* ⚔️ تحديات الزملاء (duel.js) */
-  h+=`<button class="qz-card qz-du" id="qzDu"><span>⚔️</span><div><b>تحديات الزملاء</b><small>${DUI&&DUI.inv?"📨 عندك "+DUI.inv+" "+(DUI.inv>1?"دعوات":"دعوة")+" تحدي":DUI&&DUI.live?"🔴 "+DUI.live+" تحدي مباشر الحين":"تحدّى زميلك بأسئلة التعاميم، والكل يتابع"}</small></div><em>‹</em></button>`;
+  if(window.AJF_DUEL_ON)h+=`<button class="qz-card qz-du" id="qzDu"><span>⚔️</span><div><b>تحديات الزملاء</b><small>${DUI&&DUI.inv?"📨 عندك "+DUI.inv+" "+(DUI.inv>1?"دعوات":"دعوة")+" تحدي":DUI&&DUI.live?"🔴 "+DUI.live+" تحدي مباشر الحين":"تحدّى زميلك بأسئلة التعاميم، والكل يتابع"}</small></div><em>‹</em></button>`;
   h+=`<details class="qz-card qz-rules"><summary>📜 قوانين التحدي</summary><ul>
     <li>كل يوم ${r?r.per:10} أسئلة من التعاميم ودليل العمليات، ولكل سؤال 4 خيارات.</li>
     <li>عندك ${r?r.secs:30} ثانية لكل سؤال، وإذا خلص الوقت ينحسب خطأ.</li>
