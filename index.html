@@ -1555,6 +1555,9 @@ function riyadhNow(){
 }
 let NOW=riyadhNow();
 const TODAY=NOW.date;
+/* «اليوم» ثابت من وقت فتح الصفحة: إذا التطبيق بقى مفتوح بعد منتصف الليل نعيد تحميله عشان يصير اليوم الجديد (بدون ما نقاطع موظف يكتب) */
+function dayCheck(){try{if(riyadhNow().date.getTime()===TODAY.getTime())return;const a=document.activeElement;if(!document.hidden&&a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;location.reload()}catch(e){}}
+setInterval(dayCheck,60e3);document.addEventListener("visibilitychange",()=>{if(!document.hidden)dayCheck()});window.addEventListener("pageshow",dayCheck);
 
 /* what flies on a given date */
 function flightsOn(date,{all=false}={}){
