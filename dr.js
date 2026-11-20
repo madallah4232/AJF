@@ -162,6 +162,8 @@ function parseAmd(raw){
       if(n.length===6||n.length===8)d.acc={bj:n[0],by:n[1],bi:n[2],j:n[3],y:n[4],i:n[5]};
       else if(n.length>=10)d.acc={bj:n[0],by:n[1],bi:n[2],j:n[5],y:n[6],i:n[7]};
 }
+    const sg=/\b([A-Z][A-Z0-9]{2})\s*[-–]\s*([A-Z][A-Z0-9]{2})\b/.exec(l);if(sg&&!d.sorg&&sg[1]!==sg[2]){d.sorg=sg[1];d.sdst=sg[2]}
+    if(/JOINING/.test(l)){const tx=/\bTO\s*([A-Z0-9]{3})\b/.exec(l);if(tx&&tx[1]!=="TAL"&&!d.wdst)d.wdst=tx[1]}
     const tw=/^\W*TOTAL\s*\(\s*([A-Z0-9]{3})/.exec(l);if(tw&&!d.wdst)d.wdst=tw[1];const ex=/\bEX\s+([A-Z0-9]{3})\W/.exec(l);if(ex&&!d.worg)d.worg=ex[1];
     if(/^\W*TOTAL\s*\(/.test(l)||/\bEX\s+[A-Z]{3}\W/.test(l)){const b=bags(l);if(b)(d.bagC=d.bagC||[]).push(b)}}
   if(d.acc&&d.tot!=null&&d.acc.j+d.acc.y!==d.tot)d.accBad=1;
@@ -311,7 +313,8 @@ function cpBar(r){const D=dS(dayK());if(D.skip[r.id])return"";if(r.x&&!val(r,"fi
   if(dn)return`<div class="dr-cp">${amdSt(r)}<div class="dr-row"><button class="sec" data-dcp="${E(r.id)}">📋 نسخ سطر الرحلة مرة ثانية</button>${amdBtn(r)}</div></div>`;
   return`<div class="dr-cp">${amdSt(r)}${ms.length?`<div class="dr-warn">⚠️ ناقص: ${ms.map(E).join("، ")}</div>`:""}<div class="dr-row"><button data-dcp="${E(r.id)}">📋 نسخ سطر هذي الرحلة</button>${amdBtn(r)}</div></div>`}
 const amdBtn=r=>r.f?`<button class="sec" style="flex:0 0 auto;padding:6px 14px" data-damd="${E(r.id)}" ${PST[r.id]&&PST[r.id].busy?"disabled":""} aria-label="تعبئة من صور أماديوس">📷 أماديوس</button>`:"";
-const amdSt=r=>{const p=r.f&&PST[r.id];if(!p)return"";return`<div class="${p.err?"dr-warn":"dr-h"}">${p.busy?"⏳ "+E(p.busy===1?"يقرأ الصور على جوالك… (أول مرة 10–20 ثانية)":p.busy):p.err?E(p.err):p.msg}</div>`}
+const amdSt=r=>{const p=r.f&&PST[r.id];if(!p)return"";return`<div class="${p.err?"dr-warn":"dr-h"}">${p.busy?"⏳ "+E(p.busy===1?"يقرأ الصور على جوالك… (أول مرة 10–20 ثانية)":p.busy):p.err?E(p.err):p.msg}</div>`+
+  (!p.busy&&p.ask&&AMDL[r.id]?`<div class="dr-h">الصور اللي ما عرفت جهتها، هي لـ:</div><div class="dr-row"><button class="sec" data-damdf="a" data-id="${E(r.id)}">🛬 رحلة الوصول</button><button class="sec" data-damdf="d" data-id="${E(r.id)}">🛫 رحلة المغادرة</button></div>`:"")}
 
 function paint(){if(!root)return;css();
   if(!own()){root.innerHTML=`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>التقرير اليومي خاص بالمشرف.</p></div>`;return}
@@ -416,7 +419,12 @@ async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint()
       for(let i=0;i<files.length;i++){if(files.length>1){PST[id]={busy:`يقرأ الصورة ${i+1} من ${files.length}…`};if(dayK()===k)paint()}
         const rr=await lim(w.recognize(await prepA(files[i])),90000,"aierr");R.push(XL.parseAmd(rr.data.text||""))}}
     finally{try{await w.setParameters({tessedit_pageseg_mode:"3"})}catch(e){}}
-    const r=list().find(x=>x.id===id);if(!r)throw new Error("none");
+    AMDL[id]={k,R};amdApply(id,k,R,null)}
+  catch(e){console.error(e);PST[id]={err:PERR[e.message]||e.message||PERR.aierr}}
+  if(dayK()===k)paint()}
+const AMDL={};
+function amdApply(id,k,R,force){
+  try{const r=list().find(x=>x.id===id);if(!r)throw new Error("none");let unk=0;
     /* كل صورة نعرف هي للوصول ولا للمغادرة: من المسار (JED → AJF) ورقم الرحلة (الوصول/المغادرة) */
     const isA=x=>/^A[JI1LU][FE]$/.test(x||""),num=x=>+String(x||"").replace(/\D/g,""),fi=num(val(r,"fin")),fo=num(val(r,"fout")),dd=dayD(),G2={a:[],d:[]},warn=[];
     const LOG=[];for(const [pi,d] of R.entries()){const sh=d.blk?"Flight Info":d.acc?"Acceptance":d.tot!=null||(d.bagC||[]).length?"W&B":"؟";
@@ -424,6 +432,8 @@ async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint()
       let dir=d.dst&&isA(d.dst)&&!isA(d.org)?"a":d.org&&isA(d.org)&&!isA(d.dst)?"d":null;
       /* شاشة Weight & Balance: TOTAL(AJF) أو EX JED = وصول، TOTAL(JED) أو EX AJF = مغادرة */
       if(!dir){const a=isA(d.wdst)||d.worg&&!isA(d.worg),b=d.wdst&&!isA(d.wdst)||isA(d.worg);if(a&&!b)dir="a";else if(b&&!a)dir="d"}
+      /* سطر المقطع في الجدول (JED-AJF) */
+      if(!dir&&d.sorg){if(isA(d.sdst)&&!isA(d.sorg))dir="a";else if(isA(d.sorg)&&!isA(d.sdst))dir="d"}
       /* رقم الرحلة: مطابق، أو فيه رقم واحد مقروء غلط (1283 بدل 1383) والمسار يأكد الجهة */
       const nr=(x,y)=>{x=String(x);y=String(y);if(x.length!==y.length)return false;let c=0;for(let i=0;i<x.length;i++)if(x[i]!==y[i])c++;return c<=1};
       if(d.fno){if(fi!==fo&&d.fno===fi)dir="a";else if(d.fno===fo){if(fi!==fo)dir="d"}
@@ -434,9 +444,10 @@ async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint()
       const okD=x=>x.dd===dd.getDate()&&(!x.mon||x.mon===MON[dd.getMonth()]);
       if(d.dd&&!okD(d)&&!R.some(x=>x!==d&&x.fno&&x.fno===d.fno&&x.dd&&okD(x))){LOG.push(`صورة ${pi+1}: تاريخها ${d.dd}${d.mon||""} واليوم المختار ${dd.getDate()}${MON[dd.getMonth()]} — تجاهلتها`);continue}
       const tag=(d.fno?"SV"+d.fno+" ":"")+(d.org&&d.dst?d.org+"→"+d.dst:"");
-      if(!dir){LOG.push(`صورة ${pi+1} (${sh} ${tag}): ما عرفت وصول ولا مغادرة — تجاهلتها`);continue}
-      LOG.push(`صورة ${pi+1}: ${sh} · ${dir==="a"?"وصول":"مغادرة"} ${tag}`);G2[dir].push(d)}
-    if(!G2.a.length&&!G2.d.length)throw new Error(LOG.length?LOG.join(" · "):"amdnone");
+      let man="";if(!dir&&force){dir=force;man=" (حددتها أنت)"}
+      if(!dir){unk++;LOG.push(`صورة ${pi+1} (${sh}${tag?" "+tag:""}): ما عرفت وصول ولا مغادرة`);continue}
+      LOG.push(`صورة ${pi+1}: ${sh} · ${dir==="a"?"وصول":"مغادرة"} ${tag}${man}`);G2[dir].push(d)}
+    if(!G2.a.length&&!G2.d.length){PST[id]={err:LOG.length?LOG.join(" · "):PERR.amdnone,ask:unk};return}
     const D=dS(k),o=D.e[id]=D.e[id]||{},out=[],regs=[];let typ="";
     for(const dir of["a","d"]){const L=G2[dir];if(!L.length)continue;const K=dir==="a"?{t:"ata",s:"sta",j:"aj",y:"ay",i:"ai",b:"ab",n:"الوصول"}:{t:"atd",s:"std",j:"dj",y:"dy",i:"di",b:"db",n:"المغادرة"};
       const m={bagC:[]};for(const d of L){for(const kk of["blk","sch","aps","tot","winf","acc","accBad"])if(m[kk]==null&&d[kk]!=null)m[kk]=d[kk];m.bagC.push(...(d.bagC||[]));regs.push(...(d.regs||[]));if(!typ&&d.typ)typ=d.typ}
@@ -457,8 +468,9 @@ async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint()
     const rg=regs.map(regN),okR=rg.find(g=>REGT[g]!=null)||rg.find(g=>/^HZ[A-Z]{2}\d{2}$/.test(g));
     if(okR){const cur=regN(val(r,"reg"));if(cur&&cur!==okR)warn.push(`التسجيل في أماديوس ${okR} وكان ${cur}`);o.reg=okR;out.push(`<b dir="ltr">${E(okR)}</b>`)}
     if(typ&&!val(r,"typ"))o.typ=typ;
-    if(!out.length)throw new Error(LOG.length?"ما قدرت أعبّي شي بشكل مؤكد · "+LOG.join(" · ")+(warn.length?" · "+warn.join(" · "):""):"amdnone");sv();
-    PST[id]={msg:"✓ من أماديوس — "+out.join("<br>")+"<br>راجعها قبل النسخ"+`<br><small style="opacity:.75">${LOG.map(E).join("<br>")}</small>`+(warn.length?`<br><span style="color:var(--amber)">⚠️ ${warn.map(E).join("<br>⚠️ ")}</span>`:"")}}
+    if(!out.length){PST[id]={err:"ما قدرت أعبّي شي بشكل مؤكد · "+LOG.join(" · ")+(warn.length?" · "+warn.join(" · "):""),ask:unk};return}
+    sv();
+    PST[id]={ask:unk,msg:"✓ من أماديوس — "+out.join("<br>")+"<br>راجعها قبل النسخ"+`<br><small style="opacity:.75">${LOG.map(E).join("<br>")}</small>`+(warn.length?`<br><span style="color:var(--amber)">⚠️ ${warn.map(E).join("<br>⚠️ ")}</span>`:"")}}
   catch(e){console.error(e);PST[id]={err:PERR[e.message]||e.message||PERR.aierr}}
   if(dayK()===k)paint()}
 /* حقل اختيار الصورة برا الصفحة عشان ما ينمسح لما تنعاد الرسمة */
@@ -477,6 +489,7 @@ function bind(){
     if(t.dataset.drday!=null){DAY=+t.dataset.drday;OPEN=null;RES=null;CP=null;C1=null;paint();return}
     if(t.dataset.dcp){const r=list().find(x=>x.id===t.dataset.dcp);if(!r)return;copyTxt(tsv([r])).then(ok=>{if(!ok){alert("تعذّر النسخ، جرّب مرة ثانية");return}C1={k:dayK(),id:r.id};CP=null;try{ajfAct("dr_copy1",dayK()+" "+r.id)}catch(e){}paint();const b=root.querySelector(`[data-dmk="${CSS.escape(r.id)}"]`);if(b)b.scrollIntoView({block:"center",behavior:"smooth"})});return}
     if(t.dataset.dmk){D.done[t.dataset.dmk]=Date.now();sv();C1=null;paint();return}
+    if(t.dataset.damdf){const id=t.dataset.id,L=AMDL[id];if(L){delete AMDL[id];amdApply(id,L.k,L.R,t.dataset.damdf)}return}
     if(t.dataset.damd){PH={id:t.dataset.damd,k:dayK(),amd:1};const f=imgIn();f.value="";f.multiple=true;f.click();return}
     if(t.dataset.dtype||t.dataset.dphoto){let id=t.dataset.dphoto;if(!id){id="x"+Date.now().toString(36);D.x.push({id,stn:"AJF",...XT[t.dataset.dtype]});sv();OPEN=id}
       PH={id,k:dayK()};const f=imgIn();f.value="";f.multiple=false;f.click();if(t.dataset.dtype)setTimeout(paint,50);return}
