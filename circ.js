@@ -236,14 +236,14 @@ async function uploadAll(){if(S.upBusy)return;S.upBusy=true;paintUp();
     catch(e){x.st="err";x.retry=1;x.msg=/put/.test(e.message)?"تعذّر رفع الملف — جرّب مرة ثانية":errTxt(e)}paintUp()}
   S.upBusy=false;paintUp();recent();F({action:"usage"}).then(j=>{S.usage=j;paintUp()}).catch(()=>{});if(window.hubPaint)try{hubPaint()}catch(e){}}
 
-async function reindex(btn){if(!confirm("إعادة قراءة كل ملفات PDF وتحديث البحث؟ تاخذ دقيقة أو أكثر حسب عدد الملفات."))return;btn.disabled=true;
+async function reindex(btn){if(!confirm("إعادة قراءة ملفات PDF اللي ما فيها أرقام صفحات وتحديث البحث؟ الأدلة الكبيرة تاخذ عدة دقائق."))return;btn.disabled=true;
   try{let all=[],off=0;for(;;){const j=await R("ajf_circ_list",{p_offset:off,p_limit:100});all=all.concat(j.rows);off+=100;if(off>=j.n)break}
-    const fl=all.filter(r=>r.has_file);let i=0,bad=0;
+    const fl=all.filter(r=>r.has_file);let i=0,bad=0,skip=0;
     for(const r of fl){i++;btn.textContent=`🔄 ${i}/${fl.length}: ${r.title.slice(0,30)}`;
-      try{const g=(await R("ajf_circ_get",{p_id:r.id})).row,u=await F({action:"get",path:r.id+".pdf"}),blob=await(await fetch(u.url)).blob();
+      try{const g=(await R("ajf_circ_get",{p_id:r.id})).row;if(/\[صفحة \d+\]/.test(g.ftext||"")){skip++;continue}/* ملف مقروء بأرقام صفحاته: ما يحتاج */const u=await F({action:"get",path:r.id+".pdf"}),blob=await(await fetch(u.url)).blob();
         const x=await pdfText(blob,m=>{btn.textContent=`🔄 ${i}/${fl.length}: ${m}`});
         const o={id:r.id,title:g.title,tags:g.tags,body:g.body||"",ftext:x.text,lang:g.lang,cdate:g.cd||"",pages:x.pages,ai:g.ai};Object.assign(o,indexText(o));delete o.ai;await R("ajf_circ_save",{p:o});await F({action:"chunk",id:r.id}).catch(()=>{})}catch(e){bad++}}
-    btn.textContent=`✓ تمت إعادة قراءة ${fl.length-bad} ملف${bad?" — تعذّر "+bad:""}`}
+    btn.textContent=`✓ تمت إعادة قراءة ${fl.length-bad-skip} ملف${skip?" (و"+skip+" سليمة ما احتاجت)":""}${bad?" — تعذّر "+bad:""}`}
   catch(e){btn.textContent=errTxt(e)}btn.disabled=false;S.q.trim()?search():recent()}
 
 /* ---------- المساعد ---------- */
@@ -334,6 +334,12 @@ async function viewFile(id,o){o=o||{};vwCss();vwClose();const tok=++VW.tok;
     VW.url=u.url;const ft=g&&g.row?String(g.row.body||"")+"\n\n"+String(g.row.ftext||""):"";const lp=o.q?vwLocate(vwPages(ft),o.q):0;VW.found=!!lp;const pg=lp||+o.pg||1;
     const doc=await lib.getDocument({url:u.url,cMapUrl:PDFJS+"cmaps/",cMapPacked:true}).promise;if(tok!==VW.tok){doc.destroy();return}
     VW.doc=doc;VW.n=doc.numPages;VW.pg=Math.min(Math.max(1,pg),VW.n);
+    /* الملف ما فيه أرقام صفحات محفوظة: ندور على النص داخل الـ PDF نفسه صفحة صفحة (ونحفظ النتيجة) */
+    if(!lp&&!+o.pg&&o.q&&!o.bad){const ck="ajf_pgc_"+id+"_"+NORM(o.q).slice(0,60);let hp=0;try{hp=+localStorage.getItem(ck)||0}catch(e){}
+      if(!hp){const L=ov.querySelector(".cxv-l");for(let i=1;i<=doc.numPages&&tok===VW.tok;i++){if(L&&i%10===1)L.textContent=`… أدور على النص في الملف (صفحة ${i} من ${doc.numPages})`;
+          try{const tc=await(await doc.getPage(i)).getTextContent();if(vwLocate([{p:i,n:" "+NORM(tc.items.map(x=>x.str).join(" "))+" "}],o.q)){hp=i;break}}catch(e){}}
+        if(tok!==VW.tok)return;if(hp)try{localStorage.setItem(ck,String(hp))}catch(e){}}
+      if(hp){VW.found=true;VW.pg=hp;const a=ov.querySelector(".cxv-x");a.href=u.url+"#page="+hp;a.hidden=false;await vwRender(1,1);return}}
     if(!lp&&!+o.pg){const n=ov.querySelector(".cxv-n");n.hidden=false;n.className="cxv-n warn";n.innerHTML=vwNote(o,false,0,0);vwTr(n,o);
       ov.querySelector(".cxv-f span").textContent=`${VW.n} صفحة`;ov.querySelector(".cxv-b").innerHTML=`<p class="cxv-l">ما قدرت أحدد مكان هذي المعلومة في الملف.<br>اعتبرها غير مؤكدة وتأكد من المشرف أو من الدليل.<br><br><button data-v="go1">اعرض الملف من البداية</button></p>`;
       ov.querySelector(".cxv-b").onclick=e=>{if(e.target.closest('[data-v="go1"]'))vwRender(1,1)};const a=ov.querySelector(".cxv-x");a.href=u.url;a.hidden=false;return}

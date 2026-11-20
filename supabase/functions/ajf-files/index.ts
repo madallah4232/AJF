@@ -326,13 +326,25 @@ Deno.serve(async (req) => {
       hits.sort((x, y) => x.s - y.s);
       const seen = new Set<string>(), texts = new Map<string, string>(), pick = new Map<string, string[]>(), order: string[] = []; let tot = 0;
       const smallIds: string[] = [];
+      // كل جزء من الدليل لازم يبدأ برقم صفحته، عشان المصدر يفتح على الصفحة الصحيحة
+      const pickN: { cid: string; n: number }[] = [];
+      const fixPg = (t: string) => { if (/^\s*\[صفحة \d+\]/.test(t)) return t; const m = t.match(/\[صفحة (\d+)\]/); return m ? `[صفحة ${Math.max(1, +m[1] - 1)}]\n` + t : t; };
       for (const h of hits) {
         const key = h.cid + ":" + h.n; if (seen.has(key)) continue; seen.add(key);
         const r = byId.get(h.cid); if (!r) continue;
         if (!order.includes(h.cid)) { if (order.length >= 6) continue; order.push(h.cid); }
         if (r.n <= 12000) { if (!smallIds.includes(h.cid)) { if (tot + r.n > 45000) continue; smallIds.push(h.cid); tot += r.n; } continue; }
-        if (tot > 40000) continue; tot += h.txt.length; (pick.get(h.cid) || pick.set(h.cid, []).get(h.cid)!).push(h.txt);
+        if (tot > 40000) continue; tot += h.txt.length; (pick.get(h.cid) || pick.set(h.cid, []).get(h.cid)!).push(fixPg(h.txt)); pickN.push({ cid: h.cid, n: h.n });
       }
+      // جزء ما فيه أي رقم صفحة (صفحة طويلة): ناخذ آخر رقم صفحة من الجزء اللي قبله
+      try {
+        const need = pickN.filter((x) => (pick.get(x.cid) || []).some((t) => !/\[صفحة \d+\]/.test(t)) && x.n > 0).slice(0, 8);
+        for (const x of need) {
+          const { data: pv } = await sb.from("ajf_circ_chunk").select("txt").eq("cid", x.cid).eq("n", x.n - 1).maybeSingle();
+          const ms = [...String(pv?.txt || "").matchAll(/\[صفحة (\d+)\]/g)]; if (!ms.length) continue;
+          const L = pick.get(x.cid)!; const i = L.findIndex((t) => !/\[صفحة \d+\]/.test(t)); if (i >= 0) L[i] = `[صفحة ${ms[ms.length - 1][1]}]\n` + L[i];
+        }
+      } catch (_) { /* بدون رقم صفحة يبقى المصدر يفتح بالبحث داخل الملف */ }
       if (smallIds.length) {
         const { data: st } = await sb.from("ajf_circ").select("id,body,ftext").in("id", smallIds);
         (st || []).forEach((r: any) => texts.set(r.id, (String(r.body || "") + "\n" + String(r.ftext || "")).slice(0, 12000)));
