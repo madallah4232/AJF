@@ -300,15 +300,24 @@ Deno.serve(async (req) => {
     try {
       const H = (Array.isArray(a.h) ? a.h : []).slice(-6).map((t: any) => ({ q: String(t.q || "").slice(0, 600), a: String(t.a || "").slice(0, 2500) }));
       // 1) طلب واحد سريع: السؤال كامل (لو متابعة) + صيغته بالإنجليزي بمصطلحات الأدلة + كلمات بحث
-      let full = q, en = "", kw: string[] = [];
+      let full = q, en = "", kw: string[] = [], qAir = "";
       try {
-        const j = JSON.parse(await gem(`${H.length ? "المحادثة السابقة:\n" + H.map((t, i) => `(${i + 1}) الموظف: ${t.q}\nالمساعد: ${t.a.slice(0, 600)}`).join("\n\n") + "\n\n" : ""}رسالة موظف الخدمات الأرضية الآن: ${q}\n\nأرجع JSON بالشكل {"full":"...","en":"...","kw":[...]}:\n- full: السؤال كامل ومستقل بالعربي (إذا الرسالة تكملة أو توضيح لما قبلها اجمع فيه كل التفاصيل المهمة: الراكب، العمر، الجنسية، المسار، شركة الطيران...؛ وإذا موضوع جديد اكتبه كما هو).\n- en: نفس السؤال بالإنجليزي بالمصطلحات المستخدمة في أدلة الخدمات الأرضية وشركات الطيران (مثل unaccompanied minor, young passenger, UMNR, NOTOC, dangerous goods, INAD, deportee, WCHR, load sheet, check-in closure).\n- kw: 8 إلى 16 كلمة أو عبارة بحث قصيرة عربي وإنجليزي، مع اسم ورمز شركة الطيران إذا مذكورة.`, "تجهز سؤال للبحث في أدلة تشغيل طيران. JSON فقط.", true));
-        full = String(j.full || q).slice(0, 800) || q; en = String(j.en || "").slice(0, 800); kw = Array.isArray(j.kw) ? j.kw.map(String) : [];
+        const j = JSON.parse(await gem(`${H.length ? "المحادثة السابقة:\n" + H.map((t, i) => `(${i + 1}) الموظف: ${t.q}\nالمساعد: ${t.a.slice(0, 600)}`).join("\n\n") + "\n\n" : ""}رسالة موظف الخدمات الأرضية الآن: ${q}\n\nأرجع JSON بالشكل {"full":"...","en":"...","kw":[...],"air":""}:\n- full: السؤال كامل ومستقل بالعربي (إذا الرسالة تكملة أو توضيح لما قبلها اجمع فيه كل التفاصيل المهمة: الراكب، العمر، الجنسية، المسار، شركة الطيران...؛ وإذا موضوع جديد اكتبه كما هو).\n- en: نفس السؤال بالإنجليزي بالمصطلحات المستخدمة في أدلة الخدمات الأرضية وشركات الطيران (مثل unaccompanied minor, young passenger, UMNR, NOTOC, dangerous goods, INAD, deportee, WCHR, load sheet, check-in closure).\n- air: رمز شركة الطيران اللي السؤال عن رحلاتها إذا مذكورة صراحة أو مفهومة من المحادثة: SV (السعودية/Saudia)، XY (طيران ناس)، F3 (طيران أديل)، SM (إير كايرو)، NP (النيل)، FZ (فلاي دبي)، G9 (العربية للطيران)؛ وإذا ما فيه شركة محددة "".\n- kw: 8 إلى 16 كلمة أو عبارة بحث قصيرة عربي وإنجليزي، مع اسم ورمز شركة الطيران إذا مذكورة.`, "تجهز سؤال للبحث في أدلة تشغيل طيران. JSON فقط.", true));
+        full = String(j.full || q).slice(0, 800) || q; en = String(j.en || "").slice(0, 800); kw = Array.isArray(j.kw) ? j.kw.map(String) : []; qAir = String(j.air || "").toUpperCase().trim();
       } catch { /* نكمل بالسؤال كما هو */ }
       tm.prep = Date.now() - t0;
       const { data: meta } = await sb.rpc("ajf_circ_meta");
       const M = (meta || []) as Record<string, any>[];
       const byId = new Map(M.map((r) => [r.id, r]));
+      // كل شركة طيران لها دليلها: إذا السؤال عن شركة، ما نستخدم أدلة شركة ثانية أبداً (الأدلة العامة مثل SGS وGACA تبقى)
+      const AIRS: [string, RegExp][] = [["XY", /flynas|طيران ناس|ناس للطيران/i], ["F3", /flyadeal|طيران أديل|طيران اديل|أديل|اديل/i], ["NP", /nile ?air|النيل للطيران|طيران النيل/i],
+        ["SM", /air ?cairo|اير ?كايرو|إير ?كايرو/i], ["FZ", /fly ?dubai|فلاي دبي/i], ["G9", /air ?arabia|العربية للطيران/i],
+        ["SV", /saudia|الخطوط السعودية|الخطوط الجوية العربية السعودية|الخطوط الجوية السعودية|\bGOPM\b|\bSV\s?-?\d|\bSV\b/i]];
+      const airOf = (t: string) => { for (const [c, re] of AIRS) if (re.test(t)) return c; return ""; };
+      const docAir = new Map<string, string>(M.map((r) => { let t = ""; try { t = JSON.parse(r.ai || "{}").t || ""; } catch (_) { /* */ } return [r.id, airOf(String(r.title || "") + " " + t)]; }));
+      if (!/^(SV|XY|F3|NP|SM|FZ|G9)$/.test(qAir)) qAir = "";
+      if (!qAir) { const qa = airOf(q + " " + full); if (qa && !(qa === "SV" && !/saudia|الخطوط|رحل[اةت]+\s*(ال)?سعودي|طيران\s*(ال)?سعودي|\bSV\b/i.test(q + " " + full))) qAir = qa; }
+      const airOk = (id: string) => { const d = docAir.get(id) || ""; return !qAir || !d || d === qAir; };
       // 2) البحث بالمعنى في كل التعاميم والأدلة + البحث بالكلمات (للأرقام والرموز مثل XY أو SV)
       const hits: { cid: string; n: number; txt: string; s: number }[] = [];
       try {
@@ -319,8 +328,8 @@ Deno.serve(async (req) => {
       {
         kw = [...new Set([...kw, ...NORM(full).split(" ").filter((w) => w.length > 2)])].slice(0, 24);
         const groups = kw.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 2);
-        const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: hits.length ? 12 : 30 });
-        ((ch || []) as any[]).forEach((c, i) => hits.push({ cid: c.cid, n: c.n, txt: c.txt, s: (hits.length ? 6 : 0) + i * 1.5 }));
+        const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: qAir ? 40 : hits.length ? 12 : 30 });
+        ((ch || []) as any[]).filter((c) => airOk(c.cid)).forEach((c, i) => hits.push({ cid: c.cid, n: c.n, txt: c.txt, s: (hits.length ? 6 : 0) + i * 1.5 }));
       }
       // 3) نرتب ونجمع: التعميم الصغير يروح كامل، والدليل الكبير أقرب أجزائه فقط — بحد أقصى ~70 ألف حرف عشان يكون سريع
       hits.sort((x, y) => x.s - y.s);
@@ -331,7 +340,7 @@ Deno.serve(async (req) => {
       const fixPg = (t: string) => { if (/^\s*\[صفحة \d+\]/.test(t)) return t; const m = t.match(/\[صفحة (\d+)\]/); return m ? `[صفحة ${Math.max(1, +m[1] - 1)}]\n` + t : t; };
       for (const h of hits) {
         const key = h.cid + ":" + h.n; if (seen.has(key)) continue; seen.add(key);
-        const r = byId.get(h.cid); if (!r) continue;
+        const r = byId.get(h.cid); if (!r || !airOk(h.cid)) continue;
         if (!order.includes(h.cid)) { if (order.length >= 6) continue; order.push(h.cid); }
         if (r.n <= 12000) { if (!smallIds.includes(h.cid)) { if (tot + r.n > 45000) continue; smallIds.push(h.cid); tot += r.n; } continue; }
         if (tot > 40000) continue; tot += h.txt.length; (pick.get(h.cid) || pick.set(h.cid, []).get(h.cid)!).push(fixPg(h.txt)); pickN.push({ cid: h.cid, n: h.n });
@@ -357,7 +366,7 @@ Deno.serve(async (req) => {
       const given = new Map<string, string>(rows.map((r) => [r.id, texts.has(r.id) ? texts.get(r.id)! : pick.get(r.id)!.join("\n\n")]));
       tm.search = Date.now() - t0;
       const hist = H.map((t) => `الموظف: ${t.q}\nأنت: ${t.a}`).join("\n\n");
-      const P_ASK = `أقرب ما في التعاميم والأدلة المرفوعة لسؤال الموظف (تم البحث في كل الملفات بالمعنى):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`;
+      const P_ASK = `أقرب ما في التعاميم والأدلة المرفوعة لسؤال الموظف (تم البحث في كل الملفات بالمعنى):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}${qAir ? "تنبيه: السؤال عن رحلات " + qAir + " — جاوب من أدلة وتعاميم هذه الشركة والأدلة العامة فقط، ولا تستخدم إجراءات شركة طيران ثانية.\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`;
       const ans = onD ? await gemStream(P_ASK, SYS_ASK, onD) : await gem(P_ASK, SYS_ASK, false, true);
       tm.answer = Date.now() - t0;
       let fin = ans, vs = { ok: 0, bad: 0 };
