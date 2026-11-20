@@ -236,7 +236,7 @@ async function uploadAll(){if(S.upBusy)return;S.upBusy=true;paintUp();
     catch(e){x.st="err";x.retry=1;x.msg=/put/.test(e.message)?"تعذّر رفع الملف — جرّب مرة ثانية":errTxt(e)}paintUp()}
   S.upBusy=false;paintUp();recent();F({action:"usage"}).then(j=>{S.usage=j;paintUp()}).catch(()=>{});if(window.hubPaint)try{hubPaint()}catch(e){}}
 
-async function reindex(btn){if(!confirm("إعادة قراءة ملفات PDF اللي ما فيها أرقام صفحات وتحديث البحث؟ الأدلة الكبيرة تاخذ عدة دقائق."))return;btn.disabled=true;
+async function reindex(btn){/* تأكيد بضغطتين بدل نافذة confirm (بعض المتصفحات تمنعها) */if(!btn.dataset.sure){btn.dataset.sure="1";btn.textContent="⚠︎ اضغط مرة ثانية للتأكيد: إعادة قراءة الملفات اللي بدون أرقام صفحات (عدة دقائق)";setTimeout(()=>{if(btn.dataset.sure&&!btn.disabled){delete btn.dataset.sure;btn.textContent="🔄 إعادة قراءة كل الملفات (بعد أي تحديث للبحث)"}},8000);return}delete btn.dataset.sure;btn.disabled=true;
   try{let all=[],off=0;for(;;){const j=await R("ajf_circ_list",{p_offset:off,p_limit:100});all=all.concat(j.rows);off+=100;if(off>=j.n)break}
     const fl=all.filter(r=>r.has_file);let i=0,bad=0,skip=0;
     for(const r of fl){i++;btn.textContent=`🔄 ${i}/${fl.length}: ${r.title.slice(0,30)}`;
