@@ -141,7 +141,33 @@ function parseFlt(raw){
   d.dest=pick(to)||pick(fr);
   const px=b=>{const m=/\bPAX[:\s]+(\d{1,3})/.exec(b);return m?+m[1]:0};d.ay=px(IN);d.dy=px(OUT);
   return d}
-return{append,isoWeek,parseFlt}})();
+/* قراءة لقطات أماديوس (DCS) لرحلة مغادرة: Flight Information · Acceptance Figures · Customer Weight & Balance.
+   كل قيمة تنقرى بس إذا كانت واضحة، وإذا شاشتين تعطي نفس القيمة نتأكد إنها متطابقة. */
+function parseAmd(raw){
+  const t=String(raw||"").toUpperCase().replace(/[$§]/g,"S").replace(/[|]/g," ").replace(/\r/g,""),L=t.split("\n"),d={};
+  const T=x=>{const m=/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/.exec(x||"");return m?m[1].padStart(2,"0")+":"+m[2]:""};
+  const fl=/\bS\s*[VY¥]\s*([0-9OIL]{3,4})\b/.exec(t);if(fl){const n=fl[1].replace(/O/g,"0").replace(/[IL]/g,"1");if(/^\d+$/.test(n))d.fno=+n}
+  const dt=/\b([0-3]?[0-9OI])\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/.exec(t);if(dt){const x=dt[1].replace(/O/g,"0").replace(/I/g,"1");if(/^\d+$/.test(x)&&+x>=1&&+x<=31)d.dd=+x;d.mon=dt[2]}
+  for(const l of L){
+    if(/OFF\W{0,2}\w?ON\s*BLOCK|ONBLOCK/.test(l)&&!d.atd)d.atd=T(l.replace(/^.*BLOCKS?\)?:?/,""));
+    else if(/SCHEDULED\s*:/.test(l)&&!d.sstd)d.sstd=T(l.replace(/^.*SCHEDULED\s*:/,""));
+    const r=/\bHZ\s*-?\s*([A-Z0-9]{3,4})\b/.exec(l);if(r){(d.regs=d.regs||[]).push("HZ"+r[1])}
+    const ac=/\b[A-Z]{3}\s*-\s*[A-Z]{3}\s+(3[0-9]{2}|7[0-9]{2}|[0-9]{3})\s+(?:HZ|[0-9])/.exec(l);if(ac&&!d.typ)d.typ=ac[1];
+    const tp=/TOTAL\s+PASSENGERS\s+(\d{1,3})\W+PLUS\W+INFANTS?\s+(\d{1,2})\b/.exec(l);if(tp){d.tot=+tp[1];d.winf=+tp[2]}
+    if((/JOINING/.test(l)||/\bTOTAL\s+\d/.test(l)&&!/^\W*TOTAL/.test(l))&&!/FIGURES|PASSENGERS|\(/.test(l)&&!d.acc){
+      const n=(l.replace(/^.*?(?:\bTO\s*[A-Z]{3}\b|\bTOTAL\b)/,"").replace(/\bO\b/g,"0").match(/\b\d{1,3}\b/g)||[]).map(Number);
+      if(n.length===6||n.length===8)d.acc={bj:n[0],by:n[1],bi:n[2],j:n[3],y:n[4],i:n[5]};
+      else if(n.length>=10)d.acc={bj:n[0],by:n[1],bi:n[2],j:n[5],y:n[6],i:n[7]};
+}
+    if(/^\W*TOTAL\s*\(/.test(l)||/\bEX\s+[A-Z]{3}\W/.test(l)){const b=bags(l);if(b)(d.bagC=d.bagC||[]).push(b)}}
+  if(d.acc&&d.tot!=null&&d.acc.j+d.acc.y!==d.tot)d.accBad=1;
+  return d}
+/* خانة العفش في أماديوس: قطع@وزن (87@1435) — الـ@ ينقرى أحياناً 0 أو 8 أو Q */
+function bags(l){const out=[];for(const tok of l.split(/\s+/).reverse()){const s=tok.replace(/[^0-9A-Z@©]/g,"");if(s.length<3)continue;
+    if(/^0\W?0$|^0[@©Q]0$|^000$/.test(s))return{p:0,w:0};
+    for(let i=1;i<=3&&i<s.length-1;i++){const p=s.slice(0,i),w=s.slice(i+1);if(!/^\d+$/.test(p)||!/^[1-9]\d{1,4}$/.test(w))continue;const r=+w/+p;if(+p>0&&r>=7&&r<=30)out.push({p:+p,w:+w})}
+    if(out.length)return out.length===1?out[0]:null}return null}
+return{append,isoWeek,parseFlt,parseAmd}})();
 G.DRXL=XL;
 if(typeof module!=="undefined"&&module.exports){module.exports={XL};return}
 
@@ -278,8 +304,10 @@ function cpBar(r){const D=dS(dayK());if(D.skip[r.id])return"";if(r.x&&!val(r,"fi
   const ms=miss(r),dn=D.done[r.id],cp=C1&&C1.k===dayK()&&C1.id===r.id;
   if(cp)return`<div class="dr-cp"><div class="dr-h">✓ انسخ سطر الرحلة. في الإكسل: اضغط خانة <b>Day</b> بأول سطر فاضي ← لصق.</div>
     <div class="row"><button class="mk" data-dmk="${E(r.id)}">✔ لصقتها — علّمها</button><button class="sec" data-dcp="${E(r.id)}">📋 نسخ مرة ثانية</button></div></div>`;
-  if(dn)return`<div class="dr-cp"><div class="row"><button class="sec" data-dcp="${E(r.id)}">📋 نسخ سطر الرحلة مرة ثانية</button></div></div>`;
-  return`<div class="dr-cp">${ms.length?`<div class="dr-warn">⚠️ ناقص: ${ms.map(E).join("، ")}</div>`:""}<div class="row"><button data-dcp="${E(r.id)}">📋 نسخ سطر هذي الرحلة</button></div></div>`}
+  if(dn)return`<div class="dr-cp">${amdSt(r)}<div class="row"><button class="sec" data-dcp="${E(r.id)}">📋 نسخ سطر الرحلة مرة ثانية</button>${amdBtn(r)}</div></div>`;
+  return`<div class="dr-cp">${amdSt(r)}${ms.length?`<div class="dr-warn">⚠️ ناقص: ${ms.map(E).join("، ")}</div>`:""}<div class="row"><button data-dcp="${E(r.id)}">📋 نسخ سطر هذي الرحلة</button>${amdBtn(r)}</div></div>`}
+const amdBtn=r=>r.f?`<button class="sec" style="flex:0 0 auto;padding:6px 14px" data-damd="${E(r.id)}" ${PST[r.id]&&PST[r.id].busy?"disabled":""} aria-label="تعبئة من صور أماديوس">📷 أماديوس</button>`:"";
+const amdSt=r=>{const p=r.f&&PST[r.id];if(!p)return"";return`<div class="${p.err?"dr-warn":"dr-h"}">${p.busy?"⏳ "+E(p.busy===1?"يقرأ الصور على جوالك… (أول مرة 10–20 ثانية)":p.busy):p.err?E(p.err):p.msg}</div>`}
 
 function paint(){if(!root)return;css();
   if(!own()){root.innerHTML=`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>التقرير اليومي خاص بالمشرف.</p></div>`;return}
@@ -353,7 +381,7 @@ function prep(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(fil
   const g=c.getContext("2d",{willReadFrequently:true});g.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);
   const D=g.getImageData(0,0,c.width,c.height),px=D.data;let sum=0;for(let i=0;i<px.length;i+=4){const y=.299*px[i]+.587*px[i+1]+.114*px[i+2];px[i]=px[i+1]=px[i+2]=y;sum+=y}
   if(sum/(px.length/4)<110)for(let i=0;i<px.length;i+=4)px[i]=px[i+1]=px[i+2]=255-px[i];g.putImageData(D,0,0);ok(c)};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error("img"))};im.src=u})}
-const PERR={img:"ما قدرت أفتح الصورة، جرّب صورة ثانية.",lib:"أول مرة يحتاج إنترنت عشان يحمّل برنامج القراءة، تأكد من الاتصال وجرّب.",none:"ما لقيت بيانات رحلة في الصورة. صوّر الإيميل كامل وواضح (من REF لين Outbound).",aierr:"ما قدرت أقرأ الصورة، جرّب صورة أوضح."};
+const PERR={img:"ما قدرت أفتح الصورة، جرّب صورة ثانية.",lib:"أول مرة يحتاج إنترنت عشان يحمّل برنامج القراءة، تأكد من الاتصال وجرّب.",none:"ما لقيت بيانات رحلة في الصورة. صوّر الإيميل كامل وواضح (من REF لين Outbound).",amdnone:"ما قدرت أقرأ بيانات من الصور. صوّر الشاشة مستقيمة وقريبة وبدون انعكاس: Flight Information وAcceptance Figures أو Weight & Balance.",aierr:"ما قدرت أقرأ الصورة، جرّب صورة أوضح."};
 async function readPhoto(file,ph){const{id,k}=ph;PST[id]={busy:1};paint();
   try{const lim=(p,ms,e)=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no(new Error(e)),ms))]);
     const cv=await prep(file),w=await lim(tw(),90000,"lib"),rr=await lim(w.recognize(cv),90000,"aierr"),d=XL.parseFlt(rr.data.text||"");
@@ -368,9 +396,50 @@ async function readPhoto(file,ph){const{id,k}=ph;PST[id]={busy:1};paint();
     sv();PST[id]={msg:"✓ تعبّت من الصورة — راجعها، وأضف ATA وATD"+(d.utc===true?" (الأوقات كانت UTC وتحوّلت لتوقيت السعودية)":"")+(d.note?" · "+d.note:"")};OPEN=id}
   catch(e){console.error(e);PST[id]={err:PERR[e.message]||PERR.aierr}}
   if(dayK()===k)paint()}
+/* 📷 صور أماديوس لرحلة مجدولة: تنقرى على الجوال (نفس Tesseract)، الصور ما تطلع من الجوال وما تنحفظ */
+function prepA(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const w0=im.naturalWidth,h0=im.naturalHeight,sc=2400/Math.max(w0,h0),W=Math.round(w0*sc),H=Math.round(h0*sc);
+  const c=document.createElement("canvas");c.width=W;c.height=H;const g=c.getContext("2d",{willReadFrequently:true});g.imageSmoothingQuality="high";g.drawImage(im,0,0,W,H);URL.revokeObjectURL(u);
+  /* تنظيف تصوير الشاشة: نقسم على خلفية مموّهة (يشيل الإضاءة غير المتساوية) ونرفع التباين */
+  let s=c;for(let f=2;f<=24;f*=2){const n=document.createElement("canvas");n.width=Math.max(1,Math.round(W/f));n.height=Math.max(1,Math.round(H/f));const x=n.getContext("2d");x.imageSmoothingQuality="high";x.drawImage(s,0,0,n.width,n.height);s=n}
+  const b=document.createElement("canvas");b.width=W;b.height=H;const bg=b.getContext("2d",{willReadFrequently:true});bg.drawImage(s,0,0,W,H);
+  const D=g.getImageData(0,0,W,H),B=bg.getImageData(0,0,W,H).data,px=D.data;
+  for(let i=0;i<px.length;i+=4){const y=.299*px[i]+.587*px[i+1]+.114*px[i+2],k=.299*B[i]+.587*B[i+1]+.114*B[i+2]+1;let v=(y/k*255-150)*3+128;v=v<0?0:v>255?255:v;px[i]=px[i+1]=px[i+2]=v}
+  g.putImageData(D,0,0);ok(c)};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error("img"))};im.src=u})}
+const MON=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint();
+  try{const lim=(p,ms,e)=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no(new Error(e)),ms))]);const w=await lim(tw(),90000,"lib"),R=[];
+    try{await w.setParameters({tessedit_pageseg_mode:"6"});
+      for(let i=0;i<files.length;i++){if(files.length>1){PST[id]={busy:`يقرأ الصورة ${i+1} من ${files.length}…`};if(dayK()===k)paint()}
+        const rr=await lim(w.recognize(await prepA(files[i])),90000,"aierr");R.push(XL.parseAmd(rr.data.text||""))}}
+    finally{try{await w.setParameters({tessedit_pageseg_mode:"3"})}catch(e){}}
+    const r=list().find(x=>x.id===id);if(!r)throw new Error("none");
+    const m={regs:[],bagC:[]};for(const d of R){for(const kk of["fno","dd","mon","atd","sstd","typ","tot","winf","acc","accBad"])if(m[kk]==null&&d[kk]!=null)m[kk]=d[kk];m.regs.push(...(d.regs||[]));m.bagC.push(...(d.bagC||[]))}
+    if(!m.atd&&!m.acc&&m.tot==null&&!m.bagC.length)throw new Error("amdnone");
+    /* لازم الصورة تكون لنفس الرحلة ونفس اليوم — غير كذا ما نعبّي شي */
+    const fo=+String(val(r,"fout")).replace(/\D/g,""),dd=dayD();
+    if(m.fno&&fo&&m.fno!==fo)throw new Error(`الصور لرحلة ${m.fno} مو ${fo} — ما تعبّى شي.`);
+    if(m.dd&&(m.dd!==dd.getDate()||(m.mon&&m.mon!==MON[dd.getMonth()])))throw new Error(`الصور بتاريخ ${m.dd}${m.mon||""} واليوم المختار ${dd.getDate()}${MON[dd.getMonth()]} — ما تعبّى شي.`);
+    const D=dS(k),o=D.e[id]=D.e[id]||{},got=[],warn=[];
+    if(!m.fno)warn.push("ما قدرت أقرأ رقم الرحلة من الصور، تأكد إنها لهذي الرحلة");
+    if(m.atd&&HM.test(m.atd)){o.atd=m.atd;got.push("ATD "+m.atd)}
+    if(m.sstd&&HM.test(val(r,"std"))&&m.sstd!==val(r,"std"))warn.push(`STD في أماديوس ${m.sstd} والجدول ${val(r,"std")} — ما غيّرته. إذا الرحلة معدّلة الوقت غيّر STD بيدك، لأن OT/DLY يتحسب منه`);
+    const inf=m.acc?m.acc.i:m.winf;if(m.acc&&m.winf!=null&&m.acc.i!==m.winf)warn.push("عدد الرضّع مختلف بين الشاشتين — ما عبّيته");
+    else if(inf!=null){o.di=String(inf);got.push("INF "+inf)}
+    if(m.acc&&(m.accBad||m.tot!=null&&m.acc.j+m.acc.y!==m.tot))warn.push(`J+Y (${m.acc.j}+${m.acc.y}) ما يطابق إجمالي الركاب ${m.tot} — ما عبّيت الركاب`);
+    else if(m.acc){o.dj=String(m.acc.j);o.dy=String(m.acc.y);got.push(`J ${m.acc.j} · Y ${m.acc.y}`)}
+    else if(m.tot!=null)warn.push(`قرأت إجمالي الركاب ${m.tot} بس، صوّر شاشة Acceptance Figures عشان يتقسّم J وY`);
+    /* عدد القطع: لو انقرى من سطرين (TOTAL و GRAND TOTAL) لازم يتطابقون، غير كذا ما يتعبّى */
+    const bp=[...new Set(m.bagC.map(b=>b.p))];if(bp.length===1){o.db=String(bp[0]);got.push("عفش "+bp[0]+" قطعة");if(m.bagC.length<2)warn.push(`عدد القطع ${bp[0]} انقرى من سطر واحد بس — تأكد منه`)}else if(bp.length>1)warn.push("عدد القطع ما انقرى بوضوح — ما عبّيته، أدخله بيدك");
+    const rg=m.regs.map(regN),okR=rg.find(g=>REGT[g]!=null)||rg.find(g=>/^HZ[A-Z]{2}\d{2}$/.test(g));
+    if(okR){const cur=regN(val(r,"reg"));if(cur&&cur!==okR)warn.push(`التسجيل في أماديوس ${okR} وكان ${cur}`);o.reg=okR;got.push(okR)}
+    if(m.typ&&!val(r,"typ")){o.typ=m.typ}
+    if(!got.length)throw new Error("amdnone");sv();
+    PST[id]={msg:"✓ من أماديوس: <b dir=\"ltr\">"+E(got.join(" · "))+"</b> — راجعها قبل النسخ"+(warn.length?`<br><span style="color:var(--amber)">⚠️ ${warn.map(E).join("<br>⚠️ ")}</span>`:"")}}
+  catch(e){console.error(e);PST[id]={err:PERR[e.message]||e.message||PERR.aierr}}
+  if(dayK()===k)paint()}
 /* حقل اختيار الصورة برا الصفحة عشان ما ينمسح لما تنعاد الرسمة */
 function imgIn(){let f=document.getElementById("drImg");if(!f){f=document.createElement("input");f.type="file";f.accept="image/*";f.id="drImg";f.hidden=true;document.body.appendChild(f);
-  f.addEventListener("change",()=>{const x=f.files&&f.files[0];if(x&&PH)readPhoto(x,PH)})}return f}
+  f.addEventListener("change",()=>{const fs=[...(f.files||[])];if(!fs.length||!PH)return;if(PH.amd)readAmd(fs.slice(0,4),PH);else readPhoto(fs[0],PH)})}return f}
 function upd(id){/* تحديث ملخص البطاقة بدون إعادة رسم الخانات (عشان ما يطير الكيبورد) */
   const c=root.querySelector(`[data-card="${CSS.escape(id)}"]`);if(!c)return;const Ls=list(),ix=Ls.findIndex(x=>x.id===id),r=Ls[ix];if(!r)return;
   const tmp=document.createElement("div");tmp.innerHTML=card(r,ix+1);const n=tmp.firstElementChild;
@@ -384,8 +453,9 @@ function bind(){
     if(t.dataset.drday!=null){DAY=+t.dataset.drday;OPEN=null;RES=null;CP=null;C1=null;paint();return}
     if(t.dataset.dcp){const r=list().find(x=>x.id===t.dataset.dcp);if(!r)return;copyTxt(tsv([r])).then(ok=>{if(!ok){alert("تعذّر النسخ، جرّب مرة ثانية");return}C1={k:dayK(),id:r.id};CP=null;try{ajfAct("dr_copy1",dayK()+" "+r.id)}catch(e){}paint();const b=root.querySelector(`[data-dmk="${CSS.escape(r.id)}"]`);if(b)b.scrollIntoView({block:"center",behavior:"smooth"})});return}
     if(t.dataset.dmk){D.done[t.dataset.dmk]=Date.now();sv();C1=null;paint();return}
+    if(t.dataset.damd){PH={id:t.dataset.damd,k:dayK(),amd:1};const f=imgIn();f.value="";f.multiple=true;f.click();return}
     if(t.dataset.dtype||t.dataset.dphoto){let id=t.dataset.dphoto;if(!id){id="x"+Date.now().toString(36);D.x.push({id,stn:"AJF",...XT[t.dataset.dtype]});sv();OPEN=id}
-      PH={id,k:dayK()};const f=imgIn();f.value="";f.click();if(t.dataset.dtype)setTimeout(paint,50);return}
+      PH={id,k:dayK()};const f=imgIn();f.value="";f.multiple=false;f.click();if(t.dataset.dtype)setTimeout(paint,50);return}
     if(t.id==="drAdd"){const id="x"+Date.now().toString(36);D.x.push({id,stn:"AJF"});sv();OPEN=id;paint();const c=root.querySelector(`[data-card="${id}"] input`);if(c)c.focus();return}
     if(t.dataset.dskip){const id=t.dataset.dskip;if(D.skip[id])delete D.skip[id];else D.skip[id]=1;sv();paint();return}
     if(t.dataset.ddel){if(!confirm("حذف هذي الرحلة من التقرير؟"))return;const id=t.dataset.ddel;D.x=D.x.filter(x=>x.id!==id);delete D.e[id];delete D.skip[id];delete D.done[id];sv();paint();return}
