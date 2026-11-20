@@ -39,6 +39,42 @@ async function gem(text: string, sys: string, json = false, strong = false): Pro
   }
   throw new Error("gemini " + last);
 }
+// نفس gem لكن يرسل الجواب أول بأول (streaming) عشان الموظف يشوف الكلام خلال ثواني بدل ما ينتظر الجواب كامل
+async function gemStream(text: string, sys: string, onD: (d: string) => void): Promise<string> {
+  let last = "";
+  for (const m of GM_STRONG) {
+    let think = true;
+    for (let t = 0; t < 2; t++) {
+      const tc = !think ? {} : /2\.5/.test(m) ? { thinkingConfig: { thinkingBudget: 512 } } : { thinkingConfig: { thinkingLevel: "low" } };
+      let got = "";
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.trim()}:streamGenerateContent?alt=sse`, {
+          method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GK }, signal: AbortSignal.timeout(45000),
+          body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 2500, ...tc } }),
+        });
+        if (!r.ok || !r.body) {
+          const et = (await r.text()).slice(0, 300); last = m + " " + r.status + " " + et.slice(0, 160);
+          if (r.status === 400 && think && /think/i.test(et)) { think = false; t--; continue; }
+          if (r.status !== 429 && r.status < 500) break;
+        } else {
+          const rd = r.body.pipeThrough(new TextDecoderStream()).getReader(); let buf = "";
+          for (;;) {
+            const { value, done } = await rd.read(); if (done) break; buf += value;
+            let k; while ((k = buf.indexOf("\n")) >= 0) {
+              const line = buf.slice(0, k).trim(); buf = buf.slice(k + 1);
+              if (!line.startsWith("data:")) continue;
+              try { const j = JSON.parse(line.slice(5)); for (const x of (j.candidates?.[0]?.content?.parts || [])) if (x.text && !x.thought) { got += x.text; onD(x.text); } } catch (_) { /* سطر ناقص */ }
+            }
+          }
+          if (got.trim()) return got; last = m + " empty"; break;
+        }
+      } catch (e) { if (got.trim()) return got; last = m + " " + String(e).slice(0, 120); break; }
+      if (t === 0) await new Promise((ok) => setTimeout(ok, 2000));
+    }
+  }
+  throw new Error("gemini " + last);
+}
 // شرح الكلمات الإنجليزية: [{t,ar}] نظيف ومحدود
 function glClean(v: unknown): { t: string; ar: string }[] {
   const seen = new Set<string>();
@@ -99,6 +135,7 @@ const SYS_ASK = `أنت مساعد عمليات خبير لموظفي SGS (ال�
 التوثيق: بعد كل معلومة من تعميم اكتب مصدرها هكذا: [رقم التعميم، «جملة قصيرة منسوخة كما هي من نص التعميم المرفق»] مثل [2، «Unaccompanied minors are not accepted»].
 - انسخ الجملة من النص نفسه بلغتها الأصلية (إنجليزي إذا الأصل إنجليزي) بدون ترجمة ولا إعادة صياغة، ومن الموضع اللي فيه المعلومة — مو من عنوان أو فهرس. لا تكتب رقم صفحة (النظام يحددها تلقائياً).
 - إذا ما قدرت تنسخ جملة اكتب الرقم فقط مثل [2] — ولا تحذف أي معلومة من التعميم بسبب التوثيق أبداً.
+لا تستخدم خطوط فاصلة (--- أو ***) ولا مقدمات مثل "إليك الإجراءات"؛ ابدأ بالخلاصة مباشرة، واذكر فقط اللي يخص حالة الموظف.
 - لا تخلط سياسة شركة طيران بشركة ثانية، ولا تخترع أرقام (أعمار، أوزان، مدد) غير مكتوبة في التعاميم.
 إذا يحتاج الجواب معلومة مو موجودة في التعاميم (مثل تأشيرة دخول دولة لجنسية معينة)، اذكر ما تعرفه بإيجاز تحت عنوان **خارج التعاميم (تأكد من TIMATIC)** ولا تنسبه لتعميم.
 هذي محادثة متصلة: إذا رسالة الموظف توضيح أو تصحيح أو تكملة لسؤال سابق، اربطها بما قبلها وجاوب السؤال الأصلي بعد التوضيح، ولا تبدأ موضوع جديد ولا تكرر جواب سابق بدون داعي. إذا ما فهمت قصده اسأله سؤال توضيحي واحد قصير.
@@ -255,9 +292,10 @@ Deno.serve(async (req) => {
     return error ? out({ s: "err", e: error.message }) : out({ s: "ok", url: data.signedUrl });
   }
   if (a.action === "ask") {
-    if (!GK) return out({ s: "nokey" });
+    const runAsk = async (onD?: (d: string) => void): Promise<any> => {
+    if (!GK) return ({ s: "nokey" });
     const q = String(a.q || "").slice(0, 600).trim();
-    if (q.length < 2) return out({ s: "bad" });
+    if (q.length < 2) return ({ s: "bad" });
     const t0 = Date.now(); const tm: Record<string, number> = {};
     try {
       const H = (Array.isArray(a.h) ? a.h : []).slice(-6).map((t: any) => ({ q: String(t.q || "").slice(0, 600), a: String(t.a || "").slice(0, 2500) }));
@@ -291,29 +329,42 @@ Deno.serve(async (req) => {
       for (const h of hits) {
         const key = h.cid + ":" + h.n; if (seen.has(key)) continue; seen.add(key);
         const r = byId.get(h.cid); if (!r) continue;
-        if (!order.includes(h.cid)) { if (order.length >= 10) continue; order.push(h.cid); }
-        if (r.n <= 25000) { if (!smallIds.includes(h.cid)) { smallIds.push(h.cid); tot += r.n; } continue; }
-        if (tot > 70000) continue; tot += h.txt.length; (pick.get(h.cid) || pick.set(h.cid, []).get(h.cid)!).push(h.txt);
+        if (!order.includes(h.cid)) { if (order.length >= 6) continue; order.push(h.cid); }
+        if (r.n <= 12000) { if (!smallIds.includes(h.cid)) { if (tot + r.n > 45000) continue; smallIds.push(h.cid); tot += r.n; } continue; }
+        if (tot > 40000) continue; tot += h.txt.length; (pick.get(h.cid) || pick.set(h.cid, []).get(h.cid)!).push(h.txt);
       }
       if (smallIds.length) {
         const { data: st } = await sb.from("ajf_circ").select("id,body,ftext").in("id", smallIds);
-        (st || []).forEach((r: any) => texts.set(r.id, (String(r.body || "") + "\n" + String(r.ftext || "")).slice(0, 25000)));
+        (st || []).forEach((r: any) => texts.set(r.id, (String(r.body || "") + "\n" + String(r.ftext || "")).slice(0, 12000)));
       }
       const rows = order.map((id) => byId.get(id)!).filter((r) => texts.has(r.id) || pick.has(r.id));
-      if (!M.length) return out({ s: "ok", answer: "ما فيه تعاميم مرفوعة للحين.", src: [] });
+      if (!M.length) return ({ s: "ok", answer: "ما فيه تعاميم مرفوعة للحين.", src: [] });
       const docs = rows.length ? rows.map((r, i) => `[${i + 1}] العنوان: ${r.title}\nالتاريخ: ${r.cd || ""}\n` +
         (texts.has(r.id) ? `النص كامل:\n${texts.get(r.id)}` : `أقرب أجزاء الدليل للسؤال (من كامل صفحاته، و[صفحة N] تبين رقم الصفحة):\n${pick.get(r.id)!.join("\n…\n")}`)).join("\n\n-----\n\n")
         : "(ما فيه أي جزء من التعاميم له علاقة بالسؤال)";
       const given = new Map<string, string>(rows.map((r) => [r.id, texts.has(r.id) ? texts.get(r.id)! : pick.get(r.id)!.join("\n\n")]));
       tm.search = Date.now() - t0;
       const hist = H.map((t) => `الموظف: ${t.q}\nأنت: ${t.a}`).join("\n\n");
-      const ans = await gem(`أقرب ما في التعاميم والأدلة المرفوعة لسؤال الموظف (تم البحث في كل الملفات بالمعنى):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`, SYS_ASK, false, true);
+      const P_ASK = `أقرب ما في التعاميم والأدلة المرفوعة لسؤال الموظف (تم البحث في كل الملفات بالمعنى):\n\n${docs}\n\n=====\n${hist ? "المحادثة السابقة مع نفس الموظف (مرتبطة بسؤاله الحالي):\n" + hist + "\n\n=====\n" : ""}رسالة الموظف الآن: ${q}${full !== q ? "\n(المقصود بالكامل: " + full + ")" : ""}`;
+      const ans = onD ? await gemStream(P_ASK, SYS_ASK, onD) : await gem(P_ASK, SYS_ASK, false, true);
       tm.answer = Date.now() - t0;
       let fin = ans, vs = { ok: 0, bad: 0 };
       try { const v = await verifyCites(sb, ans, rows, t0, given); fin = v.text; vs = { ok: v.ok, bad: v.bad }; } catch (_) { /* لو فشل التحقق نرجع الجواب كما هو */ }
       tm.total = Date.now() - t0;
-      return out({ s: "ok", answer: fin, ver: vs, tm, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
-    } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
+      return ({ s: "ok", answer: fin, ver: vs, tm, src: rows.map((r) => ({ id: r.id, title: r.title, cd: r.cd, has_file: !!r.has_file, ai: r.ai })) });
+    } catch (e) { return ({ s: "aierr", e: String(e).slice(0, 300) }); }
+      };
+    // stream: سطور JSON — {d:"..."} أثناء الكتابة، ثم النتيجة النهائية الموثّقة
+    if (a.stream) {
+      const enc = new TextEncoder();
+      const st = new ReadableStream({ async start(c) {
+        const send = (o: unknown) => { try { c.enqueue(enc.encode(JSON.stringify(o) + "\n")); } catch (_) { /* أغلق الاتصال */ } };
+        try { send(await runAsk((d) => send({ d }))); } catch (e) { send({ s: "aierr", e: String(e).slice(0, 300) }); }
+        try { c.close(); } catch (_) { /* */ }
+      } });
+      return new Response(st, { headers: { ...cors, "Content-Type": "application/x-ndjson", "Cache-Control": "no-store" } });
+    }
+    return out(await runAsk());
   }
   if (!admin) return out({ s: "denied" });
   // ---------- تحدي التشغيل: توليد أسئلة من التعاميم والأدلة (تنحفظ بانتظار اعتماد المشرف) ----------

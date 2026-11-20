@@ -878,6 +878,7 @@ html:has(#hub:not([hidden])),body:has(#hub:not([hidden])){overflow:hidden}
 .ax{display:grid;gap:10px;padding:14px;border-radius:18px;background:linear-gradient(150deg,color-mix(in oklab,var(--c) 22%,var(--panel)),var(--panel));border:1px solid color-mix(in oklab,var(--c) 45%,var(--line))}
 .ax-h{display:flex;gap:10px;align-items:center}.ax-h i{font-style:normal;font-size:26px}.ax-h b{display:block;font:700 16px var(--display)}.ax-h small{color:var(--muted);font-size:12px}
 .ax textarea{width:100%;border-radius:12px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:16px/1.6 var(--body);padding:10px 12px;resize:vertical}
+.ax-cur{display:inline-block;margin-inline-start:2px;color:var(--amber,#e8a25a);animation:axb 1s steps(2) infinite}@keyframes axb{50%{opacity:0}}
 .ax-a{padding:12px 14px;border-radius:14px;background:var(--night);border:1px solid var(--line);font-size:15px;line-height:1.85}
 .ax-c{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 4px;margin:0 2px;border-radius:6px;background:var(--c);color:#110b07;font:700 11px var(--mono);vertical-align:middle}
 .ax-c.bad{background:#7a2a20;color:#ffd6cc}
@@ -3871,7 +3872,7 @@ const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TI
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 let drP=null;const drLoad=()=>window.DR?Promise.resolve():drP||(drP=ldJs("dr.js?v=16").catch(e=>{drP=null;throw e}));
 let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=11").catch(e=>{qzP=null;throw e}));
-let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=23")).catch(e=>{timP=null;throw e}));
+let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=24")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;
   if(!CIRC.length){L.innerHTML=`<div class="bd-empty">ما فيه تعاميم حالياً</div>`;return}

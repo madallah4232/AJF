@@ -256,7 +256,7 @@ function citeUnits(inner){const Q=[];const t=String(inner).replace(/«([^»]*)»
     else if(tok==="≈"){if(u)u.ap=1}
     else if(/^\d{1,2}$/.test(tok)&&!(u&&u.p&&!u.q&&+tok>9))U.push({n:+tok,p:"",q:""})});return U}
 const CITE_RX=/\[(\d{1,2}(?:[^\[\]]{0,700}?))\]/g;
-function fmtAns(t){let h=E(t).replace(/^\s*#{1,4}\s*(.+)$/gm,"<b>$1</b>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ");
+function fmtAns(t){let h=E(String(t).replace(/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/gm,"").replace(/\n{3,}/g,"\n\n")).replace(/^\s*#{1,4}\s*(.+)$/gm,"<b>$1</b>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ");
   h=h.replace(CITE_RX,(m,inner)=>{const U=citeUnits(inner);if(!U.length)return m;
     return U.map(u=>{const bad=u.bad,old=!u.q&&!u.bad;
       return`<button class="ax-c${bad?" bad":u.ap?" ap":""}" data-asrc="${u.n-1}"${u.p?` data-pg="${u.p}"`:""}${u.q?` data-q="${u.q}"`:""}${u.bad?` data-bad="1"`:""}${u.ap?` data-ap="1"`:""}${old?` data-old="1"`:""}>${u.n}${u.p&&!u.bad?" · ص"+u.p:""}${u.bad?" ⚠︎":u.ap?" ≈":""}</button>`}).join("")});
@@ -270,13 +270,24 @@ function thHTML(){const T=S.th||[];if(!T.length&&!S.abusy&&!S.aerr)return"";
     const fa=fmtAns(t.a),nb=(fa.match(/data-bad="1"/g)||[]).length;
     return`<div class="ax-q">${E(t.q)}</div><div class="ax-a">${fa.replace(/data-asrc="(\d+)"/g,`data-asrc="${ti}:$1"`)}</div>`+(t.tm&&isAdm()?`<p class="tx-note" dir="rtl" style="opacity:.7">⏱ تجهيز ${(t.tm.prep/1e3).toFixed(1)}ث · بحث ${((t.tm.search-t.tm.prep)/1e3).toFixed(1)}ث · جواب ${((t.tm.answer-t.tm.search)/1e3).toFixed(1)}ث · تحقق ${((t.tm.total-t.tm.answer)/1e3).toFixed(1)}ث = ${(t.tm.total/1e3).toFixed(1)}ث</p>`:"")+(nb?`<p class="tx-note" style="color:#ffb4a6">⚠︎ ${nb} معلومة ما انلقى لها نص يثبتها في التعميم — لا تعتمد عليها قبل ما تتأكد.</p>`:"")+
       ((t.src||[]).some((r,i)=>!cs.size||cs.has(i))?`<div class="ax-s"><small>المصادر:</small>${(t.src||[]).map((r,i)=>{if(cs.size&&!cs.has(i))return"";const a=AI(r);return`<button class="ax-sr" data-asrc="${ti}:${i}"><i>${i+1}</i><span>${E(a&&a.t||r.title)}</span>${r.has_file?"<em>📄</em>":""}</button>`}).join("")}</div>`:"")}).join("")+
-    (S.abusy?`<div class="ax-q">${E(S.pending||"")}</div><div class="bd-empty">… المساعد يقرأ التعاميم ويجهز الجواب (عادة 10–25 ثانية)</div>`:"")+
+    (S.abusy?`<div class="ax-q">${E(S.pending||"")}</div>${S.partial?`<div class="ax-a">${fmtAns(S.partial.replace(CITE_RX,""))}<span class="ax-cur">▍</span></div>`:`<div class="bd-empty">… المساعد يبحث في التعاميم ويبدأ يكتب خلال ثواني</div>`}`:"")+
     (S.aerr?`<div class="bd-empty">${S.aerr}</div>`:"")+
     (T.length?`<p class="tx-note">جواب آلي من التعاميم — تأكد من المصدر قبل أي قرار مهم. اكتب تحت سؤال متابعة أو توضيح وبيربطه بما قبله.</p>`:"")+`</div>`}
+/* الجواب يوصل أول بأول (stream) — والدالة القديمة اللي ترجع JSON كامل تشتغل بعد */
+async function askStream(q,h){const r=await fetch(FN,{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,action:"ask",q,h,stream:1})});
+  if(!r.ok)throw new Error(r.status===404?"nofn":"fn"+r.status);
+  const fin=j=>{if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok"){const x=new Error(j.s);x.d=j.e||"";throw x}return j};
+  if(!/ndjson/.test(r.headers.get("content-type")||"")||!r.body)return fin(await r.json());
+  const rd=r.body.getReader(),dec=new TextDecoder();let buf="",last=null,pt=0;
+  for(;;){const{value,done}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let k;
+    while((k=buf.indexOf("\n"))>=0){const ln=buf.slice(0,k);buf=buf.slice(k+1);if(!ln.trim())continue;let j;try{j=JSON.parse(ln)}catch(e){continue}
+      if(j.d!=null){S.partial=(S.partial||"")+j.d;const n=Date.now();if(n-pt>220){pt=n;paint()}}else last=j}}
+  if(buf.trim())try{last=JSON.parse(buf)}catch(e){}
+  if(!last)throw new Error("aierr");return fin(last)}
 async function ask(){const q=(S.aq||"").trim();if(q.length<2||S.abusy)return;S.abusy=true;S.aerr="";S.pending=q;S.aq="";try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();
-  try{const h=(S.th||[]).slice(-6).map(t=>({q:t.q,a:t.a}));const j=await F({action:"ask",q,h});
+  try{const h=(S.th||[]).slice(-6).map(t=>({q:t.q,a:t.a}));S.partial="";const j=await askStream(q,h);S.partial="";
     S.th=(S.th||[]).concat([{q,a:j.answer||"",src:j.src||[],tm:j.tm||null}]);thSave()}
-  catch(e){S.aq=q;S.aerr=e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي."+(AUTH.me&&AUTH.me.admin&&e.d?`<br><small dir="ltr" style="opacity:.7;word-break:break-all">${E(e.d)}</small>`:""):E(errTxt(e))}
+  catch(e){S.partial="";S.aq=q;S.aerr=e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي."+(AUTH.me&&AUTH.me.admin&&e.d?`<br><small dir="ltr" style="opacity:.7;word-break:break-all">${E(e.d)}</small>`:""):E(errTxt(e))}
   S.abusy=false;paint()}
 async function sumAll(btn){btn.disabled=true;try{let all=[],off=0;for(;;){const j=await R("ajf_circ_list",{p_offset:off,p_limit:100});all=all.concat(j.rows);off+=100;if(off>=j.n)break}
     const todo=all.filter(r=>!AI(r));let i=0,bad=0;for(const r of todo){i++;btn.textContent=`🤖 ${i}/${todo.length}: ${r.title.slice(0,30)}`;
