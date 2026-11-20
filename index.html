@@ -1332,7 +1332,7 @@ function gatePass(isNew){GATE.mode=isNew?"new":"old";$("gateC").innerHTML=`${ICO
   $("gGo").onclick=go;$("gateC").querySelectorAll("input").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")go()});setTimeout(()=>$("gP1").focus(),80)}
 async function gateLogin(){const b=$("gGo");if(b){b.disabled=true;b.textContent="…"}
   try{const j=await rpc("ajf_login",{p_emp:GATE.emp,p_pass:GATE.pass,p_device:AUTH.dev,p_label:devLabel()});
-    if(j.s==="ok"){AUTH.tok=j.token;AUTH.me={emp:GATE.emp,name:j.name||GATE.name,title:GATE.title,admin:j.admin};authSave();GATE.pass="";$("gate").hidden=true;ajfAct("login",devLabel());acctPaint(0);authCheck();setTimeout(pushOffer,2500);
+    if(j.s==="ok"){AUTH.tok=j.token;AUTH.me={emp:GATE.emp,name:j.name||GATE.name,title:GATE.title,admin:j.admin};authSave();GATE.pass="";$("gate").hidden=true;$("gateC").innerHTML="";try{if(typeof loadLive==="function")loadSched().then(loadLive)}catch(e){}ajfAct("login",devLabel());acctPaint(0);authCheck();setTimeout(pushOffer,2500);
       try{if(window.bootShow)bootShow()}catch(e){}return}
     if(j.s==="pending"){gateWait(j.new);return}
     const m={bad:"الرقم الوظيفي أو الرقم السري غير صحيح",locked:"محاولات كثيرة خاطئة. جرّب بعد "+(j.min||15)+" دقيقة",weak:"الرقم السري لازم 6 خانات على الأقل",rejected:"تم رفض هذا الجوال. راجع المشرف."}[j.s]||"صار خطأ، جرّب مرة ثانية";
@@ -2135,7 +2135,7 @@ function csSync(force){if(DEMO||!AUTH.tok||csP||(!force&&Date.now()-csAt<8000))r
     if(JSON.stringify([V,N,can])!==JSON.stringify([CSV,CSN,CSCAN])){CSV=V;CSN=N;CSCAN=can;csSave();if(!open)render();renderNext();
       if(!$("cs").hidden&&csCur){const a=document.activeElement;if(a&&$("csBody").contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))csPend=true;else renderCS()}}})
     .catch(()=>{}).finally(()=>{csP=null});return csP}
-(function relayLoop(){if(!document.hidden&&!DEMO){loadRelay();loadShared();csSync()}setTimeout(relayLoop,relayFast()?8000:relayNear()?20000:45000)})();document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay();shAt=0;loadShared();csSync(true)}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
+(function relayLoop(){if(!document.hidden&&!DEMO&&AUTH.tok){loadRelay();loadShared();csSync()}setTimeout(relayLoop,relayFast()?8000:relayNear()?20000:45000)})();document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!DEMO){relayAt=0;loadRelay();shAt=0;loadShared();csSync(true)}});setTimeout(()=>{if(!DEMO)loadRelay()},2500);setInterval(watchSafe,45000);setTimeout(watchSafe,4000);
 
 /* ---------- Coordination Sheet (GS-OL-029) ----------
    نسخة رقمية من نموذج SGS: المخطط يُحسب من ATA وقواعد الدوران، والفعلي يسجله الموظف بزر «الآن».
@@ -2296,7 +2296,7 @@ const csDur=m=>m==null||isNaN(m)?"":pad(Math.floor(m/60))+"."+pad(m%60)+"M";
 /* نموذج SGS بنفس الشكل (A4) — نفس الصفوف والخانات والشعار */
 function csFormHTML(){
   const{f,date}=csCur,d=csData(f,date),P=csPlan(f,d),k=iso(date)+"_"+f.n,N=CSN[k]||{},E=CSE[k]||{},e=escT;
-  const X=dlyInfo(f,date),atd=hm(d.atd)?d.atd:X?(X.est?"≈":"")+fmt(X.atd):"",dly=hm(d.atd)?(()=>{let x=toMin(d.atd)-tm(f.t);if(x>720)x-=1440;if(x<-720)x+=1440;return Math.max(0,x)})():X?X.dly:null;
+  const X=dlyInfo(f,date),atd=hm(d.atd)?d.atd:X&&!X.est?fmt(X.atd):"",dly=hm(d.atd)?(()=>{let x=toMin(d.atd)-tm(f.t);if(x>720)x-=1440;if(x<-720)x+=1440;return Math.max(0,x)})():X&&!X.est?X.dly:null;/* التقديري ما ينطبع في النموذج الرسمي */
   const dt=pad(date.getUTCDate())+["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][date.getUTCMonth()]+String(date.getUTCFullYear()).slice(2);
   const pa=d.pa||{},pd=d.pd||{},n0=(v,z)=>String(v??"").trim()||z,rm=d.rm||{};
   /* المُعد: أكثر موظف سجّل في الشيت، وإلا اللي يطبع */
@@ -2956,8 +2956,8 @@ async function lcPDF(){const b=$("lcPdf"),t0="PDF · إرسال الثلاثة",
 $("lcPdf").onclick=lcPDF;
 
 $("csShare").onclick=async()=>{
-  const{f,date}=csCur,d=csData(f,date),X=dlyInfo(f,date),atd=hm(d.atd)?d.atd:X?(X.est?"≈":"")+fmt(X.atd):"-";
-  const t=[`COORDINATION SHEET · ${f.ino||""}/${f.n} · ${iso(date)}`,`A/C REG ${d.reg||"-"} · GATE ${d.gate||"-"}`,`STA ${f.ia||"-"} · ATA ${d.ata||"-"} · STD ${f.t} · ATD ${atd}`,...(X?[dlyText(X)]:[]),
+  const{f,date}=csCur,d=csData(f,date),X=dlyInfo(f,date),atd=hm(d.atd)?d.atd:X&&!X.est?fmt(X.atd):"-";
+  const t=[`COORDINATION SHEET · ${f.ino||""}/${f.n} · ${iso(date)}`,`A/C REG ${d.reg||"-"} · GATE ${d.gate||"-"}`,`STA ${f.ia||"-"} · ATA ${d.ata||"-"} · STD ${f.t} · ATD ${atd}`,...(X&&(!X.est||hm(d.atd))?[dlyText(X)]:[]),
     ...CS_ROWS.filter(r=>hm(csGet(d,r[2])||"")).map(r=>`${r[1]}: ${csGet(d,r[2])}${r[3]&&hm(csGet(d,r[3])||"")?" – "+csGet(d,r[3]):""}${(d.rm||{})[r[0]]?" · "+d.rm[r[0]]:""}`)].join("\n");
   try{if(navigator.share){await navigator.share({title:"Coordination Sheet "+f.n,text:t});return}}catch(e){return}
   try{await navigator.clipboard.writeText(t);$("csShare").textContent="✓ نُسخ";setTimeout(()=>$("csShare").textContent="مشاركة",1500)}catch(e){}
@@ -3708,7 +3708,7 @@ try{localStorage.removeItem("ajf_wx");const s=JSON.parse(localStorage.getItem("a
 for(const fn of[renderClock,renderNext,render])try{fn()}catch(e){console.error(e)}
 /* صفحة البداية القديمة (الفيديو) ألغيت — الدخول صار بحركة البوابة bootShow في سكربت الرئيسية */
 try{renderWx()}catch(e){console.error(e)}
-wxTick();setInterval(()=>{if(!document.hidden)wxTick()},10*60e3);
+wxTick();setInterval(()=>{if(!document.hidden&&(AUTH.tok||DEMO))wxTick()},10*60e3);
 /* التطبيق على الآيفون يرجع من الخلفية بدون إعادة تحميل، فنعرض الترحيب إذا غاب أكثر من 10 دقائق */
 let hiddenAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden){hiddenAt=Date.now();return}
   if(!DEMO&&AUTH.tok&&hiddenAt&&Date.now()-hiddenAt>10*60e3){try{if(window.bootShow)bootShow()}catch(e){console.error(e)}}});
@@ -3716,9 +3716,9 @@ requestAnimationFrame(()=>setY(innerHeight));
 addEventListener("resize",()=>{if(!open)setY(innerHeight)});
 if(DEMO){const k=iso(TODAY);applyLive({date:k,updated:fmt(NOW.mins),flights:{SM321:{s:"landed",t:"~08:28"},SM322:{s:"departed",t:"09:27"},SV8382:{s:"landed",t:"08:55"},SV8383:{s:"departed",t:"09:38"},G9221:{s:"landed",t:"16:02"},G9222:{s:"departed",t:"17:01"},SV8034:{s:"landed",t:"17:44"},SV1382:{s:"departed",t:"~18:27"},NP109:{s:"delayed",t:"~21:25"},XY149:{s:"departed",t:"~18:20"}}});
   const b=document.createElement("div");b.textContent="وضع تجريبي · أوقات وهمية للعرض فقط";b.style.cssText="position:fixed;top:0;inset-inline:0;z-index:50;background:#e89a55;color:#1a1205;font:600 12px/26px system-ui;text-align:center";document.body.appendChild(b);
-}else{loadSched().then(loadLive);setTimeout(loadArchive,3000);setInterval(()=>{if(!document.hidden)loadSched()},30*60e3);setInterval(()=>{if(!document.hidden)loadLive()},30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadLive()});}
+}else{loadSched().then(loadLive);setTimeout(loadArchive,3000);setInterval(()=>{if(!document.hidden&&(AUTH.tok||DEMO))loadSched()},30*60e3);setInterval(()=>{if(!document.hidden&&(AUTH.tok||DEMO))loadLive()},30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&(AUTH.tok||DEMO))loadLive()});/* ما يسحب بيانات وهو على شاشة الدخول */}
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
-setInterval(()=>{try{const before=NOW.mins;renderClock();if(NOW.mins!==before){renderNext();if(!open)render()}}catch(e){}},15000);
+setInterval(()=>{if(!AUTH.tok&&!DEMO)return;try{const before=NOW.mins;renderClock();if(NOW.mins!==before){renderNext();if(!open)render()}}catch(e){}},15000);
 </script>
 <script>
 /* ---------- الرئيسية واللوحات ----------
@@ -3799,7 +3799,7 @@ function hubPaint(){
   const fl=flightsOn(TODAY).filter(f=>!f.off&&(LV(TODAY).flights[f.n]||{}).s!=="canceled"),left=fl.filter(f=>toMin(f.t)>NOW.mins).length,nd=nextDeparture();
   $("hubHi").innerHTML=`<small>${DAYS[TODAY.getUTCDay()]} · ${dLabel(TODAY)}</small><h2>${hubGreet()}${first?"، <span>"+escT(first)+"</span>":""}</h2>${me.title?`<div class="hub-ttl" dir="ltr">${escT(me.name)} · ${escT(me.title)}</div>`:""}`;
   const sv=fl.filter(f=>/^SV/i.test(f.n)).length,seen=circSeen(),nw=CIRCN&&CIRCLAST&&CIRCLAST!==seen;
-  const info={tim:[CIRCN?CIRCN+" تعميم":"",nw?"جديد":""],flt:[left+" متبقية",""],trc:[fl.length+" رحلة اليوم",""],lc:[sv+" رحلة سعودية",""],qz:(()=>{try{const q=JSON.parse(localStorage.getItem("ajf_qz_hub")||"null");return q&&q.k>Date.now()?[q.t,q.b]:["",""]}catch(e){return["",""]}})()};
+  const info={tim:[CIRCN?CIRCN+" تعميم":"",nw?"جديد":""],flt:[left+" متبقية",""],trc:[(()=>{try{return fl.filter(formOk).length}catch(e){return fl.length}})()+" رحلة اليوم",""],lc:[sv+" رحلة سعودية",""],qz:(()=>{try{const q=JSON.parse(localStorage.getItem("ajf_qz_hub")||"null");return q&&q.k>Date.now()?[q.t,q.b]:["",""]}catch(e){return["",""]}})()};
   info.dr=["",""];const BL=BOARDS.filter(B=>!B.own||drOwn());/* التقرير اليومي: يظهر في الرئيسية للمالك فقط (15024232) */
   const g=$("hubG");if(g.children.length!==BL.length)g.innerHTML=BL.map(B=>`<button class="hub-c" data-b="${B.id}" style="--c:${B.c}"><div class="ic">${svgI(B.ic,24)}</div><div><b>${B.t}</b><span>${B.s}</span><span class="nf" style="color:${B.c}"></span></div><em></em></button>`).join("");
   BL.forEach(B=>{const c=g.querySelector(`[data-b="${B.id}"]`);c.querySelector(".nf").textContent=info[B.id][0];c.querySelector("em").textContent=info[B.id][1]});
@@ -3910,7 +3910,7 @@ $("hubAcct").onclick=openAcct;$("bdBack").onclick=boardBack;
 $("hubHome").onclick=()=>{BOARD=null;if(!reduce){const w=document.querySelector(".wrap");w.classList.remove("in")}hubShow(true)};
 /* بعد الرجوع من الشيت/النموذج/اللودشيت: نحدّث قائمة اللوحة */
 ["csBack","fmBack","lcBack"].forEach(id=>$(id).addEventListener("click",()=>{if(BOARD&&BOARD!=="flt"&&!$("bd").hidden)setTimeout(bdRender,0)}));
-setInterval(()=>{if(document.hidden)return;hubClock();if(!$("hub").hidden)hubPaint();circLoad()},15000);
+setInterval(()=>{if(document.hidden||(!AUTH.tok&&!DEMO))return;hubClock();if(!$("hub").hidden)hubPaint();circLoad()},15000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)circLoad(true)});
 try{const it=$("intro");if(it)it.hidden=true}catch(e){}
 /* حركة الدخول بدل صفحة البداية القديمة */
