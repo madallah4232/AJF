@@ -146,8 +146,9 @@ function parseFlt(raw){
 function parseAmd(raw){
   const t=String(raw||"").toUpperCase().replace(/[$§]/g,"S").replace(/[|]/g," ").replace(/\r/g,""),L=t.split("\n"),d={};
   const TT=x=>[...String(x||"").matchAll(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/g)].map(m=>m[1].padStart(2,"0")+":"+m[2]);
-  const rt=/\b[0-3]?[0-9OI]\s*(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+([A-Z0-9]{3})\s*[^A-Z0-9\s]{0,3}\s*([A-Z0-9]{3})\b/.exec(t);if(rt){d.org=rt[1];d.dst=rt[2]}
-  const fl=/\bS\s*[VY¥]\s*([0-9OIL]{3,4})\b/.exec(t);if(fl){const n=fl[1].replace(/O/g,"0").replace(/[IL]/g,"1");if(/^\d+$/.test(n))d.fno=+n}
+  const rt=/\b[0-3]?[0-9OI]\s*(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+([A-Z0-9]{3})\s*(?:[(\[{]\s*\w\s*[)\]}]\s*)?[^A-Z0-9\s]{0,3}\s*([A-Z0-9]{3})\b/.exec(t);if(rt){d.org=rt[1];d.dst=rt[2]}
+  /* رقم الرحلة من سطر العنوان (اللي فيه التاريخ) — مو من شريط التبويبات فوق اللي فيه رحلات ثانية */
+  const fl=/\bS\s*[VY¥5]\s*([0-9OIL]{3,4})\s+[0-3]?[0-9OI]\s*(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/.exec(t);if(fl){const n=fl[1].replace(/O/g,"0").replace(/[IL]/g,"1");if(/^\d+$/.test(n))d.fno=+n}
   const dt=/\b([0-3]?[0-9OI])\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/.exec(t);if(dt){const x=dt[1].replace(/O/g,"0").replace(/I/g,"1");if(/^\d+$/.test(x)&&+x>=1&&+x<=31)d.dd=+x;d.mon=dt[2]}
   for(const l of L){
     if(/OFF\W{0,2}\w?ON\s*BLOCK|ONBLOCK/.test(l)&&!d.blk)d.blk=TT(l.replace(/^.*BLOCKS?\)?:?/,""));
@@ -161,6 +162,7 @@ function parseAmd(raw){
       if(n.length===6||n.length===8)d.acc={bj:n[0],by:n[1],bi:n[2],j:n[3],y:n[4],i:n[5]};
       else if(n.length>=10)d.acc={bj:n[0],by:n[1],bi:n[2],j:n[5],y:n[6],i:n[7]};
 }
+    const tw=/^\W*TOTAL\s*\(\s*([A-Z0-9]{3})/.exec(l);if(tw&&!d.wdst)d.wdst=tw[1];const ex=/\bEX\s+([A-Z0-9]{3})\W/.exec(l);if(ex&&!d.worg)d.worg=ex[1];
     if(/^\W*TOTAL\s*\(/.test(l)||/\bEX\s+[A-Z]{3}\W/.test(l)){const b=bags(l);if(b)(d.bagC=d.bagC||[]).push(b)}}
   if(d.acc&&d.tot!=null&&d.acc.j+d.acc.y!==d.tot)d.accBad=1;
   return d}
@@ -416,12 +418,21 @@ async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint()
     finally{try{await w.setParameters({tessedit_pageseg_mode:"3"})}catch(e){}}
     const r=list().find(x=>x.id===id);if(!r)throw new Error("none");
     /* كل صورة نعرف هي للوصول ولا للمغادرة: من المسار (JED → AJF) ورقم الرحلة (الوصول/المغادرة) */
-    const isA=x=>/^A[JI1LU]F$/.test(x||""),num=x=>+String(x||"").replace(/\D/g,""),fi=num(val(r,"fin")),fo=num(val(r,"fout")),dd=dayD(),G2={a:[],d:[]},warn=[];
+    const isA=x=>/^A[JI1LU][FE]$/.test(x||""),num=x=>+String(x||"").replace(/\D/g,""),fi=num(val(r,"fin")),fo=num(val(r,"fout")),dd=dayD(),G2={a:[],d:[]},warn=[];
     const LOG=[];for(const [pi,d] of R.entries()){const sh=d.blk?"Flight Info":d.acc?"Acceptance":d.tot!=null||(d.bagC||[]).length?"W&B":"؟";
       if(!d.blk&&!d.acc&&d.tot==null&&!(d.bagC||[]).length){LOG.push(`صورة ${pi+1}: ما انقرى منها شي`);continue}
       let dir=d.dst&&isA(d.dst)&&!isA(d.org)?"a":d.org&&isA(d.org)&&!isA(d.dst)?"d":null;
-      if(d.fno){if(fi!==fo&&d.fno===fi)dir="a";else if(d.fno===fo){if(fi!==fo)dir="d"}else throw new Error(`صورة لرحلة ${d.fno} مو ${fi===fo?fo:fi+"/"+fo} — ما تعبّى شي.`)}
-      if(d.dd&&(d.dd!==dd.getDate()||(d.mon&&d.mon!==MON[dd.getMonth()])))throw new Error(`صورة بتاريخ ${d.dd}${d.mon||""} واليوم المختار ${dd.getDate()}${MON[dd.getMonth()]} — ما تعبّى شي.`);
+      /* شاشة Weight & Balance: TOTAL(AJF) أو EX JED = وصول، TOTAL(JED) أو EX AJF = مغادرة */
+      if(!dir){const a=isA(d.wdst)||d.worg&&!isA(d.worg),b=d.wdst&&!isA(d.wdst)||isA(d.worg);if(a&&!b)dir="a";else if(b&&!a)dir="d"}
+      /* رقم الرحلة: مطابق، أو فيه رقم واحد مقروء غلط (1283 بدل 1383) والمسار يأكد الجهة */
+      const nr=(x,y)=>{x=String(x);y=String(y);if(x.length!==y.length)return false;let c=0;for(let i=0;i<x.length;i++)if(x[i]!==y[i])c++;return c<=1};
+      if(d.fno){if(fi!==fo&&d.fno===fi)dir="a";else if(d.fno===fo){if(fi!==fo)dir="d"}
+        else if(dir==="a"&&nr(d.fno,fi)||dir==="d"&&nr(d.fno,fo)){}
+        else if(!dir&&fi!==fo&&nr(d.fno,fi)!==nr(d.fno,fo))dir=nr(d.fno,fi)?"a":"d";
+        else{LOG.push(`صورة ${pi+1}: لرحلة ${d.fno} مو ${fi===fo?fo:fi+"/"+fo} — تجاهلتها`);continue}}
+      /* التاريخ: لو صورة قرأ تاريخها غلط (19 ↔ 10) نقبلها إذا صورة ثانية لنفس الرحلة تاريخها صحيح */
+      const okD=x=>x.dd===dd.getDate()&&(!x.mon||x.mon===MON[dd.getMonth()]);
+      if(d.dd&&!okD(d)&&!R.some(x=>x!==d&&x.fno&&x.fno===d.fno&&x.dd&&okD(x))){LOG.push(`صورة ${pi+1}: تاريخها ${d.dd}${d.mon||""} واليوم المختار ${dd.getDate()}${MON[dd.getMonth()]} — تجاهلتها`);continue}
       const tag=(d.fno?"SV"+d.fno+" ":"")+(d.org&&d.dst?d.org+"→"+d.dst:"");
       if(!dir){LOG.push(`صورة ${pi+1} (${sh} ${tag}): ما عرفت وصول ولا مغادرة — تجاهلتها`);continue}
       LOG.push(`صورة ${pi+1}: ${sh} · ${dir==="a"?"وصول":"مغادرة"} ${tag}`);G2[dir].push(d)}
@@ -452,7 +463,7 @@ async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint()
   if(dayK()===k)paint()}
 /* حقل اختيار الصورة برا الصفحة عشان ما ينمسح لما تنعاد الرسمة */
 function imgIn(){let f=document.getElementById("drImg");if(!f){f=document.createElement("input");f.type="file";f.accept="image/*";f.id="drImg";f.hidden=true;document.body.appendChild(f);
-  f.addEventListener("change",()=>{const fs=[...(f.files||[])];if(!fs.length||!PH)return;if(PH.amd)readAmd(fs.slice(0,4),PH);else readPhoto(fs[0],PH)})}return f}
+  f.addEventListener("change",()=>{const fs=[...(f.files||[])];if(!fs.length||!PH)return;if(PH.amd)readAmd(fs.slice(0,6),PH);else readPhoto(fs[0],PH)})}return f}
 function upd(id){/* تحديث ملخص البطاقة بدون إعادة رسم الخانات (عشان ما يطير الكيبورد) */
   const c=root.querySelector(`[data-card="${CSS.escape(id)}"]`);if(!c)return;const Ls=list(),ix=Ls.findIndex(x=>x.id===id),r=Ls[ix];if(!r)return;
   const tmp=document.createElement("div");tmp.innerHTML=card(r,ix+1);const n=tmp.firstElementChild;
