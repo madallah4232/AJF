@@ -1017,6 +1017,17 @@ body,.bd,.hub{background:var(--felt),var(--night)}
 .hx-r span{font-size:12.5px;line-height:1.45;color:var(--muted)}
 .adm-b .row{background:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;padding:0!important;min-height:0!important;overflow:visible!important;margin:0!important}
 .adm-b .row::before,.adm-b .row::after{display:none!important}
+/* ===== تحسين القراءة (مراجعة Impeccable · 2026-11-20) =====
+   النص العربي الثانوي كان 10–11.5px، وهذا صغير على الجوال وقت الضغط.
+   تباعد الحروف يقطّع الحروف العربية المتصلة، فأُلغي على النص العربي. */
+.clock span,.day .dn,.legend,.stat span,.side small,.kv span,.trk-kv span,.hub-st span,
+.cs-tm label span,.cs-saved,.cs-by,.wx-sl,.wx-raw,.wx-ft,.tx-br-c small{font-size:12px}
+.row .t small{font-size:11px}
+.ask-note,.a-ttl,.bf .st,.ci small,.tx-note,.hub-f,.hub-top .lg small{font-size:12.5px}
+.bf .a button small,.dc-c em{font-size:11.5px}
+.chip,.tu-src,.trk-live,.cx-nw,.cx-miss,.tx-doc em{font-size:11.5px}
+.hub-top .lg small,.hub-f,.intro small{letter-spacing:0}
+.tx-note,.ask-note{line-height:1.7}
 </style>
 </head>
 <body>
