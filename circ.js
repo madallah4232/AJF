@@ -303,7 +303,8 @@ function vwCss(){if(document.getElementById("cxvCss"))return;const st=document.c
 .cxv-h b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cxv button,.cxv a.cxv-x{min-width:40px;height:40px;padding:0 10px;border-radius:11px;border:1px solid var(--line,#3a2e24);background:transparent;color:inherit;font:600 14px system-ui;display:inline-grid;place-items:center;text-decoration:none}
 .cxv button:disabled{opacity:.35}.cxv-f span{min-width:96px;text-align:center;font:700 14px var(--mono,monospace)}
-.cxv-n{padding:8px 12px;font-size:13px;line-height:1.55;background:#3b2a10;color:#ffdc8f;text-align:center;max-height:30vh;overflow:auto}.cxv-n.warn{background:#4a1612;color:#ffc9bf}.cxv-n q{display:block;margin-top:4px;font-style:italic;color:#fff3d6;quotes:'«' '»'}
+.cxv-n{padding:8px 12px;font-size:13px;line-height:1.55;background:#3b2a10;color:#ffdc8f;text-align:center;max-height:30vh;overflow:auto}.cxv-n.warn{background:#4a1612;color:#ffc9bf}.cxv-tr{margin-top:6px;padding-top:6px;border-top:1px dashed #ffdc8f55;color:#fff3d6;font-size:14px;line-height:1.6;direction:rtl;text-align:right}.cxv-tr small{color:#ffdc8f;font-weight:700}
+.cxv-n q{display:block;margin-top:4px;font-style:italic;color:#fff3d6;quotes:'«' '»'}
 .cxv-b{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:#2b2520}
 .cxv-p{position:relative;margin:8px auto;background:#fff;box-shadow:0 2px 14px #000a}.cxv-p canvas{display:block;width:100%;height:100%}
 .cxv-m{position:absolute;background:rgba(255,212,0,.42);mix-blend-mode:multiply;border-radius:3px;box-shadow:0 0 0 2px rgba(235,150,0,.85);animation:cxvF 1s ease 2}
@@ -333,7 +334,7 @@ async function viewFile(id,o){o=o||{};vwCss();vwClose();const tok=++VW.tok;
     VW.url=u.url;const ft=g&&g.row?String(g.row.body||"")+"\n\n"+String(g.row.ftext||""):"";const lp=o.q?vwLocate(vwPages(ft),o.q):0;VW.found=!!lp;const pg=lp||+o.pg||1;
     const doc=await lib.getDocument({url:u.url,cMapUrl:PDFJS+"cmaps/",cMapPacked:true}).promise;if(tok!==VW.tok){doc.destroy();return}
     VW.doc=doc;VW.n=doc.numPages;VW.pg=Math.min(Math.max(1,pg),VW.n);
-    if(!lp&&!+o.pg){const n=ov.querySelector(".cxv-n");n.hidden=false;n.className="cxv-n warn";n.innerHTML=vwNote(o,false,0,0);
+    if(!lp&&!+o.pg){const n=ov.querySelector(".cxv-n");n.hidden=false;n.className="cxv-n warn";n.innerHTML=vwNote(o,false,0,0);vwTr(n,o);
       ov.querySelector(".cxv-f span").textContent=`${VW.n} صفحة`;ov.querySelector(".cxv-b").innerHTML=`<p class="cxv-l">ما قدرت أحدد مكان هذي المعلومة في الملف.<br>اعتبرها غير مؤكدة وتأكد من المشرف أو من الدليل.<br><br><button data-v="go1">اعرض الملف من البداية</button></p>`;
       ov.querySelector(".cxv-b").onclick=e=>{if(e.target.closest('[data-v="go1"]'))vwRender(1,1)};const a=ov.querySelector(".cxv-x");a.href=u.url;a.hidden=false;return}
     const a=ov.querySelector(".cxv-x");a.href=u.url+"#page="+VW.pg;a.hidden=false;await vwRender(1,1)}
@@ -360,9 +361,17 @@ async function vwRender(scroll,first){const ov=document.getElementById("cxv");if
         const d=document.createElement("i");d.className="cxv-m";d.style.cssText=`left:${x1-3}px;top:${y1-2}px;width:${x2-x1+6}px;height:${y2-y1+4}px`;box.appendChild(d);hit++;top=top==null?y1:Math.min(top,y1)})}}catch(e){}}
   body.scrollTop=scroll?(top!=null?Math.max(0,top-90):0):ratio*body.scrollHeight;
   const n=ov.querySelector(".cxv-n");if(first){n.hidden=false;const o=VW.o||{};
-    n.className="cxv-n"+(VW.found&&!o.ap?"":" warn");n.innerHTML=vwNote(o,VW.found,hit,VW.pg)}  else n.hidden=true}
+    n.className="cxv-n"+(VW.found&&!o.ap?"":" warn");n.innerHTML=vwNote(o,VW.found,hit,VW.pg);vwTr(n,o)}  else n.hidden=true}
 
 /* تعميم مكتوب (بدون ملف PDF): نعرض نصه ونظلّل الجملة اللي اعتمد عليها المساعد */
+/* ترجمة عربية للنص الإنجليزي اللي اعتمد عليه المساعد — تظهر تحته أعلى الصفحة، وتنحفظ على الجوال */
+const TRC=(()=>{try{return JSON.parse(localStorage.getItem("ajf_trc")||"{}")}catch(e){return{}}})();
+function vwTr(n,o){const q=String((o&&o.q)||"").trim();if(!q||!/[A-Za-z]{3}/.test(q)||/[\u0600-\u06FF]{6}/.test(q)||!n.querySelector("q"))return;
+  const box=document.createElement("div");box.className="cxv-tr";n.appendChild(box);
+  const show=t=>{box.innerHTML=`<small>الترجمة:</small> ${E(t)}`};
+  if(TRC[q]){show(TRC[q]);return}box.innerHTML="<small>… جاري الترجمة</small>";
+  F({action:"tr",t:q}).then(j=>{const t=String(j.ar||"").trim();if(!t){box.remove();return}TRC[q]=t;
+    try{const k=Object.keys(TRC);if(k.length>200)delete TRC[k[0]];localStorage.setItem("ajf_trc",JSON.stringify(TRC))}catch(e){}show(t)}).catch(()=>box.remove())}
 function vwNote(o,found,hit,pg){return found&&o.ap?`⚠︎ ${pg?"ص "+pg+" — ":""}صياغة المساعد مختلفة عن الدليل. ${hit?"المظلّل بالأصفر":"هذا"} هو النص الفعلي — اقرأه وقارنه بالجواب قبل ما تعتمد:<q dir="auto">${E(o.q)}</q>`:found?`📍 ${pg?"ص "+pg+" — ":""}${hit?"المظلّل بالأصفر":"في هذا التعميم"} النص اللي اعتمد عليه المساعد:<q dir="auto">${E(o.q)}</q>`
   :o.q?`⚠︎ ما لقيت هذا النص في التعميم — المعلومة غير مؤكدة، لا تعتمد عليها قبل ما تتأكد:<q dir="auto">${E(o.q)}</q>`
   :o.bad?`⚠︎ المساعد ما أعطى نص من التعميم يثبت هذي المعلومة — غير مؤكدة، تأكد بنفسك.`
@@ -381,7 +390,7 @@ async function viewText(id,o){o=o||{};vwCss();vwClose();const tok=++VW.tok;
     const body=ov.querySelector(".cxv-b");
     body.innerHTML=`<div class="cxv-t" dir="auto">${lines.map((l,i)=>sel.has(i)?`<mark>${E(l)}</mark>`:E(l)).join("<br>")}</div>`;
     const m=body.querySelector("mark");if(m)body.scrollTop=Math.max(0,m.offsetTop-90);
-    const n=ov.querySelector(".cxv-n");n.hidden=false;n.className="cxv-n"+(sel.size&&!o.ap?"":(o.q||o.bad?" warn":""));n.innerHTML=vwNote(o,!!sel.size,sel.size,0)}
+    const n=ov.querySelector(".cxv-n");n.hidden=false;n.className="cxv-n"+(sel.size&&!o.ap?"":(o.q||o.bad?" warn":""));n.innerHTML=vwNote(o,!!sel.size,sel.size,0);vwTr(n,o)}
   catch(e){if(tok!==VW.tok)return;ov.querySelector(".cxv-b").innerHTML=`<p class="cxv-l">${E(errTxt(e))}</p>`}}
 /* ---------- فتح الملف ---------- */
 async function openFile(id,btn){

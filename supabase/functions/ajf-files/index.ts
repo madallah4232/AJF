@@ -366,6 +366,15 @@ Deno.serve(async (req) => {
     }
     return out(await runAsk());
   }
+  // ترجمة نص التعميم المنسوخ للعربي (لما الموظف يفتح المصدر)
+  if (a.action === "tr") {
+    if (!GK) return out({ s: "nokey" });
+    const t = String(a.t || "").slice(0, 700).trim(); if (t.length < 3) return out({ s: "bad" });
+    try {
+      const ar = await gem(t, "ترجم نص من دليل/تعميم تشغيل الخدمات الأرضية بالمطارات إلى عربي واضح ودقيق يفهمه موظف ما يعرف إنجليزي. حافظ على الأرقام والوحدات والرموز (مثل Wh و WCHR و SV) كما هي. أرجع الترجمة فقط بدون أي إضافة.");
+      return out({ s: "ok", ar: ar.trim().slice(0, 1200) });
+    } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 200) }); }
+  }
   if (!admin) return out({ s: "denied" });
   // ---------- تحدي التشغيل: توليد أسئلة من التعاميم والأدلة (تنحفظ بانتظار اعتماد المشرف) ----------
   if (a.action === "quizgen") {
