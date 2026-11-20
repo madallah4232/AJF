@@ -259,7 +259,7 @@ const DRCSS=`
 .dr-g label{display:grid;gap:3px;font-size:11.5px;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 .dr-g>button{min-width:0;padding:6px 4px!important;font-size:13px!important;overflow-wrap:anywhere}
 .dr-s{background:var(--bg,transparent);min-width:0}
-.dr-g input,.dr-g select{width:100%;min-width:0;height:42px;border-radius:11px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:600 15px var(--mono);padding:0 6px;text-align:center;direction:ltr;color-scheme:dark;-webkit-user-select:text;user-select:text}
+.dr-g input,.dr-g select{width:100%;min-width:0;height:42px;border-radius:11px;border:1px solid var(--line);background:var(--raise);color:var(--ink);font:600 16px var(--mono);padding:0 6px;text-align:center;direction:ltr;color-scheme:dark;-webkit-user-select:text;user-select:text}
 .dr-g input.au{color:#d9b45a;border-style:dashed}
 .dr-g input:focus{outline:2px solid #d9b45a;outline-offset:0}
 .dr-tot{font-size:12px;color:var(--muted);text-align:left;direction:ltr}
@@ -417,13 +417,15 @@ async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint()
     const r=list().find(x=>x.id===id);if(!r)throw new Error("none");
     /* كل صورة نعرف هي للوصول ولا للمغادرة: من المسار (JED → AJF) ورقم الرحلة (الوصول/المغادرة) */
     const isA=x=>/^A[JI1LU]F$/.test(x||""),num=x=>+String(x||"").replace(/\D/g,""),fi=num(val(r,"fin")),fo=num(val(r,"fout")),dd=dayD(),G2={a:[],d:[]},warn=[];
-    for(const d of R){if(!d.blk&&!d.acc&&d.tot==null&&!(d.bagC||[]).length)continue;
+    const LOG=[];for(const [pi,d] of R.entries()){const sh=d.blk?"Flight Info":d.acc?"Acceptance":d.tot!=null||(d.bagC||[]).length?"W&B":"؟";
+      if(!d.blk&&!d.acc&&d.tot==null&&!(d.bagC||[]).length){LOG.push(`صورة ${pi+1}: ما انقرى منها شي`);continue}
       let dir=d.dst&&isA(d.dst)&&!isA(d.org)?"a":d.org&&isA(d.org)&&!isA(d.dst)?"d":null;
       if(d.fno){if(fi!==fo&&d.fno===fi)dir="a";else if(d.fno===fo){if(fi!==fo)dir="d"}else throw new Error(`صورة لرحلة ${d.fno} مو ${fi===fo?fo:fi+"/"+fo} — ما تعبّى شي.`)}
       if(d.dd&&(d.dd!==dd.getDate()||(d.mon&&d.mon!==MON[dd.getMonth()])))throw new Error(`صورة بتاريخ ${d.dd}${d.mon||""} واليوم المختار ${dd.getDate()}${MON[dd.getMonth()]} — ما تعبّى شي.`);
-      if(!dir){warn.push("صورة ما عرفت إذا هي للوصول أو المغادرة (رقم الرحلة والمسار ما انقروا) — تجاهلتها");continue}
-      G2[dir].push(d)}
-    if(!G2.a.length&&!G2.d.length)throw new Error(warn.length?warn[0]:"amdnone");
+      const tag=(d.fno?"SV"+d.fno+" ":"")+(d.org&&d.dst?d.org+"→"+d.dst:"");
+      if(!dir){LOG.push(`صورة ${pi+1} (${sh} ${tag}): ما عرفت وصول ولا مغادرة — تجاهلتها`);continue}
+      LOG.push(`صورة ${pi+1}: ${sh} · ${dir==="a"?"وصول":"مغادرة"} ${tag}`);G2[dir].push(d)}
+    if(!G2.a.length&&!G2.d.length)throw new Error(LOG.length?LOG.join(" · "):"amdnone");
     const D=dS(k),o=D.e[id]=D.e[id]||{},out=[],regs=[];let typ="";
     for(const dir of["a","d"]){const L=G2[dir];if(!L.length)continue;const K=dir==="a"?{t:"ata",s:"sta",j:"aj",y:"ay",i:"ai",b:"ab",n:"الوصول"}:{t:"atd",s:"std",j:"dj",y:"dy",i:"di",b:"db",n:"المغادرة"};
       const m={bagC:[]};for(const d of L){for(const kk of["blk","sch","aps","tot","winf","acc","accBad"])if(m[kk]==null&&d[kk]!=null)m[kk]=d[kk];m.bagC.push(...(d.bagC||[]));regs.push(...(d.regs||[]));if(!typ&&d.typ)typ=d.typ}
@@ -435,13 +437,17 @@ async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint()
       else if(m.acc){o[K.j]=String(m.acc.j);o[K.y]=String(m.acc.y);got.push(`J ${m.acc.j} · Y ${m.acc.y}`)}
       else if(m.tot!=null)warn.push(`${K.n}: قرأت إجمالي الركاب ${m.tot} بس، صوّر Acceptance Figures عشان يتقسّم J وY`);
       /* عدد القطع: لو انقرى من سطرين لازم يتطابقون، غير كذا ما يتعبّى */
-      const bp=[...new Set(m.bagC.map(b=>b.p))];if(bp.length===1){o[K.b]=String(bp[0]);got.push("عفش "+bp[0]);if(m.bagC.length<2)warn.push(`عفش ${K.n} ${bp[0]} انقرى من سطر واحد بس — تأكد منه`)}else if(bp.length>1)warn.push(`عفش ${K.n} ما انقرى بوضوح — أدخله بيدك`);
+      /* سطرين متطابقين = مؤكد. سطر واحد = نقبله بس إذا معقول مقابل عدد الركاب (ما يزيد عن 1.5 قطعة للراكب) مع تنبيه */
+      const bp=[...new Set(m.bagC.map(b=>b.p+"@"+b.w))],px=m.tot!=null?m.tot:m.acc?m.acc.j+m.acc.y:null;
+      if(bp.length===1&&m.bagC.length>=2){const p=m.bagC[0].p;o[K.b]=String(p);got.push("عفش "+p)}
+      else if(bp.length===1&&px&&m.bagC[0].p<=px*1.5){const p=m.bagC[0].p;o[K.b]=String(p);got.push("عفش "+p);warn.push(`عفش ${K.n} ${p} انقرى من سطر واحد — تأكد منه`)}
+      else if(m.bagC.length)warn.push(`عفش ${K.n} ما انقرى بشكل مؤكد (${[...new Set(m.bagC.map(b=>b.p))].join(" / ")}) — ما عبّيته، أدخله بيدك`);
       if(got.length)out.push(`<b>${K.n}:</b> <b dir="ltr">${E(got.join(" · "))}</b>`)}
     const rg=regs.map(regN),okR=rg.find(g=>REGT[g]!=null)||rg.find(g=>/^HZ[A-Z]{2}\d{2}$/.test(g));
     if(okR){const cur=regN(val(r,"reg"));if(cur&&cur!==okR)warn.push(`التسجيل في أماديوس ${okR} وكان ${cur}`);o.reg=okR;out.push(`<b dir="ltr">${E(okR)}</b>`)}
     if(typ&&!val(r,"typ"))o.typ=typ;
-    if(!out.length)throw new Error("amdnone");sv();
-    PST[id]={msg:"✓ من أماديوس — "+out.join("<br>")+"<br>راجعها قبل النسخ"+(warn.length?`<br><span style="color:var(--amber)">⚠️ ${warn.map(E).join("<br>⚠️ ")}</span>`:"")}}
+    if(!out.length)throw new Error(LOG.length?"ما قدرت أعبّي شي بشكل مؤكد · "+LOG.join(" · ")+(warn.length?" · "+warn.join(" · "):""):"amdnone");sv();
+    PST[id]={msg:"✓ من أماديوس — "+out.join("<br>")+"<br>راجعها قبل النسخ"+`<br><small style="opacity:.75">${LOG.map(E).join("<br>")}</small>`+(warn.length?`<br><span style="color:var(--amber)">⚠️ ${warn.map(E).join("<br>⚠️ ")}</span>`:"")}}
   catch(e){console.error(e);PST[id]={err:PERR[e.message]||e.message||PERR.aierr}}
   if(dayK()===k)paint()}
 /* حقل اختيار الصورة برا الصفحة عشان ما ينمسح لما تنعاد الرسمة */
