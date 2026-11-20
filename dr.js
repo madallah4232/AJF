@@ -145,12 +145,14 @@ function parseFlt(raw){
    كل قيمة تنقرى بس إذا كانت واضحة، وإذا شاشتين تعطي نفس القيمة نتأكد إنها متطابقة. */
 function parseAmd(raw){
   const t=String(raw||"").toUpperCase().replace(/[$§]/g,"S").replace(/[|]/g," ").replace(/\r/g,""),L=t.split("\n"),d={};
-  const T=x=>{const m=/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/.exec(x||"");return m?m[1].padStart(2,"0")+":"+m[2]:""};
+  const TT=x=>[...String(x||"").matchAll(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/g)].map(m=>m[1].padStart(2,"0")+":"+m[2]);
+  const rt=/\b[0-3]?[0-9OI]\s*(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+([A-Z0-9]{3})\s*[^A-Z0-9\s]{0,3}\s*([A-Z0-9]{3})\b/.exec(t);if(rt){d.org=rt[1];d.dst=rt[2]}
   const fl=/\bS\s*[VY¥]\s*([0-9OIL]{3,4})\b/.exec(t);if(fl){const n=fl[1].replace(/O/g,"0").replace(/[IL]/g,"1");if(/^\d+$/.test(n))d.fno=+n}
   const dt=/\b([0-3]?[0-9OI])\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/.exec(t);if(dt){const x=dt[1].replace(/O/g,"0").replace(/I/g,"1");if(/^\d+$/.test(x)&&+x>=1&&+x<=31)d.dd=+x;d.mon=dt[2]}
   for(const l of L){
-    if(/OFF\W{0,2}\w?ON\s*BLOCK|ONBLOCK/.test(l)&&!d.atd)d.atd=T(l.replace(/^.*BLOCKS?\)?:?/,""));
-    else if(/SCHEDULED\s*:/.test(l)&&!d.sstd)d.sstd=T(l.replace(/^.*SCHEDULED\s*:/,""));
+    if(/OFF\W{0,2}\w?ON\s*BLOCK|ONBLOCK/.test(l)&&!d.blk)d.blk=TT(l.replace(/^.*BLOCKS?\)?:?/,""));
+    else if(/SCHEDULED\s*:/.test(l)&&!d.sch)d.sch=TT(l.replace(/^.*SCHEDULED\s*:/,""));
+    else if(/\bA\w?RP\w{0,3}T?\s*:/.test(l)&&!d.aps)d.aps=l.replace(/^.*?:/,"").match(/\b[A-Z0-9]{3}\b/g);
     const r=/\bHZ\s*-?\s*([A-Z0-9]{3,4})\b/.exec(l);if(r){(d.regs=d.regs||[]).push("HZ"+r[1])}
     const ac=/\b[A-Z]{3}\s*-\s*[A-Z]{3}\s+(3[0-9]{2}|7[0-9]{2}|[0-9]{3})\s+(?:HZ|[0-9])/.exec(l);if(ac&&!d.typ)d.typ=ac[1];
     const tp=/TOTAL\s+PASSENGERS\s+(\d{1,3})\W+PLUS\W+INFANTS?\s+(\d{1,2})\b/.exec(l);if(tp){d.tot=+tp[1];d.winf=+tp[2]}
@@ -242,7 +244,7 @@ const DRCSS=`
 .dr-tm span.e{color:var(--muted)}
 .dr-dl{grid-column:1/-1;font-size:12px;color:var(--amber);direction:ltr;text-align:right}
 .dr-cp{border-top:1px dashed var(--line);padding:10px 12px;display:grid;gap:8px;background:color-mix(in oklab,var(--raise) 40%,var(--panel))}
-.dr-cp .row{display:flex;gap:8px}
+.dr-cp .dr-row{display:flex;gap:8px}
 .dr-cp button{flex:1;min-height:44px;border-radius:12px;border:0;background:#d9b45a;color:#1a1205;font:700 14.5px var(--display);padding:6px}
 .dr-cp button.sec{background:var(--raise);color:var(--ink);border:1px solid var(--line)}
 .dr-cp button.mk{background:var(--go);color:#0f1a0f}
@@ -303,9 +305,9 @@ function card(r,no){const D=dS(dayK()),sk=!!D.skip[r.id],dn=D.done[r.id],ms=miss
 function cpBar(r){const D=dS(dayK());if(D.skip[r.id])return"";if(r.x&&!val(r,"fin"))return`<div class="dr-cp"><div class="dr-h">أدخل رقم الرحلة عشان تقدر تنسخها.</div></div>`;
   const ms=miss(r),dn=D.done[r.id],cp=C1&&C1.k===dayK()&&C1.id===r.id;
   if(cp)return`<div class="dr-cp"><div class="dr-h">✓ انسخ سطر الرحلة. في الإكسل: اضغط خانة <b>Day</b> بأول سطر فاضي ← لصق.</div>
-    <div class="row"><button class="mk" data-dmk="${E(r.id)}">✔ لصقتها — علّمها</button><button class="sec" data-dcp="${E(r.id)}">📋 نسخ مرة ثانية</button></div></div>`;
-  if(dn)return`<div class="dr-cp">${amdSt(r)}<div class="row"><button class="sec" data-dcp="${E(r.id)}">📋 نسخ سطر الرحلة مرة ثانية</button>${amdBtn(r)}</div></div>`;
-  return`<div class="dr-cp">${amdSt(r)}${ms.length?`<div class="dr-warn">⚠️ ناقص: ${ms.map(E).join("، ")}</div>`:""}<div class="row"><button data-dcp="${E(r.id)}">📋 نسخ سطر هذي الرحلة</button>${amdBtn(r)}</div></div>`}
+    <div class="dr-row"><button class="mk" data-dmk="${E(r.id)}">✔ لصقتها — علّمها</button><button class="sec" data-dcp="${E(r.id)}">📋 نسخ مرة ثانية</button></div></div>`;
+  if(dn)return`<div class="dr-cp">${amdSt(r)}<div class="dr-row"><button class="sec" data-dcp="${E(r.id)}">📋 نسخ سطر الرحلة مرة ثانية</button>${amdBtn(r)}</div></div>`;
+  return`<div class="dr-cp">${amdSt(r)}${ms.length?`<div class="dr-warn">⚠️ ناقص: ${ms.map(E).join("، ")}</div>`:""}<div class="dr-row"><button data-dcp="${E(r.id)}">📋 نسخ سطر هذي الرحلة</button>${amdBtn(r)}</div></div>`}
 const amdBtn=r=>r.f?`<button class="sec" style="flex:0 0 auto;padding:6px 14px" data-damd="${E(r.id)}" ${PST[r.id]&&PST[r.id].busy?"disabled":""} aria-label="تعبئة من صور أماديوس">📷 أماديوس</button>`:"";
 const amdSt=r=>{const p=r.f&&PST[r.id];if(!p)return"";return`<div class="${p.err?"dr-warn":"dr-h"}">${p.busy?"⏳ "+E(p.busy===1?"يقرأ الصور على جوالك… (أول مرة 10–20 ثانية)":p.busy):p.err?E(p.err):p.msg}</div>`}
 
@@ -413,28 +415,33 @@ async function readAmd(files,ph){const{id,k}=ph;PST[id]={busy:1};OPEN=id;paint()
         const rr=await lim(w.recognize(await prepA(files[i])),90000,"aierr");R.push(XL.parseAmd(rr.data.text||""))}}
     finally{try{await w.setParameters({tessedit_pageseg_mode:"3"})}catch(e){}}
     const r=list().find(x=>x.id===id);if(!r)throw new Error("none");
-    const m={regs:[],bagC:[]};for(const d of R){for(const kk of["fno","dd","mon","atd","sstd","typ","tot","winf","acc","accBad"])if(m[kk]==null&&d[kk]!=null)m[kk]=d[kk];m.regs.push(...(d.regs||[]));m.bagC.push(...(d.bagC||[]))}
-    if(!m.atd&&!m.acc&&m.tot==null&&!m.bagC.length)throw new Error("amdnone");
-    /* لازم الصورة تكون لنفس الرحلة ونفس اليوم — غير كذا ما نعبّي شي */
-    const fo=+String(val(r,"fout")).replace(/\D/g,""),dd=dayD();
-    if(m.fno&&fo&&m.fno!==fo)throw new Error(`الصور لرحلة ${m.fno} مو ${fo} — ما تعبّى شي.`);
-    if(m.dd&&(m.dd!==dd.getDate()||(m.mon&&m.mon!==MON[dd.getMonth()])))throw new Error(`الصور بتاريخ ${m.dd}${m.mon||""} واليوم المختار ${dd.getDate()}${MON[dd.getMonth()]} — ما تعبّى شي.`);
-    const D=dS(k),o=D.e[id]=D.e[id]||{},got=[],warn=[];
-    if(!m.fno)warn.push("ما قدرت أقرأ رقم الرحلة من الصور، تأكد إنها لهذي الرحلة");
-    if(m.atd&&HM.test(m.atd)){o.atd=m.atd;got.push("ATD "+m.atd)}
-    if(m.sstd&&HM.test(val(r,"std"))&&m.sstd!==val(r,"std"))warn.push(`STD في أماديوس ${m.sstd} والجدول ${val(r,"std")} — ما غيّرته. إذا الرحلة معدّلة الوقت غيّر STD بيدك، لأن OT/DLY يتحسب منه`);
-    const inf=m.acc?m.acc.i:m.winf;if(m.acc&&m.winf!=null&&m.acc.i!==m.winf)warn.push("عدد الرضّع مختلف بين الشاشتين — ما عبّيته");
-    else if(inf!=null){o.di=String(inf);got.push("INF "+inf)}
-    if(m.acc&&(m.accBad||m.tot!=null&&m.acc.j+m.acc.y!==m.tot))warn.push(`J+Y (${m.acc.j}+${m.acc.y}) ما يطابق إجمالي الركاب ${m.tot} — ما عبّيت الركاب`);
-    else if(m.acc){o.dj=String(m.acc.j);o.dy=String(m.acc.y);got.push(`J ${m.acc.j} · Y ${m.acc.y}`)}
-    else if(m.tot!=null)warn.push(`قرأت إجمالي الركاب ${m.tot} بس، صوّر شاشة Acceptance Figures عشان يتقسّم J وY`);
-    /* عدد القطع: لو انقرى من سطرين (TOTAL و GRAND TOTAL) لازم يتطابقون، غير كذا ما يتعبّى */
-    const bp=[...new Set(m.bagC.map(b=>b.p))];if(bp.length===1){o.db=String(bp[0]);got.push("عفش "+bp[0]+" قطعة");if(m.bagC.length<2)warn.push(`عدد القطع ${bp[0]} انقرى من سطر واحد بس — تأكد منه`)}else if(bp.length>1)warn.push("عدد القطع ما انقرى بوضوح — ما عبّيته، أدخله بيدك");
-    const rg=m.regs.map(regN),okR=rg.find(g=>REGT[g]!=null)||rg.find(g=>/^HZ[A-Z]{2}\d{2}$/.test(g));
-    if(okR){const cur=regN(val(r,"reg"));if(cur&&cur!==okR)warn.push(`التسجيل في أماديوس ${okR} وكان ${cur}`);o.reg=okR;got.push(okR)}
-    if(m.typ&&!val(r,"typ")){o.typ=m.typ}
-    if(!got.length)throw new Error("amdnone");sv();
-    PST[id]={msg:"✓ من أماديوس: <b dir=\"ltr\">"+E(got.join(" · "))+"</b> — راجعها قبل النسخ"+(warn.length?`<br><span style="color:var(--amber)">⚠️ ${warn.map(E).join("<br>⚠️ ")}</span>`:"")}}
+    /* كل صورة نعرف هي للوصول ولا للمغادرة: من المسار (JED → AJF) ورقم الرحلة (الوصول/المغادرة) */
+    const isA=x=>/^A[JI1LU]F$/.test(x||""),num=x=>+String(x||"").replace(/\D/g,""),fi=num(val(r,"fin")),fo=num(val(r,"fout")),dd=dayD(),G2={a:[],d:[]},warn=[];
+    for(const d of R){if(!d.blk&&!d.acc&&d.tot==null&&!(d.bagC||[]).length)continue;
+      let dir=d.dst&&isA(d.dst)&&!isA(d.org)?"a":d.org&&isA(d.org)&&!isA(d.dst)?"d":null;
+      if(d.fno){if(fi!==fo&&d.fno===fi)dir="a";else if(d.fno===fo){if(fi!==fo)dir="d"}else throw new Error(`صورة لرحلة ${d.fno} مو ${fi===fo?fo:fi+"/"+fo} — ما تعبّى شي.`)}
+      if(d.dd&&(d.dd!==dd.getDate()||(d.mon&&d.mon!==MON[dd.getMonth()])))throw new Error(`صورة بتاريخ ${d.dd}${d.mon||""} واليوم المختار ${dd.getDate()}${MON[dd.getMonth()]} — ما تعبّى شي.`);
+      if(!dir){warn.push("صورة ما عرفت إذا هي للوصول أو المغادرة (رقم الرحلة والمسار ما انقروا) — تجاهلتها");continue}
+      G2[dir].push(d)}
+    if(!G2.a.length&&!G2.d.length)throw new Error(warn.length?warn[0]:"amdnone");
+    const D=dS(k),o=D.e[id]=D.e[id]||{},out=[],regs=[];let typ="";
+    for(const dir of["a","d"]){const L=G2[dir];if(!L.length)continue;const K=dir==="a"?{t:"ata",s:"sta",j:"aj",y:"ay",i:"ai",b:"ab",n:"الوصول"}:{t:"atd",s:"std",j:"dj",y:"dy",i:"di",b:"db",n:"المغادرة"};
+      const m={bagC:[]};for(const d of L){for(const kk of["blk","sch","aps","tot","winf","acc","accBad"])if(m[kk]==null&&d[kk]!=null)m[kk]=d[kk];m.bagC.push(...(d.bagC||[]));regs.push(...(d.regs||[]));if(!typ&&d.typ)typ=d.typ}
+      const got=[],ix=a=>{if(!a||!a.length)return"";const p=(m.aps||[]).findIndex(isA);return p>=0&&p<a.length&&(m.aps.length===a.length)?a[p]:dir==="d"?a[0]:a[a.length-1]};
+      const tm=ix(m.blk),st=ix(m.sch);if(tm){o[K.t]=tm;got.push(K.t.toUpperCase()+" "+tm)}
+      if(st&&HM.test(val(r,K.s))&&st!==val(r,K.s))warn.push(`${K.s.toUpperCase()} في أماديوس ${st} والجدول ${val(r,K.s)} — ما غيّرته.${dir==="d"?" إذا الرحلة معدّلة الوقت غيّر STD بيدك، لأن OT/DLY يتحسب منه":""}`);
+      const inf=m.acc?m.acc.i:m.winf;if(m.acc&&m.winf!=null&&m.acc.i!==m.winf)warn.push(`عدد الرضّع (${K.n}) مختلف بين الشاشتين — ما عبّيته`);else if(inf!=null){o[K.i]=String(inf);got.push("INF "+inf)}
+      if(m.acc&&(m.accBad||m.tot!=null&&m.acc.j+m.acc.y!==m.tot))warn.push(`ركاب ${K.n}: J+Y (${m.acc.j}+${m.acc.y}) ما يطابق الإجمالي ${m.tot} — ما عبّيتهم`);
+      else if(m.acc){o[K.j]=String(m.acc.j);o[K.y]=String(m.acc.y);got.push(`J ${m.acc.j} · Y ${m.acc.y}`)}
+      else if(m.tot!=null)warn.push(`${K.n}: قرأت إجمالي الركاب ${m.tot} بس، صوّر Acceptance Figures عشان يتقسّم J وY`);
+      /* عدد القطع: لو انقرى من سطرين لازم يتطابقون، غير كذا ما يتعبّى */
+      const bp=[...new Set(m.bagC.map(b=>b.p))];if(bp.length===1){o[K.b]=String(bp[0]);got.push("عفش "+bp[0]);if(m.bagC.length<2)warn.push(`عفش ${K.n} ${bp[0]} انقرى من سطر واحد بس — تأكد منه`)}else if(bp.length>1)warn.push(`عفش ${K.n} ما انقرى بوضوح — أدخله بيدك`);
+      if(got.length)out.push(`<b>${K.n}:</b> <b dir="ltr">${E(got.join(" · "))}</b>`)}
+    const rg=regs.map(regN),okR=rg.find(g=>REGT[g]!=null)||rg.find(g=>/^HZ[A-Z]{2}\d{2}$/.test(g));
+    if(okR){const cur=regN(val(r,"reg"));if(cur&&cur!==okR)warn.push(`التسجيل في أماديوس ${okR} وكان ${cur}`);o.reg=okR;out.push(`<b dir="ltr">${E(okR)}</b>`)}
+    if(typ&&!val(r,"typ"))o.typ=typ;
+    if(!out.length)throw new Error("amdnone");sv();
+    PST[id]={msg:"✓ من أماديوس — "+out.join("<br>")+"<br>راجعها قبل النسخ"+(warn.length?`<br><span style="color:var(--amber)">⚠️ ${warn.map(E).join("<br>⚠️ ")}</span>`:"")}}
   catch(e){console.error(e);PST[id]={err:PERR[e.message]||e.message||PERR.aierr}}
   if(dayK()===k)paint()}
 /* حقل اختيار الصورة برا الصفحة عشان ما ينمسح لما تنعاد الرسمة */
