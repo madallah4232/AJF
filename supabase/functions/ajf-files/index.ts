@@ -412,70 +412,100 @@ Deno.serve(async (req) => {
         ramp: ["الساحة (Ramp)", "موظف الساحة والتحميل (Ramp)", ["ramp", "apron", "loading", "unloading", "offloading", "hold", "bulk", "uld", "container", "baggage loading", "belt loader", "high loader", "pushback", "push back", "tow", "chock", "cone", "gpu", "ground power", "fod", "marshal", "wing walker", "refuel", "fuelling", "aircraft damage", "turnaround", "turn around", "lir", "loading instruction", "notoc", "dangerous goods", "avih", "hum", "lightning", "wind", "safety", "ppe", "engine", "door", "cargo door", "ساحه", "تحميل", "تنزيل", "عنبر", "سلامه", "دفع", "معدات", "اضرار"]],
         lc: ["اللود كنترول (Load Control)", "موظف التحكم بالحمولة (Load Control)", ["load sheet", "loadsheet", "load control", "weight and balance", "balance", "trim", "index", "mzfw", "mtow", "mlw", "zfw", "lir", "loading instruction", "notoc", "lmc", "last minute change", "standard weight", "pax weight", "crew weight", "fuel", "cpm", "ldm", "mvt", "dry operating", "doi", "dow", "captain", "underload", "cg", "centre of gravity", "center of gravity", "لود شيت", "لودشيت", "الحموله", "التوازن", "وزن", "الطاقم"]],
       };
-      const tk = TOP[a.topic] ? a.topic : Object.keys(TOP)[Math.floor(Math.random() * 4)];
-      const [tName, tRole, kws] = TOP[tk];
-      let c: Record<string, any> | null = a.src ? M.find((r) => r.id === a.src) || null : null;
-      let txt = "";
-      if (!c) {
-        // نجيب أجزاء الأدلة اللي تتكلم عن هذا المجال فعلاً، ونختار منها عشوائياً حتى تتنوع الأسئلة
-        const groups = kws.map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 2);
-        const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: 60 });
-        const L = ((ch || []) as any[]).filter((x) => x.hit >= 3);
-        if (L.length) {
-          const top = L.slice(0, 30).sort(() => Math.random() - 0.5);
-          const first = top[0], same = top.filter((x) => x.cid === first.cid).slice(0, 3);
-          c = M.find((r) => r.id === first.cid) || { id: first.cid, title: "" };
-          txt = same.map((x) => x.txt).join("\n\n…\n\n");
+      // ===== تنويع + سرعة: نقسم الطلب لدفعات صغيرة (5 أسئلة) تشتغل بنفس الوقت، كل دفعة من جزء مختلف من الأدلة =====
+      const { data: oldAll } = await sb.from("ajf_quiz_q").select("q,o,a,tp,st,src_id,page").neq("st", "no").order("id", { ascending: false }).limit(3000);
+      const OLD = (oldAll || []) as any[];
+      // بصمة السؤال = كلماته + جوابه الصحيح، عشان نكشف نفس المعلومة لو انكتبت بصياغة ثانية
+      const toks = (s: string) => new Set(NORM(s).split(" ").filter((w) => w.length > 2).map((w) => SK(w)));
+      const fp = (q: string, ans: string) => toks(q + " " + ans);
+      const sim = (A: Set<string>, B: Set<string>) => { if (!A.size || !B.size) return 0; let n = 0; A.forEach((w) => { if (B.has(w)) n++; }); return n / Math.min(A.size, B.size); };
+      const FP: Set<string>[] = OLD.map((x) => fp(String(x.q || ""), String((x.o || [])[x.a] || "")));
+      // الصفحات اللي انولّد منها قبل (نتجنبها عشان ما تتكرر نفس المعلومة)
+      const usedPg = new Map<string, number>(); OLD.forEach((x) => { const k = x.src_id + "#" + String(x.page || ""); usedPg.set(k, (usedPg.get(k) || 0) + 1); });
+      const pgOf = (t: string) => { const m = String(t).match(/\[صفحة (\d+)\]/); return m ? m[1] : ""; };
+      // "كل المجالات": نبدأ بالمجال اللي أسئلته أقل حتى يتوازن البنك بين التخصصات
+      const cntTp = (k: string) => OLD.filter((x) => x.tp === k).length;
+      const nb = Math.max(1, Math.min(3, Math.ceil(want / 5)));
+      const tks: string[] = TOP[a.topic] ? Array(nb).fill(a.topic)
+        : Object.keys(TOP).sort((x, y) => cntTp(x) - cntTp(y) + (Math.random() - 0.5) * 0.1).slice(0, nb);
+      const takenCk = new Set<string>();
+      // نختار لكل دفعة جزء من الدليل: من مجالها، ما انسأل منه قبل، وما أخذته دفعة ثانية
+      const pickSrc = async (tk: string): Promise<{ c: Record<string, any>; txt: string } | null> => {
+        if (a.src) {
+          const c = M.find((r) => r.id === a.src); if (!c) return null;
+          if (c.chunks > 0) {
+            const free = [...Array(c.chunks).keys()].filter((k) => !takenCk.has(c.id + ":" + k)).sort(() => Math.random() - 0.5);
+            const k = free[0] ?? 0; takenCk.add(c.id + ":" + k); takenCk.add(c.id + ":" + (k + 1));
+            const { data: ch } = await sb.from("ajf_circ_chunk").select("n,txt").eq("cid", c.id).in("n", [k, k + 1]).order("n");
+            const txt = (ch || []).map((x: any) => x.txt).join("\n\n"); if (txt.length >= 400) return { c, txt };
+          }
+          const { data: r } = await sb.from("ajf_circ").select("body,ftext").eq("id", c.id).single();
+          const all = String(r?.body || "") + "\n\n" + String(r?.ftext || ""); const st = all.length > 9000 ? Math.floor(Math.random() * (all.length - 8000)) : 0;
+          return { c, txt: all.slice(st, st + 8000) };
         }
-      }
-      if (!c) { const w = M.map((r) => Math.sqrt(r.n)), t = w.reduce((x, y) => x + y, 0); let p = Math.random() * t; c = M[M.length - 1]; for (let i = 0; i < M.length; i++) { p -= w[i]; if (p <= 0) { c = M[i]; break; } } }
-      if (!txt && c.chunks > 0) {
-        const k = Math.floor(Math.random() * c.chunks);
-        const { data: ch } = await sb.from("ajf_circ_chunk").select("n,txt").eq("cid", c.id).in("n", [k, k + 1, k + 2]).order("n");
-        txt = (ch || []).map((x: any) => x.txt).join("\n\n");
-      }
-      if (txt.length < 400) {
-        const { data: r } = await sb.from("ajf_circ").select("body,ftext").eq("id", c.id).single();
-        const all = (String(r?.body || "") + "\n\n" + String(r?.ftext || ""));
-        const st = all.length > 14000 ? Math.floor(Math.random() * (all.length - 12000)) : 0;
-        txt = all.slice(st, st + 12000);
-      }
-      const { data: old } = await sb.from("ajf_quiz_q").select("q").order("id", { ascending: false }).limit(150);
-      const avoid = (old || []).map((x: any) => "- " + String(x.q).slice(0, 140)).join("\n");
+        const groups = TOP[tk][2].map((k) => { const n = NORM(k); return [{ n, k: n.includes(" ") ? "" : SK(n) }]; }).filter((g) => g[0].n.length > 2);
+        const { data: ch } = await sb.rpc("ajf_chunk_search", { p_groups: groups, p_limit: 150 });
+        const L = ((ch || []) as any[]).filter((x) => x.hit >= 2 && M.some((r) => r.id === x.cid) && !takenCk.has(x.cid + ":" + x.n));
+        if (!L.length) return null;
+        // وزن كل جزء: علاقته بالمجال، وينقص كثير إذا صفحته انولّد منها أسئلة قبل
+        const w = L.map((x) => Math.min(x.hit, 8) / (1 + 3 * (usedPg.get(x.cid + "#" + pgOf(x.txt)) || 0)));
+        let p = Math.random() * w.reduce((s, v) => s + v, 0), f = L[0];
+        for (let i = 0; i < L.length; i++) { p -= w[i]; if (p <= 0) { f = L[i]; break; } }
+        const same = L.filter((x) => x.cid === f.cid && Math.abs(x.n - f.n) <= 1).sort((x, y) => x.n - y.n).slice(0, 2);
+        same.forEach((x) => takenCk.add(x.cid + ":" + x.n));
+        return { c: M.find((r) => r.id === f.cid)!, txt: same.map((x) => x.txt).join("\n\n…\n\n") };
+      };
       const SYS_QZ = `أنت مدرّب خبير في الخدمات الأرضية (SGS) والخطوط السعودية (Saudia). تكتب أسئلة اختيار من متعدد لتحدي يومي لموظفي محطة مطار الجوف AJF.
 واقع محطة الجوف: مطار صغير، رحلات داخلية أغلبها (السعودية، طيران ناس، طيران أديل) إلى الرياض وجدة والدمام وغيرها، وبعض الرحلات الدولية لمصر (Air Cairo، Nile Air). طائرات ضيقة البدن (عائلة A320/A321). ما فيه صالات ترانزيت ولا تحويل أمتعة بين رحلات ولا طائرات عريضة ولا مبنى شحن كبير.
 الموظفين: كاونتر إنهاء الإجراءات، بوابة التصعيد، الساحة (Ramp)، اللود كنترول، ومشرفين.
 دقتك ووضوح السؤال وفائدته للموظف أهم من عدد الأسئلة.`;
-      const prompt = `المجال المطلوب: ${tName} — الأسئلة موجهة لـ ${tRole} في محطة الجوف.
-المصدر: ${c.title || ""}${c.cd ? " (" + c.cd + ")" : ""}\nالنص:\n${txt}\n\n=====\nاكتب حتى ${want} أسئلة من هذا النص فقط، بهذه الشروط:
-- كل سؤال عن شي يسويه أو يقرره ${tRole} بيده في شغله اليومي في الجوف. اسأل نفسك: "هل موظف الجوف بيواجه هذا الموقف فعلاً؟" إذا لا، لا تكتب السؤال.
-- ممنوع: أي شي خاص بمحطات كبيرة أو دولية (الترانزيت والتحويل، الصالات، الطائرات العريضة، مستودعات الشحن، مكاتب التذاكر، مراكز التحكم، الإدارة)، وتعاريف المصطلحات، وأرقام النماذج والمراجع، وتواريخ الإصدار، وأسماء الإدارات والأشخاص، والمسؤوليات الإدارية.
+      const STY = ["موقف مع راكب", "قرار سريع قبل الإقلاع", "رقم أو حد مسموح (وزن، عدد، وقت، Wh)", "الخطوة الصحيحة التالية في إجراء", "خطأ شائع: أي تصرف غلط", "متى يُسمح ومتى يُرفض"];
+      const batch = async (tk: string, k: number) => {
+        const s = await pickSrc(tk); if (!s) return { rows: [] as Record<string, unknown>[], src: "" };
+        const [tName, tRole] = TOP[tk], c = s.c;
+        // نرسل للنموذج بس الأسئلة السابقة من نفس المصدر (أقصر = أسرع، وأدق في منع التكرار)
+        const avoid = OLD.filter((x) => x.src_id === c.id).slice(0, 60).map((x) => "- " + String(x.q).slice(0, 120)).join("\n");
+        const sty = [...STY].sort(() => Math.random() - 0.5).slice(0, 3).join("، ");
+        const prompt = `المجال المطلوب: ${tName} — الأسئلة موجهة لـ ${tRole} في محطة الجوف.
+المصدر: ${c.title || ""}${c.cd ? " (" + c.cd + ")" : ""}\nالنص:\n${s.txt}\n\n=====\nاكتب حتى ${k} أسئلة من هذا النص فقط، بهذه الشروط:
+- كل سؤال عن شي يسويه أو يقرره ${tRole} بيده في شغله اليومي في الجوف. إذا موظف الجوف ما بيواجه الموقف فعلاً، لا تكتب السؤال.
+- كل سؤال عن معلومة مختلفة تماماً عن باقي الأسئلة (ممنوع سؤالين عن نفس المعلومة بصياغتين). نوّع أنواع الأسئلة، مثل: ${sty}.
+- ممنوع: أي شي خاص بمحطات كبيرة أو دولية (الترانزيت والتحويل، الصالات، الطائرات العريضة، مستودعات الشحن، مكاتب التذاكر، مراكز التحكم، الإدارة)، وتعاريف المصطلحات، وأرقام النماذج والمراجع، وتواريخ الإصدار، وأسماء الإدارات والأشخاص.
 - كل سؤال مبني على معلومة مكتوبة صراحة في النص، والجواب الصحيح مؤكد منه 100%. لا تخترع ولا تعتمد على معلوماتك العامة.
-- اكتب السؤال كموقف تشغيلي واضح وقصير بلغة الشغل اليومية، مثل: "راكب على رحلة الرياض معه ... وش تسوي؟" أو "قبل إغلاق البوابة بـ ... وش الإجراء الصحيح؟". سطر أو سطرين، بدون غموض، والموظف يفهمه من أول قراءة.
-- عربي مبسط، والمصطلح الفني بالإنجليزي بين قوسين إذا لزم (مثل WCHR، Load Sheet).
+- السؤال موقف تشغيلي واضح وقصير (سطر أو سطرين) بلغة الشغل اليومية، والموظف يفهمه من أول قراءة.
+- عربي مبسط، والمصطلح الفني بالإنجليزي بين قوسين إذا لزم.
 - 4 خيارات قصيرة ومتقاربة الطول، واحد فقط صحيح، والخاطئة معقولة لكنها خاطئة بوضوح حسب النص. ممنوع "كل ما سبق" و"لا شيء مما سبق".
 - d: 1 سهل، 2 متوسط، 3 صعب — نوّع بينها.
-- why: سطر أو سطرين يشرح ليش الجواب صحيح حسب النص.
+- why: سطر أو سطرين ليش الجواب صحيح حسب النص.
 - page: رقم الصفحة إذا ظاهر في النص مثل [صفحة 214]، وإلا "".
-- gl: كل كلمة أو عبارة أو اختصار بالإنجليزي ظاهر في q أو o أو why، مع شرح عربي مختصر (من 2 إلى 10 كلمات) يفهمه موظف ما يعرف إنجليزي. مثل {"t":"CUTE","ar":"نظام أجهزة الكاونتر المشتركة بين شركات الطيران"}. إذا ما فيه إنجليزي أرجع [].
+- gl: كل كلمة أو اختصار بالإنجليزي في q أو o أو why مع شرح عربي مختصر (2 إلى 10 كلمات). إذا ما فيه إنجليزي أرجع [].
 - rel: من 1 إلى 5، كم السؤال مفيد فعلاً لـ ${tRole} في الجوف (5 = موقف يتكرر ولازم يعرفه). كن صارم.
-- لا تكرر ولا تعيد صياغة هذه الأسئلة الموجودة:\n${avoid || "(ما فيه)"}
-- إذا النص ما فيه معلومات تنفع هذا المجال، أرجع قائمة فاضية. أسئلة أقل وقوية أفضل من كثيرة وضعيفة.
+- لا تكرر ولا تعيد صياغة هذه الأسئلة الموجودة من نفس المصدر:\n${avoid || "(ما فيه)"}
+- إذا النص ما فيه معلومات تنفع هذا المجال، أرجع قائمة فاضية.
 أرجع JSON فقط: {"qs":[{"q":"...","o":["...","...","...","..."],"a":0,"d":1,"why":"...","page":"","rel":5,"gl":[{"t":"...","ar":"..."}]}]}`;
-      const j = JSON.parse(await gem(prompt, SYS_QZ, true, true));
-      const seen = new Set((old || []).map((x: any) => NORM(x.q)));
-      const rows: Record<string, unknown>[] = [];
-      for (const x of (Array.isArray(j.qs) ? j.qs : []) as any[]) {
-        const q = String(x.q || "").trim(), o = (Array.isArray(x.o) ? x.o : []).map((t: unknown) => String(t || "").trim()), ai = Number(x.a);
-        if (Number(x.rel) < 4 || q.length < 8 || o.length !== 4 || o.some((t: string) => !t) || new Set(o).size !== 4 || !(ai >= 0 && ai <= 3) || seen.has(NORM(q))) continue;
-        seen.add(NORM(q));
-        // نخلط الخيارات حتى الجواب الصحيح ما يكون دايم الأول
-        const idx = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
-        rows.push({ q: q.slice(0, 600), o: idx.map((i) => o[i].slice(0, 200)), a: idx.indexOf(ai), d: [1, 2, 3].includes(Number(x.d)) ? Number(x.d) : 2,
-          why: String(x.why || "").slice(0, 800), page: String(x.page || "").slice(0, 20), gl: glClean(x.gl), src_id: c.id, src_title: String(c.title || "").slice(0, 200), st: "pending", by_ai: true });
-      }
+        let j: any = {};
+        try { j = JSON.parse(await gem(prompt, SYS_QZ, true, true)); } catch (_) { j = {}; }
+        const rows: Record<string, unknown>[] = [];
+        for (const x of (Array.isArray(j.qs) ? j.qs : []) as any[]) {
+          const q = String(x.q || "").trim(), o = (Array.isArray(x.o) ? x.o : []).map((t: unknown) => String(t || "").trim()), ai = Number(x.a);
+          if (Number(x.rel) < 4 || q.length < 8 || o.length !== 4 || o.some((t: string) => !t) || new Set(o).size !== 4 || !(ai >= 0 && ai <= 3)) continue;
+          const f = fp(q, o[ai]);
+          if (FP.some((g) => sim(f, g) >= 0.7)) continue; // نفس المعلومة موجودة (حتى لو بصياغة ثانية)
+          FP.push(f);
+          const idx = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+          rows.push({ q: q.slice(0, 600), o: idx.map((i) => o[i].slice(0, 200)), a: idx.indexOf(ai), d: [1, 2, 3].includes(Number(x.d)) ? Number(x.d) : 2,
+            why: String(x.why || "").slice(0, 800), page: String(x.page || pgOf(s.txt) || "").slice(0, 20), gl: glClean(x.gl), src_id: c.id, src_title: String(c.title || "").slice(0, 200),
+            st: "pending", by_ai: true, tp: tk });
+        }
+        return { rows, src: String(c.title || "") };
+      };
+      // نجهّز المصادر بالترتيب (عشان ما تاخذ دفعتين نفس الجزء) والتوليد نفسه يشتغل بالتوازي
+      const per = Math.ceil(want / nb);
+      const R = await Promise.all(tks.map((tk) => batch(tk, per)));
+      const rows = R.flatMap((r) => r.rows).slice(0, want);
       if (rows.length) { const { error } = await sb.from("ajf_quiz_q").insert(rows); if (error) return out({ s: "err", e: error.message }); }
-      return out({ s: "ok", n: rows.length, src: c.title, topic: tName });
+      const srcs = [...new Set(R.map((r) => r.src).filter(Boolean))].join(" · ");
+      return out({ s: "ok", n: rows.length, src: srcs || "التعاميم والأدلة", topic: [...new Set(tks.map((t) => TOP[t][0]))].join(" + ") });
     } catch (e) { return out({ s: "aierr", e: String(e).slice(0, 300) }); }
   }
   // ---------- 📖 شرح الكلمات الإنجليزية بالعربي للأسئلة القديمة (20 سؤال كل مرة، والجوال يكرر لين تخلص) ----------

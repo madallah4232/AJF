@@ -288,7 +288,7 @@ function admPaint(){if(!root||VIEW!=="adm")return;const a=(ST&&ST.adm)||{},r=ST&
     <select id="qaTop">${[["mix","كل المجالات (بالتناوب)"],["chk","الكاونتر وإنهاء إجراءات الركاب"],["gate","بوابة التصعيد"],["ramp","الساحة (Ramp)"],["lc","اللود كنترول"]].map(([k,t])=>`<option value="${k}" ${k===ATOP?"selected":""}>${t}</option>`).join("")}</select>
     <select id="qaSrc"><option value="">يختار المصدر المناسب للمجال من التعاميم والأدلة</option>${(ASRC||[]).map(c=>`<option value="${E(c.id)}">${E(c.title)}</option>`).join("")}</select>
     <select id="qaN">${[5,10,15].map(n=>`<option value="${n}" ${n===10?"selected":""}>${n} أسئلة</option>`).join("")}</select>
-    <button class="qz-go" id="qaGen" style="margin:0" ${AGEN?"disabled":""}>${AGEN?"… جاري التوليد (قرابة 30 ثانية)":"توليد الأسئلة"}</button>
+    <button class="qz-go" id="qaGen" style="margin:0" ${AGEN?"disabled":""}>${AGEN?"… جاري التوليد (قرابة 15 ثانية)":"توليد الأسئلة"}</button>
     <div class="qa-m">الأسئلة الجديدة تروح لـ "بانتظار الاعتماد" وما تظهر للموظفين لين تعتمدها.${AMSG?"<br><b style='color:var(--ink)'>"+E(AMSG)+"</b>":""}</div></div>
   <div class="qz-card qa-f"><b>📖 شرح الكلمات الإنجليزية</b><div class="qa-m">يجهّز شرح عربي مختصر لكل كلمة إنجليزية في الأسئلة القديمة (مثل CUTE و Backup). الأسئلة الجديدة تنولّد مع شرحها تلقائياً.${AGL?"<br><b style='color:var(--ink)'>"+E(AGL)+"</b>":""}</div>
     <button class="qz-go" id="qaGl" ${AGLB?"disabled":""}>${AGLB?"جاري التجهيز…":"📖 تجهيز الشرح للأسئلة"}</button></div>
@@ -311,8 +311,7 @@ function admPaint(){if(!root||VIEW!=="adm")return;const a=(ST&&ST.adm)||{},r=ST&
     AGLB=false;admPaint()};
   $q("#qaGen").onclick=async()=>{AGEN=true;AMSG="";const src=$q("#qaSrc").value,n=+$q("#qaN").value;ATOP=$q("#qaTop").value;admPaint();
     try{const j=await edge({action:"quizgen",n,src,topic:ATOP==="mix"?"":ATOP});
-      /* الأسئلة الجديدة تاخذ اختصاص المجال اللي انولّدت له */
-      const tk=TPK[j.topic]||(ATOP!=="mix"?ATOP:"");if(j.s==="ok"&&j.n&&tk){try{await call("ajf_qz_admin",{p_action:"tag",p_arg:{last:j.n,tp:tk}})}catch(e){}}
+      /* الاختصاص ينحفظ مع كل سؤال من الخادم مباشرة */
       AMSG=j.s==="ok"?(j.n?`✓ انضاف ${j.n} سؤال (${j.topic||""}) من: ${j.src}`:`ما طلع أسئلة مفيدة كفاية من: ${j.src}. اضغط توليد مرة ثانية.`):j.s==="nokey"?"مفتاح Gemini غير موجود":j.s==="nosrc"?"ما فيه تعاميم مرفوعة":j.s==="aierr"?"خدمة الذكاء الاصطناعي ما ردّت، جرّب بعد دقيقة":"تعذّر التوليد"}
     catch(e){AMSG=/fn 404/.test(e.message)?"حدّث الدالة ajf-files في Supabase أول":"تعذّر التوليد، تأكد من الإنترنت"}
     AGEN=false;AT="pending";AOFF=0;await re()};
