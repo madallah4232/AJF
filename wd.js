@@ -198,8 +198,9 @@ function rowsOut(){const rows=[];GR.forEach(([k,l])=>S.g[k].forEach(id=>{const p
 function tableHTML(){
   const TITLE=`توزيع جدول العمل - ${dayName(cur)} ${fmt(cur)}`;
   const base="border:1px solid #999;padding:2px 6px;text-align:center;font-family:Arial,sans-serif;font-size:11px;";
-  let t=`<table dir="rtl" style="border-collapse:collapse;direction:rtl;min-width:0;width:360px;border:3px solid #000"><tr><td colspan="4" style="${base}background:#1E5B33;color:#fff;font-weight:bold;font-size:13px">${TITLE}</td></tr><tr>`;
-  t+=["اسم الموظف","الرقم الوظيفي","التوزيع","الرحلات"].map(x=>`<td style="${base}background:#2E8B57;color:#fff;font-weight:bold">${x}</td>`).join("")+"</tr>";
+  let t=`<table dir="rtl" style="border-collapse:collapse;direction:rtl;min-width:0;width:400px;table-layout:fixed;border:3px solid #000"><tr><td colspan="4" style="${base}background:#1E5B33;color:#fff;font-weight:bold;font-size:13px">${TITLE}</td></tr><tr>`;
+  /* عرض الأعمدة ثابت: عمود الرحلات بنفس عرض اسم الموظف */
+  t+=[["اسم الموظف",28],["الرقم الوظيفي",22],["التوزيع",22],["الرحلات",28]].map(([x,w])=>`<td width="${w}%" style="${base}width:${w}%;background:#2E8B57;color:#fff;font-weight:bold">${x}</td>`).join("")+"</tr>";
   const rows=rowsOut();
   rows.forEach(([n,i,l,f],k)=>{const bg=k%2?"#fff":"#E2F0E5";
     t+=`<tr><td style="${base}background:${bg};color:#000;font-weight:bold;">${esc(n)}</td><td style="${base}background:${bg};color:#000;">${i}</td><td style="${base}background:${bg};color:#000;">${l}</td><td style="${base}background:${bg};color:#000;direction:ltr;">${esc(f||"")}</td></tr>`});
