@@ -61,10 +61,11 @@ function auto(d){
   P.forEach(p=>{if(!offReason(p,d))g[p.t].push(p.id)});
   const r=ROT[d];
   if(r){const inG=Object.keys(g).find(k=>g[k].includes(r));if(inG){g[inG]=g[inG].filter(x=>x!==r);g.CP.push(r)}}
-  return{g,rem:[],ok:false,t:false};
+  return{g,rem:[],f:{},ok:false,t:false};
 }
-function load(){const s=lsGet("ajf_wd_"+cur,null);S=s&&s.g&&(s.t||s.ok)?s:auto(cur);GR.forEach(([k])=>{if(!S.g[k])S.g[k]=[]});if(!S.rem)S.rem=[]}
+function load(){const s=lsGet("ajf_wd_"+cur,null);S=s&&s.g&&(s.t||s.ok)?s:auto(cur);GR.forEach(([k])=>{if(!S.g[k])S.g[k]=[]});if(!S.rem)S.rem=[];if(!S.f)S.f={}}
 function save(){lsSet("ajf_wd_"+cur,S)}
+const flOf=id=>(S.f&&S.f[id]||[]).join(" / ");
 function inTable(id){return GR.some(([k])=>S.g[k].includes(id))}
 function removeEverywhere(id){GR.forEach(([k])=>S.g[k]=S.g[k].filter(x=>x!==id));S.rem=S.rem.filter(x=>x!==id)}
 function moveTo(id,key,beforeId){
@@ -109,6 +110,7 @@ const CSS=`
 .wd-chip .grip{touch-action:none;cursor:grab;font-size:18px;color:var(--amber);padding:2px 6px;line-height:1}
 .wd-chip .nm{flex:1;min-width:0;cursor:pointer}
 .wd-chip .nm b{display:block;font-weight:600}
+.wd-chip .nm .fl{display:block;font:600 12px var(--mono);font-style:normal;color:var(--amber);direction:ltr;text-align:right}
 .wd-chip .nm small{color:var(--muted);font:500 12px var(--mono);direction:ltr;unicode-bidi:isolate}
 .wd-sh{font:700 11px var(--mono);color:#140d06;border-radius:6px;padding:1px 7px}
 .wd-sh.sA{background:var(--A)}.wd-sh.sB{background:var(--B)}.wd-sh.sC{background:var(--C)}
@@ -139,6 +141,10 @@ const CSS=`
 .wd-opts button small{display:block;font:500 11px var(--mono);opacity:.7;direction:ltr}
 .wd-opts button.cur{background:var(--amber);color:#1a1205;border-color:var(--amber)}
 .wd-opts button.del{grid-column:1/-1;color:var(--warn);direction:rtl}
+.wd-fls{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.wd-fls button{padding:8px 4px;border-radius:11px;border:1px solid var(--line);background:var(--raise);direction:ltr}
+.wd-fls button b{display:block;font:700 14px var(--mono)}.wd-fls button small{font:500 11px var(--mono);color:var(--muted)}
+.wd-fls button.cur{background:var(--amber);border-color:var(--amber);color:#1a1205}.wd-fls button.cur small{color:#1a1205}
 .wd-lv{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding:8px 0;font-size:14px}
 .wd-lv .t{flex:1}.wd-lv small{color:var(--muted)}
 .wd-lv button{padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--raise);color:var(--warn);font-size:13px}
@@ -155,7 +161,7 @@ function css(){if(document.getElementById("wdCss"))return;const s=document.creat
 /* ---------- العرض ---------- */
 function chip(p,warn,off){
   return`<div class="wd-chip${off?" off":""}" data-id="${p.id}"><span class="grip" data-grip>⠿</span>
-    <div class="nm" data-open><b>${esc(p.n)}</b><small>${p.id}</small></div><span class="wd-sh s${p.s}">${p.s}</span>${warn?`<span class="wd-w">${esc(warn)}</span>`:""}</div>`;
+    <div class="nm" data-open><b>${esc(p.n)}</b><small>${p.id}</small>${S.f&&S.f[p.id]&&S.f[p.id].length?`<i class="fl">✈ ${esc(flOf(p.id))}</i>`:""}</div><span class="wd-sh s${p.s}">${p.s}</span>${warn?`<span class="wd-w">${esc(warn)}</span>`:""}</div>`;
 }
 function render(){
   if(!root||!root.isConnected)return;
@@ -188,15 +194,15 @@ function render(){
 }
 
 /* ---------- الجدول الناتج (نفس الشكل المعتمد) ---------- */
-function rowsOut(){const rows=[];GR.forEach(([k,l])=>S.g[k].forEach(id=>{const p=PM[id];if(p&&SH[p.s])rows.push([p.n,p.id,l])}));return rows}
+function rowsOut(){const rows=[];GR.forEach(([k,l])=>S.g[k].forEach(id=>{const p=PM[id];if(p&&SH[p.s])rows.push([p.n,p.id,l,flOf(id)])}));return rows}
 function tableHTML(){
   const TITLE=`توزيع جدول العمل - ${dayName(cur)} ${fmt(cur)}`;
   const base="border:1px solid #999;padding:2px 6px;text-align:center;font-family:Arial,sans-serif;font-size:11px;";
   let t=`<table dir="rtl" style="border-collapse:collapse;direction:rtl;min-width:0;width:360px;border:3px solid #000"><tr><td colspan="4" style="${base}background:#1E5B33;color:#fff;font-weight:bold;font-size:13px">${TITLE}</td></tr><tr>`;
   t+=["اسم الموظف","الرقم الوظيفي","التوزيع","الرحلات"].map(x=>`<td style="${base}background:#2E8B57;color:#fff;font-weight:bold">${x}</td>`).join("")+"</tr>";
   const rows=rowsOut();
-  rows.forEach(([n,i,l],k)=>{const bg=k%2?"#fff":"#E2F0E5";
-    t+=`<tr><td style="${base}background:${bg};color:#000;font-weight:bold;">${esc(n)}</td><td style="${base}background:${bg};color:#000;">${i}</td><td style="${base}background:${bg};color:#000;">${l}</td><td style="${base}background:${bg};color:#000;"></td></tr>`});
+  rows.forEach(([n,i,l,f],k)=>{const bg=k%2?"#fff":"#E2F0E5";
+    t+=`<tr><td style="${base}background:${bg};color:#000;font-weight:bold;">${esc(n)}</td><td style="${base}background:${bg};color:#000;">${i}</td><td style="${base}background:${bg};color:#000;">${l}</td><td style="${base}background:${bg};color:#000;direction:ltr;">${esc(f||"")}</td></tr>`});
   NOTES.forEach((n,j)=>{const bg=(rows.length+j)%2?"#fff":"#E2F0E5";
     t+=`<tr><td colspan="4" style="border:1px solid #999;padding:2px 6px;text-align:right;font-family:Arial,sans-serif;font-size:11px;background:${bg};color:#000;">${n}</td></tr>`});
   return t+"</table>";
@@ -206,12 +212,12 @@ function emailBits(){
   const to=[...new Set(rows.map(r=>r[1]+"@saudiags.com"))].join(";");
   const intro=`الاخوه الاعزاء\r\n\r\nتحيه طيبه ..\r\n\r\nتجدون بالجدول ادناه توزيع العمل ليوم ${dayName(cur)} الموافق ${fmt(cur)}\r\n\r\n`;
   const outro=`\r\n\r\nارجوا التقيد والالتزام بمواقع العمل .`;
-  const plain=rows.map(r=>`${r[0]} - ${r[2]} - ${r[1]}`).join("\r\n");
+  const plain=rows.map(r=>`${r[0]} - ${r[2]} - ${r[1]}${r[3]?" - "+r[3]:""}`).join("\r\n");
   const html=`<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px"><p>الاخوه الاعزاء</p><p>تحيه طيبه ..</p><p>تجدون بالجدول ادناه توزيع العمل ليوم ${dayName(cur)} الموافق ${fmt(cur)}</p>${tableHTML()}<p>ارجوا التقيد والالتزام بمواقع العمل .</p></div>`;
   return{to,intro,outro,plain,html,subject:"توزيع العمل"};
 }
-async function copyTable(){
-  const e=emailBits();
+async function copyTable(only){
+  const e=emailBits();if(only){e.html=`<div dir="rtl">${tableHTML()}</div>`;e.intro="";e.outro=""}
   try{
     await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([e.html],{type:"text/html"}),"text/plain":new Blob([e.intro+e.plain+e.outro],{type:"text/plain"})})]);
     return true;
@@ -223,7 +229,7 @@ async function copyTable(){
 }
 /* يفتح مسودة في Outlook فقط — التطبيق ما يرسل أي إيميل بنفسه */
 async function openOutlook(){
-  const e=emailBits(),ok=await copyTable();
+  const e=emailBits(),ok=await copyTable(true);
   toast(ok?"انسخ الجدول — الصقه داخل الرسالة":"ما انسخ الجدول تلقائياً، استخدم زر «نسخ الجدول»");
   const url="mailto:"+e.to+"?subject="+encodeURIComponent(e.subject)+"&body="+encodeURIComponent(e.intro+"(الصق الجدول هنا)"+e.outro);
   setTimeout(()=>{location.href=url},ok?700:1200);
@@ -234,9 +240,15 @@ function ov(id){let o=document.getElementById(id);if(!o){o=document.createElemen
 function openSheet(id){
   if(S.ok)return;const p=PM[id];if(!p)return;const where=Object.keys(S.g).find(k=>S.g[k].includes(id)),r=offReason(p,cur);
   sheet.querySelector(".wd-pn").innerHTML=`<h4>${esc(p.n)}</h4><p>${p.id} · شفت ${p.s}${r?" · "+r+" اليوم":""}</p><div class="wd-opts">${
-    GR.map(([k,l])=>`<button data-mv="${k}" class="${where===k?"cur":""}">${AR[k]||l}<small>${l}</small></button>`).join("")}${where?`<button class="del" data-mv="TRASH">حذف من الجدول</button>`:""}</div>`;
+    GR.map(([k,l])=>`<button data-mv="${k}" class="${where===k?"cur":""}">${AR[k]||l}<small>${l}</small></button>`).join("")}${where?`<button class="del" data-mv="TRASH">حذف من الجدول</button>`:""}</div>${where?flPick(id):""}`;
   sheet.dataset.id=id;sheet.classList.add("show");
 }
+function flPick(id){
+  const L=(G.wdFlights?G.wdFlights(cur):[]),sel=S.f[id]||[];
+  const all=[...L.map(f=>f.n),...sel.filter(n=>!L.some(f=>f.n===n))];
+  return`<h4 style="margin-top:16px">الرحلات</h4><p>اختر رحلات هذا الموظف اليوم (تقدر تختار أكثر من رحلة).</p><div class="wd-fls">${
+    all.length?all.map(n=>{const f=L.find(x=>x.n===n);return`<button data-fl="${esc(n)}" class="${sel.includes(n)?"cur":""}"><b>${esc(n)}</b><small>${f?esc(f.t+(f.d?" · "+f.d:"")):"—"}</small></button>`}).join(""):`<p>ما فيه رحلات بهذا اليوم في لوحة الرحلات.</p>`}</div>
+    <button class="wd-btn pr" data-done style="width:100%;margin-top:12px">تم</button>`}
 /* ---------- الإجازات ---------- */
 function openLeaves(){
   const rows=LEAVES.map((l,i)=>({l,i,p:PM[l.id]})).filter(x=>x.p).sort((a,b)=>a.l.from.localeCompare(b.l.from));
@@ -301,7 +313,7 @@ function onClick(e){
     if(Date.now()-okArm>3500){okArm=Date.now();a.textContent="اضغط مرة ثانية للتأكيد";setTimeout(()=>{const x=root.querySelector('[data-a="ok"]');if(x)x.textContent="اعتماد التوزيع"},3500);return}
     okArm=0;S.ok=true;S.t=true;save();render();toast("تم اعتماد التوزيع")}
   else if(k==="re"){S.ok=false;save();render()}
-  else if(k==="cp")copyTable().then(ok=>toast(ok?"تم نسخ الجدول":"تعذّر النسخ"));
+  else if(k==="cp")copyTable(true).then(ok=>toast(ok?"تم نسخ الجدول":"تعذّر النسخ"));
   else if(k==="ol")openOutlook();
   else if(k==="prev"||k==="next"){const d=parse(cur);d.setDate(d.getDate()+(k==="next"?1:-1));go(iso(d))}
   else if(k==="pick"){const p=root.querySelector("#wdPick");p.value=cur;if(p.showPicker){try{p.showPicker();return}catch(x){}}p.focus();p.click()}
@@ -309,7 +321,10 @@ function onClick(e){
 function bindOnce(){
   if(sheet)return;css();
   sheet=ov("wdSheet");lvs=ov("wdLeaves");
-  sheet.addEventListener("click",e=>{const mv=e.target.closest("[data-mv]");if(mv)moveTo(sheet.dataset.id,mv.dataset.mv);if(mv||e.target===sheet)sheet.classList.remove("show")});
+  sheet.addEventListener("click",e=>{const fl=e.target.closest("[data-fl]");
+    if(fl){const id=sheet.dataset.id,n=fl.dataset.fl,a=S.f[id]=S.f[id]||[],i=a.indexOf(n);if(i>=0)a.splice(i,1);else a.push(n);if(!a.length)delete S.f[id];S.t=true;save();render();openSheet(id);return}
+    if(e.target.closest("[data-done]")){sheet.classList.remove("show");return}
+    const mv=e.target.closest("[data-mv]");if(mv)moveTo(sheet.dataset.id,mv.dataset.mv);if(mv||e.target===sheet)sheet.classList.remove("show")});
   lvs.addEventListener("click",e=>{const t=e.target;
     if(t===lvs||t.id==="wdLvClose"){lvs.classList.remove("show");return}
     if(t.dataset.dl!==undefined){LEAVES.splice(+t.dataset.dl,1);lsSet("ajf_wd_leaves",LEAVES);afterLeaves();openLeaves();return}
