@@ -208,7 +208,7 @@ function empPaint(){if(!root||VIEW!=="emp")return;const D=EMP||{},R=D.rows||[];l
       <div class="qa-st" style="margin-top:10px"><div><b style="color:var(--go)">${ok}</b><span>صح</span></div><div><b style="color:var(--warn)">${done.length-ok}</b><span>غلط${to?" (منها "+to+" وقت/خروج)":""}</span></div><div><b>${done.length}</b><span>سؤال</span></div></div></div>`;
     if(!R.length)h+=`<div class="bd-empty">${D.mine?"ما جاوبت على أي سؤال للحين":"ما جاوب على أي سؤال للحين"}</div>`;
     let g="";R.forEach(x=>{const k=x.rno+"-"+x.day;if(k!==g){g=k;h+=`<div class="bd-sec" style="margin:6px 2px 0"><span>الجولة ${x.rno} · اليوم ${x.day}</span><span style="font-size:12px">${E(fdate(x.shown))}</span></div>`}
-      const st=!x.ans?"⏳ لم يجاوب بعد":x.ok?"✅ صح":x.pick==null?"⏱️ خلص الوقت أو طلع من التطبيق":"❌ غلط";
+      const st=!x.ans?"⏳ لم يجاوب بعد":x.ok?(D.mine?"✅ إجابتك صح":"✅ إجابته صح"):x.pick==null?"⏱️ خلص الوقت أو طلع من التطبيق":(D.mine?"❌ إجابتك غلط":"❌ إجابته غلط");
       h+=`<div class="qz-card qe-q"><div class="qe-h"><span>سؤال ${x.n} · ${LV[x.d]||""}</span><span>${st}${x.ans?" · "+secs(x.ms):""}</span></div><p>${E(x.q)}</p>
         <div class="qe-o">${(x.o||[]).map((t,i)=>`<div class="${i===x.right?"r":i===x.pick?"w":""}"><b>${LT[i]}</b><span>${E(t)}</span>${i===x.right?"<i>✓ الصحيح</i>":i===x.pick?(D.mine?"<i>✗ اختيارك</i>":"<i>✗ اختياره</i>"):""}</div>`).join("")}</div>
         <div class="qe-ans">✅ الجواب الصحيح: ${E((x.o||[])[x.right]||"")}</div>
