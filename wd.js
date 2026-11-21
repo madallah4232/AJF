@@ -5,6 +5,8 @@
 (function(G){
 "use strict";
 const DAYS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+/* الوصف العربي يظهر داخل اللوحة فقط — الجدول المرسل يبقى بالأسماء المعتمدة */
+const AR={SUP:"مشرف",LC:"موازنة الحمولة",TRC:"منسق الرحلة",CG:"الكاونتر والبوابة",CO:"الكاونتر",CP:"نقطة التفتيش",BAG:"خدمة الأمتعة"};
 const GR=[["SUP","SUP"],["LC","LC"],["TRC","TRC"],["TC","TC"],["CG","COUNTER / GATE"],["CO","COUNTER"],["CP","CHECK POINT"],["BAG","BAG SERVES"]];
 /* id, الاسم, الشفت, يوما الراحة (0=الأحد), المهمة الافتراضية */
 const P=[
@@ -23,10 +25,10 @@ const P=[
 ["15029450","معاذ العنزي","C",6,0,"CG"],["15026197","ريان الريس","C",0,1,"TRC"]
 ].map(a=>({id:a[0],n:a[1],s:a[2],o:[a[3],a[4]],t:a[5]}));
 const PM=Object.fromEntries(P.map(p=>[p.id,p]));
-/* مناوبة التشك بوينت (نوفمبر 2026) */
+/* مناوبة نقطة التفتيش CHECK POINT (نوفمبر 2026 — محدّثة من ملف المناوبة) */
 const ROT={};
-"15042999,15043731,15043732,15040830,15040831,15043731,15042997,15042999,15043731,15043732,15040830,15040831,15043732,15042997,15042999,15043732,15042997,15040830,15040831,15042997,15043730,15042999,15040830,15043732,15043730,15040831,15040830,15042997,15042999,15043730"
- .split(",").forEach((id,i)=>{ROT["2026-11-"+String(i+1).padStart(2,"0")]=id});
+"15042999,15043731,15043732,15040830,15040831,15043731,15042997,15042999,15043731,15043732,15040830,15040831,,15042997,15042999,15029820,15042997,15040830,15040831,,15042997,15043730,15029820,15043732,15040830,15043730,15029820,15043732,15042999,15043730"
+ .split(",").forEach((id,i)=>{if(id)ROT["2026-11-"+String(i+1).padStart(2,"0")]=id});/* الفاضي = يوم بدون مناوب */
 const LEAVES0=[
 {id:"15025750",type:"إجازة",from:"2026-11-01",to:"2026-11-10"},{id:"15043730",type:"إجازة",from:"2026-11-01",to:"2026-11-18"},
 {id:"15025749",type:"إجازة",from:"2026-11-01",to:"2026-11-11"},{id:"15025748",type:"إجازة",from:"2026-11-01",to:"2026-11-12"},
@@ -61,7 +63,7 @@ function auto(d){
   if(r){const inG=Object.keys(g).find(k=>g[k].includes(r));if(inG){g[inG]=g[inG].filter(x=>x!==r);g.CP.push(r)}}
   return{g,rem:[],ok:false,t:false};
 }
-function load(){const s=lsGet("ajf_wd_"+cur,null);S=s&&s.g?s:auto(cur);GR.forEach(([k])=>{if(!S.g[k])S.g[k]=[]});if(!S.rem)S.rem=[]}
+function load(){const s=lsGet("ajf_wd_"+cur,null);S=s&&s.g&&(s.t||s.ok)?s:auto(cur);GR.forEach(([k])=>{if(!S.g[k])S.g[k]=[]});if(!S.rem)S.rem=[]}
 function save(){lsSet("ajf_wd_"+cur,S)}
 function inTable(id){return GR.some(([k])=>S.g[k].includes(id))}
 function removeEverywhere(id){GR.forEach(([k])=>S.g[k]=S.g[k].filter(x=>x!==id));S.rem=S.rem.filter(x=>x!==id)}
@@ -98,6 +100,7 @@ const CSS=`
 .wd-grid{display:grid;gap:10px}
 .wd-grp{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:box-shadow .12s,border-color .12s}
 .wd-grp h3{margin:0;padding:9px 12px;background:var(--raise);color:var(--ink);font:700 14px var(--display);display:flex;justify-content:space-between;align-items:center;direction:ltr;letter-spacing:.3px}
+.wd-grp h3 small{font:600 12px var(--body);color:var(--muted);margin:0 8px;direction:rtl;unicode-bidi:isolate}
 .wd-grp h3 em{font:600 12px var(--mono);font-style:normal;background:var(--panel);border-radius:999px;padding:1px 9px;color:var(--amber)}
 .wd-list{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:52px}
 .wd-hint{margin:0;color:var(--muted);font-size:13px;text-align:center;padding:10px 0;border:1.5px dashed var(--line);border-radius:10px}
@@ -132,7 +135,8 @@ const CSS=`
 .wd-pn h4{margin:0 0 4px;font:700 16px var(--display)}
 .wd-pn p{margin:0 0 12px;color:var(--muted);font-size:13px}
 .wd-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.wd-opts button{padding:11px;border-radius:11px;border:1px solid var(--line);background:var(--raise);direction:ltr}
+.wd-opts button{padding:9px 6px;border-radius:11px;border:1px solid var(--line);background:var(--raise);font-weight:600}
+.wd-opts button small{display:block;font:500 11px var(--mono);opacity:.7;direction:ltr}
 .wd-opts button.cur{background:var(--amber);color:#1a1205;border-color:var(--amber)}
 .wd-opts button.del{grid-column:1/-1;color:var(--warn);direction:rtl}
 .wd-lv{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding:8px 0;font-size:14px}
@@ -141,6 +145,7 @@ const CSS=`
 .wd-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .wd-form select,.wd-form input{font:inherit;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--raise);color:var(--ink);min-width:0;color-scheme:dark;font-size:16px}
 .wd-form .full{grid-column:1/-1}
+.wd-form label{display:grid;gap:4px;font-size:12px;color:var(--muted);min-width:0}
 #wdToast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--ink);color:var(--night);padding:10px 16px;border-radius:12px;z-index:300;font-size:14px;display:none;max-width:90vw;text-align:center;font-family:var(--body)}
 body.wd-drag{touch-action:none;overflow-x:hidden}
 .wd.locked .grip{opacity:.25;pointer-events:none}
@@ -158,27 +163,27 @@ function render(){
   const offIn=P.filter(p=>SH[p.s]&&inTable(p.id)&&offReason(p,cur)).length;
   let total=0;
   const grid=GR.map(([k,l])=>{const ids=S.g[k].filter(id=>PM[id]&&SH[PM[id].s]);total+=ids.length;
-    return`<section class="wd-grp" data-drop="${k}"><h3><span>${l}</span><em>${ids.length}</em></h3><div class="wd-list">${
-      ids.length?ids.map(id=>chip(PM[id],offReason(PM[id],cur),false)).join(""):'<p class="wd-hint">اسحب اسماً إلى هنا</p>'}</div></section>`}).join("");
+    return`<section class="wd-grp" data-drop="${k}"><h3><span>${l}${AR[k]?`<small>${AR[k]}</small>`:""}</span><em>${ids.length}</em></h3><div class="wd-list">${
+      ids.length?ids.map(id=>chip(PM[id],offReason(PM[id],cur),false)).join(""):'<p class="wd-hint">اسحب اسم موظف لهنا</p>'}</div></section>`}).join("");
   let b="";
-  if(S.ok)b+=`<div class="wd-bn ok">تم اعتماد توزيع هذا اليوم. الأسماء مقفلة، ويمكنك فتح Outlook من الأسفل.</div>`;
+  if(S.ok)b+=`<div class="wd-bn ok">تم اعتماد توزيع هذا اليوم. الأسماء مقفلة، وتقدر ترسله بفتح البريد (Outlook) من الأسفل.</div>`;
   const r=ROT[cur];
-  if(r&&!S.g.CP.includes(r)&&!S.ok)b+=`<div class="wd-bn">مناوب التشك بوينت حسب الجدول: ${esc(PM[r].n)} — ${offReason(PM[r],cur)?"لا يداوم اليوم ("+offReason(PM[r],cur)+")":"غير موضوع في CHECK POINT"}.</div>`;
-  if(offIn)b+=`<div class="wd-bn">${offIn} من الموزّعين لا يداومون اليوم حسب الجدول والإجازات، وعليهم علامة.</div>`;
-  if(cur<"2026-11-01"||cur>"2026-11-30")b+=`<div class="wd-bn">الجدول والإجازات المحمّلة تغطي نوفمبر 2026 فقط.</div>`;
+  if(r&&!S.g.CP.includes(r)&&!S.ok)b+=`<div class="wd-bn">مناوب نقطة التفتيش حسب الجدول: ${esc(PM[r].n)} — ${offReason(PM[r],cur)?"لا يداوم اليوم ("+offReason(PM[r],cur)+")":"غير موضوع في نقطة التفتيش"}.</div>`;
+  if(offIn)b+=`<div class="wd-bn">${offIn} من الموجودين في التوزيع ما يداومون اليوم (راحة أو إجازة)، وعليهم علامة.</div>`;
+  if(cur<"2026-11-01"||cur>"2026-11-30")b+=`<div class="wd-bn">جدول المناوبات والإجازات الموجود يغطي شهر نوفمبر 2026 فقط.</div>`;
   const dock=S.ok
-    ?`<button class="wd-btn ol" data-a="ol"><svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="5" width="30" height="22" rx="4" fill="#fff"/><ellipse cx="12" cy="16" rx="6.2" ry="6.8" fill="#0F6CBD"/><ellipse cx="12" cy="16" rx="2.8" ry="3.6" fill="#fff"/><path d="M20 10.5h8M20 16h8M20 21.5h8" stroke="#0F6CBD" stroke-width="2.2" stroke-linecap="round"/></svg>فتح في Outlook</button><button class="wd-btn gh" data-a="cp">نسخ</button><button class="wd-btn gh" data-a="re">إعادة فتح</button>`
-    :`<div class="wd-trash" data-drop="TRASH"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>اسحب هنا للحذف</div><button class="wd-btn pr" data-a="ok">${Date.now()-okArm<3500?"تأكيد الاعتماد؟":"اعتماد"}</button>`;
+    ?`<button class="wd-btn ol" data-a="ol"><svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="5" width="30" height="22" rx="4" fill="#fff"/><ellipse cx="12" cy="16" rx="6.2" ry="6.8" fill="#0F6CBD"/><ellipse cx="12" cy="16" rx="2.8" ry="3.6" fill="#fff"/><path d="M20 10.5h8M20 16h8M20 21.5h8" stroke="#0F6CBD" stroke-width="2.2" stroke-linecap="round"/></svg>إرسال بالبريد (Outlook)</button><button class="wd-btn gh" data-a="cp">نسخ الجدول</button><button class="wd-btn gh" data-a="re">فتح للتعديل</button>`
+    :`<div class="wd-trash" data-drop="TRASH"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>اسحب الاسم هنا لحذفه</div><button class="wd-btn pr" data-a="ok">${Date.now()-okArm<3500?"اضغط مرة ثانية للتأكيد":"اعتماد التوزيع"}</button>`;
   const open=root.querySelector(".wd-prev[open]");
   root.innerHTML=`<div class="wd${S.ok?" locked":""}">
     <div class="wd-date"><button data-a="prev" aria-label="اليوم السابق"><span dir="ltr">›</span></button><div class="dn">${dayName(cur)}<small>${fmt(cur)}</small></div><button data-a="next" aria-label="اليوم التالي"><span dir="ltr">‹</span></button><button data-a="pick" aria-label="اختيار تاريخ">📅</button><input type="date" id="wdPick"></div>
-    <div class="wd-tools"><span class="wd-st${S.ok?" ok":""}">${S.ok?"معتمد":"مسودة"}</span>${["A","B","C"].map(s=>`<button class="wd-cb s${s}${SH[s]?" on":""}" data-sh="${s}">شفت ${s}</button>`).join("")}<span class="sp"></span><button class="wd-cb" data-a="lv">الإجازات</button><button class="wd-cb" data-a="rst">إعادة التوزيع</button></div>
-    <div class="wd-sum"><div><b>${total}</b><span>في الجدول</span></div><div><b>${off.filter(p=>offReason(p,cur)).length}</b><span>لا يداوم</span></div><div><b>${rem.length}</b><span>محذوف</span></div></div>
+    <div class="wd-tools"><span class="wd-st${S.ok?" ok":""}">${S.ok?"✓ معتمد":"غير معتمد"}</span>${["A","B","C"].map(s=>`<button class="wd-cb s${s}${SH[s]?" on":""}" data-sh="${s}">شفت ${s}</button>`).join("")}<span class="sp"></span><button class="wd-cb" data-a="lv">الإجازات والانتدابات</button><button class="wd-cb" data-a="rst">توزيع تلقائي من جديد</button></div>
+    <div class="wd-sum"><div><b>${total}</b><span>في الجدول</span></div><div><b>${off.filter(p=>offReason(p,cur)).length}</b><span>غير مداوم</span></div><div><b>${rem.length}</b><span>محذوف من التوزيع</span></div></div>
     ${b}
     <div class="wd-grid">${grid}</div>
-    <div class="wd-out"><h3>لا يداومون اليوم / خارج الجدول (${outs.length})</h3><div class="wd-list">${
-      (off.map(p=>chip(p,offReason(p,cur)||"غير موزّع",true)).join("")+rem.map(p=>chip(p,"محذوف",true)).join(""))||'<p class="wd-hint">لا أحد</p>'}</div></div>
-    <details class="wd-prev"${open?" open":""}><summary>معاينة الجدول كما سيُرسل</summary><div class="wd-pb">${tableHTML()}</div></details>
+    <div class="wd-out"><h3>غير موجودين في توزيع اليوم (${outs.length})</h3><div class="wd-list">${
+      (off.map(p=>chip(p,offReason(p,cur)||"بدون موقع",true)).join("")+rem.map(p=>chip(p,"محذوف من التوزيع",true)).join(""))||'<p class="wd-hint">لا أحد</p>'}</div></div>
+    <details class="wd-prev"${open?" open":""}><summary>شكل الجدول قبل الإرسال</summary><div class="wd-pb">${tableHTML()}</div></details>
     <div class="wd-dock">${dock}</div></div>`;
 }
 
@@ -219,7 +224,7 @@ async function copyTable(){
 /* يفتح مسودة في Outlook فقط — التطبيق ما يرسل أي إيميل بنفسه */
 async function openOutlook(){
   const e=emailBits(),ok=await copyTable();
-  toast(ok?"تم نسخ الجدول — الصقه في نص الرسالة":"تعذّر النسخ التلقائي، استخدم زر نسخ");
+  toast(ok?"انسخ الجدول — الصقه داخل الرسالة":"ما انسخ الجدول تلقائياً، استخدم زر «نسخ الجدول»");
   const url="mailto:"+e.to+"?subject="+encodeURIComponent(e.subject)+"&body="+encodeURIComponent(e.intro+"(الصق الجدول هنا)"+e.outro);
   setTimeout(()=>{location.href=url},ok?700:1200);
 }
@@ -229,18 +234,18 @@ function ov(id){let o=document.getElementById(id);if(!o){o=document.createElemen
 function openSheet(id){
   if(S.ok)return;const p=PM[id];if(!p)return;const where=Object.keys(S.g).find(k=>S.g[k].includes(id)),r=offReason(p,cur);
   sheet.querySelector(".wd-pn").innerHTML=`<h4>${esc(p.n)}</h4><p>${p.id} · شفت ${p.s}${r?" · "+r+" اليوم":""}</p><div class="wd-opts">${
-    GR.map(([k,l])=>`<button data-mv="${k}" class="${where===k?"cur":""}">${l}</button>`).join("")}${where?`<button class="del" data-mv="TRASH">حذف من الجدول</button>`:""}</div>`;
+    GR.map(([k,l])=>`<button data-mv="${k}" class="${where===k?"cur":""}">${AR[k]||l}<small>${l}</small></button>`).join("")}${where?`<button class="del" data-mv="TRASH">حذف من الجدول</button>`:""}</div>`;
   sheet.dataset.id=id;sheet.classList.add("show");
 }
 /* ---------- الإجازات ---------- */
 function openLeaves(){
   const rows=LEAVES.map((l,i)=>({l,i,p:PM[l.id]})).filter(x=>x.p).sort((a,b)=>a.l.from.localeCompare(b.l.from));
-  lvs.querySelector(".wd-pn").innerHTML=`<h4>الإجازات والانتدابات</h4><p>أي موظف هنا لا يظهر في التوزيع خلال الفترة. اترك «إلى» فارغاً إذا لم يُحدَّد تاريخ الرجوع.</p>${
-    rows.map(({l,i,p})=>`<div class="wd-lv"><div class="t"><b>${esc(p.n)}</b><br><small>${esc(l.type)} · ${fmt(l.from)} ← ${l.to?fmt(l.to):"مفتوحة"}</small></div><button data-dl="${i}">حذف</button></div>`).join("")||"<p>لا توجد إجازات.</p>"}
-    <div class="wd-form"><select id="wdLvE" class="full">${P.slice().sort((a,b)=>a.n.localeCompare(b.n,"ar")).map(p=>`<option value="${p.id}">${esc(p.n)}</option>`).join("")}</select>
-    <select id="wdLvT"><option>إجازة</option><option>انتداب</option><option>يوم تعويضي</option></select><span></span>
-    <input type="date" id="wdLvF" value="${cur}"><input type="date" id="wdLvTo">
-    <button class="wd-btn pr full" id="wdLvAdd">إضافة</button></div>
+  lvs.querySelector(".wd-pn").innerHTML=`<h4>الإجازات والانتدابات</h4><p>أي موظف هنا لا يظهر في التوزيع خلال الفترة. إذا ما تعرف تاريخ الرجوع اترك خانة النهاية فاضية.</p>${
+    rows.map(({l,i,p})=>`<div class="wd-lv"><div class="t"><b>${esc(p.n)}</b><br><small>${esc(l.type)} · من ${fmt(l.from)} ${l.to?"إلى "+fmt(l.to):"(بدون تاريخ رجوع)"}</small></div><button data-dl="${i}">حذف</button></div>`).join("")||"<p>لا توجد إجازات.</p>"}
+    <div class="wd-form"><label class="full">الموظف<select id="wdLvE">${P.slice().sort((a,b)=>a.n.localeCompare(b.n,"ar")).map(p=>`<option value="${p.id}">${esc(p.n)}</option>`).join("")}</select></label>
+    <label>النوع<select id="wdLvT"><option>إجازة</option><option>انتداب</option><option>يوم تعويضي</option></select></label><span></span>
+    <label>من تاريخ<input type="date" id="wdLvF" value="${cur}"></label><label>إلى تاريخ<input type="date" id="wdLvTo"></label>
+    <button class="wd-btn pr full" id="wdLvAdd">إضافة للقائمة</button></div>
     <p style="margin-top:12px"><button class="wd-btn gh" id="wdLvClose" style="min-height:40px">إغلاق</button></p>`;
   lvs.classList.add("show");
 }
@@ -289,11 +294,11 @@ function onClick(e){
   const a=t.closest("[data-a]");if(!a)return;const k=a.dataset.a;
   if(k==="lv")openLeaves();
   else if(k==="rst"){
-    if(S.ok){toast("الجدول معتمد. افتحه للتعديل أولاً");return}
-    if(Date.now()-rstArm>3000){rstArm=Date.now();toast("اضغط مرة ثانية لإعادة التوزيع التلقائي وفقدان تعديلات اليوم");return}
-    S=auto(cur);save();render();toast("تمت إعادة التوزيع التلقائي")}
+    if(S.ok){toast("التوزيع معتمد. اضغط «فتح للتعديل» أولاً");return}
+    if(Date.now()-rstArm>3000){rstArm=Date.now();toast("اضغط مرة ثانية: بيرجع التوزيع التلقائي وتنمسح تعديلاتك لهذا اليوم");return}
+    S=auto(cur);save();render();toast("رجع التوزيع التلقائي")}
   else if(k==="ok"){
-    if(Date.now()-okArm>3500){okArm=Date.now();a.textContent="تأكيد الاعتماد؟";setTimeout(()=>{const x=root.querySelector('[data-a="ok"]');if(x)x.textContent="اعتماد"},3500);return}
+    if(Date.now()-okArm>3500){okArm=Date.now();a.textContent="اضغط مرة ثانية للتأكيد";setTimeout(()=>{const x=root.querySelector('[data-a="ok"]');if(x)x.textContent="اعتماد التوزيع"},3500);return}
     okArm=0;S.ok=true;S.t=true;save();render();toast("تم اعتماد التوزيع")}
   else if(k==="re"){S.ok=false;save();render()}
   else if(k==="cp")copyTable().then(ok=>toast(ok?"تم نسخ الجدول":"تعذّر النسخ"));
@@ -309,7 +314,7 @@ function bindOnce(){
     if(t===lvs||t.id==="wdLvClose"){lvs.classList.remove("show");return}
     if(t.dataset.dl!==undefined){LEAVES.splice(+t.dataset.dl,1);lsSet("ajf_wd_leaves",LEAVES);afterLeaves();openLeaves();return}
     if(t.id==="wdLvAdd"){const from=lvs.querySelector("#wdLvF").value,to=lvs.querySelector("#wdLvTo").value||null;
-      if(!from){toast("حدّد تاريخ البداية");return}if(to&&to<from){toast("تاريخ النهاية قبل البداية");return}
+      if(!from){toast("اختر تاريخ البداية");return}if(to&&to<from){toast("تاريخ النهاية قبل تاريخ البداية");return}
       LEAVES.push({id:lvs.querySelector("#wdLvE").value,type:lvs.querySelector("#wdLvT").value,from,to});lsSet("ajf_wd_leaves",LEAVES);afterLeaves();openLeaves()}});
   document.addEventListener("keydown",e=>{if(e.key==="Escape"){sheet.classList.remove("show");lvs.classList.remove("show")}});
 }
