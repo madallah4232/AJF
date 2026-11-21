@@ -3736,6 +3736,8 @@ const BOARDS=[
   {id:"lc",t:"Load Control",s:"اللودشيت ونموذج GACA",c:"#c4936a",ic:'<path d="M12 3v18M5 7h14"/><path d="M5 7l-3 7a3.5 3.5 0 0 0 6 0zM19 7l-3 7a3.5 3.5 0 0 0 6 0z"/>'},
   {id:"qz",t:"تحدي التشغيل",s:"أسئلة يومية من التعاميم ودليل العمليات ولوحة المراكز",c:"#d9b45a",ic:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>'},
   /* التقرير اليومي: يظهر للمالك فقط (15024232) */
+  /* توزيع العمل اليومي: يظهر للمالك فقط (15024232) لين يعتمده */
+  {id:"wd",own:1,t:"توزيع العمل اليومي",s:"توزيع الموظفين على المواقع وإرساله عبر Outlook",c:"#8fc49a",ic:'<circle cx="9" cy="7" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5A5 5 0 0 1 21 19"/>'},
   {id:"dr",own:1,t:"التقرير اليومي",s:"تعبئة Local Station Flight SKD وإضافتها لملف الإكسل",c:"#7fa7d9",ic:'<path d="M4 4h16v16H4z"/><path d="M4 9h16M4 14h16M9 9v11M15 9v11"/>'}];
 const drOwn=()=>!!(AUTH.me&&String(AUTH.me.emp)==="15024232");
 const svgI=(p,s=24)=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
@@ -3804,7 +3806,7 @@ function hubPaint(){
   $("hubHi").innerHTML=`<small>${DAYS[TODAY.getUTCDay()]} · ${dLabel(TODAY)}</small><h2>${hubGreet()}${first?"، <span>"+escT(first)+"</span>":""}</h2>${me.title?`<div class="hub-ttl" dir="ltr">${escT(me.name)} · ${escT(me.title)}</div>`:""}`;
   const sv=fl.filter(f=>/^SV/i.test(f.n)).length,seen=circSeen(),nw=CIRCN&&CIRCLAST&&CIRCLAST!==seen;
   const info={tim:[CIRCN?CIRCN+" تعميم":"",nw?"جديد":""],flt:[left+" متبقية",""],trc:[(()=>{try{return fl.filter(formOk).length}catch(e){return fl.length}})()+" رحلة اليوم",""],lc:[sv+" رحلة سعودية",""],qz:(()=>{try{const q=JSON.parse(localStorage.getItem("ajf_qz_hub")||"null");return q&&q.k>Date.now()?[q.t,q.b]:["",""]}catch(e){return["",""]}})()};
-  info.dr=["",""];const BL=BOARDS.filter(B=>!B.own||drOwn());/* التقرير اليومي: يظهر في الرئيسية للمالك فقط (15024232) */
+  info.dr=["",""];info.wd=["",""];const BL=BOARDS.filter(B=>!B.own||drOwn());/* التقرير اليومي: يظهر في الرئيسية للمالك فقط (15024232) */
   const g=$("hubG");if(g.children.length!==BL.length)g.innerHTML=BL.map(B=>`<button class="hub-c" data-b="${B.id}" style="--c:${B.c}"><div class="ic">${svgI(B.ic,24)}</div><div><b>${B.t}</b><span>${B.s}</span><span class="nf" style="color:${B.c}"></span></div><em></em></button>`).join("");
   BL.forEach(B=>{const c=g.querySelector(`[data-b="${B.id}"]`);c.querySelector(".nf").textContent=info[B.id][0];c.querySelector("em").textContent=info[B.id][1]});
 }
@@ -3828,7 +3830,7 @@ function openBoard(id,card){const B=BOARDS.find(x=>x.id===id);if(!B)return;ajfAc
     if(id==="flt"){$("bd").hidden=true;scrollTo(0,0);const w=document.querySelector(".wrap");if(!reduce){w.classList.remove("in");void w.offsetWidth;w.classList.add("in")}return}
     const b=$("bd");b.style.setProperty("--c",B.c);b.classList.remove("out");$("bdT").textContent=B.t;$("bdS").textContent=B.s;b.hidden=false;$("bdB").scrollTop=0;bdDay=0;
     bdRender();if(!reduce){b.classList.remove("in");void b.offsetWidth;b.classList.add("in")}
-    if(id==="qz")return;
+    if(id==="qz"||id==="wd")return;
     if(id==="tim"){circLoad(true);dcpLoad().then(()=>{if(BOARD==="tim")bdRender()})}else csSync(true).then(()=>{if(BOARD===id)bdRender()})})}
 function boardBack(){const b=$("bd");ajfAct("home");
   const go=()=>{b.hidden=true;b.classList.remove("out");hubShow(true)};
@@ -3854,6 +3856,9 @@ function bdRender(){const B=$("bdB");
   if(BOARD==="dr"){if(!drOwn()){B.innerHTML=`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>التقرير اليومي خاص بالمشرف.</p></div>`;return}
     let r=$("drRoot");if(!r){B.innerHTML=`<div id="drRoot"><div class="bd-empty">جاري التحميل…</div></div>`;r=$("drRoot")}
     drLoad().then(()=>{const x=$("drRoot");if(x&&window.DR)DR.mount(x)}).catch(()=>{const x=$("drRoot");if(x)x.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
+  if(BOARD==="wd"){if(!drOwn()){B.innerHTML=`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>توزيع العمل خاص بالمشرف.</p></div>`;return}
+    let r=$("wdRoot");if(!r){B.innerHTML=`<div id="wdRoot"><div class="bd-empty">جاري التحميل…</div></div>`;r=$("wdRoot")}
+    wdLoad().then(()=>{const x=$("wdRoot");if(x&&window.WD)WD.mount(x)}).catch(()=>{const x=$("wdRoot");if(x)x.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
   if(BOARD==="qz"){B.innerHTML=`<div id="qzRoot"><div class="bd-empty">جاري التحميل…</div></div>`;
     qzLoad().then(()=>{const r=$("qzRoot");if(r&&window.QZ)QZ.mount(r)}).catch(()=>{const r=$("qzRoot");if(r)r.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
   /* اللوحة كاملة (التعاميم + فحص الوثائق) مقفلة مؤقتاً لين نحل مشكلة المساعد — مفتوحة للمشرف ومن يعطيه صلاحية */
@@ -3874,6 +3879,7 @@ const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="doc" class="${TIMTAB==="doc"?"on":""}">🛂 فحص وثائق الراكب</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 let drP=null;const drLoad=()=>window.DR?Promise.resolve():drP||(drP=ldJs("dr.js?v=16").catch(e=>{drP=null;throw e}));
+let wdP=null;const wdLoad=()=>window.WD?Promise.resolve():wdP||(wdP=ldJs("wd.js?v=1").catch(e=>{wdP=null;throw e}));
 let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=12").catch(e=>{qzP=null;throw e}));
 let timP=null;const timLoad=()=>window.TIM&&window.CIRCM?Promise.resolve():timP||(timP=(window.TIM?Promise.resolve():ldJs("timatic.js?v=10")).then(()=>window.CIRCM||ldJs("circ.js?v=27")).catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
