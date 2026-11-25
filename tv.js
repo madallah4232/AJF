@@ -8,7 +8,7 @@ const K=window.TVKB,GCC=K.GCC;
 let PI=null,PIP=null,root=null;
 const loadPI=()=>PI?Promise.resolve(PI):PIP||(PIP=fetch("tvpi.json?v=1").then(r=>{if(!r.ok)throw new Error("pi");return r.json()}).then(j=>{const ix={};j.c.forEach((c,i)=>ix[c]=i);PI={...j,ix};return PI}).catch(e=>{PIP=null;throw e}));
 let DN=null;try{DN=new Intl.DisplayNames(["ar"],{type:"region"})}catch(e){}
-const FIX={PS:"فلسطين",AE:"الإمارات",US:"أمريكا",GB:"بريطانيا",KR:"كوريا الجنوبية",CD:"الكونغو الديمقراطية",CG:"الكونغو",XK:"كوسوفو"};
+const FIX={SA:"السعودية",PS:"فلسطين",AE:"الإمارات",US:"أمريكا",GB:"بريطانيا",KR:"كوريا الجنوبية",CD:"الكونغو الديمقراطية",CG:"الكونغو",XK:"كوسوفو"};
 const cn=c=>!c?"—":FIX[c]||(DN?DN.of(c):c)||c;
 const apN=a=>K.AP[a]?K.AP[a][0]:a,apC=a=>a&&a.startsWith("C:")?a.slice(2):K.AP[a]?K.AP[a][1]:"";
 const apLabel=a=>a&&a.startsWith("C:")?cn(a.slice(2)):`${apN(a)} ${a}`;
@@ -172,16 +172,44 @@ const CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;ali
 .tv-l{display:flex;gap:8px;font-size:13.5px;line-height:1.6}.tv-l .tv-mk{width:20px;height:20px;font-size:11px;margin-top:2px}.tv-l small{display:block;color:var(--muted);font-size:11.5px}.tv-l small a{color:inherit}.tv-l em{font-style:normal;color:#f0b429}
 .tv-sub{border-top:1px dashed var(--line);padding-top:8px;display:grid;gap:8px}.tv-sub>b{font-size:13px}
 .tv-ai{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:10px}.tv-ai .a{font-size:14px;line-height:1.75;white-space:normal}.tv-ai .q{font-size:13px;color:var(--muted)}
-.tv-note{font-size:12px;color:var(--muted);line-height:1.6}`;
+.tv-note{font-size:12px;color:var(--muted);line-height:1.6}
+.tv-pk{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;min-width:0;background:var(--raise,#141414);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:15px;text-align:start}.tv-pk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tv-pk i{font-style:normal;color:var(--muted);flex:none}.tv-pk.e span{color:var(--muted)}
+.tv-ov{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:flex-end}
+.tv-sh{width:100%;max-height:88vh;background:#0b0b0b;border-top:1px solid #262626;border-radius:20px 20px 0 0;display:flex;flex-direction:column;padding:12px 12px calc(12px + env(safe-area-inset-bottom));gap:10px;direction:rtl;color:#f2f2f2;font-family:var(--body,system-ui)}
+.tv-sh-h{display:flex;justify-content:space-between;align-items:center}.tv-sh-h b{font-size:16px}.tv-sh-h button{background:none;border:0;color:#9a9a9a;font:inherit;font-size:14px}
+.tv-sh-q{width:100%;box-sizing:border-box;background:#141414;color:#f2f2f2;border:1px solid #262626;border-radius:12px;padding:12px;font:inherit;font-size:16px}
+.tv-sh-l{overflow:auto;-webkit-overflow-scrolling:touch;display:grid;gap:2px}.tv-sh-l button{display:flex;justify-content:space-between;align-items:center;background:none;border:0;border-bottom:1px solid #1a1a1a;color:#f2f2f2;padding:12px 6px;font:inherit;font-size:15px;text-align:start}.tv-sh-l button small{color:#9a9a9a;font-size:12px}.tv-sh-l button.on{color:#d9c8a8;font-weight:700}
+.tv-sh-g{font-size:12px;color:#9a9a9a;padding:10px 6px 4px}`;
 const MK={ok:"✓",w:"!",x:"✕",i:"i"};
 const mk=l=>`<span class="tv-mk ${l}">${MK[l]}</span>`;
-function natOpts(sel){const all=PI?PI.c:TOP_NAT;const rest=all.filter(c=>!TOP_NAT.includes(c)).sort((a,b)=>cn(a).localeCompare(cn(b),"ar"));
-  return`<option value="">اختر…</option><optgroup label="الأكثر">${TOP_NAT.map(c=>`<option value="${c}" ${c===sel?"selected":""}>${E(cn(c))}</option>`).join("")}</optgroup><optgroup label="كل الدول">${rest.map(c=>`<option value="${c}" ${c===sel?"selected":""}>${E(cn(c))}</option>`).join("")}</optgroup>`}
-function apOpts(sel){const by={};Object.entries(K.AP).forEach(([a,[n,c]])=>{if(a!=="AJF")(by[c]=by[c]||[]).push(a)});
-  const cs=Object.keys(by).sort((a,b)=>a==="SA"?-1:b==="SA"?1:cn(a).localeCompare(cn(b),"ar"));
-  const others=(PI?PI.c:[]).filter(c=>!by[c]).sort((a,b)=>cn(a).localeCompare(cn(b),"ar"));
-  return`<option value="">اختر…</option>${cs.map(c=>`<optgroup label="${E(cn(c))}">${by[c].map(a=>`<option value="${a}" ${a===sel?"selected":""}>${E(apN(a))} ${a}</option>`).join("")}</optgroup>`).join("")}<optgroup label="دول أخرى (أي مطار)">${others.map(c=>`<option value="C:${c}" ${"C:"+c===sel?"selected":""}>${E(cn(c))}</option>`).join("")}</optgroup>`}
-function carOpts(sel){return`<option value="">الناقل (اختياري)</option>${Object.entries(K.CAR).map(([k,v])=>`<option value="${k}" ${k===sel?"selected":""}>${E(v)} ${k}</option>`).join("")}`}
+/* ---------- قائمة اختيار مع بحث (بدل القوائم العادية) ---------- */
+let EN=null;try{EN=new Intl.DisplayNames(["en"],{type:"region"})}catch(e){}
+const enN=c=>{try{return EN?EN.of(c):""}catch(e){return""}};
+function natItems(){const all=PI?PI.c:TOP_NAT;const rest=all.filter(c=>!TOP_NAT.includes(c)).sort((a,b)=>cn(a).localeCompare(cn(b),"ar"));
+  return[...TOP_NAT.map(c=>({v:c,l:cn(c),s:c,g:"الأكثر"})),...rest.map(c=>({v:c,l:cn(c),s:c,g:"كل الدول"}))].map(o=>({...o,k:AN(o.l+" "+o.v+" "+enN(o.v))}))}
+function apItems(){const by={};Object.entries(K.AP).forEach(([a,[n,c]])=>{if(a!=="AJF")(by[c]=by[c]||[]).push(a)});
+  const cs=Object.keys(by).sort((a,b)=>a==="SA"?-1:b==="SA"?1:cn(a).localeCompare(cn(b),"ar"));const out=[];
+  cs.forEach(c=>by[c].forEach(a=>out.push({v:a,l:apN(a),s:a,g:cn(c),k:AN(apN(a)+" "+a+" "+cn(c)+" "+enN(c))})));
+  (PI?PI.c:[]).filter(c=>!by[c]).sort((a,b)=>cn(a).localeCompare(cn(b),"ar")).forEach(c=>out.push({v:"C:"+c,l:cn(c),s:"أي مطار",g:"دول أخرى",k:AN(cn(c)+" "+c+" "+enN(c))}));
+  return out}
+function carItems(){return[{v:"",l:"بدون تحديد",s:"",g:"",k:""},...Object.entries(K.CAR).map(([k,v])=>({v:k,l:v,s:k,g:"الناقلين",k:AN(v+" "+k)}))]}
+const PK_T={nat:"جنسية الراكب",res:"مقيم في",to:"المطار",car:"الناقل"};
+function openPick(kind,i){const items=kind==="car"?carItems():kind==="to"?apItems():natItems();
+  const cur=kind==="nat"?S.nat:kind==="res"?S.res:S.legs[i][kind];
+  const ov=document.createElement("div");ov.className="tv-ov";
+  ov.innerHTML=`<div class="tv-sh"><div class="tv-sh-h"><b>${E(PK_T[kind])}</b><button data-x="1">إغلاق ✕</button></div>
+    <input type="search" class="tv-sh-q" placeholder="ابحث بالعربي أو الإنجليزي أو الرمز…" autocomplete="off"><div class="tv-sh-l"></div></div>`;
+  document.body.appendChild(ov);const q=ov.querySelector("input"),L=ov.querySelector(".tv-sh-l");
+  const draw=()=>{const w=AN(q.value).trim().split(/\s+/).filter(Boolean);let g="";
+    const f=items.filter(o=>!w.length||w.every(x=>o.k.includes(x)||o.v.toLowerCase().includes(x)));
+    L.innerHTML=f.slice(0,300).map(o=>{const gh=!w.length&&o.g&&o.g!==g?`<div class="tv-sh-g">${E(g=o.g)}</div>`:"";
+      return gh+`<button data-v="${E(o.v)}" class="${o.v===cur?"on":""}"><span>${E(o.l)}</span><small>${E(o.s)}</small></button>`}).join("")||`<div class="tv-sh-g">ما لقيت نتيجة</div>`};
+  draw();q.addEventListener("input",draw);setTimeout(()=>q.focus(),60);
+  const close=()=>{ov.remove()};
+  ov.addEventListener("click",e=>{if(e.target===ov){close();return}const b=e.target.closest("button");if(!b)return;if(b.dataset.x){close();return}
+    if(b.dataset.v!=null){const v=b.dataset.v;if(kind==="nat")S.nat=v;else if(kind==="res")S.res=v;else{S.legs[i][kind]=v;S.out=null}close();save();paint()}})}
+const pkLabel=(kind,v)=>!v?(kind==="car"?"الناقل (اختياري)":"اختر…"):kind==="car"?`${K.CAR[v]||v} ${v}`:kind==="to"?apLabel(v):cn(v);
+const pkBtn=(kind,v,i)=>`<button class="tv-pk ${v?"":"e"}" data-pk="${kind}"${i!=null?` data-i="${i}"`:""}><span>${E(pkLabel(kind,v))}</span><i>⌕</i></button>`;
 function paint(){if(!root)return;
   if(!document.getElementById("tvCss")){const st=document.createElement("style");st.id="tvCss";st.textContent=CSS;document.head.appendChild(st)}
   const legs=S.legs,cts=[...new Set(legs.map(l=>apC(l.to)).filter(c=>c&&c!=="SA"&&c!==S.nat))];
@@ -191,14 +219,14 @@ function paint(){if(!root)return;
     <textarea id="tvTxt" rows="2" placeholder="مثال: يمني مقيم بالسعودية رايح القاهرة عن طريق دبي على فلاي دبي تذكرتين">${E(S.txt)}</textarea>
     <button class="tv-sm" id="tvParse">↙︎ عبّي الخانات من الكلام</button></div>
   <div class="tv-box"><b>👤 الراكب</b>
-    <div class="tv-r"><label class="l">الجنسية (الجواز)<select id="tvNat">${natOpts(S.nat)}</select></label><label class="l">مقيم في<select id="tvRes">${natOpts(S.res)}</select></label></div>
+    <div class="tv-r"><label class="l">الجنسية (الجواز)${pkBtn("nat",S.nat)}</label><label class="l">مقيم في${pkBtn("res",S.res)}</label></div>
     <div class="tv-r"><label class="l">العمر<input type="number" id="tvAge" inputmode="numeric" min="0" max="120" value="${E(S.age)}" placeholder="اختياري"></label>
       <label class="l">الجنس<div class="tv-chips" id="tvSex"><button data-sex="M" class="${S.sex==="M"?"on":""}">رجل</button><button data-sex="F" class="${S.sex==="F"?"on":""}">امرأة</button></div></label></div></div>
   <div class="tv-box"><b>✈️ المسار — من الجوف AJF</b>
     ${legs.map((l,i)=>`<div class="tv-leg"><div class="n"><span>${i===legs.length-1?"🛬 الوجهة النهائية":"🔁 ترانزيت "+(i+1)}</span>${legs.length>1?`<button data-del="${i}">حذف ✕</button>`:""}</div>
-      <div class="tv-r"><select data-leg="${i}" data-f="to">${apOpts(l.to)}</select><select data-leg="${i}" data-f="car">${carOpts(l.car)}</select></div>
+      <div class="tv-r">${pkBtn("to",l.to,i)}${pkBtn("car",l.car,i)}</div>
       ${i<legs.length-1?`<label class="l">مدة الانتظار في ${E(l.to?apLabel(l.to):"الترانزيت")} (ساعات)<input type="number" inputmode="decimal" data-leg="${i}" data-f="h" value="${E(l.h)}" placeholder="اختياري"></label>`:""}</div>`).join("")}
-    <button class="tv-add" id="tvAdd">＋ أضف محطة ترانزيت قبل الوجهة</button>
+    <button class="tv-add" id="tvAdd">＋ أضف محطة بعد الوجهة</button>
     ${legs.length>1?`<label class="l">التذكرة<div class="tv-chips" id="tvTk"><button data-tk="one" class="${S.ticket==="one"?"on":""}">تذكرة وحدة (حجز واحد)</button><button data-tk="sep" class="${S.ticket==="sep"?"on":""}">تذاكر منفصلة</button></div></label>`:""}</div>
   <div class="tv-box"><b>📄 الوثائق اللي معه</b>
     ${cts.length?`<div class="tv-chips">${cts.map(c=>`<button data-visa="${c}" class="${S.visas[c]?"on":""}">تأشيرة/إقامة سارية لـ ${E(cn(c))}</button>`).join("")}</div>`:`<div class="tv-note">اختر المسار أول عشان تطلع خانات التأشيرات.</div>`}
@@ -250,15 +278,15 @@ function bind(el){el.addEventListener("click",e=>{const b=e.target.closest("butt
   if(b.id==="tvGo")return run();if(b.id==="tvAsk"){const t=root.querySelector("#tvAq");if(t)S.aq=t.value;return ask()}
   if(b.id==="tvNew"){S.th=[];paintOut();return}
   if(b.id==="tvParse"){const o=parse(S.txt);if(o.legs&&!o.legs.length)delete o.legs;Object.assign(S,{...o,sup:o.sup&&o.sup.length?o.sup:S.sup,visas:{...S.visas,...(o.visas||{})}});S.out=null;save();loadPI().catch(()=>{}).then(paint);return}
-  if(b.id==="tvAdd"){S.legs.splice(S.legs.length-1,0,{to:"",car:"",h:""});S.out=null;save();paint();return}
+  if(b.id==="tvAdd"){S.legs.push({to:"",car:"",h:""});S.out=null;save();paint();setTimeout(()=>{const x=root.querySelectorAll(".tv-leg");const l=x[x.length-1];if(l)l.scrollIntoView({behavior:"smooth",block:"center"})},40);return}
+  if(b.dataset.pk){openPick(b.dataset.pk,b.dataset.i!=null?+b.dataset.i:null);return}
   if(b.dataset.del!=null){S.legs.splice(+b.dataset.del,1);if(!S.legs.length)S.legs=[{to:"",car:"",h:""}];S.out=null;save();paint();return}
   if(b.dataset.sex){S.sex=S.sex===b.dataset.sex?"":b.dataset.sex;save();paint();return}
   if(b.dataset.tk){S.ticket=S.ticket===b.dataset.tk?"":b.dataset.tk;save();paint();return}
   if(b.dataset.visa){const c=b.dataset.visa;S.visas[c]=!S.visas[c];save();paint();return}
   if(b.dataset.sup){const k=b.dataset.sup;S.sup=S.sup.includes(k)?S.sup.filter(x=>x!==k):[...S.sup,k];save();paint();return}
   if(b.dataset.ebola){S.ebola=!S.ebola;save();paint();return}});
-  el.addEventListener("change",e=>{const t=e.target;if(t.id==="tvNat"){S.nat=t.value;save();paint()}else if(t.id==="tvRes"){S.res=t.value;save()}
-    else if(t.dataset.leg!=null){S.legs[+t.dataset.leg][t.dataset.f]=t.value;S.out=null;save();if(t.dataset.f==="to")paint()}});
+  el.addEventListener("change",e=>{const t=e.target;if(t.dataset.leg!=null){S.legs[+t.dataset.leg][t.dataset.f]=t.value;S.out=null;save();if(t.dataset.f==="to")paint()}});
   el.addEventListener("input",e=>{const t=e.target;if(t.id==="tvTxt")S.txt=t.value;else if(t.id==="tvAge")S.age=t.value;else if(t.id==="tvAq")S.aq=t.value;
     else if(t.dataset.leg!=null&&t.dataset.f==="h")S.legs[+t.dataset.leg].h=t.value;save()})}
 window.TV={mount:el=>{root=el;if(!el.__tv){el.__tv=1;bind(el)}paint();loadPI().then(()=>{if(root===el&&!S.out)paint()}).catch(()=>{})},
