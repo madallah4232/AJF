@@ -42,7 +42,14 @@ const stamp=()=>({n:meN(),at:Date.now()});
 async function cget(k){const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:k});if(j.s!=="ok")throw new Error(j.s);return j.v}
 async function roster(){try{const v=await cget("wd_roster");if(v&&Array.isArray(v.p)&&v.p.length){setRoster(v);lsSet("ajf_wd_roster",v)}}catch(e){}return RST}
 async function cset(k,v){const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:k,p_v:v});if(j.s!=="ok")throw new Error(j.s)}
-function norm(s,d){s=s&&s.g?s:auto(d);GR.forEach(([k])=>{if(!s.g[k])s.g[k]=[]});if(!s.rem)s.rem=[];if(!s.f)s.f={};if(!s.by)s.by={};return s}
+function norm(s,d){s=s&&s.g?s:auto(d);GR.forEach(([k])=>{if(!s.g[k])s.g[k]=[]});if(!s.rem)s.rem=[];if(!s.f)s.f={};if(!s.by)s.by={};return sync(s,d)}
+/* أي يوم غير معتمد يتبع الأوفات والإجازات تلقائياً حتى لو انعدّل: يطلع منه اللي عنده راحة أو إجازة،
+   ويرجع له أي موظف يداوم وما هو في الجدول (إلا اللي مشرف حذفه بنفسه). اللي حطه مشرف بيده يبقى وعليه علامة. */
+function sync(s,d){if(s.ok||!P.length)return s;
+  GR.forEach(([k])=>{s.g[k]=s.g[k].filter(id=>{const p=PM[id];return!p||!offReason(p,d)||s.by[id]})});
+  P.forEach(p=>{if(offReason(p,d)||s.rem.includes(p.id)||GR.some(([k])=>s.g[k].includes(p.id)))return;
+    const k=ROT[d]===p.id?"CP":p.t;(s.g[k]||(s.g[k]=[])).push(p.id)});
+  return s}
 let q=Promise.resolve(),pend=0;
 /* كل تعديل: يطبّق فوراً على الشاشة، ثم يجيب آخر نسخة من السيرفر ويطبّق نفس التعديل عليها ويحفظها — عشان ما يمسح تعديل مشرف ثاني */
 function commit(fn){
@@ -175,7 +182,8 @@ const CSS=`
 .wd-lv .t{flex:1}.wd-lv small{color:var(--muted)}
 .wd-lv button{padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--raise);color:var(--warn);font-size:13px}
 .wd-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-.wd-form select,.wd-form input{font:inherit;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--raise);color:var(--ink);min-width:0;color-scheme:dark;font-size:16px}
+.wd-form textarea{resize:vertical;line-height:1.5}
+.wd-form select,.wd-form input,.wd-form textarea{font:inherit;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--raise);color:var(--ink);min-width:0;color-scheme:dark;font-size:16px}
 .wd-form .full{grid-column:1/-1}
 .wd-form label{display:grid;gap:4px;font-size:12px;color:var(--muted);min-width:0}
 #wdToast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--ink);color:var(--night);padding:10px 16px;border-radius:12px;z-index:300;font-size:14px;display:none;max-width:90vw;text-align:center;font-family:var(--body)}
@@ -282,18 +290,32 @@ function flPick(id){
     all.length?all.map(n=>{const f=L.find(x=>x.n===n);return`<button data-fl="${esc(n)}" class="${sel.includes(n)?"cur":""}"><b>${esc(n)}</b><small>${f?esc(f.t+(f.d?" · "+f.d:"")):"—"}</small></button>`}).join(""):`<p>ما فيه رحلات بهذا اليوم في لوحة الرحلات.</p>`}</div>
     <button class="wd-btn pr" data-done style="width:100%;margin-top:12px">تم</button>`}
 /* ---------- الإجازات ---------- */
+/* يقرأ جدول الإجازات الملصوق من الإيميل: الرقم الوظيفي ثم تاريخ البداية وتاريخ النهاية (مثل 18 Nov 2026 أو 18/11/2026) */
+const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function pDates(t){const out=[],re=/(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})[\s\-\/.]*([A-Za-z]{3})[A-Za-z]*[\s\-\/.,]*(\d{2,4})|(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/g;let m;
+  while((m=re.exec(t))){let y,mo,d;
+    if(m[1]){y=+m[1];mo=+m[2];d=+m[3]}else if(m[4]){mo=MON[m[5].toLowerCase()];if(!mo)continue;d=+m[4];y=+m[6]}else{d=+m[7];mo=+m[8];y=+m[9]}
+    if(y<100)y+=2000;if(mo<1||mo>12||d<1||d>31)continue;out.push(y+"-"+pad(mo)+"-"+pad(d))}return out}
+function parseLeaves(txt){
+  txt=String(txt||"").replace(/[\u0660-\u0669]/g,c=>c.charCodeAt(0)-0x660);
+  const ids=[...txt.matchAll(/(^|\D)(1\d{7})(?=\D|$)/g)],res=[],bad=[];
+  ids.forEach((m,i)=>{const st=m.index+m[0].length,en=i+1<ids.length?ids[i+1].index:txt.length,ds=pDates(txt.slice(st,en)),id=m[2];
+    if(!ds.length)return;if(!PM[id]){bad.push(id);return}
+    const from=ds[0],to=ds[1]&&ds[1]>=from?ds[1]:null;res.push({id,type:"إجازة",from,to})});
+  return{res,bad}}
 function openLeaves(){
   const rows=LEAVES.map((l,i)=>({l,i,p:PM[l.id]})).filter(x=>x.p).sort((a,b)=>a.l.from.localeCompare(b.l.from));
   lvs.querySelector(".wd-pn").innerHTML=`<h4>الإجازات والانتدابات</h4><p>أي موظف هنا لا يظهر في التوزيع خلال الفترة. إذا ما تعرف تاريخ الرجوع اترك خانة النهاية فاضية.</p>${
     rows.map(({l,i,p})=>`<div class="wd-lv"><div class="t"><b>${esc(p.n)}</b><br><small>${esc(l.type)} · من ${fmt(l.from)} ${l.to?"إلى "+fmt(l.to):"(بدون تاريخ رجوع)"}</small></div><button data-dl="${i}">حذف</button></div>`).join("")||"<p>لا توجد إجازات.</p>"}
-    <div class="wd-form"><label class="full">الموظف<select id="wdLvE">${P.slice().sort((a,b)=>a.n.localeCompare(b.n,"ar")).map(p=>`<option value="${p.id}">${esc(p.n)}</option>`).join("")}</select></label>
+    <div class="wd-form"><label class="full">لصق جدول الإجازات من الإيميل<textarea id="wdLvP" rows="4" placeholder="انسخ جدول الإجازات من الإيميل كامل والصقه هنا"></textarea></label><button class="wd-btn pr full" id="wdLvImp">إضافة كل الإجازات من الجدول</button></div>
+    <div class="wd-form"><label class="full">أو إضافة إجازة وحدة — الموظف<select id="wdLvE">${P.slice().sort((a,b)=>a.n.localeCompare(b.n,"ar")).map(p=>`<option value="${p.id}">${esc(p.n)}</option>`).join("")}</select></label>
     <label>النوع<select id="wdLvT"><option>إجازة</option><option>انتداب</option><option>يوم تعويضي</option></select></label><span></span>
     <label>من تاريخ<input type="date" id="wdLvF" value="${cur}"></label><label>إلى تاريخ<input type="date" id="wdLvTo"></label>
     <button class="wd-btn pr full" id="wdLvAdd">إضافة للقائمة</button></div>
     <p style="margin-top:12px"><button class="wd-btn gh" id="wdLvClose" style="min-height:40px">إغلاق</button></p>`;
   lvs.classList.add("show");
 }
-function afterLeaves(){if(!S.t&&!S.ok){S=auto(cur);save()}render()}/* اليوم اللي ما أحد عدّله يتبع الإجازات المشتركة تلقائياً */
+function afterLeaves(){if(!S.ok){S=norm(S,cur);save()}render()}/* كل يوم غير معتمد يتبع الإجازات المشتركة تلقائياً */
 
 /* ---------- السحب والإفلات ---------- */
 let drag=null;
@@ -361,6 +383,11 @@ function bindOnce(){
   lvs.addEventListener("click",e=>{const t=e.target;
     if(t===lvs||t.id==="wdLvClose"){lvs.classList.remove("show");return}
     if(t.dataset.dl!==undefined){const x=LEAVES[+t.dataset.dl];if(x)commitLeaves(L=>{const i=L.findIndex(l=>l.id===x.id&&l.from===x.from&&l.type===x.type);if(i>=0)L.splice(i,1)});openLeaves();return}
+    if(t.id==="wdLvImp"){const{res,bad}=parseLeaves(lvs.querySelector("#wdLvP").value);
+      if(!res.length){toast(bad.length?"الأرقام الوظيفية هذي مو موجودة في القائمة: "+bad.join("، "):"ما لقيت إجازات في النص الملصوق");return}
+      const same=(a,b)=>a.id===b.id&&a.from===b.from&&(a.to||"")===(b.to||"");
+      commitLeaves(L=>res.forEach(n=>{const i=L.findIndex(l=>l.id===n.id&&l.from===n.from);if(i>=0)L[i]=Object.assign({},L[i],{to:n.to});else if(!L.some(l=>same(l,n)))L.push(n)}));
+      openLeaves();toast("انضافت "+res.length+" إجازة"+(bad.length?" — وما لقيت هالأرقام في القائمة: "+bad.join("، "):""));return}
     if(t.id==="wdLvAdd"){const from=lvs.querySelector("#wdLvF").value,to=lvs.querySelector("#wdLvTo").value||null;
       if(!from){toast("اختر تاريخ البداية");return}if(to&&to<from){toast("تاريخ النهاية قبل تاريخ البداية");return}
       const nl={id:lvs.querySelector("#wdLvE").value,type:lvs.querySelector("#wdLvT").value,from,to};commitLeaves(L=>L.push(nl));openLeaves()}});
