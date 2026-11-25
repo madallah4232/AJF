@@ -117,7 +117,7 @@ const CITY={"الجوف":"AJF","سكاكا":"AJF","الرياض":"RUH","جده":
   "اسطنبول":"IST","تركيا":"IST","عدن":"ADE","صنعاء":"SAH","بورتسودان":"PZU","بور سودان":"PZU","الخرطوم":"KRT","كراتشي":"KHI","لاهور":"LHE","اسلام اباد":"ISB","بيشاور":"PEW","دلهي":"DEL","مومباي":"BOM","بومباي":"BOM","كوتشي":"COK","كيرلا":"COK","حيدر اباد":"HYD","كاليكوت":"CCJ",
   "دكا":"DAC","مانيلا":"MNL","جاكرتا":"CGK","كولومبو":"CMB","كاتماندو":"KTM","اديس ابابا":"ADD","نيروبي":"NBO","تونس":"TUN","الدار البيضاء":"CMN","الجزائر":"ALG","لندن":"LHR","باريس":"CDG","فرانكفورت":"FRA","نيويورك":"JFK",
   "مصر":"CAI","الامارات":"DXB","السعوديه":"RUH","السودان":"PZU","اليمن":"ADE","سوريا":"DAM","العراق":"BGW","باكستان":"KHI","الهند":"DEL","بنغلاديش":"DAC","الفلبين":"MNL","اندونيسيا":"CGK","سريلانكا":"CMB","نيبال":"KTM","اثيوبيا":"ADD","كينيا":"NBO","المغرب":"CMN","امريكا":"JFK","بريطانيا":"LHR","فرنسا":"CDG","المانيا":"FRA"};
-const CARN={"السعوديه":"SV","الخطوط السعوديه":"SV","ناس":"XY","طيران ناس":"XY","اديل":"F3","فلاي دبي":"FZ","فلاي دباي":"FZ","الاماراتيه":"EK","طيران الامارات":"EK","الاتحاد":"EY","العربيه":"G9","القطريه":"QR","مصر للطيران":"MS","اير كايرو":"SM","ايركايرو":"SM","النيل":"NP","الملكيه الاردنيه":"RJ","الكويتيه":"KU","الجزيره":"J9","طيران الخليج":"GF","العماني":"WY","التركيه":"TK","بيغاسوس":"PC","الباكستانيه":"PK","انديغو":"6E","اندغو":"6E","طيران الهند":"AI","الفلبينيه":"PR","الاثيوبيه":"ET","اليمنيه":"IY","طيران الرياض":"RX"};
+const CARN={"السعوديه":"SV","الخطوط السعوديه":"SV","ناس":"XY","طيران ناس":"XY","اديل":"F3","فلاي دبي":"FZ","فلاي دباي":"FZ","الاماراتيه":"EK","طيران الامارات":"EK","الاتحاد":"EY","العربيه":"G9","القطريه":"QR","مصر للطيران":"MS","اير كايرو":"SM","ايركايرو":"SM","النيل":"NP","الملكيه الاردنيه":"RJ","الكويتيه":"KU","الجزيره":"J9","طيران الخليج":"GF","العماني":"WY","التركيه":"TK","بيغاسوس":"PC","الباكستانيه":"PK","انديغو":"6E","اندغو":"6E","انديقو":"6E","انديجو":"6E","اندقو":"6E","فلاي ناس":"XY","فلاي اديل":"F3","الطيران العماني":"WY","الجزيره للطيران":"J9","طيران الهند":"AI","الفلبينيه":"PR","الاثيوبيه":"ET","اليمنيه":"IY","طيران الرياض":"RX"};
 function parse(txt){const t=" "+AN(txt).replace(/[،,.؛]/g," ")+" ",o={};
   const near=(re)=>{const m=t.match(re);return m?m.index:-1};
   /* الجنسية: أول صفة جنسية في الكلام (مو بعد «ب» أو داخل عبارة تأشيرة/إقامة) */
@@ -138,16 +138,17 @@ function parse(txt){const t=" "+AN(txt).replace(/[،,.؛]/g," ")+" ",o={};
   const inCar=i=>carSpans.some(([a,b])=>i+1>=a&&i+1<b);
   const hits=[];for(const[k,v]of Object.entries(CITY)){const kk=AN(k);let i=t.indexOf(" "+kk);if(i<0)i=t.indexOf(" ب"+kk.replace(/^ال/,"ال"));while(i>=0){if(!(rm&&i>=resPos&&i<resPos+rm[0].length)&&!inCar(i))hits.push([i,v,kk.length]);i=t.indexOf(" "+kk,i+1)}}
   hits.sort((a,b)=>a[0]-b[0]||b[2]-a[2]);const pl=[];hits.forEach(h=>{if(pl.length&&h[0]<pl[pl.length-1][0]+pl[pl.length-1][2])return;if(h[1]==="AJF")return;pl.push(h)});
-  /* الترانزيت: بعد كلمات عن طريق/ترانزيت/عبر/مرور */
-  const trw=/(عن طريق|ترانزيت|عبر|مرورا|مرور|via|يمر|بيمر|ويربط|ربط)/g;let m,trIdx=[];while((m=trw.exec(t)))trIdx.push(m.index);
-  const isTr=p=>trIdx.some(i=>p[0]>i&&p[0]-i<25);
-  const dest=pl.filter(p=>!isTr(p)),tr=pl.filter(isTr);
-  if(pl.length){const order=[...tr.map(p=>p[1])];const d=dest.length?dest[dest.length-1][1]:null;
-    o.legs=[...order.map(a=>({to:a,car:"",h:""})),...(d&&!order.includes(d)?[{to:d,car:"",h:""}]:[])]}
-  /* الناقلين بترتيبهم */
-  const ch=[];for(const[k,v]of Object.entries(CARN)){const kk=AN(k);const i=t.indexOf(kk);if(i>=0&&!(kk==="السعوديه"&&!/(الخطوط|طيران|علي)\s*السعوديه/.test(t)))ch.push([i,v,kk.length])}
+  /* الترانزيت: الأماكن بعد «عن طريق/ترانزيت/عبر/من…» تجي أول، والباقي بترتيب ذكره */
+  const trw=/(عن طريق|ترانزيت|عبر|مرورا|مرور|via|يمر|بيمر|ربط|\sمن)/g;let m,trIdx=[];while((m=trw.exec(t)))trIdx.push(m.index+m[0].length);
+  const isTr=p=>trIdx.some(i=>p[0]>=i-1&&p[0]-i<14);
+  const tr=pl.filter(isTr).map(p=>p[1]),rest=pl.filter(p=>!isTr(p)).map(p=>p[1]);
+  const route=[];[...tr,...rest].forEach(a=>{if(!route.includes(a))route.push(a)});
+  if(route.length)o.legs=route.map(a=>({to:a,car:"",h:""}));
+  /* الناقلين بترتيبهم: بالاسم العربي أو الرمز (FZ, 6E, SV…) */
+  const ch=[];for(const[k,v]of Object.entries(CARN)){const kk=AN(k);let i=t.indexOf(kk);if(i>=0&&!(kk==="السعوديه"&&!/(الخطوط|طيران|علي)\s*السعوديه/.test(t)))ch.push([i,v,kk.length])}
+  const cre=new RegExp("(^|[^a-z0-9])("+Object.keys(K.CAR).map(c=>c.toLowerCase()).join("|")+")(?=$|[^a-z0-9])","g");while((m=cre.exec(t)))ch.push([m.index+m[1].length,m[2].toUpperCase(),m[2].length]);
   ch.sort((a,b)=>a[0]-b[0]||b[2]-a[2]);const cs=[];ch.forEach(c=>{if(cs.length&&c[0]<cs[cs.length-1][0]+cs[cs.length-1][2])return;cs.push(c)});
-  if(o.legs&&cs.length){o.legs.forEach((l,i)=>{l.car=(cs[i]||cs[cs.length-1])[1]})}
+  if(o.legs&&cs.length){o.legs.forEach((l,i)=>{l.car=cs.length===1?cs[0][1]:(cs[i]?cs[i][1]:"")})}
   const hm=t.match(/(\d{1,2})\s*ساع/);if(hm&&o.legs&&o.legs.length>1)o.legs[0].h=hm[1];
   /* تأشيرة للوجهة */
   if(o.legs){o.legs.forEach(l=>{const c=apC(l.to);if(c&&new RegExp("معه\\s+(تاشير|فيزا|اقام)[^\\s]*\\s+(\\S+\\s+)?("+Object.entries(CITY).filter(([k,v])=>apC(v)===c).map(([k])=>AN(k)).join("|")+")").test(t)){(o.visas=o.visas||{})[c]=1}})}
@@ -277,7 +278,7 @@ async function ask(){if(S.busy||!S.out||S.out.err)return;const q=(S.aq||"").trim
 function bind(el){el.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||!root.contains(b))return;
   if(b.id==="tvGo")return run();if(b.id==="tvAsk"){const t=root.querySelector("#tvAq");if(t)S.aq=t.value;return ask()}
   if(b.id==="tvNew"){S.th=[];paintOut();return}
-  if(b.id==="tvParse"){const o=parse(S.txt);if(o.legs&&!o.legs.length)delete o.legs;Object.assign(S,{...o,sup:o.sup&&o.sup.length?o.sup:S.sup,visas:{...S.visas,...(o.visas||{})}});S.out=null;save();loadPI().catch(()=>{}).then(paint);return}
+  if(b.id==="tvParse"){const o=parse(S.txt);if(o.legs&&!o.legs.length)delete o.legs;Object.assign(S,{nat:"",res:"SA",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{}},o,{age:o.age!=null?String(o.age):"",th:[]});S.out=null;save();loadPI().catch(()=>{}).then(()=>{paint();if(S.nat&&S.legs[S.legs.length-1].to)run()});return}
   if(b.id==="tvAdd"){S.legs.push({to:"",car:"",h:""});S.out=null;save();paint();setTimeout(()=>{const x=root.querySelectorAll(".tv-leg");const l=x[x.length-1];if(l)l.scrollIntoView({behavior:"smooth",block:"center"})},40);return}
   if(b.dataset.pk){openPick(b.dataset.pk,b.dataset.i!=null?+b.dataset.i:null);return}
   if(b.dataset.del!=null){S.legs.splice(+b.dataset.del,1);if(!S.legs.length)S.legs=[{to:"",car:"",h:""}];S.out=null;save();paint();return}
