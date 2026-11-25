@@ -1,4 +1,4 @@
-/* ---------- التعاميم: نص مكتوب + ملفات PDF، بحث عربي/إنجليزي، وربط مع فحص وثائق الراكب ----------
+/* ---------- التعاميم: نص مكتوب + ملفات PDF، بحث عربي/إنجليزي ----------
    البحث يتم في Supabase (ajf_circ_search) بكلمات الموظف + مرادفاتها وترجمتها من القاموس.
    الملفات في مخزن خاص، ولا تُفتح إلا برابط مؤقت من دالة ajf-files بعد التحقق من الدخول. */
 (function(){
@@ -103,11 +103,12 @@ const DICT=`عفش شنط شنطه حقيبه حقائب امتعه baggage bag 
 كندا canada
 استراليا australia
 نموذج استماره form`;
+const CTRYN=`السعودية SAUDI ARABIA SAU;الإمارات UNITED ARAB EMIRATES ARE;الكويت KUWAIT KWT;البحرين BAHRAIN BHR;قطر QATAR QAT;عُمان OMAN OMN;اليمن YEMEN YEM;الأردن JORDAN JOR;مصر EGYPT EGY;السودان SUDAN SDN;جنوب السودان SOUTH SUDAN SSD;لبنان LEBANON LBN;سوريا SYRIA SYR;العراق IRAQ IRQ;فلسطين PALESTINIAN TERRITORY PSE;إيران IRAN IRN;تركيا TURKIYE TUR;المغرب MOROCCO MAR;الجزائر ALGERIA DZA;تونس TUNISIA TUN;ليبيا LIBYA LBY;موريتانيا MAURITANIA MRT;الصومال SOMALIA SOM;جيبوتي DJIBOUTI DJI;إريتريا ERITREA ERI;إثيوبيا ETHIOPIA ETH;كينيا KENYA KEN;أوغندا UGANDA UGA;تنزانيا TANZANIA TZA;نيجيريا NIGERIA NGA;غانا GHANA GHA;الكاميرون CAMEROON CMR;تشاد CHAD TCD;النيجر NIGER NER;مالي MALI MLI;السنغال SENEGAL SEN;جنوب أفريقيا SOUTH AFRICA ZAF;الهند INDIA IND;باكستان PAKISTAN PAK;بنغلاديش BANGLADESH BGD;نيبال NEPAL NPL;سريلانكا SRI LANKA LKA;أفغانستان AFGHANISTAN AFG;الفلبين PHILIPPINES PHL;إندونيسيا INDONESIA IDN;ماليزيا MALAYSIA MYS;تايلاند THAILAND THA;فيتنام VIET NAM VNM;ميانمار MYANMAR MMR;الصين CHINA CHN;اليابان JAPAN JPN;كوريا الجنوبية KOREA KOR;سنغافورة SINGAPORE SGP;المالديف MALDIVES MDV;كازاخستان KAZAKHSTAN KAZ;أوزبكستان UZBEKISTAN UZB;أذربيجان AZERBAIJAN AZE;جورجيا GEORGIA GEO;أرمينيا ARMENIA ARM;روسيا RUSSIAN FEDERATION RUS;أوكرانيا UKRAINE UKR;بريطانيا UNITED KINGDOM GBR;أيرلندا IRELAND IRL;فرنسا FRANCE FRA;ألمانيا GERMANY DEU;إيطاليا ITALY ITA;إسبانيا SPAIN ESP;البرتغال PORTUGAL PRT;هولندا NETHERLANDS NLD;بلجيكا BELGIUM BEL;سويسرا SWITZERLAND CHE;النمسا AUSTRIA AUT;السويد SWEDEN SWE;النرويج NORWAY NOR;الدنمارك DENMARK DNK;فنلندا FINLAND FIN;بولندا POLAND POL;اليونان GREECE GRC;قبرص CYPRUS CYP;البوسنة BOSNIA AND HERZEGOVINA BIH;ألبانيا ALBANIA ALB;أمريكا USA USA;كندا CANADA CAN;المكسيك MEXICO MEX;البرازيل BRAZIL BRA;أستراليا AUSTRALIA AUS;نيوزيلندا NEW ZEALAND NZL`.split(";");
 let GRP=null,ADMSYN=null;
 function groupsBase(){if(GRP)return GRP;GRP=[];
   const add=line=>{const w=NORM(line).split(" ").filter(x=>x.length>1);if(w.length>1)GRP.push(new Set(w))};
   DICT.split("\n").forEach(add);
-  try{(window.TIM&&TIM.countries||[]).forEach(c=>add(c.ar+" "+c.en+" "+c.a3))}catch(e){}
+  CTRYN.forEach(add);
   (ADMSYN||[]).forEach(add);return GRP}
 /* شريط الرئيسية: المشرف يختار التعاميم الخاصة بمطار الجوف فقط (مفتاح tick) */
 let TKI=null;async function loadTk(){if(TKI)return;try{const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"tick"});TKI=j&&j.v&&Array.isArray(j.v.ids)?j.v.ids:[]}catch(e){TKI=[]}paintRes()}
@@ -482,32 +483,6 @@ function bind(el){if(el.__cx)return;el.__cx=1;
   /* مسودة التعميم المكتوب تنحفظ أول بأول */
   el.addEventListener("input",e=>{const box=e.target.closest(".cx-ed");if(!box||!box.querySelector('[data-save="__new"]'))return;const o={};box.querySelectorAll("[data-f]").forEach(i=>o[i.dataset.f]=i.value);try{localStorage.setItem("ajf_cx_draft",JSON.stringify(o))}catch(x){}})}
 
-/* ---------- ربط مع فحص وثائق الراكب ---------- */
-let REL=null;const RELC=new Map();
-/* بدل عرض التعاميم: نسأل المساعد عن حالة الراكب ونعرض الخلاصة فقط */
-async function related(ctx,el){if(!el||!AUTH.tok)return;
-  const T=ctx.T,B=ctx.B,P=ctx.P,nm=c=>c&&(c.ar||c.en)||"";const cs=new Map();const addC=c=>{if(c&&c.a2)cs.set(c.a2,c)};
-  const nat=(P&&window.TIM&&TIM.countries.find(c=>c.a3===P.nat))||(T&&T.hdr.nat)||null;
-  if(T){["nat","tr","dst","emb"].forEach(k=>{if(k!=="emb"||!T.hdr.dst)addC(T.hdr[k])});T.secs.forEach(s=>addC(s.c))}addC(nat);
-  const vs=(ctx.V||[]).filter(v=>v.type!=="passport").map(v=>`${v.type==="res"?"إقامة":"تأشيرة"}${v.kind?" "+v.kind:""} ${nm(v.c)}`.trim());
-  const parts=[];if(nat)parts.push("الجنسية "+nm(nat));if(T&&T.hdr.dst)parts.push("الوجهة "+nm(T.hdr.dst));if(T&&T.hdr.tr)parts.push("ترانزيت "+nm(T.hdr.tr));
-  if(T&&T.hdr.res)parts.push("مقيم في "+nm(T.hdr.res));if(vs.length)parts.push("معه "+vs.join(" و"));
-  if(B&&B.codes.length)parts.push("المسار "+B.codes.slice(0,6).join("-"));if(ctx.date)parts.push("تاريخ السفر "+ctx.date);if(ctx.note)parts.push("ملاحظة الموظف: "+ctx.note);
-  if(!cs.size&&!parts.length){el.innerHTML="";return}
-  const head=`<div class="bd-sec"><span>📢 خلاصة التعاميم لهذا الراكب</span></div>`;
-  const q=`راكب مسافر من مطار الجوف: ${parts.join("، ")}. هل فيه تعميم ينطبق عليه (جنسيته أو وجهته أو مطار/دولة الترانزيت أو نوع تأشيرته) مثل منع قبول أو اشتراط تأشيرة دخول لدولة الترانزيت؟ تجاهل التعاميم اللي ما تخصه. إذا فيه: ابدأ بسطر **الخلاصة:** يُقبل أو يُقبل بشرط كذا أو لا يُقبل، ثم المطلوب باختصار. إذا ما فيه قل بسطر واحد: لا يوجد تعميم يخص هذا الراكب. بدون قسم خارج التعاميم وبدون نقل نص التعميم.`.slice(0,600);
-  if(RELC.has(q)){const c=RELC.get(q);el.innerHTML=c.h;return c.r}
-  el.innerHTML=head+`<div class="bd-empty">… جاري البحث في التعاميم (عادة 10–25 ثانية)</div>`;
-  try{const j=await F({action:"ask",q});
-    const t=String(j.answer||"").replace(/\s*\[[^\[\]]{1,700}\]/g,"").replace(/\*\*خارج التعاميم[\s\S]*$/,"").trim()||"لا يوجد تعميم يخص هذا الراكب.";
-    const none=/لا يوجد تعميم|ما فيه تعميم|ما فيه تعاميم/.test(t)&&t.length<160;
-    const h=head+`<div class="ci cx"><div class="cx-sum">${none?"✓ لا يوجد تعميم يخص هذا الراكب":fmtAns(t)}</div><p class="tx-note">خلاصة آلية من التعاميم — للتفاصيل اسأل مساعد التعاميم.</p></div>`;
-    /* r: نص الخلاصة للمساعد الذكي تحت التحليل (يُبنى عليه الحكم) — none: ما فيه تعميم يخصه */
-    const res={none,t,q};RELC.set(q,{h,r:res});if(el.isConnected)el.innerHTML=h;return res}
-  catch(e){el.innerHTML=head+`<div class="bd-empty">${e.message==="nokey"?"مساعد التعاميم غير مفعّل":e.message==="aierr"?"المساعد مشغول — أعد التحليل بعد شوي":E(errTxt(e))}</div>`;return null}}
-const MO={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
-function parseTd(s){const m=String(s).replace(/O/g,"0").match(/^(\d{2})([A-Z0]{3})(\d{2})$/);if(!m)return null;const mo=MO[m[2].replace(/0/g,"O")];return mo==null?null:new Date(Date.UTC(2000+ +m[3],mo,+m[1]))}
-
-window.CIRCM={mount:(el,q)=>{bind(el);mount(el,q)},related,count:async()=>{const j=await R("ajf_circ_list",{p_offset:0,p_limit:1});return{n:j.n,last:j.rows[0]&&j.rows[0].id}},
+window.CIRCM={mount:(el,q)=>{bind(el);mount(el,q)},count:async()=>{const j=await R("ajf_circ_list",{p_offset:0,p_limit:1});return{n:j.n,last:j.rows[0]&&j.rows[0].id}},
   _t:{citeUnits,vwLocate,vwPages,qGroups,indexText,NORM,SK,guessDate,pdfText,fmtAns,cited}};
 })();
