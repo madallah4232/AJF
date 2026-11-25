@@ -39,7 +39,7 @@ function match(r,P,x){const need=[];
   if(r.sup){if(!r.sup.some(s=>P.sup.includes(s)))need.push("معه تأشيرة أو إقامة سارية من "+r.sup.map(s=>SUP[s]).join(" أو "))}
   if(r.car){if(!x.car||!x.car.length)need.push("الناقل "+r.car.map(c=>K.CAR[c]||c).join(" أو "));else if(!r.car.some(c=>x.car.includes(c)))return[0]}
   return need.length?[2,need.filter(Boolean).join(" و")]:[1]}
-const rules=(c,s)=>K.R.filter(r=>(r.c===c||(r.c==="*"&&c==="*"))&&r.s===s);
+let TK="";const rules=(c,s)=>K.R.filter(r=>(r.c===c||(r.c==="*"&&c==="*"))&&r.s===s&&!(r.tk&&TK&&r.tk!==TK));
 const ST={F:["ok","بدون تأشيرة"],V:["ok","تأشيرة عند الوصول"],E:["w","تأشيرة إلكترونية مسبقة"],T:["w","تصريح سفر إلكتروني ETA مسبق"],R:["w","تأشيرة مسبقة مطلوبة"],N:["x","الدخول غير مسموح"]};
 const stTxt=s=>{if(!s||s==="-")return null;const k=ST[s[0]];return k?[k[0],k[1]+(s.length>1?` (${s.slice(1)} يوم)`:"")]:null};
 const RANK={ok:0,i:0,w:1,x:2};const worse=(a,b)=>RANK[b]>RANK[a]?b:a;
@@ -64,7 +64,7 @@ function entry(P,c,x){const L=[];let lv="ok",head,detailed=K.R.some(r=>r.c===c&&
 function ppL(P,c,x){return rules(c,"pp").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]).map(([r,m])=>line(r,"i",m[1]))}
 const TWOVH={SA:12,EG:24,LB:12};
 /* تحليل المسار كامل */
-function analyze(P){const legs=P.legs.filter(l=>l.to),pts=["AJF",...legs.map(l=>l.to)],out=[];
+function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF",...legs.map(l=>l.to)],out=[];
   if(legs.length<1)return null;
   const final=apC(pts[pts.length-1]),x0={final};
   /* الخروج من السعودية: أول نقطة دولية */
@@ -73,7 +73,7 @@ function analyze(P){const legs=P.legs.filter(l=>l.to),pts=["AJF",...legs.map(l=>
   out.push({k:"exit",ic:"🇸🇦",t:"المغادرة من السعودية",lv:exitL.reduce((a,l)=>worse(a,l.lv),"ok"),head:exitL.length?"":"ما فيه شرط خاص للمغادرة",L:exitL});
   for(let i=1;i<pts.length-1;i++){const ap=pts[i],c=apC(ap),inCar=legs[i-1].car,outCar=legs[i].car,h=+legs[i-1].h||null,car=[inCar,outCar].filter(Boolean),x={final,car};
     const card={k:"tr",ic:"🔁",t:`ترانزيت: ${apLabel(ap)}`,L:[],lv:"ok"};
-    if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";card.L.push({lv:"i",t:P.ticket==="sep"?"تذاكر منفصلة: يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط.":"إذا التذكرة وحدة العفش ينشحن لآخر محطة عادة؛ إذا منفصلة يستلمه ويخلص إجراءات الرحلة الدولية من جديد."});out.push(card);continue}
+    if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";card.L.push({lv:"i",t:P.ticket==="sep"?"تذاكر منفصلة: يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط.":P.ticket==="one"?"تذكرة وحدة: العفش ينشحن لآخر محطة عادة.":"إذا التذكرة وحدة العفش ينشحن لآخر محطة عادة؛ إذا منفصلة يستلمه ويخلص إجراءات الرحلة الدولية من جديد."});out.push(card);continue}
     /* هل يقدر يبقى داخل المطار؟ */
     const tw=rules(c,"twov").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
     const twBlock=tw.some(([r,m])=>r.lv==="x"&&m[0]===1);
