@@ -13,7 +13,7 @@ const SRC={
  fz:{t:"فلاي دبي — Connecting flights",u:"https://www.flydubai.com/en/plan/connections/"},
  fragomen:{t:"Fragomen — Airport transit and immigration",u:"https://www.fragomen.com/insights/blog/airport-transit-and-immigration-it-really-simple"},
  uae_ban:{t:"وكالة أنباء الإمارات (وام) — إجراءات NCEMA و ICP الاحترازية (إيبولا)",u:"https://www.wam.ae/en/article/c0kmbb5-ncema-icp-announce-additional-precautionary",d:"2026-06-05"},
- qa_vqapi:{t:"Visit Qatar (الموقع الرسمي) — أداة فحص التأشيرة لمقيمي الخليج",u:"https://visitqatar.com/intl-en/plan-your-trip/visas",d:"2026-11-27"},
+ qa_vqapi:{t:"Visit Qatar (الموقع الرسمي) — أداة فحص التأشيرة",u:"https://visitqatar.com/intl-en/plan-your-trip/visas",d:"2026-11-27"},
  qa_hia:{t:"مطار حمد الدولي (الموقع الرسمي) — Transfers",u:"https://dohahamadairport.com/airport-guide/at-the-airport/transfers",d:"2026-11-27"},
  uae_rumor:{t:"dubaivisitsvisa — قائمة الحظر المتداولة غير مؤكدة",u:"https://dubaivisitsvisa.com/article/uae-visa-ban-countries"},
  eg_sec:{t:"مصادر سياحية مصرية 2026 (قوائم الموافقة الأمنية تختلف بين المصادر)",u:"https://www.egyptkarofttours.com/egypt-visa-on-arrival-the-complete-2026-guide-plus-restricted-banned-countries-list"},
@@ -114,6 +114,7 @@ const R=[
 /* ===================== قطر ===================== */
 {c:"QA",s:"entry",lv:"w",res:["GCC"],natNot:["SA","AE","KW","QA","BH","OM"],t:"إقامة الخليج ما تعطي تأشيرة عند الوصول لقطر بعد الآن — لازم تأشيرة مسبقة عن طريق منصة «هيّا» Hayya قبل السفر. (العمالة المنزلية المسافرة مع كفيلها الخليجي مستثناة.)",src:"qa_vqapi"},
 {c:"QA",s:"entry",lv:"x",nat:["IR","PK","AF","YE","SY","IQ","LB"],t:"التأشيرة عند الوصول موقوفة لهالجنسية بكل فئاتها (سياحة، ترانزيت، إقامة خليجية، حتى الإقامة الذهبية الإماراتية). يُقبل فقط إذا معه تأشيرة مسبقة سارية (هيّا، عمل، عائلية، رسمية).",src:"rj"},
+{c:"QA",s:"entry",lv:"w",nat:["IN","TH"],qk:"qa_dqh",q:"معه حجز فندق مؤكد عن طريق Discover Qatar؟",qno:"التأشيرة عند الوصول لهالجنسية مشروطة بحجز فندق عن طريق Discover Qatar قبل السفر، أو تأشيرة هيّا مسبقة.",t:"التأشيرة عند الوصول لقطر لهالجنسية مشروطة بحجز فندق مؤكد عن طريق Discover Qatar قبل السفر (أو تأشيرة هيّا مسبقة).",src:"qa_vqapi"},
 /* ===================== الكويت ===================== */
 {c:"KW",s:"entry",lv:"ok",st:"V90",res:["SA","AE","QA","BH","OM"],natNot:["SA","AE","KW","QA","BH","OM","IR","EG","SY","LB","BD","SD","PK"],t:"المقيم في الخليج يقدر ياخذ تأشيرة سياحية عند الوصول للكويت، بشرط إقامته سارية 6 شهور على الأقل.",src:"kw_voa"},
 {c:"KW",s:"entry",lv:"w",res:["SA","AE","QA","BH","OM"],nat:["IR","EG","SY","LB","BD","SD","PK"],t:"حتى لو مقيم في الخليج، هالجنسية ما تاخذ تأشيرة عند الوصول للكويت — لازم تأشيرة سياحية إلكترونية مسبقة (المهنة من القائمة المعتمدة، والإقامة والجواز 6 شهور). الزوجة والأبناء يسافرون فقط مع الكفيل على نفس الرحلة.",src:"rj"},
