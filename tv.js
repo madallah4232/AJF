@@ -73,7 +73,14 @@ function entry(P,c,x){const L=[];let lv="ok",head,detailed=K.R.some(r=>r.c===c&&
 function ppL(P,c,x){return rules(c,"pp").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]).map(([r,m])=>line(r,"i",m[1]))}
 const TWOVH={SA:12,EG:24,LB:12};
 /* تحليل المسار كامل */
-function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF",...legs.map(l=>l.to)],out=[];
+function analyze(P){TK=P.ticket||"";
+  /* اتفاقيات شحن العفش بين الناقلين (من مراجعة التعاميم) */
+  const ilOf=(a,b)=>{if(!a||!b)return{v:"unk"};if(a===b)return{v:"yes",same:1};return(P.il||{})[a+">"+b]||{v:P.ilPending?"pend":"unk"}};
+  const ilLine=(a,b,ap,free)=>{const r=ilOf(a,b),nm=carN(a)+" و"+carN(b);
+    if(r.v==="yes")return{lv:"ok",bag:1,t:r.same?`🧳 نفس الناقل (${carN(a)}) — العفش يمشي لآخر محطة.`:`🧳 حسب تعاميم المحطة: فيه اتفاقية شحن عفش بين ${nm} — العفش يمشي لآخر محطة.`,src:r.src};
+    if(r.v==="no")return{lv:"w",bag:1,no:1,t:`🧳 حسب تعاميم المحطة: ما فيه اتفاقية شحن عفش بين ${nm} — ما ينفع يتشحن لآخر محطة، يستلمه في ${apN(ap)} ويشحنه من جديد.`,src:r.src};
+    if(r.v==="pend")return{lv:"w",bag:1,t:`🧳 جاري البحث في تعاميم المحطة عن اتفاقية شحن عفش بين ${nm}…`};
+    return{lv:"w",bag:1,t:`🧳 ما لقيت في تعاميم المحطة اتفاقية شحن عفش بين ${nm} — مع التذاكر المنفصلة الأصل إنه يستلمه في ${apN(ap)}، إلا إذا تأكدت من وجود الاتفاقية.`}};const legs=P.legs.filter(l=>l.to),pts=["AJF",...legs.map(l=>l.to)],out=[];
   if(legs.length<1)return null;
   const final=apC(pts[pts.length-1]),x0={final};
   /* الخروج من السعودية: أول نقطة دولية */
@@ -82,7 +89,7 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
   out.push({k:"exit",ic:"🇸🇦",t:"المغادرة من السعودية",lv:exitL.reduce((a,l)=>worse(a,l.lv),"ok"),head:exitL.length?"":"ما فيه شرط خاص للمغادرة",L:exitL});
   for(let i=1;i<pts.length-1;i++){const ap=pts[i],c=apC(ap),inCar=legs[i-1].car,outCar=legs[i].car,h=+legs[i-1].h||null,car=[inCar,outCar].filter(Boolean),x={final,car,ap};
     const card={k:"tr",ic:"🔁",t:`ترانزيت: ${apLabel(ap)}`,L:[],lv:"ok"};
-    if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";{const bg=legs[i-1].bag;card.L.push(bg==="out"?{lv:"i",t:"🧳 يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط."}:bg==="thru"?(P.ticket==="sep"?{lv:"w",t:"🧳 العفش لآخر محطة مع تذاكر منفصلة: يصير فقط إذا بين الناقلين اتفاقية شحن — تأكد قبل ما تشحن."}:{lv:"ok",t:"🧳 العفش يمشي لآخر محطة."}):{lv:"w",t:"🧳 حدد وين ينشحن العفش في هالمحطة."})}out.push(card);continue}
+    if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";{const bg=legs[i-1].bag;card.L.push(bg==="out"?{lv:"i",bag:1,t:"🧳 يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط."}:bg==="thru"?(P.ticket==="sep"?(()=>{const l=ilLine(legs[i-1].car,legs[i].car,ap,true);return l})():{lv:"ok",bag:1,t:"🧳 تذكرة وحدة: العفش يمشي لآخر محطة."}):{lv:"w",bag:1,t:"🧳 حدد وين ينشحن العفش في هالمحطة."})}out.push(card);continue}
     /* هل يقدر يبقى داخل المطار؟ */
     const tw=rules(c,"twov").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
     let twBlock=false;const circ=tw.some(([r,m])=>r.vis&&m[0]===1);if(tw.some(([r,m])=>r.circ&&m[0]===1))card.circ=1;
@@ -96,15 +103,16 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
     const lg=legs[i-1],prevC=apC(pts[i-1]),nextC=apC(pts[i+1]);
     const b1=rules(c,"bag1").filter(r=>r.all||(prevC!==c&&nextC===c)),forced=b1.length>0,long=h&&h>24;
     const bagR=rules(c,"bag").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
-    let bagsOut=lg.bag==="out"||forced;
+    let bagsOut=lg.bag==="out"||forced,ilNo=false;
     if(lg.bag==="thru"){
-      if(forced){b1.forEach(r=>card.L.push(line(r,"w")));card.L.push({lv:"w",t:`🧳 لا تشحن العفش لآخر محطة: اشحنه لين ${apN(ap)} بس — الراكب يستلمه هناك ويطلع من الجوازات${freeIn?"":" (ويحتاج إذن دخول لـ "+cn(c)+")"}، وبعدين يشحنه من جديد.`})}
-      else{card.L.push({lv:"ok",t:"🧳 العفش يمشي لآخر محطة."});
-        if(long){const sm=K.SRC.msc;card.L.push({lv:"w",t:`🧳 الانتظار ${h} ساعة (أكثر من 24): يعتبر توقف (Stopover)، وعادة العفش ينشحن لين هالمحطة بس — تأكد مع الناقل قبل ما تشحنه لآخر محطة.`,src:sm.t,u:sm.u})}
-        if(P.ticket==="sep"){card.L.push({lv:"w",t:"🧳 تذاكر منفصلة: الشحن لآخر محطة يصير فقط إذا بين الناقلين اتفاقية شحن ويوافقون — تأكد قبل ما تشحن، وغير كذا يستلمه هنا."});
-          bagR.forEach(([r,m])=>card.L.push(line(r,"i",m[1])));rules("*","bag").forEach(r=>card.L.push(line(r,"i")))}}}
-    else if(lg.bag==="out"){card.L.push({lv:"i",t:`🧳 يستلم عفشه في ${apN(ap)} ويطلع من الجوازات — لازم يحق له دخول ${cn(c)}.`});b1.forEach(r=>card.L.push(line(r,"i")))}
-    else card.L.push({lv:"w",t:"🧳 حدد وين ينشحن العفش في هالمحطة (يمشي لآخر محطة أو يستلمه هنا)."});
+      if(forced){b1.forEach(r=>{const l=line(r,"w");l.bag=1;card.L.push(l)});card.L.push({lv:"w",bag:1,t:`🧳 لا تشحن العفش لآخر محطة: اشحنه لين ${apN(ap)} بس — الراكب يستلمه هناك ويطلع من الجوازات${freeIn?"":" (ويحتاج إذن دخول لـ "+cn(c)+")"}، وبعدين يشحنه من جديد.`})}
+      else{const il=P.ticket==="sep"?ilLine(lg.car,legs[i].car,ap,freeIn):null;
+        if(il&&il.no){bagsOut=true;ilNo=true}
+        card.L.push(il||{lv:"ok",bag:1,t:"🧳 تذكرة وحدة: العفش يمشي لآخر محطة."});
+        if(long){const sm=K.SRC.msc;card.L.push({lv:"w",bag:1,t:`🧳 الانتظار ${h} ساعة (أكثر من 24): يعتبر توقف (Stopover)، وعادة العفش ينشحن لين هالمحطة بس — تأكد مع الناقل قبل ما تشحنه لآخر محطة.`,src:sm.t,u:sm.u})}
+        if(il&&il.lv!=="ok")bagR.forEach(([r,m])=>card.L.push(line(r,"i",m[1])))}}
+    else if(lg.bag==="out"){card.L.push({lv:"i",bag:1,t:`🧳 يستلم عفشه في ${apN(ap)} ويطلع من الجوازات — لازم يحق له دخول ${cn(c)}.`});b1.forEach(r=>card.L.push(line(r,"i")))}
+    else card.L.push({lv:"w",bag:1,t:"🧳 حدد وين ينشحن العفش في هالمحطة (يمشي لآخر محطة أو يستلمه هنا)."});
     if(bagsOut)card.L=card.L.filter(l=>!(l.tw&&l.lv==="ok"));
     card.lv=card.L.reduce((a,l)=>worse(a,l.lv),"ok");
     if(twBlock)card.lv="x";
@@ -114,7 +122,7 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
       card.ent.L=card.ent.L.concat(tv);
       if(bagsOut||tooLong)card.lv=worse(card.lv,e.lv);
       card.head=bagsOut||tooLong?`لازم يطلع من الجوازات في ${apN(ap)} — ${e.head.replace(/^✕\s*/,"")}`:`إذا اضطر يطلع من المطار: ${e.head}`}
-    else card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":forced&&lg.bag==="thru"?`🧳 ما ينفع يتشحن العفش لين ${apN(pts[pts.length-1])}: ${cn(c)} تشترط استلامه في ${apN(ap)}${freeIn?" (وما يحتاج تأشيرة)":""}`:forced&&freeIn?"🧳 العفش ينستلم هنا — وما يحتاج تأشيرة لدخوله":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار";
+    else card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":forced&&lg.bag==="thru"?`🧳 ما ينفع يتشحن العفش لين ${apN(pts[pts.length-1])}: ${cn(c)} تشترط استلامه في ${apN(ap)}${freeIn?" (وما يحتاج تأشيرة)":""}`:ilNo?`🧳 العفش ينشحن لين ${apN(ap)} بس (ما فيه اتفاقية شحن بين الناقلين) — يستلمه هنا وما يحتاج تأشيرة`:forced&&freeIn?"🧳 العفش ينستلم هنا — وما يحتاج تأشيرة لدخوله":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار";
     out.push(card)}
   /* الوجهة النهائية */
   const fc=final,e=entry(P,fc,{final,car:[legs[legs.length-1].car].filter(Boolean)});
@@ -216,6 +224,7 @@ const CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;ali
 .tv-sec{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px}
 .tv-sec h4,.tv-h4,.tv-ai h4{margin:0;font-size:14px;font-weight:700;color:var(--muted)}.tv-h4{margin:6px 4px -2px}
 .tv-sec.need{border-color:rgba(240,180,41,.4)}.tv-sec.need.x{border-color:rgba(240,97,74,.45)}.tv-sec.need.x .tv-need{background:rgba(240,97,74,.1);border-inline-start-color:#f0614a}.tv-need{font-size:15px;line-height:1.6;padding:10px 12px;border-radius:12px;background:rgba(240,180,41,.1);border-inline-start:3px solid #f0b429}
+.tv-sec.bag.w{border-color:rgba(240,180,41,.45)}.tv-sec.bag.x{border-color:rgba(240,97,74,.5)}.tv-src{color:var(--muted);font-size:11.5px}
 .tv-sec.circ.hit.x{border-color:rgba(240,97,74,.5)}.tv-sec.circ.hit.w{border-color:rgba(240,180,41,.45)}
 .tv-cl{display:flex;gap:10px;align-items:flex-start;font-size:15px;line-height:1.6}.tv-cl .tv-mk{margin-top:3px}
 .tv-more summary{cursor:pointer;font-size:12.5px;color:var(--muted);list-style:none;padding:4px 0}.tv-more summary::-webkit-details-marker{display:none}.tv-more summary::before{content:"▸ ";}.tv-more[open] summary::before{content:"▾ "}
@@ -341,7 +350,10 @@ function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-e
   const hit=cv.st==="ok"&&circLines(cv).length>0;
   const lv=cv.st==="ok"?(hit?worse(o.lv,cv.lv):o.lv):worse(o.lv,"w");
   const needs=[...o.needs];if(hit&&cv.lv!=="ok"&&cv.k)needs.unshift("📢 حسب تعميم المحطة: "+cv.k);if(cv.st!=="ok")needs.unshift("ما تمت مراجعة التعاميم — أعد المراجعة تحت");
-  return heroH(o,lv)+(lv!=="ok"?`<div class="tv-sec need ${lv}"><h4>${lv==="x"?"سبب عدم القبول":"المطلوب قبل القبول"}</h4>${needs.map(n=>`<div class="tv-need">${E(n.replace(/^[^:]+:\s*/,m=>m))}</div>`).join("")}</div>`:"")+circH(cv)+`<h4 class="tv-h4">تفاصيل المسار</h4>`+cardsH(o)+aiH()}
+  return heroH(o,lv)+(lv!=="ok"?`<div class="tv-sec need ${lv}"><h4>${lv==="x"?"سبب عدم القبول":"المطلوب قبل القبول"}</h4>${needs.map(n=>`<div class="tv-need">${E(n.replace(/^[^:]+:\s*/,m=>m))}</div>`).join("")}</div>`:"")+circH(cv)+bagH(o)+`<h4 class="tv-h4">تفاصيل المسار</h4>`+cardsH(o)+aiH()}
+function bagH(o){const rows=[];o.cards.forEach((c,ci)=>{if(c.k!=="tr")return;c.L.filter(l=>l.bag).forEach(l=>rows.push([o.pts[ci],l]))});if(!rows.length)return"";
+  const lv=rows.reduce((a,[,l])=>worse(a,l.lv==="i"?"ok":l.lv),"ok");
+  return`<div class="tv-sec bag ${lv}"><h4>🧳 شحن العفش</h4>${rows.map(([ap,l])=>`<div class="tv-cl">${mk(l.lv)}<span><b>${E(apN(ap))}:</b> ${E(l.t.replace(/^🧳\s*/,""))}${l.src?`<small class="tv-src"> — ${E(l.src)}</small>`:""}</span></div>`).join("")}</div>`}
 function circLines(cv){return String(cv.a||"").split("\n").map(x=>x.replace(/\*+/g,"").trim()).filter(x=>/^📢/.test(x)).map(x=>x.replace(/^📢\s*(التعاميم|التعميم)?\s*:?\s*/,"")).filter(x=>!/لا يوجد تعميم|ما فيه تعميم|لا توجد تعاميم|لا ينطبق/.test(x))}
 function circH(cv){if(cv.st!=="ok")return`<div class="tv-sec"><h4>📢 تعاميم المحطة</h4><div class="tv-note">${E(cv.err||"تعذّرت المراجعة")}</div><button class="tv-sm" id="tvCv">↻ أعد مراجعة التعاميم</button></div>`;
   const ls=circLines(cv),none=!ls.length;
@@ -349,7 +361,7 @@ function circH(cv){if(cv.st!=="ok")return`<div class="tv-sec"><h4>📢 تعام�
     ${none?`<div class="tv-cl">${mk("ok")}<span>ما فيه تعميم يخص هالراكب أو هالمسار</span></div>`:ls.map(x=>`<div class="tv-cl">${mk(cv.lv==="ok"?"i":cv.lv)}<span>${E(x)}</span></div>`).join("")}
     <details class="tv-more"><summary>رد المراجعة كامل</summary><div class="a">${fmt(cv.a)}</div></details></div>`}
 function cardsH(o){const cv=S.cv||{};return`<div class="tv-tl">${o.cards.map((c,ci)=>{const hit=cv.st==="ok"&&circLines(cv).length>0,lv=c.circ?(cv.st==="ok"?(hit?worse(c.lv==="w"?"ok":c.lv,cv.lv):(c.lv==="w"?"ok":c.lv)):"w"):c.lv;
-  const key=c.L.filter(l=>l.lv==="w"||l.lv==="x"),rest=c.L.filter(l=>!(l.lv==="w"||l.lv==="x"));
+  const kk=l=>l.bag||l.lv==="w"||l.lv==="x",key=c.L.filter(kk),rest=c.L.filter(l=>!kk(l));
   const ent=c.ent?`<div class="tv-sub"><b>🛂 لو طلع من المطار — دخول ${E(cn(apC(o.pts[ci])))}: ${E(c.ent.head)}</b>${c.ent.L.filter(l=>l.lv==="w"||l.lv==="x").map(lineH).join("")}${c.ent.L.some(l=>!(l.lv==="w"||l.lv==="x"))?`<details class="tv-more"><summary>معلومات إضافية</summary>${c.ent.L.filter(l=>!(l.lv==="w"||l.lv==="x")).map(lineH).join("")}</details>`:""}</div>`:"";
   return`<div class="tv-st ${lv}"><span class="tv-dot">${MK[lv]}</span><div class="tv-st-b"><div class="tv-st-h">${c.k==="exit"?"":`<small>${c.k==="tr"?"ترانزيت":"الوجهة النهائية"}</small>`}<b>${E(c.t.replace(/^[^:]+:\s*/,""))}</b>${(()=>{const h=c.circ&&cv.st==="ok"&&cv.lv!=="ok"&&circLines(cv).length?(cv.lv==="x"?"⛔ حسب تعميم المحطة ما يمشي — شوف «تعاميم المحطة» فوق":"⚠️ حسب تعميم المحطة: بشرط — شوف «تعاميم المحطة» فوق"):c.head;return h?`<span>${E(h)}</span>`:""})()}</div>
     ${key.map(lineH).join("")}${ent}${rest.length?`<details class="tv-more"><summary>التفاصيل والمصادر (${rest.length})</summary>${rest.map(lineH).join("")}</details>`:""}</div></div>`}).join("")}</div>`}
@@ -361,9 +373,9 @@ function aiH(){return`<div class="tv-ai"><h4>🤖 كمّل مع المساعد</
     <div class="tv-note">هذي الأداة تجمع قواعد منشورة من مواقع حكومية وشركات طيران (مو من تيماتيك نفسه). القواعد تتغير، فإذا الحكم ⚠️ أو الحالة نادرة، تأكد قبل القبول. آخر مراجعة للقواعد: ${E(K.D)}.</div>`}
 function fmt(t){return E(String(t||"")).replace(/^\s*#{1,4}\s*(.+)$/gm,"<b>$1</b>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ").replace(/\n/g,"<br>")}
 function legsB(){const n=S.legs.length,k=S.legs.length>1?(S.bagTo!=null&&S.bagTo<n?S.bagTo:null):0;return S.legs.map((l,i)=>({...l,bag:k==null?"":i<n-1?(i<k?"thru":i===k?"out":"thru"):""}))}
-function P(){return{nat:S.nat,st:isGcc()?"cit":S.st,res:resOf(),age:S.age===""?null:+S.age,sex:S.sex,sup:S.sup,ebola:S.ebola,ticket:S.legs.length>1?S.ticket:"one",legs:legsB(),visas:S.visas}}
+function P(){return{il:S.il||{},ilPending:!!(S.cv&&S.cv.st==="run"),nat:S.nat,st:isGcc()?"cit":S.st,res:resOf(),age:S.age===""?null:+S.age,sex:S.sex,sup:S.sup,ebola:S.ebola,ticket:S.legs.length>1?S.ticket:"one",legs:legsB(),visas:S.visas}}
 function run(){if(!S.nat){S.out={err:"اختر جنسية الراكب أول."};paintOut();return}if(!S.legs[S.legs.length-1].to){S.out={err:"اختر الوجهة النهائية."};paintOut();return}
-  loadPI().then(()=>{S.out=analyze(P());S.th=[];S.cv={st:"run"};paintOut();reviewCirc();try{ajfAct&&ajfAct("tv",S.nat+">"+S.legs.map(l=>l.to).join(">"))}catch(e){}
+  loadPI().then(()=>{S.il={};S.cv={st:"run"};S.out=analyze(P());S.th=[];paintOut();reviewCirc();try{ajfAct&&ajfAct("tv",S.nat+">"+S.legs.map(l=>l.to).join(">"))}catch(e){}
     setTimeout(()=>{const o=root.querySelector("#tvOut");if(o)o.scrollIntoView({behavior:"smooth",block:"start"})},50)}).catch(()=>{S.out={err:"تعذّر تحميل قاعدة التأشيرات، تأكد من الإنترنت."};paintOut()})}
 function paintOut(){const o=root&&root.querySelector("#tvOut");if(o)o.innerHTML=outHTML();save()}
 function ctxText(){const p=P(),o=S.out;const L=[];
@@ -384,8 +396,11 @@ const verdict=a=>{const t=String(a||"");const i=t.lastIndexOf("الخلاصة");
 async function callAI(q,h){const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"tim",ctx:ctxText(),q,h})});
   if(r.status===404)throw new Error("nofn");const j=await r.json();if(j.s==="out")throw new Error("out");if(j.s==="nokey")throw new Error("nokey");if(j.s!=="ok")throw new Error(j.s||"aierr");return j.answer||""}
 const aiErr=m=>m==="out"?"سجّل دخولك أول.":m==="nokey"?"مفتاح Gemini ناقص في Supabase.":m==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":"تعذّر الاتصال، جرّب مرة ثانية.";
-async function reviewCirc(){const tok=S.out;S.cv={st:"run"};paintOut();
-  try{const a=await callAI(CVQ,[]);if(S.out!==tok)return;S.th=[{q:CVQ,a}];S.cv={st:"ok",a,...verdict(a)}}
+function ilPairs(){const L=S.legs,ps=[];if(L.length<2||S.ticket!=="sep")return ps;for(let i=0;i<L.length-1;i++){const a=L[i].car,b=L[i+1].car;if(a&&b&&a!==b&&!ps.includes(a+">"+b))ps.push(a+">"+b)}return ps}
+function parseIl(a){const il={};String(a||"").split("\n").forEach(x=>{const m=x.replace(/\*+/g,"").match(/🧳\s*([A-Z0-9]{2})\s*[>←→\-–]+\s*([A-Z0-9]{2})\s*:\s*(نعم|لا|غير مذكور)\s*[—–\-:]?\s*(.*)/);if(m)il[m[1]+">"+m[2]]={v:m[3]==="نعم"?"yes":m[3]==="لا"?"no":"unk",src:m[4]&&m[4].trim()?"تعميم: "+m[4].trim():"تعاميم المحطة"}});return il}
+async function reviewCirc(){let tok=S.out;S.cv={st:"run"};S.out=analyze(P());tok=S.out;paintOut();
+  const ps=ilPairs(),q=CVQ+(ps.length?` + شحن العفش (interline / through check / اتفاقية شحن العفش / baggage agreement): الراكب على تذاكر منفصلة. ابحث في التعاميم عن اتفاقيات شحن العفش بين هالناقلين: ${ps.map(p=>p.split(">").map(c=>carN(c)+" "+c).join(" ← ")).join("، ")}. وقبل سطر الخلاصة اكتب سطر لكل زوج بهالشكل بالضبط (بالرموز الإنجليزية): ${ps.map(p=>"🧳 "+p+": نعم أو لا أو غير مذكور — عنوان التعميم").join(" | ")}. «نعم» فقط إذا التعميم يذكر الاتفاقية صراحة، و«لا» فقط إذا التعميم ينفيها أو يمنع الشحن، وغير كذا «غير مذكور».`:"");
+  try{const a=await callAI(q,[]);if(S.out!==tok)return;S.th=[{q,a}];S.il=parseIl(a);S.cv={st:"ok",a,...verdict(a)};S.out=analyze(P())}
   catch(e){if(S.out!==tok)return;S.cv={st:"err",err:aiErr(e.message)}}paintOut()}
 async function ask(){if(S.busy||!S.out||S.out.err)return;const q=(S.aq||"").trim();if(!q)return;
   S.busy=true;paintOut();
