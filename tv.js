@@ -78,7 +78,7 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
     if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";card.L.push({lv:"i",t:P.ticket==="sep"?"تذاكر منفصلة: يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط.":P.ticket==="one"?"تذكرة وحدة: العفش ينشحن لآخر محطة عادة.":"إذا التذكرة وحدة العفش ينشحن لآخر محطة عادة؛ إذا منفصلة يستلمه ويخلص إجراءات الرحلة الدولية من جديد."});out.push(card);continue}
     /* هل يقدر يبقى داخل المطار؟ */
     const tw=rules(c,"twov").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
-    let twBlock=false;const circ=tw.some(([r,m])=>r.vis&&m[0]===1);
+    let twBlock=false;const circ=tw.some(([r,m])=>r.vis&&m[0]===1);if(tw.some(([r,m])=>r.circ&&m[0]===1))card.circ=1;
     tw.forEach(([r,m])=>{if(circ&&!r.vis&&r.lv==="ok")return;if(r.vis){const ok=P.visas[c]===1,l=line(r,m[0]===1?(ok?"ok":"x"):"w",m[1]);if(ok)l.t="معه تأشيرة للإمارات ✓ — "+l.t;if(l.lv==="x")twBlock=true;card.L.push(l);return}
       if(r.lv==="x"&&m[0]===1)twBlock=true;card.L.push(line(r,m[0]===1?r.lv:(r.lv==="x"?"w":r.lv),m[1]))});
     if(!tw.length)card.L.push({lv:"i",t:"ما عندنا قاعدة ترانزيت مفصلة لهالمطار — عادة الترانزيت داخل المطار بدون تأشيرة إذا العفش ينشحن لآخر محطة والرحلة التالية من نفس المطار، لكن بعض الدول تشترط تأشيرة ترانزيت لجنسيات معينة. تأكد.",src:K.SRC.pi.t,u:K.SRC.pi.u});
@@ -271,7 +271,7 @@ function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-e
   const V={ok:["✅ يُقبل للسفر (القواعد + التعاميم)","ok"],w:["⚠️ يُقبل بشرط — تأكد من التالي","w"],x:["⛔ لا يُقبل بالوضع الحالي","x"]}[lv];
   return`<div class="tv-v ${V[1]}"><b>${V[0]}</b>${lv!=="ok"?`<ul>${needs.map(n=>`<li>${E(n)}</li>`).join("")}</ul>`:""}</div>
     <div class="tv-cv"><b>📢 مراجعة تعاميم المحطة</b>${cv.st==="ok"?`<div class="a">${fmt(cv.a)}</div>`:`<div class="tv-note">${E(cv.err||"تعذّرت المراجعة")}</div><button class="tv-sm" id="tvCv">↻ أعد مراجعة التعاميم</button>`}</div>`+cardsH(o)+aiH()}
-function cardsH(o){return o.cards.map(c=>`<div class="tv-c"><div class="h">${mk(c.lv)}<div><b>${c.ic} ${E(c.t)}</b>${c.head?`<span>${E(c.head)}</span>`:""}</div></div>
+function cardsH(o){const cv=S.cv||{};return o.cards.map(c=>`<div class="tv-c"><div class="h">${mk(c.circ?(cv.st==="ok"?worse(c.lv==="w"?"ok":c.lv,cv.lv):"w"):c.lv)}<div><b>${c.ic} ${E(c.t)}</b>${c.head?`<span>${E(c.head)}</span>`:""}</div></div>
       ${c.L.map(lineH).join("")}
       ${c.ent?`<div class="tv-sub"><b>🛂 إذن الدخول لـ ${E(cn(apC(o.pts[o.cards.indexOf(c)])))} (لو طلع من المطار): ${E(c.ent.head)}</b>${c.ent.L.map(lineH).join("")}</div>`:""}</div>`).join("")}
 function aiH(){return`<div class="tv-ai"><b>🤖 كمّل مع المساعد</b>
@@ -298,7 +298,7 @@ function ctxText(){const p=P(),o=S.out;const L=[];
   L.push(`\nالحكم الآلي: ${o.lv==="ok"?"يُقبل":o.lv==="w"?"يُقبل بشروط":"لا يُقبل"}.${o.missing.length?" معلومات ناقصة: "+o.missing.join("، "):""}`);
   L.push("\nمعنى الرموز: ok مسموح · w شرط/تأكد · x مانع · i معلومة. القاعدة العامة (Passport Index) أقل دقة من القواعد المفصلة.");
   return L.join("\n")}
-const CVQ="راجع تعاميم المحطة المرفقة على هالحالة بدقة: المطارات (عربي وإنجليزي ورموز)، الناقلين، الجنسية، الإقامة، نوع التذكرة. اذكر كل تعميم ينطبق وأثره بسطر 📢. إذا ما فيه تعميم يخص الحالة قل ذلك صراحة. بعدين أعطني الحكم النهائي بعد دمج القواعد مع التعاميم (التعميم الأشد يُقدَّم).";
+const CVQ="إذا المسار فيه ترانزيت أبوظبي AUH: طبّق تعميم ترانزيت أبوظبي بشروطه بالضبط كما هي مكتوبة في نصه (أي ناقلين، أي اتفاقية مع السعودية، تذكرة وحدة أو منفصلة، أي جنسيات أو استثناءات) — لا توسّعه ولا تضيّقه، واذكر عنوانه وتاريخه. وبشكل عام: راجع تعاميم المحطة المرفقة على هالحالة بدقة: المطارات (عربي وإنجليزي ورموز)، الناقلين، الجنسية، الإقامة، نوع التذكرة. اذكر كل تعميم ينطبق وأثره بسطر 📢. إذا ما فيه تعميم يخص الحالة قل ذلك صراحة. بعدين أعطني الحكم النهائي بعد دمج القواعد مع التعاميم (التعميم الأشد يُقدَّم).";
 const verdict=a=>{const t=String(a||"");const i=t.lastIndexOf("الخلاصة");const ln=i>=0?t.slice(i).split("\n")[0]:"";const z=ln||t;
   const lv=/⛔|لا يُسمح|لا يسمح/.test(z)?"x":/⚠️|إذا معه|بشرط/.test(z)?"w":/✅|يُسمح له|يسمح له/.test(z)?"ok":"w";return{lv,k:ln.replace(/\*+/g,"").replace(/^الخلاصة:?\s*/,"").trim()}};
 async function callAI(q,h){const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"tim",ctx:ctxText(),q,h})});
