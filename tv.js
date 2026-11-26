@@ -13,7 +13,7 @@ const loadPI=()=>PI?Promise.resolve(PI):PIP||(PIP=Promise.all([fetch("tvpi.json?
 let DN=null;try{DN=new Intl.DisplayNames(["ar"],{type:"region"})}catch(e){}
 const FIX={SA:"السعودية",PS:"فلسطين",AE:"الإمارات",US:"أمريكا",GB:"بريطانيا",KR:"كوريا الجنوبية",CD:"الكونغو الديمقراطية",CG:"الكونغو",XK:"كوسوفو"};
 const cn=c=>!c?"—":FIX[c]||(DN?DN.of(c):c)||c;
-const apN=a=>K.AP[a]?K.AP[a][0]:WA[a]?(WA[a][1]||WA[a][2]||WA[a][3]):a,apC=a=>a&&a.startsWith("C:")?a.slice(2):K.AP[a]?K.AP[a][1]:WA[a]?WA[a][4]:"";
+const apN=a=>a&&a.startsWith("C:")?cn(a.slice(2)):K.AP[a]?K.AP[a][0]:WA[a]?(WA[a][1]||WA[a][2]||WA[a][3]):a,apC=a=>a&&a.startsWith("C:")?a.slice(2):K.AP[a]?K.AP[a][1]:WA[a]?WA[a][4]:"";
 const apLabel=a=>a&&a.startsWith("C:")?cn(a.slice(2)):`${apN(a)} ${a}`;
 const TOP_NAT=["SA","EG","SD","YE","SY","JO","PS","PK","IN","BD","PH","ID","LK","NP","ET","IQ","LB","MA","TN","DZ","TR","AF","SO","ER","NG","KE","UG","SS","LY","MR","IR","AE","KW","QA","BH","OM"];
 const SUP={US:"أمريكا",UK:"بريطانيا",SCH:"شنغن",IE:"أيرلندا",CA:"كندا"};
@@ -88,13 +88,14 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
     let twBlock=false;const circ=tw.some(([r,m])=>r.vis&&m[0]===1);if(tw.some(([r,m])=>r.circ&&m[0]===1))card.circ=1;
     tw.forEach(([r,m])=>{if(circ&&!r.vis&&r.lv==="ok")return;if(r.vis){const ok=P.visas[c]===1,l=line(r,m[0]===1?(ok?"ok":"x"):"w",m[1]);if(ok)l.t="معه تأشيرة للإمارات ✓ — "+l.t;if(l.lv==="x")twBlock=true;card.L.push(l);return}
       if(r.lv==="x"&&m[0]===1)twBlock=true;card.L.push(line(r,m[0]===1?r.lv:(r.lv==="x"?"w":r.lv),m[1]))});
-    if(!tw.length)card.L.push({lv:"i",t:"ما عندنا قاعدة ترانزيت مفصلة لهالمطار — عادة الترانزيت داخل المطار بدون تأشيرة إذا العفش ينشحن لآخر محطة والرحلة التالية من نفس المطار، لكن بعض الدول تشترط تأشيرة ترانزيت لجنسيات معينة. تأكد.",src:K.SRC.pi.t,u:K.SRC.pi.u});
-    const mx=TWOVH[c];const tooLong=h&&mx&&h>mx;
+    const eAny=entry(P,c,x),freeIn=eAny.lv==="ok";
+    if(!tw.length)card.L.push(freeIn?{lv:"ok",t:`حتى لو طلع من المطار ما يحتاج تأشيرة لـ ${cn(c)} (${eAny.head}).`,src:K.SRC.pi.t,u:K.SRC.pi.u}:{lv:"w",t:`ما عندنا قاعدة ترانزيت مفصلة لـ ${cn(c)}، وجنسيته لو طلع من المطار: ${eAny.head.replace(/^✕\s*/,"")}. بعض الدول تشترط تأشيرة ترانزيت حتى داخل المطار لجنسيات معينة — تأكد.`,src:K.SRC.pi.t,u:K.SRC.pi.u});
+    const mx=TWOVH[c]||(tw.length?0:24);const tooLong=h&&mx&&h>mx&&!freeIn;
     if(tooLong)card.L.push({lv:"w",t:`مدة الانتظار ${h} ساعة أطول من الحد المعتاد للبقاء داخل المطار (${mx} ساعة) — غالباً يحتاج تأشيرة دخول أو ترانزيت.`});
     /* العفش */
     const bagR=rules(c,"bag").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
     let bagsOut;
-    if(P.ticket==="one"){bagsOut=false;card.L.push({lv:"ok",t:circ?"تذكرة وحدة: العفش ينشحن عادة لآخر محطة.":"تذكرة وحدة: العفش ينشحن عادة لآخر محطة، والراكب يبقى داخل المطار."})}
+    if(P.ticket==="one"){bagsOut=false;card.L.push({lv:"ok",t:circ||tooLong?"تذكرة وحدة: العفش ينشحن عادة لآخر محطة.":"تذكرة وحدة: العفش ينشحن عادة لآخر محطة، والراكب يبقى داخل المطار."})}
     else if(P.ticket==="sep"){bagsOut=true;const fz=bagR.find(([r,m])=>r.car&&m[0]===1);
       card.L.push({lv:"w",t:`تذاكر منفصلة: ${fz?"ممكن يشحن العفش لآخر محطة برسوم إذا الناقل الثاني شريك (شوف تحت)، وإلا ":""}يستلم عفشه في ${apN(ap)} ويطلع من الجوازات — فيحتاج إذن دخول لـ ${cn(c)}.`})}
     else card.L.push({lv:"w",t:"حدد نوع التذكرة (وحدة أو منفصلة) — يغيّر الحكم: مع التذاكر المنفصلة غالباً يستلم عفشه ويطلع من الجوازات."});
@@ -103,12 +104,12 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
     card.lv=card.L.reduce((a,l)=>worse(a,l.lv),"ok");
     if(twBlock)card.lv="x";
     /* إذا لازم يطلع من المطار: هل يحق له الدخول؟ */
-    if(bagsOut||tooLong||P.ticket===""){const e=entry(P,c,x);card.ent=e;
+    if(!freeIn&&(bagsOut||tooLong||P.ticket==="")){const e=eAny;card.ent=e;
       const tv=rules(c,"tvisa").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]).map(([r,m])=>line(r,"i",m[1]));
       card.ent.L=card.ent.L.concat(tv);
       if(bagsOut||tooLong)card.lv=worse(card.lv,e.lv);
-      card.head=bagsOut||tooLong?`لازم يطلع من الجوازات في ${apN(ap)} — ${e.head}`:`إذا اضطر يطلع من المطار: ${e.head}`}
-    else card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":"يبقى داخل المطار";
+      card.head=bagsOut||tooLong?`لازم يطلع من الجوازات في ${apN(ap)} — ${e.head.replace(/^✕\s*/,"")}`:`إذا اضطر يطلع من المطار: ${e.head}`}
+    else card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار";
     out.push(card)}
   /* الوجهة النهائية */
   const fc=final,e=entry(P,fc,{final,car:[legs[legs.length-1].car].filter(Boolean)});
@@ -320,26 +321,27 @@ function lineH(l){return`<div class="tv-l">${mk(l.lv)}<div>${l.cond?`<em>إذا 
 /* ---------- عرض النتيجة ---------- */
 const VT={ok:["✓","يُقبل للسفر","القواعد والتعاميم ما فيها ما يمنع"],w:["!","يُقبل بشرط","تأكد من النقاط تحت قبل إصدار بطاقة الصعود"],x:["✕","لا يُقبل","بالوضع الحالي ما يمشي — شوف السبب تحت"]};
 function heroH(o,lv,pending){const p=P(),v=VT[lv],pts=o.pts;
-  const route=pts.map((a,i)=>`<span class="tv-rp"><b>${E(a==="AJF"?"الجوف":apN(a))}</b><small>${E(a.startsWith("C:")?"":a)}</small></span>${i<pts.length-1?`<span class="tv-ra"><i>←</i><small>${E(p.legs[i].car||"")}</small></span>`:""}`).join("");
+  const route=pts.map((a,i)=>`<span class="tv-rp"><b>${E(a==="AJF"?"الجوف":a.startsWith("C:")?cn(a.slice(2)):apN(a))}</b><small>${E(a.startsWith("C:")?"":a)}</small></span>${i<pts.length-1?`<span class="tv-ra"><i>←</i><small>${E(p.legs[i].car||"")}</small></span>`:""}`).join("");
   const who=[cn(p.nat),p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"",p.legs.length>1?(p.ticket==="one"?"تذكرة وحدة":"تذاكر منفصلة"):""].filter(Boolean);
   return`<div class="tv-hero ${pending?"p":lv}"><div class="tv-hero-t"><span class="tv-big">${pending?"…":v[0]}</span><div><b>${pending?"جاري الفحص":v[1]}</b><small>${pending?"نراجع القواعد وتعاميم المحطة — لا تقرر قبل ما يخلص":v[2]}</small></div></div>
     <div class="tv-route">${route}</div><div class="tv-who">${who.map(w=>`<span>${E(w)}</span>`).join("")}</div></div>`}
 function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-empty">${E(o.err)}</div>`;
   const cv=S.cv||{st:"run"};
   if(cv.st==="run")return heroH(o,"w",true)+`<div class="tv-sec"><div class="tv-skel"></div><div class="tv-skel s"></div></div>`+cardsH(o);
-  const lv=cv.st==="ok"?worse(o.lv,cv.lv):worse(o.lv,"w");
-  const needs=[...o.needs];if(cv.st==="ok"&&cv.lv!=="ok"&&cv.k)needs.unshift("📢 التعاميم: "+cv.k);if(cv.st!=="ok")needs.unshift("ما تمت مراجعة التعاميم — أعد المراجعة تحت");
+  const hit=cv.st==="ok"&&circLines(cv).length>0;
+  const lv=cv.st==="ok"?(hit?worse(o.lv,cv.lv):o.lv):worse(o.lv,"w");
+  const needs=[...o.needs];if(hit&&cv.lv!=="ok"&&cv.k)needs.unshift("📢 حسب تعميم المحطة: "+cv.k);if(cv.st!=="ok")needs.unshift("ما تمت مراجعة التعاميم — أعد المراجعة تحت");
   return heroH(o,lv)+(lv!=="ok"?`<div class="tv-sec need ${lv}"><h4>${lv==="x"?"سبب عدم القبول":"المطلوب قبل القبول"}</h4>${needs.map(n=>`<div class="tv-need">${E(n.replace(/^[^:]+:\s*/,m=>m))}</div>`).join("")}</div>`:"")+circH(cv)+`<h4 class="tv-h4">تفاصيل المسار</h4>`+cardsH(o)+aiH()}
+function circLines(cv){return String(cv.a||"").split("\n").map(x=>x.replace(/\*+/g,"").trim()).filter(x=>/^📢/.test(x)).map(x=>x.replace(/^📢\s*(التعاميم|التعميم)?\s*:?\s*/,"")).filter(x=>!/لا يوجد تعميم|ما فيه تعميم|لا توجد تعاميم|لا ينطبق/.test(x))}
 function circH(cv){if(cv.st!=="ok")return`<div class="tv-sec"><h4>📢 تعاميم المحطة</h4><div class="tv-note">${E(cv.err||"تعذّرت المراجعة")}</div><button class="tv-sm" id="tvCv">↻ أعد مراجعة التعاميم</button></div>`;
-  const ls=String(cv.a||"").split("\n").map(x=>x.replace(/\*+/g,"").trim()).filter(x=>/^📢/.test(x)).map(x=>x.replace(/^📢\s*(التعاميم|التعميم)?\s*:?\s*/,""));
-  const none=!ls.length||ls.every(x=>/لا يوجد تعميم|ما فيه تعميم|لا توجد تعاميم/.test(x));
+  const ls=circLines(cv),none=!ls.length;
   return`<div class="tv-sec circ ${none?"":"hit "+cv.lv}"><h4>📢 تعاميم المحطة</h4>
     ${none?`<div class="tv-cl">${mk("ok")}<span>ما فيه تعميم يخص هالراكب أو هالمسار</span></div>`:ls.map(x=>`<div class="tv-cl">${mk(cv.lv==="ok"?"i":cv.lv)}<span>${E(x)}</span></div>`).join("")}
     <details class="tv-more"><summary>رد المراجعة كامل</summary><div class="a">${fmt(cv.a)}</div></details></div>`}
-function cardsH(o){const cv=S.cv||{};return`<div class="tv-tl">${o.cards.map((c,ci)=>{const lv=c.circ?(cv.st==="ok"?worse(c.lv==="w"?"ok":c.lv,cv.lv):"w"):c.lv;
+function cardsH(o){const cv=S.cv||{};return`<div class="tv-tl">${o.cards.map((c,ci)=>{const hit=cv.st==="ok"&&circLines(cv).length>0,lv=c.circ?(cv.st==="ok"?(hit?worse(c.lv==="w"?"ok":c.lv,cv.lv):(c.lv==="w"?"ok":c.lv)):"w"):c.lv;
   const key=c.L.filter(l=>l.lv==="w"||l.lv==="x"),rest=c.L.filter(l=>!(l.lv==="w"||l.lv==="x"));
   const ent=c.ent?`<div class="tv-sub"><b>🛂 لو طلع من المطار — دخول ${E(cn(apC(o.pts[ci])))}: ${E(c.ent.head)}</b>${c.ent.L.filter(l=>l.lv==="w"||l.lv==="x").map(lineH).join("")}${c.ent.L.some(l=>!(l.lv==="w"||l.lv==="x"))?`<details class="tv-more"><summary>معلومات إضافية</summary>${c.ent.L.filter(l=>!(l.lv==="w"||l.lv==="x")).map(lineH).join("")}</details>`:""}</div>`:"";
-  return`<div class="tv-st ${lv}"><span class="tv-dot">${MK[lv]}</span><div class="tv-st-b"><div class="tv-st-h">${c.k==="exit"?"":`<small>${c.k==="tr"?"ترانزيت":"الوجهة النهائية"}</small>`}<b>${E(c.t.replace(/^[^:]+:\s*/,""))}</b>${(()=>{const h=c.circ&&cv.st==="ok"&&cv.lv!=="ok"?(cv.lv==="x"?"⛔ حسب تعميم المحطة ما يمشي — شوف «تعاميم المحطة» فوق":"⚠️ حسب تعميم المحطة: بشرط — شوف «تعاميم المحطة» فوق"):c.head;return h?`<span>${E(h)}</span>`:""})()}</div>
+  return`<div class="tv-st ${lv}"><span class="tv-dot">${MK[lv]}</span><div class="tv-st-b"><div class="tv-st-h">${c.k==="exit"?"":`<small>${c.k==="tr"?"ترانزيت":"الوجهة النهائية"}</small>`}<b>${E(c.t.replace(/^[^:]+:\s*/,""))}</b>${(()=>{const h=c.circ&&cv.st==="ok"&&cv.lv!=="ok"&&circLines(cv).length?(cv.lv==="x"?"⛔ حسب تعميم المحطة ما يمشي — شوف «تعاميم المحطة» فوق":"⚠️ حسب تعميم المحطة: بشرط — شوف «تعاميم المحطة» فوق"):c.head;return h?`<span>${E(h)}</span>`:""})()}</div>
     ${key.map(lineH).join("")}${ent}${rest.length?`<details class="tv-more"><summary>التفاصيل والمصادر (${rest.length})</summary>${rest.map(lineH).join("")}</details>`:""}</div></div>`}).join("")}</div>`}
 function aiH(){return`<div class="tv-ai"><h4>🤖 كمّل مع المساعد</h4>
       <div class="tv-note">إذا عندك معلومة زيادة أو تصحيح اكتبها، والمساعد يعيد الحكم مع القواعد والتعاميم.</div>
