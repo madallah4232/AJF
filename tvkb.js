@@ -69,7 +69,7 @@ const SRC={
  qa_tr:{t:"Visit Qatar ومطار حمد — الترانزيت وتأشيرة الترانزيت (نوفمبر 2026)",u:"https://www.visaverge.com/guides/doha-hamad-transit-visa-96-hour-rules/",d:"2026-11-01"},
  tr_atv:{t:"وزارة الخارجية التركية — تأشيرة عبور المطار الإلكترونية (e-ATV) عبر مطار إسطنبول",u:"https://www.evisa.gov.tr",d:"2024-04-15",perm:1},
  sch_atv:{t:"لائحة التأشيرات الأوروبية 810/2009 الملحق IV + القوائم الوطنية (يوليو 2026)",u:"https://home-affairs.ec.europa.eu/policies/schengen/visa-policy_en",d:"2026-07-01",perm:1},
- pi:{t:"Passport Index (قاعدة عامة لـ199 دولة — تحديث فبراير 2026)",u:"https://github.com/imorte/passport-index-data"}
+ pi:{t:"قاعدة عامة غير رسمية (Passport Index — فبراير 2026) — تأكد من TIMATIC",u:""}
 };
 const D="2026-11-26";
 const NOIL_=["3L","A2","PC","EW","DP","XQ","T5","W6","6Q","J9","IX","QP","6E","BS","HU","PF","PA"];
