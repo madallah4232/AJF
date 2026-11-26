@@ -1055,6 +1055,8 @@ body,.bd,.hub{background:var(--felt),var(--night)}
 <style>
 /* ===== 🔋 «أسود صافي مسطح» — معتمد للجميع لتوفير البطارية (شاشات OLED) =====
    كل شي هنا للعرض على الشاشة فقط — الطباعة والـ PDF ترسم من النموذج الأصلي ومن #csPrint ولا تتأثر */
+/* لما تكون أي شاشة كاملة مفتوحة: اللوحة اللي تحتها تختفي تماماً (ما تبان تحت الكيبورد في الآيفون) */
+html:has(:is(#bd,.cs,.fm,.trk,.ask,.dlyc,.gate):not([hidden])) :is(body>.wrap,body>.hub){visibility:hidden}
 html.eco{--night:#000;--panel:#0d0d0d;--raise:#161616;--line:#262626;--ink:#e4ded6;--muted:#8c857c;--felt:linear-gradient(#0000,#0000);--fuzz:0 0 0 1px #262626}
 html.eco,html.eco body{background:#000!important}
 html.eco{--leaf:none}
