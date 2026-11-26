@@ -1,10 +1,10 @@
 /* offline support: pages/js cache-first with background update, json always network-first, audio and icons cache-first */
-const C="ajf-v172";
-self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(["./","index.html","manifest.json","icon-192.png"]).catch(()=>{})))});
+const C="ajf-v173";
+self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(["./","index.html","manifest.json","icon-192.png","fonts/ibm-plex-mono-latin-500-normal.woff2","fonts/ibm-plex-mono-latin-600-normal.woff2","fonts/ibm-plex-mono-latin-ext-500-normal.woff2","fonts/ibm-plex-mono-latin-ext-600-normal.woff2","fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2","fonts/ibm-plex-sans-arabic-arabic-500-normal.woff2","fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2","fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2","fonts/ibm-plex-sans-arabic-latin-400-normal.woff2","fonts/ibm-plex-sans-arabic-latin-500-normal.woff2","fonts/ibm-plex-sans-arabic-latin-600-normal.woff2","fonts/ibm-plex-sans-arabic-latin-700-normal.woff2","fonts/ibm-plex-sans-arabic-latin-ext-400-normal.woff2","fonts/ibm-plex-sans-arabic-latin-ext-500-normal.woff2","fonts/ibm-plex-sans-arabic-latin-ext-600-normal.woff2","fonts/ibm-plex-sans-arabic-latin-ext-700-normal.woff2","fonts/readex-pro-arabic-500-normal.woff2","fonts/readex-pro-arabic-600-normal.woff2","fonts/readex-pro-arabic-700-normal.woff2","fonts/readex-pro-latin-500-normal.woff2","fonts/readex-pro-latin-600-normal.woff2","fonts/readex-pro-latin-700-normal.woff2","fonts/readex-pro-latin-ext-500-normal.woff2","fonts/readex-pro-latin-ext-600-normal.woff2","fonts/readex-pro-latin-ext-700-normal.woff2"]).catch(()=>{})))});
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",e=>{
   const u=new URL(e.request.url);if(e.request.method!=="GET"||u.origin!==location.origin||/\.mp4$/.test(u.pathname))return;
-  const media=/\.(mp3|png)$/.test(u.pathname);
+  const media=/\.(mp3|png|woff2)$/.test(u.pathname);
   e.respondWith(media
     ?caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const cp=res.clone();caches.open(C).then(c=>c.put(e.request,cp));return res}))
     :fresh(e,/\.json$/.test(u.pathname)));
