@@ -6,11 +6,14 @@
 const E=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
 const K=window.TVKB,GCC=K.GCC;
 let PI=null,PIP=null,root=null;
-const loadPI=()=>PI?Promise.resolve(PI):PIP||(PIP=fetch("tvpi.json?v=1").then(r=>{if(!r.ok)throw new Error("pi");return r.json()}).then(j=>{const ix={};j.c.forEach((c,i)=>ix[c]=i);PI={...j,ix};return PI}).catch(e=>{PIP=null;throw e}));
+/* مطارات العالم (OurAirports): رمز → [عربي، مدينة، اسم، دولة، حجم] */
+let WA={},WAR={},WL={};const carN=c=>K.CAR[c]||(WL[c]?WL[c][1]:c);
+const loadPI=()=>PI?Promise.resolve(PI):PIP||(PIP=Promise.all([fetch("tvpi.json?v=1").then(r=>{if(!r.ok)throw new Error("pi");return r.json()}),fetch("tvap.json?v=1").then(r=>r.ok?r.json():{a:[]}).catch(()=>({a:[]}))]).then(([j,w])=>{const ix={};j.c.forEach((c,i)=>ix[c]=i);
+  (w.a||[]).forEach(x=>{WA[x[0]]=x});Object.assign(WAR,w.ar||{});(w.al||[]).forEach(x=>{WL[x[0]]=x});PI={...j,ix};return PI}).catch(e=>{PIP=null;throw e}));
 let DN=null;try{DN=new Intl.DisplayNames(["ar"],{type:"region"})}catch(e){}
 const FIX={SA:"السعودية",PS:"فلسطين",AE:"الإمارات",US:"أمريكا",GB:"بريطانيا",KR:"كوريا الجنوبية",CD:"الكونغو الديمقراطية",CG:"الكونغو",XK:"كوسوفو"};
 const cn=c=>!c?"—":FIX[c]||(DN?DN.of(c):c)||c;
-const apN=a=>K.AP[a]?K.AP[a][0]:a,apC=a=>a&&a.startsWith("C:")?a.slice(2):K.AP[a]?K.AP[a][1]:"";
+const apN=a=>K.AP[a]?K.AP[a][0]:WA[a]?(WA[a][1]||WA[a][2]||WA[a][3]):a,apC=a=>a&&a.startsWith("C:")?a.slice(2):K.AP[a]?K.AP[a][1]:WA[a]?WA[a][4]:"";
 const apLabel=a=>a&&a.startsWith("C:")?cn(a.slice(2)):`${apN(a)} ${a}`;
 const TOP_NAT=["SA","EG","SD","YE","SY","JO","PS","PK","IN","BD","PH","ID","LK","NP","ET","IQ","LB","MA","TN","DZ","TR","AF","SO","ER","NG","KE","UG","SS","LY","MR","IR","AE","KW","QA","BH","OM"];
 const SUP={US:"أمريكا",UK:"بريطانيا",SCH:"شنغن",IE:"أيرلندا",CA:"كندا"};
@@ -115,7 +118,7 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
 /* ---------- فهم الحالة المكتوبة بالعربي ---------- */
 const AN=s=>String(s||"").normalize("NFKC").replace(/[ً-ْـ]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).toLowerCase();
 const DEM={"سعودي":"SA","مصري":"EG","سوداني":"SD","جنوب سوداني":"SS","يمني":"YE","سوري":"SY","اردني":"JO","فلسطيني":"PS","باكستاني":"PK","هندي":"IN","بنغالي":"BD","بنجلاديشي":"BD","بنقالي":"BD","فلبيني":"PH","اندونيسي":"ID","سريلانكي":"LK","نيبالي":"NP","اثيوبي":"ET","حبشي":"ET","عراقي":"IQ","لبناني":"LB","مغربي":"MA","تونسي":"TN","جزائري":"DZ","تركي":"TR","افغاني":"AF","صومالي":"SO","ارتيري":"ER","اريتري":"ER","نيجيري":"NG","كيني":"KE","اوغندي":"UG","ليبي":"LY","موريتاني":"MR","ايراني":"IR","اماراتي":"AE","كويتي":"KW","قطري":"QA","بحريني":"BH","عماني":"OM","صيني":"CN","امريكي":"US","بريطاني":"GB","كندي":"CA","فرنسي":"FR","الماني":"DE","روسي":"RU","تشادي":"TD","نيجري":"NE","مالي":"ML","سنغالي":"SN","غاني":"GH","كاميروني":"CM","بورمي":"MM","اوزبكي":"UZ","فيتنامي":"VN","تايلندي":"TH","ماليزي":"MY"};
-const CITY={"الجوف":"AJF","سكاكا":"AJF","الرياض":"RUH","جده":"JED","جدة":"JED","الدمام":"DMM","المدينه":"MED","القصيم":"ELQ","تبوك":"TUU","القاهره":"CAI","سوهاج":"HMB","الاسكندريه":"HBE","برج العرب":"HBE","اسيوط":"C:EG","الاقصر":"LXR","اسوان":"ASW","الغردقه":"HRG","شرم":"SSH",
+const CITY={"الجوف":"AJF","سكاكا":"AJF","الرياض":"RUH","جده":"JED","جدة":"JED","الدمام":"DMM","المدينه":"MED","القصيم":"ELQ","تبوك":"TUU","القاهره":"CAI","سوهاج":"HMB","الاسكندريه":"HBE","برج العرب":"HBE","الاقصر":"LXR","اسوان":"ASW","الغردقه":"HRG","شرم":"SSH",
   "دبي":"DXB","الشارقه":"SHJ","ابوظبي":"AUH","ابو ظبي":"AUH","الدوحه":"DOH","قطر":"DOH","الكويت":"KWI","البحرين":"BAH","مسقط":"MCT","عمان الاردن":"AMM","عمان":"C:OM","الاردن":"AMM","بغداد":"BGW","البصره":"BSR","النجف":"NJF","اربيل":"EBL","دمشق":"DAM","حلب":"ALP","بيروت":"BEY","لبنان":"BEY",
   "اسطنبول":"IST","تركيا":"IST","عدن":"ADE","صنعاء":"SAH","بورتسودان":"PZU","بور سودان":"PZU","الخرطوم":"KRT","كراتشي":"KHI","لاهور":"LHE","اسلام اباد":"ISB","بيشاور":"PEW","دلهي":"DEL","مومباي":"BOM","بومباي":"BOM","كوتشي":"COK","كيرلا":"COK","حيدر اباد":"HYD","كاليكوت":"CCJ",
   "دكا":"DAC","مانيلا":"MNL","جاكرتا":"CGK","كولومبو":"CMB","كاتماندو":"KTM","اديس ابابا":"ADD","نيروبي":"NBO","تونس":"TUN","الدار البيضاء":"CMN","الجزائر":"ALG","لندن":"LHR","باريس":"CDG","فرانكفورت":"FRA","نيويورك":"JFK",
@@ -142,7 +145,7 @@ function parse(txt){const t=" "+AN(txt).replace(/[،,.؛]/g," ")+" ",o={};
   /* الأماكن بترتيب ورودها */
   const carSpans=[];for(const k of Object.keys(CARN)){const kk=AN(k);let i=t.indexOf(kk);while(i>=0){carSpans.push([i,i+kk.length]);i=t.indexOf(kk,i+1)}}
   const inCar=i=>carSpans.some(([a,b])=>i+1>=a&&i+1<b);
-  const hits=[];for(const[k,v]of Object.entries(CITY)){const kk=AN(k);let i=t.indexOf(" "+kk);if(i<0)i=t.indexOf(" ب"+kk.replace(/^ال/,"ال"));while(i>=0){const e=t.indexOf(kk,i)+kk.length;if(!(rm&&i>=resPos&&i<resPos+rm[0].length)&&!inCar(i)&&(e>=t.length||t[e]===" "))hits.push([i,v,kk.length]);i=t.indexOf(" "+kk,i+1)}}
+  const hits=[];for(const[k,v]of [...Object.entries(CITY),...Object.entries(WAR).filter(([k])=>!CITY[AN(k)])]){const kk=AN(k);let i=t.indexOf(" "+kk);if(i<0)i=t.indexOf(" ب"+kk.replace(/^ال/,"ال"));while(i>=0){const e=t.indexOf(kk,i)+kk.length;if(!(rm&&i>=resPos&&i<resPos+rm[0].length)&&!inCar(i)&&(e>=t.length||t[e]===" "))hits.push([i,v,kk.length]);i=t.indexOf(" "+kk,i+1)}}
   hits.sort((a,b)=>a[0]-b[0]||b[2]-a[2]);const pl=[];hits.forEach(h=>{if(pl.length&&h[0]<pl[pl.length-1][0]+pl[pl.length-1][2])return;if(h[1]==="AJF")return;pl.push(h)});
   /* الترانزيت: الأماكن بعد «عن طريق/ترانزيت/عبر/من…» تجي أول، والباقي بترتيب ذكره */
   const trw=/(عن طريق|ترانزيت|عبر|مرورا|مرور|via|يمر|بيمر|ربط|\sمن)/g;let m,trIdx=[];while((m=trw.exec(t)))trIdx.push(m.index+m[0].length);
@@ -152,7 +155,7 @@ function parse(txt){const t=" "+AN(txt).replace(/[،,.؛]/g," ")+" ",o={};
   if(route.length)o.legs=route.map(a=>({to:a,car:"",h:""}));
   /* الناقلين بترتيبهم: بالاسم العربي أو الرمز (FZ, 6E, SV…) */
   const ch=[];for(const[k,v]of Object.entries(CARN)){const kk=AN(k);let i=t.indexOf(kk);if(i>=0&&!(kk==="السعوديه"&&!/(الخطوط|طيران|علي)\s*السعوديه/.test(t)))ch.push([i,v,kk.length])}
-  const cre=new RegExp("(^|[^a-z0-9])("+Object.keys(K.CAR).map(c=>c.toLowerCase()).join("|")+")(?=$|[^a-z0-9])","g");while((m=cre.exec(t)))ch.push([m.index+m[1].length,m[2].toUpperCase(),m[2].length]);
+  const cre=new RegExp("(^|[^a-z0-9])("+[...new Set([...Object.keys(K.CAR),...Object.keys(WL)])].map(c=>c.toLowerCase()).join("|")+")(?=$|[^a-z0-9])","g");while((m=cre.exec(t)))ch.push([m.index+m[1].length,m[2].toUpperCase(),m[2].length]);
   ch.sort((a,b)=>a[0]-b[0]||b[2]-a[2]);const cs=[];ch.forEach(c=>{if(cs.length&&c[0]<cs[cs.length-1][0]+cs[cs.length-1][2])return;cs.push(c)});
   if(o.legs&&cs.length){o.legs.forEach((l,i)=>{l.car=cs.length===1?cs[0][1]:(cs[i]?cs[i][1]:"")})}
   const hm=t.match(/(\d{1,2})\s*ساع/);if(hm&&o.legs&&o.legs.length>1)o.legs[0].h=hm[1];
@@ -190,7 +193,7 @@ const CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;ali
 .tv-sh{width:100%;box-sizing:border-box;max-height:88vh;background:#0b0b0b;border-top:1px solid #262626;border-radius:20px 20px 0 0;display:flex;flex-direction:column;padding:12px 12px calc(12px + env(safe-area-inset-bottom));gap:10px;direction:rtl;color:#f2f2f2;font-family:var(--body,system-ui)}
 .tv-sh-h{display:flex;justify-content:space-between;align-items:center}.tv-sh-h b{font-size:16px}.tv-sh-h button{background:none;border:0;color:#9a9a9a;font:inherit;font-size:14px}
 .tv-sh-q{width:100%;box-sizing:border-box;background:#141414;color:#f2f2f2;border:1px solid #262626;border-radius:12px;padding:12px;font:inherit;font-size:16px}
-.tv-sh-l{overflow:auto;-webkit-overflow-scrolling:touch;display:grid;gap:2px}.tv-sh-l button{display:flex;justify-content:space-between;align-items:center;background:none;border:0;border-bottom:1px solid #1a1a1a;color:#f2f2f2;padding:12px 6px;font:inherit;font-size:15px;text-align:start}.tv-sh-l button small{color:#9a9a9a;font-size:12px}.tv-sh-l button.on{color:#d9c8a8;font-weight:700}
+.tv-sh-l{overflow:auto;-webkit-overflow-scrolling:touch;display:grid;gap:2px;align-content:start}.tv-sh-l button{display:flex;justify-content:space-between;align-items:center;background:none;border:0;border-bottom:1px solid #1a1a1a;color:#f2f2f2;padding:12px 6px;font:inherit;font-size:15px;text-align:start}.tv-sh-l button small{color:#9a9a9a;font-size:12px}.tv-sh-l button.on{color:#d9c8a8;font-weight:700}
 .tv-sh-g{font-size:12px;color:#9a9a9a;padding:10px 6px 4px}
 .tv-ov.top{align-items:stretch}.tv-ov.top .tv-sh{max-height:none;height:100%;box-sizing:border-box;border-radius:0 0 20px 20px;border-top:0;border-bottom:1px solid #262626;padding-top:calc(12px + env(safe-area-inset-top));padding-bottom:12px}.tv-ov.top .tv-sh-l{flex:1;min-height:0}`;
 const MK={ok:"✓",w:"!",x:"✕",i:"i"};
@@ -203,9 +206,10 @@ function natItems(){const all=PI?PI.c:TOP_NAT;const rest=all.filter(c=>!TOP_NAT.
 function apItems(){const by={};Object.entries(K.AP).forEach(([a,[n,c]])=>{if(a!=="AJF")(by[c]=by[c]||[]).push(a)});
   const cs=Object.keys(by).sort((a,b)=>a==="SA"?-1:b==="SA"?1:cn(a).localeCompare(cn(b),"ar"));const out=[];
   cs.forEach(c=>by[c].forEach(a=>out.push({v:a,l:apN(a),s:a,g:cn(c),k:AN(apN(a)+" "+a+" "+cn(c)+" "+enN(c))})));
+  Object.values(WA).forEach(x=>{if(K.AP[x[0]])return;out.push({v:x[0],l:(x[1]||x[2]||x[3])+(x[2]&&x[3]&&x[3]!==x[2]?" — "+x[3]:""),s:x[0]+" · "+cn(x[4]),g:"مطارات العالم",w:1,rk:x[5],k:AN([x[1],x[2],x[3],x[0],cn(x[4]),enN(x[4])].join(" "))})});
   (PI?PI.c:[]).filter(c=>!by[c]).sort((a,b)=>cn(a).localeCompare(cn(b),"ar")).forEach(c=>out.push({v:"C:"+c,l:cn(c),s:"أي مطار",g:"دول أخرى",k:AN(cn(c)+" "+c+" "+enN(c))}));
   return out}
-function carItems(){return[{v:"",l:"بدون تحديد",s:"",g:"",k:""},...Object.entries(K.CAR).map(([k,v])=>({v:k,l:v,s:k,g:"الناقلين",k:AN(v+" "+k)}))]}
+function carItems(){return[...Object.entries(K.CAR).map(([k,v])=>({v:k,l:v,s:k,g:"الناقلين",k:AN(v+" "+k+" "+(WL[k]?WL[k][1]:""))})),...Object.values(WL).filter(x=>!K.CAR[x[0]]).map(x=>({v:x[0],l:x[1],s:x[0]+" · "+x[2],g:"ناقلين العالم",w:1,k:AN(x[1]+" "+x[0]+" "+x[2])}))]}
 const PK_T={nat:"جنسية الراكب",res:"مقيم في",to:"المطار",car:"الناقل"};
 function openPick(kind,i){const items=kind==="car"?carItems():kind==="to"?apItems():natItems();
   const cur=kind==="nat"?S.nat:kind==="res"?S.res:S.legs[i][kind];
@@ -216,14 +220,15 @@ function openPick(kind,i){const items=kind==="car"?carItems():kind==="to"?apItem
   const vv=window.visualViewport,fit=()=>{if(!vv)return;ov.style.top=vv.offsetTop+"px";ov.style.height=vv.height+"px";ov.style.bottom="auto"};
   fit();if(vv){vv.addEventListener("resize",fit);vv.addEventListener("scroll",fit)}
   const draw=()=>{const w=AN(q.value).trim().split(/\s+/).filter(Boolean);let g="";
-    const f=items.filter(o=>!w.length||w.every(x=>o.k.includes(x)||o.v.toLowerCase().includes(x)));
+    let f=items.filter(o=>w.length?w.every(x=>o.k.includes(x)||o.v.toLowerCase().includes(x)):!o.w);
+    if(w.length){const qq=AN(q.value).trim();f=f.map((o,i)=>[o,(o.v.toLowerCase()===qq?0:1)*10+(o.w?1+(o.rk||0):0),i]).sort((a,b)=>a[1]-b[1]||a[2]-b[2]).map(a=>a[0])}
     L.innerHTML=f.slice(0,300).map(o=>{const gh=!w.length&&o.g&&o.g!==g?`<div class="tv-sh-g">${E(g=o.g)}</div>`:"";
       return gh+`<button data-v="${E(o.v)}" class="${o.v===cur?"on":""}"><span>${E(o.l)}</span><small>${E(o.s)}</small></button>`}).join("")||`<div class="tv-sh-g">ما لقيت نتيجة</div>`};
   draw();q.addEventListener("input",draw);setTimeout(()=>q.focus(),60);
   const close=()=>{if(vv){vv.removeEventListener("resize",fit);vv.removeEventListener("scroll",fit)}ov.remove()};
   ov.addEventListener("click",e=>{if(e.target===ov){close();return}const b=e.target.closest("button");if(!b)return;if(b.dataset.x){close();return}
     if(b.dataset.v!=null){const v=b.dataset.v;if(kind==="nat")S.nat=v;else if(kind==="res")S.res=v;else S.legs[i][kind]=v;S.out=null;close();save();paint()}})}
-const pkLabel=(kind,v)=>!v?(kind==="car"?"اختر الناقل…":"اختر…"):kind==="car"?`${K.CAR[v]||v} ${v}`:kind==="to"?apLabel(v):cn(v);
+const pkLabel=(kind,v)=>!v?(kind==="car"?"اختر الناقل…":"اختر…"):kind==="car"?`${carN(v)} ${v}`:kind==="to"?apLabel(v):cn(v);
 const pkBtn=(kind,v,i)=>`<button class="tv-pk ${v?"":"e"} ${!v&&S.showMiss&&kind!=="res"||(!v&&S.showMiss&&kind==="res")?"tv-miss":""}" data-pk="${kind}"${i!=null?` data-i="${i}"`:""}><span>${E(pkLabel(kind,v))}</span><i>⌕</i></button>`;
 const ST_T={res:"مقيم (إقامة سعودية)",visit:"تأشيرة زيارة",umrah:"تأشيرة عمرة",tour:"تأشيرة سياحة"};
 const isGcc=()=>GCC.includes(S.nat);
@@ -305,8 +310,8 @@ function paintOut(){const o=root&&root.querySelector("#tvOut");if(o)o.innerHTML=
 function ctxText(){const p=P(),o=S.out;const L=[];
   L.push("بيانات الحالة وقواعد السفر من قاعدة بيانات التطبيق (بديل نص شاشة TIMATIC — جمعت من مواقع حكومية وشركات طيران، وكل قاعدة معها مصدرها):");
   L.push(`الراكب: جنسية ${cn(p.nat)} (${p.nat})، وضعه في السعودية: ${p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"غير محدد"}${p.st==="res"?"":"، يعني مو مقيم في السعودية ولا ينطبق عليه أي شرط خاص بالمقيمين في الخليج"}، بلد إقامته: ${cn(p.res)}، العمر ${p.age??"غير محدد"}، الجنس ${p.sex==="M"?"رجل":p.sex==="F"?"امرأة":"غير محدد"}.`);
-  L.push(`المسار: الجوف AJF ← ${p.legs.map(l=>`${apLabel(l.to)}${l.car?" على "+(K.CAR[l.car]||l.car):""}${l.h?" (انتظار "+l.h+" ساعة)":""}`).join(" ← ")}. التذكرة: ${p.ticket==="one"?"وحدة":p.ticket==="sep"?"منفصلة":"غير محدد"}.`);
-  const vs=Object.keys(p.visas).filter(k=>p.visas[k]===1),vn=Object.keys(p.visas).filter(k=>p.visas[k]===0);L.push(`مطارات المسار بالإنجليزي: ${p.legs.map(l=>l.to.startsWith("C:")?enN(l.to.slice(2)):l.to+" "+enN(apC(l.to))).join(" / ")}. الناقلين: ${p.legs.map(l=>l.car?(K.CAR[l.car]||"")+" "+l.car:"").filter(Boolean).join(" / ")}.`);
+  L.push(`المسار: الجوف AJF ← ${p.legs.map(l=>`${apLabel(l.to)}${l.car?" على "+carN(l.car):""}${l.h?" (انتظار "+l.h+" ساعة)":""}`).join(" ← ")}. التذكرة: ${p.ticket==="one"?"وحدة":p.ticket==="sep"?"منفصلة":"غير محدد"}.`);
+  const vs=Object.keys(p.visas).filter(k=>p.visas[k]===1),vn=Object.keys(p.visas).filter(k=>p.visas[k]===0);L.push(`مطارات المسار بالإنجليزي: ${p.legs.map(l=>l.to.startsWith("C:")?enN(l.to.slice(2)):l.to+" "+enN(apC(l.to))).join(" / ")}. الناقلين: ${p.legs.map(l=>l.car?carN(l.car)+" "+l.car:"").filter(Boolean).join(" / ")}.`);
   L.push(`الوثائق: ${vs.length?"معه تأشيرة/إقامة سارية لـ "+vs.map(cn).join("، "):"ما معه تأشيرات"}${vn.length?"؛ ما معه تأشيرة لـ "+vn.map(cn).join("، "):""}${p.sup.length?"؛ معه تأشيرة/إقامة من "+p.sup.map(s=>SUP[s]).join("، "):""}${p.ebola?"؛ كان في دول الإيبولا خلال 21 يوم":""}.`);
   L.push("\nنتيجة المحرك الآلي:");
   o.cards.forEach(c=>{L.push(`\n[${c.t}] الحالة: ${c.lv} — ${c.head||""}`);c.L.forEach(l=>L.push(`- (${l.lv}) ${l.cond?"إذا "+l.cond+": ":""}${l.t}${l.src?" [المصدر: "+l.src+"]":""}`));
@@ -331,7 +336,7 @@ async function ask(){if(S.busy||!S.out||S.out.err)return;const q=(S.aq||"").trim
 function bind(el){el.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||!root.contains(b))return;
   if(b.id==="tvGo")return preCheck();if(b.id==="tvAsk"){const t=root.querySelector("#tvAq");if(t)S.aq=t.value;return ask()}
   if(b.id==="tvCv"){reviewCirc();return}
-  if(b.id==="tvParse"){const o=parse(S.txt);if(o.legs&&!o.legs.length)delete o.legs;Object.assign(S,{nat:"",st:"",res:"",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{}},o,{age:o.age!=null?String(o.age):"",th:[],showMiss:false});S.out=null;save();loadPI().catch(()=>{}).then(()=>{paint();if(S.nat&&S.legs[S.legs.length-1].to)preCheck()});return}
+  if(b.id==="tvParse"){loadPI().catch(()=>{}).then(()=>{const o=parse(S.txt);if(o.legs&&!o.legs.length)delete o.legs;Object.assign(S,{nat:"",st:"",res:"",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{}},o,{age:o.age!=null?String(o.age):"",th:[],showMiss:false});S.out=null;save();paint();if(S.nat&&S.legs[S.legs.length-1].to)preCheck()});return}
   if(b.id==="tvAdd"){S.legs.push({to:"",car:"",h:""});S.out=null;save();paint();setTimeout(()=>{const x=root.querySelectorAll(".tv-leg");const l=x[x.length-1];if(l)l.scrollIntoView({behavior:"smooth",block:"center"})},40);return}
   if(b.dataset.pk){openPick(b.dataset.pk,b.dataset.i!=null?+b.dataset.i:null);return}
   if(b.dataset.del!=null){S.legs.splice(+b.dataset.del,1);if(!S.legs.length)S.legs=[{to:"",car:"",h:""}];S.out=null;save();paint();return}
