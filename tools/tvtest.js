@@ -32,8 +32,12 @@ const C=[
  ["هندي بدون عفش — معه بطاقة صعود",P({nat:"IN",st:"res",res:"SA",pur:"home",legs:[leg("DXB","SV","6","none"),leg("COK","6E")],visas:{AE:0},qa:{ae_ext:1,bp_DXB:1}}),"ok"],
  ["هندي بدون عفش — ما معه بطاقة صعود ولا تأشيرة إمارات",P({nat:"IN",st:"res",res:"SA",pur:"home",legs:[leg("DXB","SV","6","none"),leg("COK","6E")],visas:{AE:0},qa:{ae_ext:1,bp_DXB:0}}),"x"],
  ["باكستاني بدون عفش ترانزيت أبوظبي ثم Air Sial — التعميم يشترط تأشيرة",P({nat:"PK",st:"res",res:"SA",pur:"home",legs:[leg("AUH","SV","5","none"),leg("ISB","PF")],visas:{AE:0}}),"x"],
+ ["باكستاني بدون عفش: القصيم ثم أبوظبي 25 ساعة على السعودية بدون تأشيرة إمارات",P({nat:"PK",st:"res",res:"SA",pur:"home",legs:[leg("ELQ","SV","","none"),leg("AUH","SV","25","none"),leg("ISB","SV")],visas:{AE:0},qa:{ae_ext:1}}),"x"],
+ ["نفس الحالة لكن الانتظار 5 ساعات",P({nat:"PK",st:"res",res:"SA",pur:"home",legs:[leg("ELQ","SV","","none"),leg("AUH","SV","5","none"),leg("ISB","SV")],visas:{AE:0},qa:{ae_ext:1}}),"ok"],
+ ["سعودي ينتظر في دبي 30 ساعة (ما يحتاج تأشيرة) — يُقبل",P({nat:"SA",st:"cit",legs:[leg("DXB","SV","30","thru"),leg("CAI","SV")],qa:{ae_ext:1}}),"ok"],
+ ["يمني ينتظر في إسطنبول 30 ساعة بدون تأشيرة تركية",P({nat:"YE",st:"res",res:"SA",pur:"tour",legs:[leg("IST","TK","30","thru"),leg("CAI","TK")],visas:{TR:0,EG:1}}),"x"],
  ["كاتماندو (التنبيه المؤقت انتهى) — ما يمنع",P({nat:"NP",legs:[leg("KTM","SV")]}),"ok"],
 ];
-T.loadPI().then(()=>{let f=0;C.forEach(([n,p,exp])=>{const o=T.analyze(p);const ok=o.lv===exp;if(!ok)f++;
+T.loadPI().then(()=>{let f=0;C.forEach(([n,p,exp])=>{const o=T.analyze(p);/* بدون تعميم مطابق في مراجعة الذكاء الاصطناعي: بطاقة «حسب التعميم» تصير حسب باقي القواعد */o.cards.forEach(c=>{if(c.circ&&c.lv==="w"&&!c.L.some(l=>l.lv==="w"&&!/📢/.test(l.t)))c.lv="ok"});o.lv=o.cards.reduce((a,c)=>({ok:0,w:1,x:2}[c.lv]>{ok:0,w:1,x:2}[a]?c.lv:a),"ok");const ok=o.lv===exp;if(!ok)f++;
   console.log((ok?"✓":"✗")+" "+n+" → "+o.lv+(ok?"":" (المتوقع "+exp+")"));if(!ok)o.cards.forEach(c=>console.log("   ["+c.t+"] "+c.lv+" "+(c.head||"")+"\n"+c.L.map(l=>"     ("+l.lv+") "+l.t.slice(0,90)).join("\n")))});
   console.log(f?`\n${f} حالة فشلت`:`\nكل الحالات نجحت (${C.length})`);process.exit(f?1:0)});

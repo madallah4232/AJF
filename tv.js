@@ -104,7 +104,8 @@ function ppL(P,c,x,res){const rs=rules(c,"pp").map(r=>[r,match(r,P,x)]).filter((
   return L}
 /* تنبيهات تشغيلية مؤقتة (إغلاق مطار، منع ترانزيت…) — فعالة فقط داخل مدتها */
 function alertsL(c,ap,P,final){return rules(c,"alert").filter(r=>active(r)&&(!r.ap||r.ap.includes(ap))&&(!r.destC||r.destC.includes(final))).map(r=>({...line(r,"x"),t:"⛔ تنبيه مؤقت: "+r.t}))}
-const TWOVH={SA:12,EG:8,LB:12},TWOVAP={HBE:6};
+/* أقصى مدة للبقاء في منطقة الترانزيت بدون تأشيرة — الافتراضي 24 ساعة (بعدها يعتبر توقف ويحتاج تأشيرة) */
+const TWOVH={SA:12,EG:8,LB:12,AE:24},TWOVAP={HBE:6};
 /* تحليل المسار كامل */
 function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
   /* اتفاقيات شحن العفش بين الناقلين (من مراجعة التعاميم) */
@@ -133,8 +134,8 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
       if(r.lv==="x"&&m[0]===1)twBlock=true;card.L.push(line(r,m[0]===1?r.lv:(r.lv==="x"?"w":r.lv),m[1]))});
     const eAny=entry(P,c,x),freeIn=eAny.lv==="ok";
     if(!tw.length)card.L.push(freeIn?{lv:"ok",t:`حتى لو طلع من المطار ما يحتاج تأشيرة لـ ${cn(c)} (${eAny.head}).`,src:K.SRC.pi.t,u:K.SRC.pi.u}:{lv:"w",t:`ما عندنا قاعدة ترانزيت مفصلة لـ ${cn(c)}، وجنسيته لو طلع من المطار: ${eAny.head.replace(/^✕\s*/,"")}. بعض الدول تشترط تأشيرة ترانزيت حتى داخل المطار لجنسيات معينة — تأكد.`,src:K.SRC.pi.t,u:K.SRC.pi.u});
-    const mx=TWOVAP[ap]||TWOVH[c]||(tw.length?0:24);const tooLong=h&&mx&&h>mx&&!freeIn;
-    if(tooLong)card.L.push({lv:"w",t:`مدة الانتظار ${h} ساعة أطول من الحد المعتاد للبقاء داخل المطار (${mx} ساعة) — غالباً يحتاج تأشيرة دخول أو ترانزيت.`});
+    const mx=TWOVAP[ap]||TWOVH[c]||24;const tooLong=h&&h>mx&&!freeIn;
+    if(tooLong)card.L.push({lv:"w",t:`الانتظار ${h} ساعة أكثر من ${mx} ساعة — ما يقدر يبقى في منطقة الترانزيت بدون تأشيرة: لازم تأشيرة ترانزيت أو دخول لـ ${cn(c)}.`,s:`الانتظار ${h} ساعة أكثر من الحد (${mx} ساعة) — ما يقدر يبقى داخل المطار`});
     /* العفش: اختيار الموظف + قواعد استلام العفش في أول مطار دخول + نوع التذكرة */
     const lg=legs[i-1],prevC=apC(pts[i-1]),nextC=apC(pts[i+1]);
     const b1=rules(c,"bag1").filter(r=>r.carOut?(r.carOut.includes(legs[i].car)&&(!r.ap||r.ap.includes(ap))):(r.all||(prevC!==c&&nextC===c))),forced=b1.length>0,long=h&&h>24;
@@ -146,7 +147,7 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
         if(na&&P.ticket!=="sep")card.L.push({lv:"i",t:`مسجلة تذكرة وحدة، لكن ${carN(NO.includes(legs[i].car)?legs[i].car:lg.car)} ما لها اتفاقية مع الخطوط السعودية — فعلياً تذاكر منفصلة.`,s:"ما فيه اتفاقية بين الناقلين — تُعامل تذاكر منفصلة",src:K.SRC.noil.t});
         if(il&&il.no){bagsOut=true;ilNo=true}
         card.L.push(il||{lv:"ok",bag:1,t:"🧳 تذكرة وحدة: العفش يمشي لآخر محطة.",s:"العفش يمشي لآخر محطة (تذكرة وحدة)"});
-        if(long){const sm=K.SRC.msc;card.L.push({lv:"w",bag:1,t:`🧳 الانتظار ${h} ساعة (أكثر من 24): يعتبر توقف (Stopover)، وعادة العفش ينشحن لين هالمحطة بس — تأكد مع الناقل قبل ما تشحنه لآخر محطة.`,src:sm.t,u:sm.u})}
+        if(long&&!(il&&il.no)){const sm=K.SRC.msc;bagsOut=true;ilNo=true;card.L=card.L.filter(l=>!(l.bag&&l.lv==="ok"));card.L.push({lv:"i",bag:1,no:1,t:`🧳 الانتظار ${h} ساعة (أكثر من 24) يعتبر توقف (Stopover): العفش ما ينشحن لآخر محطة — ينشحن لين ${apN(ap)} بس، والراكب يستلمه ويطلع من الجوازات.`,s:`العفش لين ${apN(ap)} بس — توقف أكثر من 24 ساعة`,src:sm.t,u:sm.u})}
         if(il&&il.lv!=="ok")bagR.forEach(([r,m])=>card.L.push(line(r,"i",m[1])))}}
     else if(lg.bag==="none"){const sep=P.ticket==="sep"||noAg(lg.car,legs[i].car);
       if(sep){const k="bp_"+ap,an=QA[k];card.L.push({lv:"i",bag:1,t:`🧳 بدون عفش — ما يحتاج يستلم عفش في ${apN(ap)}.`,s:"بدون عفش — ما فيه شحن"});
@@ -155,7 +156,7 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
       else card.L.push({lv:"ok",bag:1,t:"🧳 بدون عفش — ما فيه شحن ولا استلام.",s:"بدون عفش — ما فيه شحن"})}
     else if(lg.bag==="out"){card.L.push({lv:"i",bag:1,t:`🧳 يستلم عفشه في ${apN(ap)} ويطلع من الجوازات — لازم يحق له دخول ${cn(c)}.`});b1.forEach(r=>card.L.push(line(r,"i")))}
     else card.L.push({lv:"w",bag:1,t:"🧳 حدد وين ينشحن العفش في هالمحطة (يمشي لآخر محطة أو يستلمه هنا)."});
-    if(bagsOut)card.L=card.L.filter(l=>!(l.tw&&l.lv==="ok"));
+    if(bagsOut||tooLong)card.L=card.L.filter(l=>!(l.tw&&l.lv==="ok"));
     card.lv=card.L.reduce((a,l)=>worse(a,l.lv),"ok");
     if(twBlock)card.lv="x";
     /* إذا لازم يطلع من المطار: هل يحق له الدخول؟ */
@@ -452,7 +453,7 @@ const short=t=>{t=String(t||"").replace(/^🧳\s*/,"").replace(/^✕\s*/,"");con
 function whyL(c,lv,o,ci){const W=[],seen=new Set(),add=(lv,t,ic)=>{t=short(t);if(!t||seen.has(t))return;seen.add(t);W.push({lv,t,ic})};
   const ent=c.ent&&(c.mustExit||c.k==="dst")?c.ent.L:[],all=c.L.concat(ent),bg=c.L.find(l=>l.bag),bgAdd=()=>{if(bg)add(bg.lv==="i"?(bg.no?"i":"ok"):bg.lv,bg.s||bg.t,"🧳")};
   if(c.k==="exit"&&!c.L.some(l=>l.lv!=="i"&&l.lv!=="ok")){add("ok","ما فيه شرط يمنع المغادرة");return W}
-  if(c.k==="tr"&&c.mustExit&&c.ent){bgAdd();c.L.filter(l=>l.lv==="x"&&!l.bag).slice(0,1).forEach(l=>add("x",l.ans===0&&l.qno?l.qno:l.t));
+  if(c.k==="tr"&&c.mustExit&&c.ent){const tl=c.L.find(l=>/ما يقدر يبقى في منطقة الترانزيت/.test(l.t));if(tl)add("w",tl.s,"⏱️");bgAdd();c.L.filter(l=>l.lv==="x"&&!l.bag).slice(0,1).forEach(l=>add("x",l.ans===0&&l.qno?l.qno:l.t));
     add(c.ent.lv,`لازم يطلع من الجوازات في ${apN(o.pts[ci])}${c.ent.lv==="x"?" — "+short(c.ent.head):c.ent.lv==="ok"?" — "+short(c.ent.head):": "+short(c.ent.head)}`)}
   else{const xs=all.filter(l=>l.lv==="x"&&!l.bag);
     if(lv==="x"&&xs.length)add("x",xs[0].ans===0&&xs[0].qno?xs[0].qno:(c.head&&!/^(مسموح|يبقى)/.test(c.head)?c.head:xs[0].t));
