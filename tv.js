@@ -188,7 +188,8 @@ const CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;ali
 .tv-sh-h{display:flex;justify-content:space-between;align-items:center}.tv-sh-h b{font-size:16px}.tv-sh-h button{background:none;border:0;color:#9a9a9a;font:inherit;font-size:14px}
 .tv-sh-q{width:100%;box-sizing:border-box;background:#141414;color:#f2f2f2;border:1px solid #262626;border-radius:12px;padding:12px;font:inherit;font-size:16px}
 .tv-sh-l{overflow:auto;-webkit-overflow-scrolling:touch;display:grid;gap:2px}.tv-sh-l button{display:flex;justify-content:space-between;align-items:center;background:none;border:0;border-bottom:1px solid #1a1a1a;color:#f2f2f2;padding:12px 6px;font:inherit;font-size:15px;text-align:start}.tv-sh-l button small{color:#9a9a9a;font-size:12px}.tv-sh-l button.on{color:#d9c8a8;font-weight:700}
-.tv-sh-g{font-size:12px;color:#9a9a9a;padding:10px 6px 4px}`;
+.tv-sh-g{font-size:12px;color:#9a9a9a;padding:10px 6px 4px}
+.tv-ov.top{align-items:stretch}.tv-ov.top .tv-sh{max-height:none;height:100%;box-sizing:border-box;border-radius:0 0 20px 20px;border-top:0;border-bottom:1px solid #262626;padding-top:calc(12px + env(safe-area-inset-top));padding-bottom:12px}.tv-ov.top .tv-sh-l{flex:1;min-height:0}`;
 const MK={ok:"✓",w:"!",x:"✕",i:"i"};
 const mk=l=>`<span class="tv-mk ${l}">${MK[l]}</span>`;
 /* ---------- قائمة اختيار مع بحث (بدل القوائم العادية) ---------- */
@@ -208,13 +209,15 @@ function openPick(kind,i){const items=kind==="car"?carItems():kind==="to"?apItem
   const ov=document.createElement("div");ov.className="tv-ov";
   ov.innerHTML=`<div class="tv-sh"><div class="tv-sh-h"><b>${E(PK_T[kind])}</b><button data-x="1">إغلاق ✕</button></div>
     <input type="search" class="tv-sh-q" placeholder="ابحث بالعربي أو الإنجليزي أو الرمز…" autocomplete="off"><div class="tv-sh-l"></div></div>`;
-  document.body.appendChild(ov);const q=ov.querySelector("input"),L=ov.querySelector(".tv-sh-l");
+  ov.classList.add("top");document.body.appendChild(ov);const q=ov.querySelector("input"),L=ov.querySelector(".tv-sh-l");
+  const vv=window.visualViewport,fit=()=>{if(!vv)return;ov.style.top=vv.offsetTop+"px";ov.style.height=vv.height+"px";ov.style.bottom="auto"};
+  fit();if(vv){vv.addEventListener("resize",fit);vv.addEventListener("scroll",fit)}
   const draw=()=>{const w=AN(q.value).trim().split(/\s+/).filter(Boolean);let g="";
     const f=items.filter(o=>!w.length||w.every(x=>o.k.includes(x)||o.v.toLowerCase().includes(x)));
     L.innerHTML=f.slice(0,300).map(o=>{const gh=!w.length&&o.g&&o.g!==g?`<div class="tv-sh-g">${E(g=o.g)}</div>`:"";
       return gh+`<button data-v="${E(o.v)}" class="${o.v===cur?"on":""}"><span>${E(o.l)}</span><small>${E(o.s)}</small></button>`}).join("")||`<div class="tv-sh-g">ما لقيت نتيجة</div>`};
   draw();q.addEventListener("input",draw);setTimeout(()=>q.focus(),60);
-  const close=()=>{ov.remove()};
+  const close=()=>{if(vv){vv.removeEventListener("resize",fit);vv.removeEventListener("scroll",fit)}ov.remove()};
   ov.addEventListener("click",e=>{if(e.target===ov){close();return}const b=e.target.closest("button");if(!b)return;if(b.dataset.x){close();return}
     if(b.dataset.v!=null){const v=b.dataset.v;if(kind==="nat")S.nat=v;else if(kind==="res")S.res=v;else S.legs[i][kind]=v;S.out=null;close();save();paint()}})}
 const pkLabel=(kind,v)=>!v?(kind==="car"?"الناقل (اختياري)":"اختر…"):kind==="car"?`${K.CAR[v]||v} ${v}`:kind==="to"?apLabel(v):cn(v);

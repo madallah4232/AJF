@@ -3919,7 +3919,7 @@ async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e
 const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 let TIMTAB="tv";
 const timTabs=()=>`<div class="bd-days tabs"><button data-ttab="tv" class="${TIMTAB==="tv"?"on":""}">🛂 اشتراطات السفر</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
-let tvP=null;const tvLoad=()=>window.TV?Promise.resolve():tvP||(tvP=(window.TVKB?Promise.resolve():ldJs("tvkb.js?v=4")).then(()=>window.TV||ldJs("tv.js?v=6")).catch(e=>{tvP=null;throw e}));
+let tvP=null;const tvLoad=()=>window.TV?Promise.resolve():tvP||(tvP=(window.TVKB?Promise.resolve():ldJs("tvkb.js?v=5")).then(()=>window.TV||ldJs("tv.js?v=7")).catch(e=>{tvP=null;throw e}));
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 let drP=null;const drLoad=()=>window.DR?Promise.resolve():drP||(drP=ldJs("dr.js?v=16").catch(e=>{drP=null;throw e}));
 /* رحلات اليوم لعمود «الرحلات» في توزيع العمل (بدون الملغاة، وبدون شركات اللوحة فقط مثل G9) */
