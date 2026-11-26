@@ -34,6 +34,13 @@ const SRC={
  eg_pp:{t:"Wego — شروط التأشيرة عند الوصول لمصر",u:"https://blog.wego.com/egypt-visa-on-arrival/"},
  circ_auh:{t:"تعاميم المحطة المرفوعة في التطبيق",u:""},
  ba:{t:"مجلس وزراء البوسنة والهرسك (FIPA) — الإعفاء الصيفي لمواطني السعودية وعُمان والبحرين",u:"https://fipa.vijeceministara.gov.ba/en/visasinformation-for-visitors"},
+ kiwi:{t:"Kiwi.com — مطارات تشترط استلام العفش بين الرحلتين",u:"https://www.kiwi.com/stories/airports-that-require-you-to-reclaim-your-bags-between-flights/"},
+ ai_bag:{t:"طيران الهند — الجمارك وتحويل العفش",u:"https://www.airindia.com/jp/en/travel-information/visa-documents/custom-immigration-baggage-transfer.html"},
+ sq_bag:{t:"الخطوط السنغافورية — تحويل العفش حسب الدولة",u:"https://www.singaporeair.com/en_UK/za/travel-info/transfer-information/baggage-transfers/"},
+ ac_bag:{t:"طيران كندا — الوصول الدولي في تورونتو",u:"https://aircanada.com/es/en/aco/home/fly/at-the-airport/airport-information/toronto-pearson-international-airport/int-ca.html"},
+ dy_bag:{t:"النرويجية — تخليص جمارك العفش في الرحلات المواصلة",u:"https://www.norwegian.com/en/travel-info/baggage/customs-clearance-connecting-flights/"},
+ omaat:{t:"One Mile at a Time — الدخول في المطارات الأمريكية",u:"https://onemileatatime.com/?p=281090"},
+ msc:{t:"فين إير — قواعد العفش مع أكثر من ناقل (توقف أكثر من 24 ساعة)",u:"https://www.finnair.com/us-en/baggage-on-finnair-flights/baggage-allowance-when-flying-with-several-airlines"},
  pi:{t:"Passport Index (قاعدة عامة لـ199 دولة — تحديث فبراير 2026)",u:"https://github.com/imorte/passport-index-data"}
 };
 const D="2026-11-26";
@@ -112,6 +119,19 @@ const R=[
 {c:"BA",s:"entry",lv:"ok",st:"F30",nat:["SA","OM","BH"],mon:[6,9],t:"إعفاء صيفي: مواطنو السعودية وعُمان والبحرين يدخلون بدون تأشيرة من 1 يونيو إلى 30 سبتمبر، وإجمالي الإقامة لا يزيد عن 30 يوم.",src:"ba"},
 {c:"BA",s:"entry",lv:"i",nat:["SA","OM","BH"],monNot:[6,9],t:"الإعفاء من التأشيرة للسعودي والعُماني والبحريني موسمي فقط (1 يونيو – 30 سبتمبر). خارج هالفترة يحتاج تأشيرة مسبقة من سفارة البوسنة.",src:"ba"},
 /* ===================== قواعد عامة للعفش ===================== */
+/* bag1: لازم يستلم العفش في أول مطار دخول (all = حتى دولي إلى دولي، dom = دولي إلى داخلي فقط) */
+{c:"US",s:"bag1",all:1,t:"أمريكا: كل راكب يستلم عفشه ويمر الجوازات والجمارك في أول مطار أمريكي يوصله، حتى لو مواصل لرحلة دولية.",src:"omaat"},
+{c:"CA",s:"bag1",all:1,t:"كندا: القادم دولياً غالباً يستلم عفشه في أول مطار كندي (إلا القادم من دول محددة مثل أمريكا وبريطانيا).",src:"ac_bag"},
+{c:"CN",s:"bag1",all:1,t:"الصين: يستلم عفشه في مطار التحويل (دولي إلى دولي ودولي إلى داخلي).",src:"sq_bag"},
+{c:"IN",s:"bag1",t:"الهند: القادم دولياً ومواصل لرحلة داخلية يستلم عفشه في أول مطار هندي ويخلص الجمارك.",src:"ai_bag"},
+{c:"JP",s:"bag1",t:"اليابان: القادم دولياً ومواصل لرحلة داخلية يستلم عفشه في مطار التحويل.",src:"sq_bag"},
+{c:"KR",s:"bag1",t:"كوريا الجنوبية: القادم دولياً ومواصل لرحلة داخلية يستلم عفشه في مطار التحويل.",src:"sq_bag"},
+{c:"TW",s:"bag1",t:"تايوان: القادم دولياً ومواصل لرحلة داخلية يستلم عفشه في مطار التحويل.",src:"sq_bag"},
+{c:"VN",s:"bag1",t:"فيتنام: القادم دولياً ومواصل لرحلة داخلية يستلم عفشه في مطار التحويل.",src:"sq_bag"},
+{c:"BR",s:"bag1",t:"البرازيل: القادم دولياً ومواصل لرحلة داخلية يستلم عفشه في أول مطار.",src:"kiwi"},
+{c:"CL",s:"bag1",t:"تشيلي: القادم دولياً ومواصل لرحلة داخلية يستلم عفشه في أول مطار.",src:"kiwi"},
+{c:"PE",s:"bag1",t:"البيرو: القادم دولياً ومواصل لرحلة داخلية يستلم عفشه في أول مطار.",src:"kiwi"},
+{c:"NO",s:"bag1",t:"النرويج: القادم دولياً ومواصل لرحلة داخلية يستلم عفشه ويخلص الجمارك في أول مطار.",src:"dy_bag"},
 {c:"*",s:"bag",lv:"i",tk:"sep",t:"العفش ينشحن لآخر محطة فقط إذا الناقلين بينهم اتفاقية ويوافقون — غير كذا يستلم عفشه في الترانزيت، وإذا يحتاج تأشيرة للترانزيت وما معه، ممكن يُرفض سفره من البداية.",src:"ba"}
 ];
 const GCC=["SA","AE","KW","QA","BH","OM"];

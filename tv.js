@@ -82,34 +82,39 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
   out.push({k:"exit",ic:"🇸🇦",t:"المغادرة من السعودية",lv:exitL.reduce((a,l)=>worse(a,l.lv),"ok"),head:exitL.length?"":"ما فيه شرط خاص للمغادرة",L:exitL});
   for(let i=1;i<pts.length-1;i++){const ap=pts[i],c=apC(ap),inCar=legs[i-1].car,outCar=legs[i].car,h=+legs[i-1].h||null,car=[inCar,outCar].filter(Boolean),x={final,car,ap};
     const card={k:"tr",ic:"🔁",t:`ترانزيت: ${apLabel(ap)}`,L:[],lv:"ok"};
-    if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";card.L.push({lv:"i",t:P.ticket==="sep"?"تذاكر منفصلة: يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط.":P.ticket==="one"?"تذكرة وحدة: العفش ينشحن لآخر محطة عادة.":"إذا التذكرة وحدة العفش ينشحن لآخر محطة عادة؛ إذا منفصلة يستلمه ويخلص إجراءات الرحلة الدولية من جديد."});out.push(card);continue}
+    if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";{const bg=legs[i-1].bag;card.L.push(bg==="out"?{lv:"i",t:"🧳 يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط."}:bg==="thru"?(P.ticket==="sep"?{lv:"w",t:"🧳 العفش لآخر محطة مع تذاكر منفصلة: يصير فقط إذا بين الناقلين اتفاقية شحن — تأكد قبل ما تشحن."}:{lv:"ok",t:"🧳 العفش يمشي لآخر محطة."}):{lv:"w",t:"🧳 حدد وين ينشحن العفش في هالمحطة."})}out.push(card);continue}
     /* هل يقدر يبقى داخل المطار؟ */
     const tw=rules(c,"twov").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
     let twBlock=false;const circ=tw.some(([r,m])=>r.vis&&m[0]===1);if(tw.some(([r,m])=>r.circ&&m[0]===1))card.circ=1;
-    tw.forEach(([r,m])=>{if(circ&&!r.vis&&r.lv==="ok")return;if(r.vis){const ok=P.visas[c]===1,l=line(r,m[0]===1?(ok?"ok":"x"):"w",m[1]);if(ok)l.t="معه تأشيرة للإمارات ✓ — "+l.t;if(l.lv==="x")twBlock=true;card.L.push(l);return}
+    tw.forEach(([r,m])=>{if(circ&&!r.vis&&r.lv==="ok")return;if(r.lv==="ok"){const l=line(r,"ok",m[1]);l.tw=1;card.L.push(l);return}if(r.vis){const ok=P.visas[c]===1,l=line(r,m[0]===1?(ok?"ok":"x"):"w",m[1]);if(ok)l.t="معه تأشيرة للإمارات ✓ — "+l.t;if(l.lv==="x")twBlock=true;card.L.push(l);return}
       if(r.lv==="x"&&m[0]===1)twBlock=true;card.L.push(line(r,m[0]===1?r.lv:(r.lv==="x"?"w":r.lv),m[1]))});
     const eAny=entry(P,c,x),freeIn=eAny.lv==="ok";
     if(!tw.length)card.L.push(freeIn?{lv:"ok",t:`حتى لو طلع من المطار ما يحتاج تأشيرة لـ ${cn(c)} (${eAny.head}).`,src:K.SRC.pi.t,u:K.SRC.pi.u}:{lv:"w",t:`ما عندنا قاعدة ترانزيت مفصلة لـ ${cn(c)}، وجنسيته لو طلع من المطار: ${eAny.head.replace(/^✕\s*/,"")}. بعض الدول تشترط تأشيرة ترانزيت حتى داخل المطار لجنسيات معينة — تأكد.`,src:K.SRC.pi.t,u:K.SRC.pi.u});
     const mx=TWOVH[c]||(tw.length?0:24);const tooLong=h&&mx&&h>mx&&!freeIn;
     if(tooLong)card.L.push({lv:"w",t:`مدة الانتظار ${h} ساعة أطول من الحد المعتاد للبقاء داخل المطار (${mx} ساعة) — غالباً يحتاج تأشيرة دخول أو ترانزيت.`});
-    /* العفش */
+    /* العفش: اختيار الموظف + قواعد استلام العفش في أول مطار دخول + نوع التذكرة */
+    const lg=legs[i-1],prevC=apC(pts[i-1]),nextC=apC(pts[i+1]);
+    const b1=rules(c,"bag1").filter(r=>r.all||(prevC!==c&&nextC===c)),forced=b1.length>0,long=h&&h>24;
     const bagR=rules(c,"bag").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
-    let bagsOut;
-    if(P.ticket==="one"){bagsOut=false;card.L.push({lv:"ok",t:circ||tooLong?"تذكرة وحدة: العفش ينشحن عادة لآخر محطة.":"تذكرة وحدة: العفش ينشحن عادة لآخر محطة، والراكب يبقى داخل المطار."})}
-    else if(P.ticket==="sep"){bagsOut=true;const fz=bagR.find(([r,m])=>r.car&&m[0]===1);
-      card.L.push({lv:"w",t:`تذاكر منفصلة: ${fz?"ممكن يشحن العفش لآخر محطة برسوم إذا الناقل الثاني شريك (شوف تحت)، وإلا ":""}يستلم عفشه في ${apN(ap)} ويطلع من الجوازات — فيحتاج إذن دخول لـ ${cn(c)}.`})}
-    else card.L.push({lv:"w",t:"حدد نوع التذكرة (وحدة أو منفصلة) — يغيّر الحكم: مع التذاكر المنفصلة غالباً يستلم عفشه ويطلع من الجوازات."});
-    bagR.forEach(([r,m])=>card.L.push(line(r,"i",m[1])));
-    rules("*","bag").forEach(r=>card.L.push(line(r,"i")));
+    let bagsOut=lg.bag==="out"||forced;
+    if(lg.bag==="thru"){
+      if(forced){b1.forEach(r=>card.L.push(line(r,"w")));card.L.push({lv:"w",t:`🧳 لا تشحن العفش لآخر محطة: اشحنه لين ${apN(ap)} بس — الراكب يستلمه هناك ويطلع من الجوازات${freeIn?"":" (ويحتاج إذن دخول لـ "+cn(c)+")"}، وبعدين يشحنه من جديد.`})}
+      else{card.L.push({lv:"ok",t:"🧳 العفش يمشي لآخر محطة."});
+        if(long){const sm=K.SRC.msc;card.L.push({lv:"w",t:`🧳 الانتظار ${h} ساعة (أكثر من 24): يعتبر توقف (Stopover)، وعادة العفش ينشحن لين هالمحطة بس — تأكد مع الناقل قبل ما تشحنه لآخر محطة.`,src:sm.t,u:sm.u})}
+        if(P.ticket==="sep"){card.L.push({lv:"w",t:"🧳 تذاكر منفصلة: الشحن لآخر محطة يصير فقط إذا بين الناقلين اتفاقية شحن ويوافقون — تأكد قبل ما تشحن، وغير كذا يستلمه هنا."});
+          bagR.forEach(([r,m])=>card.L.push(line(r,"i",m[1])));rules("*","bag").forEach(r=>card.L.push(line(r,"i")))}}}
+    else if(lg.bag==="out"){card.L.push({lv:"i",t:`🧳 يستلم عفشه في ${apN(ap)} ويطلع من الجوازات — لازم يحق له دخول ${cn(c)}.`});b1.forEach(r=>card.L.push(line(r,"i")))}
+    else card.L.push({lv:"w",t:"🧳 حدد وين ينشحن العفش في هالمحطة (يمشي لآخر محطة أو يستلمه هنا)."});
+    if(bagsOut)card.L=card.L.filter(l=>!(l.tw&&l.lv==="ok"));
     card.lv=card.L.reduce((a,l)=>worse(a,l.lv),"ok");
     if(twBlock)card.lv="x";
     /* إذا لازم يطلع من المطار: هل يحق له الدخول؟ */
-    if(!freeIn&&(bagsOut||tooLong||P.ticket==="")){const e=eAny;card.ent=e;
+    if(!freeIn&&(bagsOut||tooLong||!lg.bag)){const e=eAny;card.ent=e;
       const tv=rules(c,"tvisa").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]).map(([r,m])=>line(r,"i",m[1]));
       card.ent.L=card.ent.L.concat(tv);
       if(bagsOut||tooLong)card.lv=worse(card.lv,e.lv);
       card.head=bagsOut||tooLong?`لازم يطلع من الجوازات في ${apN(ap)} — ${e.head.replace(/^✕\s*/,"")}`:`إذا اضطر يطلع من المطار: ${e.head}`}
-    else card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار";
+    else card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":forced&&freeIn?"🧳 العفش ينستلم هنا — وما يحتاج تأشيرة لدخوله":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار";
     out.push(card)}
   /* الوجهة النهائية */
   const fc=final,e=entry(P,fc,{final,car:[legs[legs.length-1].car].filter(Boolean)});
@@ -163,6 +168,8 @@ function parse(txt){const t=" "+AN(txt).replace(/[،,.؛]/g," ")+" ",o={};
   const cre=new RegExp("(^|[^a-z0-9])("+[...new Set([...Object.keys(K.CAR),...Object.keys(WL)])].map(c=>c.toLowerCase()).join("|")+")(?=$|[^a-z0-9])","g");while((m=cre.exec(t)))ch.push([m.index+m[1].length,m[2].toUpperCase(),m[2].length]);
   ch.sort((a,b)=>a[0]-b[0]||b[2]-a[2]);const cs=[];ch.forEach(c=>{if(cs.length&&c[0]<cs[cs.length-1][0]+cs[cs.length-1][2])return;cs.push(c)});
   if(o.legs&&cs.length){o.legs.forEach((l,i)=>{l.car=cs.length===1?cs[0][1]:(cs[i]?cs[i][1]:"")})}
+  if(o.legs&&o.legs.length>1){const thru=/عفش\S*\s+(\S+\s+)?(لاخر|لين اخر|الي اخر|علي اخر|اخر)\s*(محطه|وجهه)/.test(t),out=/(يستلم|استلام|ياخذ)\s+(\S+\s+)?عفش/.test(t);
+    if(thru||out)o.legs.slice(0,-1).forEach(l=>{l.bag=out?"out":"thru"})}
   const hm=t.match(/(\d{1,2})\s*ساع/);if(hm&&o.legs&&o.legs.length>1)o.legs[0].h=hm[1];
   /* تأشيرة للوجهة */
   if(o.legs){o.legs.forEach(l=>{const c=apC(l.to);if(c&&new RegExp("معه\\s+(تاشير|فيزا|اقام)[^\\s]*\\s+(\\S+\\s+)?("+Object.entries(CITY).filter(([k,v])=>apC(v)===c).map(([k])=>AN(k)).join("|")+")").test(t)){(o.visas=o.visas||{})[c]=1}})}
@@ -271,7 +278,8 @@ const routeCts=()=>[...new Set(S.legs.map(l=>apC(l.to)).filter(c=>c&&c!=="SA"&&c
 /* الخانات الإجبارية قبل الفحص (نفس اللي يحتاجه تيماتيك + الناقل ونوع التذكرة للتعاميم والعفش) */
 function req(){const m=[],r=[];if(!S.nat)m.push("جنسية الراكب (الجواز)");if(S.nat&&!isGcc()&&!S.st)m.push("وضع الراكب في السعودية: مقيم أو زيارة أو عمرة أو سياحة");
   S.legs.forEach((l,i)=>{const nm=i===S.legs.length-1?"الوجهة النهائية":"الترانزيت "+(i+1);if(!l.to)m.push("مطار "+nm);if(!l.car)m.push("الناقل في "+nm);
-    if(i<S.legs.length-1&&l.to&&apC(l.to)!=="SA"&&!l.h)m.push("مدة الانتظار في "+apLabel(l.to))});
+    if(i<S.legs.length-1&&l.to&&apC(l.to)!=="SA"&&!l.h)m.push("مدة الانتظار في "+apLabel(l.to));
+    if(i<S.legs.length-1&&l.to&&!l.bag)m.push("🧳 العفش في "+apLabel(l.to)+": يمشي لآخر محطة أو يستلمه هنا")});
   if(S.legs.length>1&&!S.ticket)m.push("نوع التذكرة: وحدة أو منفصلة");
   routeCts().forEach(c=>{if(S.visas[c]==null)m.push("هل معه تأشيرة/إقامة سارية لـ "+cn(c)+"؟ (نعم/لا)")});
   /* العمر والجنس: إجباري فقط إذا فيه قاعدة لهالجنسية على هالمسار تفرق حسبها */
@@ -307,6 +315,7 @@ function paint(){if(!root)return;
   <div class="tv-box"><b>✈️ المسار — من الجوف AJF</b>
     ${legs.map((l,i)=>`<div class="tv-leg"><div class="n"><span>${i===legs.length-1?"🛬 الوجهة النهائية":"🔁 ترانزيت "+(i+1)}</span>${legs.length>1?`<button data-del="${i}">حذف ✕</button>`:""}</div>
       <div class="tv-r">${pkBtn("to",l.to,i)}${pkBtn("car",l.car,i)}</div>
+      ${i<legs.length-1?`<label class="l">🧳 العفش في ${E(l.to?apLabel(l.to):"هالمحطة")}<div class="tv-chips ${S.showMiss&&!l.bag?"tv-miss":""}"><button data-bag="${i}" data-val="thru" class="${l.bag==="thru"?"on":""}">يمشي لآخر محطة</button><button data-bag="${i}" data-val="out" class="${l.bag==="out"?"on":""}">يستلمه هنا</button></div></label>`:""}
       ${i<legs.length-1?`<label class="l">مدة الانتظار في ${E(l.to?apLabel(l.to):"الترانزيت")} (ساعات)<input type="number" inputmode="decimal" data-leg="${i}" data-f="h" class="${S.showMiss&&!l.h&&l.to&&apC(l.to)!=="SA"?"tv-miss":""}" value="${E(l.h)}" placeholder="مطلوب"></label>`:""}</div>`).join("")}
     <button class="tv-add" id="tvAdd">＋ أضف محطة بعد الوجهة</button>
     ${legs.length>1?`<label class="l">التذكرة<div class="tv-chips ${S.showMiss&&!S.ticket?"tv-miss":""}" id="tvTk"><button data-tk="one" class="${S.ticket==="one"?"on":""}">تذكرة وحدة (حجز واحد)</button><button data-tk="sep" class="${S.ticket==="sep"?"on":""}">تذاكر منفصلة</button></div></label>`:""}</div>
@@ -358,7 +367,7 @@ function paintOut(){const o=root&&root.querySelector("#tvOut");if(o)o.innerHTML=
 function ctxText(){const p=P(),o=S.out;const L=[];
   L.push("بيانات الحالة وقواعد السفر من قاعدة بيانات التطبيق (بديل نص شاشة TIMATIC — جمعت من مواقع حكومية وشركات طيران، وكل قاعدة معها مصدرها):");
   L.push(`الراكب: جنسية ${cn(p.nat)} (${p.nat})، وضعه في السعودية: ${p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"غير محدد"}${p.st==="res"?"":"، يعني مو مقيم في السعودية ولا ينطبق عليه أي شرط خاص بالمقيمين في الخليج"}، بلد إقامته: ${cn(p.res)}، العمر ${p.age??"غير محدد"}، الجنس ${p.sex==="M"?"رجل":p.sex==="F"?"امرأة":"غير محدد"}.`);
-  L.push(`المسار: الجوف AJF ← ${p.legs.map(l=>`${apLabel(l.to)}${l.car?" على "+carN(l.car):""}${l.h?" (انتظار "+l.h+" ساعة)":""}`).join(" ← ")}. التذكرة: ${p.ticket==="one"?"وحدة":p.ticket==="sep"?"منفصلة":"غير محدد"}.`);
+  L.push(`المسار: الجوف AJF ← ${p.legs.map(l=>`${apLabel(l.to)}${l.car?" على "+carN(l.car):""}${l.h?" (انتظار "+l.h+" ساعة)":""}${l.bag?(l.bag==="thru"?" [العفش يمشي لآخر محطة]":" [يستلم عفشه هنا]"):""}`).join(" ← ")}. التذكرة: ${p.ticket==="one"?"وحدة":p.ticket==="sep"?"منفصلة":"غير محدد"}.`);
   const vs=Object.keys(p.visas).filter(k=>p.visas[k]===1),vn=Object.keys(p.visas).filter(k=>p.visas[k]===0);L.push(`مطارات المسار بالإنجليزي: ${p.legs.map(l=>l.to.startsWith("C:")?enN(l.to.slice(2)):l.to+" "+enN(apC(l.to))).join(" / ")}. الناقلين: ${p.legs.map(l=>l.car?carN(l.car)+" "+l.car:"").filter(Boolean).join(" / ")}.`);
   L.push(`الوثائق: ${vs.length?"معه تأشيرة/إقامة سارية لـ "+vs.map(cn).join("، "):"ما معه تأشيرات"}${vn.length?"؛ ما معه تأشيرة لـ "+vn.map(cn).join("، "):""}${p.sup.length?"؛ معه تأشيرة/إقامة من "+p.sup.map(s=>SUP[s]).join("، "):""}${p.ebola?"؛ كان في دول الإيبولا خلال 21 يوم":""}.`);
   L.push("\nنتيجة المحرك الآلي:");
@@ -388,6 +397,7 @@ function bind(el){el.addEventListener("click",e=>{const b=e.target.closest("butt
   if(b.id==="tvAdd"){S.legs.push({to:"",car:"",h:""});S.out=null;save();paint();setTimeout(()=>{const x=root.querySelectorAll(".tv-leg");const l=x[x.length-1];if(l)l.scrollIntoView({behavior:"smooth",block:"center"})},40);return}
   if(b.dataset.pk){openPick(b.dataset.pk,b.dataset.i!=null?+b.dataset.i:null);return}
   if(b.dataset.del!=null){S.legs.splice(+b.dataset.del,1);if(!S.legs.length)S.legs=[{to:"",car:"",h:""}];S.out=null;save();paint();return}
+  if(b.dataset.bag!=null){const lg=S.legs[+b.dataset.bag];lg.bag=lg.bag===b.dataset.val?"":b.dataset.val;S.out=null;save();paint();return}
   if(b.dataset.st){S.st=S.st===b.dataset.st?"":b.dataset.st;if(S.st==="res")S.res="";S.out=null;save();paint();return}
   if(b.dataset.sex){S.sex=S.sex===b.dataset.sex?"":b.dataset.sex;S.out=null;save();paint();return}
   if(b.dataset.tk){S.ticket=S.ticket===b.dataset.tk?"":b.dataset.tk;S.out=null;save();paint();return}
