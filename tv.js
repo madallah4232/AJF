@@ -18,7 +18,7 @@ const apLabel=a=>a&&a.startsWith("C:")?cn(a.slice(2)):`${apN(a)} ${a}`;
 const TOP_NAT=["SA","EG","SD","YE","SY","JO","PS","PK","IN","BD","PH","ID","LK","NP","ET","IQ","LB","MA","TN","DZ","TR","AF","SO","ER","NG","KE","UG","SS","LY","MR","IR","AE","KW","QA","BH","OM"];
 const SUP={US:"أمريكا",UK:"بريطانيا",SCH:"شنغن",IE:"أيرلندا",CA:"كندا"};
 /* حالة النموذج */
-const S={nat:"",st:"",res:"",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{},txt:"",out:null,th:[],busy:false,aq:""};
+const S={pt:"N",ppx:"",pur:"",rt:null,days:"",yf:false,qa:{},ovr:null,ovrR:"",nat:"",st:"",res:"",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{},txt:"",out:null,th:[],busy:false,aq:""};
 try{const o=JSON.parse(sessionStorage.getItem("ajf_tv")||"null");if(o)Object.assign(S,o,{out:null,busy:false})}catch(e){}
 const save=()=>{try{const{out,busy,...k}=S;sessionStorage.setItem("ajf_tv",JSON.stringify(k))}catch(e){}};
 
@@ -26,7 +26,19 @@ const save=()=>{try{const{out,busy,...k}=S;sessionStorage.setItem("ajf_tv",JSON.
 const inL=(x,l)=>!!x&&l.some(v=>v==="GCC"?GCC.includes(x):v===x);
 const ageIn=(a,r)=>a>=r[0]&&a<=r[1];
 /* 1 ينطبق · 0 ما ينطبق · 2 يعتمد على معلومة ناقصة (يرجع الشرط بالعربي) */
+const TODAY=()=>new Date().toISOString().slice(0,10);
+const PUR_T={tour:"سياحة أو زيارة",work:"عمل",study:"دراسة",home:"عودة لبلده أو إقامته",other:"أخرى (عائلة، علاج…)"};
+function active(r){const t=TODAY();if(r.cancelled&&t>=r.cancelled)return false;if(r.exp&&t>r.exp)return false;if(r.from&&t<r.from)return false;return true}
 function match(r,P,x){const need=[];
+  if(!active(r))return[0];
+  if(r.pt&&!r.pt.includes(P.pt||"N"))return[0];
+  if(r.ptNot&&r.ptNot.includes(P.pt||"N"))return[0];
+  if(r.apNot&&r.apNot.includes(x.ap))return[0];
+  if(r.yf&&!P.yf)return[0];
+  if(r.resOnly&&P.res!==r.c)return[0];
+  if(r.purNot&&P.pur&&r.purNot.includes(P.pur))return[0];
+  if(r.pur){if(!P.pur)need.push("غرض السفر "+r.pur.map(k=>PUR_T[k]).join(" أو "));else if(!r.pur.includes(P.pur))return[0]}
+  if(r.daysMin){if(P.days==null)need.push(`مدة البقاء ${r.daysMin} يوم أو أكثر`);else if(P.days<r.daysMin)return[0]}
   if(r.nat&&!inL(P.nat,r.nat))return[0];
   if(r.natNot&&inL(P.nat,r.natNot))return[0];
   if(r.res&&!inL(P.res,r.res))return[0];
@@ -49,31 +61,51 @@ let TK="";const rules=(c,s)=>K.R.filter(r=>(r.c===c||(r.c==="*"&&c==="*"))&&r.s=
 const ST={F:["ok","بدون تأشيرة"],V:["ok","تأشيرة عند الوصول"],E:["w","تأشيرة إلكترونية مسبقة"],T:["w","تصريح سفر إلكتروني ETA مسبق"],R:["w","تأشيرة مسبقة مطلوبة"],N:["x","الدخول غير مسموح"]};
 const stTxt=s=>{if(!s||s==="-")return null;const k=ST[s[0]];return k?[k[0],k[1]+(s.length>1?` (${s.slice(1)} يوم)`:"")]:null};
 const RANK={ok:0,i:0,w:1,x:2};const worse=(a,b)=>RANK[b]>RANK[a]?b:a;
-function line(r,lv,cond){const s=K.SRC[r.src]||{};return{lv,t:r.t,cond,src:s.t,u:s.u}}
+let QA={},CP={};
+function line(r,lv,cond){const s=K.SRC[r.src]||{};const l={lv,t:r.t||"",cond,src:s.t,u:s.u,d:s.d,perm:s.perm,arr:r.arr};
+  if(r.q&&!cond){const k=r.qk||(r.c+":"+r.s+":"+r.t);const a=QA[k];l.qk=k;l.q=typeof r.q==="function"?r.q(CP):r.q;l.qno=r.qno;l.ans=a;l.lv=a===1?"ok":a===0?"x":"w"}
+  return l}
 /* دخول بلد c (وجهة نهائية أو ترانزيت يطلع فيه من المطار) */
 function entry(P,c,x){const L=[];let lv="ok",head,detailed=K.R.some(r=>r.c===c&&r.s==="entry");
   const hasVisa=P.visas[c]===1;
-  if(P.nat===c){return{lv:"ok",head:"مواطن — يدخل بلده",L:ppL(P,c,x),detailed:true}}
+  if(P.nat===c){const pp=ppL(P,c,x,1),okExp=rules(c,"pp").some(r=>r.ppExpOk&&match(r,P,x)[0]===1),bad=!okExp&&pp.some(l=>l.lv==="x");
+    return{lv:bad?"x":"ok",head:bad?"✕ الجواز منتهي — حتى المواطن يحتاج جواز ساري للسفر":"مواطن — يدخل بلده",L:okExp?pp.filter(l=>l.lv!=="x"):pp,detailed:true}}
   if(GCC.includes(P.nat)&&GCC.includes(c))return{lv:"ok",head:"مواطن خليجي — يدخل بالهوية الوطنية أو الجواز",L:ppL(P,c,x),detailed:true};
-  if(P.res===c)return{lv:"ok",head:"مقيم في "+cn(c)+" — يرجع بإقامته (تأكد إنها سارية)",L:ppL(P,c,x),detailed:true};
-  const base=PI&&PI.m[P.nat]?PI.m[P.nat].split(",")[PI.ix[c]]:null;const b=stTxt(base);
+  if(P.res===c){const RL=rules(c,"entry").filter(r=>r.resOnly).map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]===1).map(([r])=>line(r,r.lv)),pp=ppL(P,c,x,1);const L2=RL.concat(pp),lv2=L2.reduce((a,l)=>worse(a,l.lv),"ok");
+    return{lv:lv2,head:lv2==="x"?"✕ "+((L2.find(l=>l.lv==="x")||{}).qno||(L2.find(l=>l.lv==="x")||{}).t||""):"مقيم في "+cn(c)+" — يرجع بإقامته (تأكد إنها سارية)",L:L2,detailed:true}}
+  let base=PI&&PI.m[P.nat]?PI.m[P.nat].split(",")[PI.ix[c]]:null,bsrc=K.SRC.pi;
+  {const bo=K.BO&&K.BO[c];if(bo){base=bo.f(P.nat,P.pt||"N");bsrc=K.SRC[bo.src]||bsrc}}
+  const b=stTxt(base);
   if(hasVisa){lv="ok";head="معه تأشيرة/إذن دخول سارٍ لـ "+cn(c)}
   else if(b){lv=b[0];head=b[1]}else{lv="w";head="ما عندنا بيانات عامة لهالجنسية — تأكد"}
   const X={...x,hasVisa,base};let over=null,cur=hasVisa?"":(base||"");
   for(const r of rules(c,"entry")){if(hasVisa&&!r.ev&&r.lv!=="i")continue;const[m,cond]=match(r,P,X);if(!m)continue;
     if(r.lv==="ok"){if(m===1&&!hasVisa){over=r;cur=r.st||cur;const t=stTxt(r.st);if(t){lv=t[0];head=t[1]}L.push(line(r,"ok"))}else if(m===2)L.push(line(r,"i",cond));continue}
     if(hasVisa&&r.vok&&r.lv==="x"){const l=line(r,"w",m===2?cond:undefined);l.t="معه تأشيرة: تأكد إنها صادرة مع الموافقة المطلوبة — "+l.t;if(m===1)lv=worse(lv,"w");L.push(l);continue}
-    if(m===1){if(r.lv==="x"&&lv!=="x")head=r.t.split(/[.،(]/)[0];lv=worse(lv,r.lv);L.push(line(r,r.lv))}else L.push(line(r,r.lv==="x"?"w":r.lv,cond))}
+    if(m===1){const l=line(r,r.lv);if(l.qk&&L.some(z=>z.qk===l.qk))continue;if(l.lv==="x"&&lv!=="x")head=(l.qno||l.t).split(/[.،(—]/)[0];lv=worse(lv,l.lv);L.push(l)}else L.push(line(r,r.lv==="x"?"w":r.lv,cond))}
   const noV=P.visas[c]===0,needV=/^[RET]/.test(cur)||L.some(l=>l.lv==="w"&&/تأشيرة/.test(l.t)&&!l.cond);
-  if(!hasVisa&&b&&!over&&lv!=="ok")L.unshift({lv:noV?"x":"w",t:`حسب القاعدة العامة: ${b[1]} لحامل جواز ${cn(P.nat)} إلى ${cn(c)}.${noV?"":" إذا معه تأشيرة أو إقامة سارية اختر «نعم» في «الوثائق»."}`,src:K.SRC.pi.t,u:K.SRC.pi.u});
+  if(!hasVisa&&b&&!over&&lv!=="ok")L.unshift({lv:noV?"x":"w",t:`${bsrc===K.SRC.pi?"حسب القاعدة العامة":"حسب التعميم"}: ${b[1]} لحامل جواز ${cn(P.nat)} إلى ${cn(c)}.${noV?"":" إذا معه تأشيرة أو تصريح دخول أو إقامة سارية اختر «نعم» في «الوثائق»."}`,src:bsrc.t,u:bsrc.u,d:bsrc.d});
+  if((P.pt||"N")!=="N"&&!over)L.push({lv:"w",t:"جواز غير عادي: القاعدة العامة مبنية على الجواز العادي — الجواز الدبلوماسي أو الرسمي له اتفاقيات خاصة، تأكد في ADC."});
   /* الموظف حدد إنه ما معه تأشيرة، والبلد يشترط تأشيرة مسبقة → مانع ✕ */
-  if(noV&&needV&&lv!=="ok"){lv="x";head="✕ ما معه تأشيرة لـ "+cn(c)+" — "+(stTxt(cur)?stTxt(cur)[1]:"يحتاج تأشيرة مسبقة");L.forEach(l=>{if(l.lv==="w"&&/تأشيرة/.test(l.t)&&!l.cond)l.lv="x"})}
+  if(noV&&needV&&lv!=="ok"){lv="x";head="✕ ما معه تأشيرة لـ "+cn(c)+" — "+(stTxt(cur)?stTxt(cur)[1]:"يحتاج تأشيرة مسبقة");L.forEach(l=>{if(l.lv==="w"&&/تأشيرة/.test(l.t)&&!l.cond&&!l.qk)l.lv="x"})}
   if(!detailed)L.push({lv:"i",t:"ما عندنا قواعد مفصلة لهالبلد — الحكم من القاعدة العامة فقط، والحالات الخاصة (إقامة، عمر، موافقات) ممكن تختلف.",src:K.SRC.pi.t,u:K.SRC.pi.u});
-  return{lv,head,L:L.concat(ppL(P,c,x)),detailed}}
-function ppL(P,c,x){return rules(c,"pp").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]).map(([r,m])=>line(r,"i",m[1]))}
-const TWOVH={SA:12,EG:24,LB:12};
+  /* تذكرة العودة: الزائر بدون تذكرة عودة أو مغادرة */
+  if(P.rt===0&&!hasVisa&&P.pur!=="home"&&x.final===c)L.push({lv:"w",t:"ما معه تذكرة عودة أو مغادرة — أغلب الدول تشترطها للزائر (ADC يعطي Don't Board إذا كانت مطلوبة). تأكد قبل القبول."});
+  const pp=ppL(P,c,x);const ppx=pp.find(l=>l.lv==="x");if(ppx){lv="x";head="✕ "+ppx.t.split(/[.—]/)[0]}else pp.forEach(l=>{lv=worse(lv,l.lv)});
+  return{lv,head,L:L.concat(pp),detailed}}
+const mLeft=d=>{const t=new Date(TODAY()),e=new Date(d);if(isNaN(e))return null;return(e-t)/86400000/30.44};
+function ppL(P,c,x,res){const rs=rules(c,"pp").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);const L=rs.map(([r,m])=>line(r,"i",m[1]));
+  if(!P.ppx)return L;const left=mLeft(P.ppx);if(left==null)return L;
+  const need=Math.max(0,...rs.filter(([r,m])=>m[0]===1&&r.ppMin).map(([r])=>r.ppMin));
+  if(left<=0)L.unshift({lv:"x",t:"الجواز منتهي — الجواز يعتبر صالح لين اليوم اللي قبل تاريخ انتهائه.",src:K.SRC.adc.t,d:K.SRC.adc.d});
+  else if(need&&left<need)L.unshift({lv:"x",t:`الجواز باقي عليه تقريباً ${Math.floor(left)} شهر — و${cn(c)} تشترط ${need} شهور على الأقل.`});
+  else if(!need&&!res&&left<6&&x.final===c)L.unshift({lv:"w",t:`الجواز باقي عليه أقل من 6 شهور — كثير من الدول تشترط 6 شهور، تأكد في ADC.`});
+  return L}
+/* تنبيهات تشغيلية مؤقتة (إغلاق مطار، منع ترانزيت…) — فعالة فقط داخل مدتها */
+function alertsL(c,ap,P,final){return rules(c,"alert").filter(r=>active(r)&&(!r.ap||r.ap.includes(ap))&&(!r.destC||r.destC.includes(final))).map(r=>({...line(r,"x"),t:"⛔ تنبيه مؤقت: "+r.t}))}
+const TWOVH={SA:12,EG:8,LB:12},TWOVAP={HBE:6};
 /* تحليل المسار كامل */
-function analyze(P){TK=P.ticket||"";
+function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
   /* اتفاقيات شحن العفش بين الناقلين (من مراجعة التعاميم) */
   const ilOf=(a,b)=>{if(!a||!b)return{v:"unk"};if(a===b)return{v:"yes",same:1};return(P.il||{})[a+">"+b]||{v:P.ilPending?"pend":"unk"}};
   const ilLine=(a,b,ap,free)=>{const r=ilOf(a,b),nm=carN(a)+" و"+carN(b);
@@ -88,7 +120,7 @@ function analyze(P){TK=P.ticket||"";
   let lvAll="ok";
   out.push({k:"exit",ic:"🇸🇦",t:"المغادرة من السعودية",lv:exitL.reduce((a,l)=>worse(a,l.lv),"ok"),head:exitL.length?"":"ما فيه شرط خاص للمغادرة",L:exitL});
   for(let i=1;i<pts.length-1;i++){const ap=pts[i],c=apC(ap),inCar=legs[i-1].car,outCar=legs[i].car,h=+legs[i-1].h||null,car=[inCar,outCar].filter(Boolean),x={final,car,ap};
-    const card={k:"tr",ic:"🔁",t:`ترانزيت: ${apLabel(ap)}`,L:[],lv:"ok"};
+    const card={k:"tr",ic:"🔁",t:`ترانزيت: ${apLabel(ap)}`,L:alertsL(c,ap,P,final),lv:"ok"};
     if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";{const bg=legs[i-1].bag;card.L.push(bg==="out"?{lv:"i",bag:1,t:"🧳 يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط."}:bg==="thru"?(P.ticket==="sep"?(()=>{const l=ilLine(legs[i-1].car,legs[i].car,ap,true);return l})():{lv:"ok",bag:1,t:"🧳 تذكرة وحدة: العفش يمشي لآخر محطة."}):{lv:"w",bag:1,t:"🧳 حدد وين ينشحن العفش في هالمحطة."})}out.push(card);continue}
     /* هل يقدر يبقى داخل المطار؟ */
     const tw=rules(c,"twov").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
@@ -97,11 +129,11 @@ function analyze(P){TK=P.ticket||"";
       if(r.lv==="x"&&m[0]===1)twBlock=true;card.L.push(line(r,m[0]===1?r.lv:(r.lv==="x"?"w":r.lv),m[1]))});
     const eAny=entry(P,c,x),freeIn=eAny.lv==="ok";
     if(!tw.length)card.L.push(freeIn?{lv:"ok",t:`حتى لو طلع من المطار ما يحتاج تأشيرة لـ ${cn(c)} (${eAny.head}).`,src:K.SRC.pi.t,u:K.SRC.pi.u}:{lv:"w",t:`ما عندنا قاعدة ترانزيت مفصلة لـ ${cn(c)}، وجنسيته لو طلع من المطار: ${eAny.head.replace(/^✕\s*/,"")}. بعض الدول تشترط تأشيرة ترانزيت حتى داخل المطار لجنسيات معينة — تأكد.`,src:K.SRC.pi.t,u:K.SRC.pi.u});
-    const mx=TWOVH[c]||(tw.length?0:24);const tooLong=h&&mx&&h>mx&&!freeIn;
+    const mx=TWOVAP[ap]||TWOVH[c]||(tw.length?0:24);const tooLong=h&&mx&&h>mx&&!freeIn;
     if(tooLong)card.L.push({lv:"w",t:`مدة الانتظار ${h} ساعة أطول من الحد المعتاد للبقاء داخل المطار (${mx} ساعة) — غالباً يحتاج تأشيرة دخول أو ترانزيت.`});
     /* العفش: اختيار الموظف + قواعد استلام العفش في أول مطار دخول + نوع التذكرة */
     const lg=legs[i-1],prevC=apC(pts[i-1]),nextC=apC(pts[i+1]);
-    const b1=rules(c,"bag1").filter(r=>r.all||(prevC!==c&&nextC===c)),forced=b1.length>0,long=h&&h>24;
+    const b1=rules(c,"bag1").filter(r=>r.carOut?(r.carOut.includes(legs[i].car)&&(!r.ap||r.ap.includes(ap))):(r.all||(prevC!==c&&nextC===c))),forced=b1.length>0,long=h&&h>24;
     const bagR=rules(c,"bag").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
     let bagsOut=lg.bag==="out"||forced,ilNo=false;
     if(lg.bag==="thru"){
@@ -122,16 +154,18 @@ function analyze(P){TK=P.ticket||"";
       card.ent.L=card.ent.L.concat(tv);
       if(bagsOut||tooLong)card.lv=worse(card.lv,e.lv);
       card.head=bagsOut||tooLong?`لازم يطلع من الجوازات في ${apN(ap)} — ${e.head.replace(/^✕\s*/,"")}`:`إذا اضطر يطلع من المطار: ${e.head}`}
-    else card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":forced&&lg.bag==="thru"?`🧳 ما ينفع يتشحن العفش لين ${apN(pts[pts.length-1])}: ${cn(c)} تشترط استلامه في ${apN(ap)}${freeIn?" (وما يحتاج تأشيرة)":""}`:ilNo?`🧳 العفش ينشحن لين ${apN(ap)} بس (ما فيه اتفاقية شحن بين الناقلين) — يستلمه هنا وما يحتاج تأشيرة`:forced&&freeIn?"🧳 العفش ينستلم هنا — وما يحتاج تأشيرة لدخوله":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار";
+    else{if(freeIn&&bagsOut){card.ent=eAny;card.mustExit=1;card.lv=worse(card.lv,eAny.lv)}card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":forced&&lg.bag==="thru"?`🧳 ما ينفع يتشحن العفش لين ${apN(pts[pts.length-1])}: ${cn(c)} تشترط استلامه في ${apN(ap)}${freeIn?" (وما يحتاج تأشيرة)":""}`:ilNo?`🧳 العفش ينشحن لين ${apN(ap)} بس (ما فيه اتفاقية شحن بين الناقلين) — يستلمه هنا وما يحتاج تأشيرة`:forced&&freeIn?"🧳 العفش ينستلم هنا — وما يحتاج تأشيرة لدخوله":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار"}
+    if(bagsOut||tooLong)card.mustExit=1;
     out.push(card)}
   /* الوجهة النهائية */
   const fc=final,e=entry(P,fc,{final,car:[legs[legs.length-1].car].filter(Boolean)});
-  out.push({k:"dst",ic:"🛬",t:`الوجهة: ${apLabel(pts[pts.length-1])}`,lv:e.lv,head:e.head,L:e.L});
+  {const al=alertsL(fc,pts[pts.length-1],P,fc);out.push({k:"dst",ic:"🛬",t:`الوجهة: ${apLabel(pts[pts.length-1])}`,lv:al.length?"x":e.lv,head:al.length?al[0].t:e.head,L:al.concat(e.L)})}
   out.forEach(c=>{lvAll=worse(lvAll,c.lv)});
   const needs=[];out.forEach(c=>{if(!c.circ&&(c.lv==="w"||c.lv==="x")){const h=c.head||(c.L.find(l=>l.lv===c.lv)||{}).t||"";needs.push(c.t+": "+h)}});
   const missing=[];if(!P.ticket&&legs.length>1)missing.push("نوع التذكرة");
   const allL=out.flatMap(c=>c.L.concat(c.ent?c.ent.L:[]));if(P.age==null&&allL.some(l=>l.cond&&/عمر/.test(l.cond)))missing.push("العمر");if(!P.sex&&allL.some(l=>l.cond&&/رجل|امرأة/.test(l.cond)))missing.push("الجنس");
-  return{cards:out,lv:lvAll,needs,missing,final,pts}}
+  const fines=[...new Set(out.filter(c=>c.lv==="x").map((c,k)=>c.k==="dst"?fc:c.k==="tr"?apC(pts[out.indexOf(c)]):"").filter(c=>K.FINE&&K.FINE[c]))].map(c=>({c,...K.FINE[c]}));
+  return{cards:out,lv:lvAll,needs,missing,final,pts,fines}}
 
 /* ---------- فهم الحالة المكتوبة بالعربي ---------- */
 const AN=s=>String(s||"").normalize("NFKC").replace(/[ً-ْـ]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).toLowerCase();
@@ -184,7 +218,7 @@ function parse(txt){const t=" "+AN(txt).replace(/[،,.؛]/g," ")+" ",o={};
   return o}
 
 /* ---------- الواجهة ---------- */
-const CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;align-items:center}.tv-h i{font-style:normal;font-size:26px}.tv-h b{display:block;font-size:16px}.tv-h small{color:var(--muted);font-size:12px}
+let CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;align-items:center}.tv-h i{font-style:normal;font-size:26px}.tv-h b{display:block;font-size:16px}.tv-h small{color:var(--muted);font-size:12px}
 .tv-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:10px}
 .tv-box>b{font-size:13px;color:var(--muted);font-weight:600}
 .tv textarea,.tv select,.tv input[type=number]{width:100%;box-sizing:border-box;background:var(--raise,#111);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:15px;min-width:0}
@@ -247,6 +281,11 @@ const CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;ali
 .tv-sh-g{font-size:12px;color:#9a9a9a;padding:10px 6px 4px}
 .tv-ov.top{align-items:stretch}.tv-ov.top .tv-sh{max-height:none;height:100%;box-sizing:border-box;border-radius:0 0 20px 20px;border-top:0;border-bottom:1px solid #262626;padding-top:calc(12px + env(safe-area-inset-top));padding-bottom:12px}.tv-ov.top .tv-sh-l{flex:1;min-height:0}`;
 const MK={ok:"✓",w:"!",x:"✕",i:"i"};
+CSS+=`.tv-q{margin-top:6px;display:grid;gap:6px}.tv-q b{font-size:14.5px;line-height:1.6}.tv-q small{color:var(--muted);font-size:12px}.tv-qno{background:rgba(240,97,74,.12);border-inline-start:3px solid #f0614a;border-radius:8px;padding:8px 10px;font-size:13.5px}
+.tv-qb button{min-width:72px}.tv-qb button.on.no{background:rgba(240,97,74,.18);border-color:#f0614a;color:#ffb4a6}
+.tv-sec.qs.w{border-color:rgba(240,180,41,.45)}.tv-sec.qs.x{border-color:rgba(240,97,74,.5)}.tv-sec.qs.ok{border-color:rgba(70,190,120,.45)}.tv-sec h4 small{color:var(--muted);font-weight:400}
+.tv-old{color:#f0b429;font-weight:600}.tv-adc{border:1px solid rgba(217,200,168,.35);border-radius:10px;padding:8px 10px}
+#tvPpx{color-scheme:dark}`;
 const mk=l=>`<span class="tv-mk ${l}">${MK[l]}</span>`;
 /* ---------- قائمة اختيار مع بحث (بدل القوائم العادية) ---------- */
 let EN=null;try{EN=new Intl.DisplayNames(["en"],{type:"region"})}catch(e){}
@@ -283,19 +322,26 @@ const pkBtn=(kind,v,i)=>`<button class="tv-pk ${v?"":"e"} ${!v&&S.showMiss&&kind
 const ST_T={res:"مقيم (إقامة سعودية)",visit:"تأشيرة زيارة",umrah:"تأشيرة عمرة",tour:"تأشيرة سياحة"};
 const isGcc=()=>GCC.includes(S.nat);
 const resOf=()=>isGcc()?S.nat:S.st==="res"?"SA":(S.res||S.nat);
+const needRt=()=>{const fc=apC(S.legs[S.legs.length-1].to);return!!fc&&fc!=="SA"&&fc!==S.nat&&fc!==resOf()&&!(GCC.includes(S.nat)&&GCC.includes(fc))};
+const PT_T={N:"عادي",D:"دبلوماسي",O:"رسمي / خاص / خدمة"};
+const isSup=()=>{try{return!!(typeof AUTH!=="undefined"&&AUTH.me&&AUTH.me.admin)}catch(e){return false}};
 const routeCts=()=>[...new Set(S.legs.map(l=>apC(l.to)).filter(c=>c&&c!=="SA"&&c!==S.nat&&c!==resOf()&&!(GCC.includes(S.nat)&&GCC.includes(c))))];
 /* الخانات الإجبارية قبل الفحص (نفس اللي يحتاجه تيماتيك + الناقل ونوع التذكرة للتعاميم والعفش) */
 function req(){const m=[],r=[];if(!S.nat)m.push("جنسية الراكب (الجواز)");if(S.nat&&!isGcc()&&!S.st)m.push("وضع الراكب في السعودية: مقيم أو زيارة أو عمرة أو سياحة");
   S.legs.forEach((l,i)=>{const nm=i===S.legs.length-1?"الوجهة النهائية":"الترانزيت "+(i+1);if(!l.to)m.push("مطار "+nm);if(!l.car)m.push("الناقل في "+nm);
     if(i<S.legs.length-1&&l.to&&apC(l.to)!=="SA"&&!l.h)m.push("مدة الانتظار في "+apLabel(l.to));
   });
+  if(!S.ppx)m.push("تاريخ انتهاء الجواز");
+  if(!S.pur)m.push("غرض السفر");
+  if(needRt()&&S.rt==null)m.push("هل معه تذكرة عودة أو مغادرة؟ (نعم/لا)");
   if(S.legs.length>1&&(S.bagTo==null||S.bagTo>=S.legs.length))m.push("🧳 العفش ينشحن لين أي مطار؟");
   if(S.legs.length>1&&!S.ticket)m.push("نوع التذكرة: وحدة أو منفصلة");
   routeCts().forEach(c=>{if(S.visas[c]==null)m.push("هل معه تأشيرة/إقامة سارية لـ "+cn(c)+"؟ (نعم/لا)")});
   /* العمر والجنس: إجباري فقط إذا فيه قاعدة لهالجنسية على هالمسار تفرق حسبها */
-  const cs=[...new Set(S.legs.map(l=>apC(l.to)).filter(Boolean))],ag=new Set(),sx=new Set();
+  const cs=[...new Set(S.legs.map(l=>apC(l.to)).filter(Boolean))],ag=new Set(),sx=new Set(),dy=new Set();
   K.R.forEach(r=>{if(!cs.includes(r.c)||(r.nat&&!inL(S.nat,r.nat))||(r.natNot&&inL(S.nat,r.natNot)))return;const n=r.notIf||{};
-    if(r.age||n.age)ag.add(cn(r.c));if(r.sex||n.sex)sx.add(cn(r.c))});
+    if(r.age||n.age)ag.add(cn(r.c));if(r.sex||n.sex)sx.add(cn(r.c));if(r.needDays||r.daysMin)dy.add(cn(r.c))});
+  if(S.days===""&&dy.size)m.push("مدة البقاء بالأيام (قواعد "+[...dy].join("، ")+" تفرق حسبها)");S.needDays=!!dy.size;
   if(S.age===""&&ag.size)m.push("عمر الراكب (قواعد "+[...ag].join("، ")+" تفرق حسب العمر لهالجنسية)");
   if(!S.sex&&sx.size)m.push("جنس الراكب (قواعد "+[...sx].join("، ")+" تفرق حسبه لهالجنسية)");
   S.needAge=!!ag.size;S.needSex=!!sx.size;return{m,r}}
@@ -320,6 +366,11 @@ function paint(){if(!root)return;
   <div class="tv-box"><b>👤 الراكب</b>
     <div class="tv-r"><label class="l">الجنسية (الجواز)${pkBtn("nat",S.nat)}</label>${S.nat&&!isGcc()&&S.st&&S.st!=="res"?`<label class="l">بلد إقامته الأصلية${pkBtn("res",S.res||S.nat)}</label>`:"<span></span>"}</div>
     ${S.nat&&!isGcc()?`<label class="l">وضعه في السعودية<div class="tv-chips ${S.showMiss&&!S.st?"tv-miss":""}" id="tvSt">${Object.entries(ST_T).map(([k,v])=>`<button data-st="${k}" class="${S.st===k?"on":""}">${v}</button>`).join("")}</div></label>`:""}
+    <div class="tv-r"><label class="l">نوع الجواز<div class="tv-chips" id="tvPt">${Object.entries(PT_T).map(([k,v])=>`<button data-pt="${k}" class="${(S.pt||"N")===k?"on":""}">${v}</button>`).join("")}</div></label>
+      <label class="l">انتهاء الجواز<input type="date" id="tvPpx" value="${E(S.ppx)}" class="${S.showMiss&&!S.ppx?"tv-miss":""}"></label></div>
+    <label class="l">غرض السفر<div class="tv-chips ${S.showMiss&&!S.pur?"tv-miss":""}" id="tvPur">${Object.entries(PUR_T).map(([k,v])=>`<button data-pur="${k}" class="${S.pur===k?"on":""}">${v}</button>`).join("")}</div></label>
+    <div class="tv-r"><label class="l">تذكرة عودة أو مغادرة<div class="tv-chips ${S.showMiss&&needRt()&&S.rt==null?"tv-miss":""}"><button data-rt="1" class="${S.rt===1?"on":""}">نعم</button><button data-rt="0" class="${S.rt===0?"on":""}">لا</button></div></label>
+      <label class="l">مدة البقاء (أيام)<input type="number" id="tvDays" inputmode="numeric" min="1" value="${E(S.days)}" class="${S.showMiss&&S.needDays&&S.days===""?"tv-miss":""}" placeholder="${S.needDays?"مطلوب لهالحالة":"اختياري"}"></label></div>
     <div class="tv-r"><label class="l">العمر<input type="number" id="tvAge" inputmode="numeric" min="0" max="120" value="${E(S.age)}" class="${S.showMiss&&S.needAge&&S.age===""?"tv-miss":""}" placeholder="${S.needAge?"مطلوب لهالحالة":"غير مطلوب عادة"}"></label>
       <label class="l">الجنس<div class="tv-chips ${S.showMiss&&S.needSex&&!S.sex?"tv-miss":""}" id="tvSex"><button data-sex="M" class="${S.sex==="M"?"on":""}">رجل</button><button data-sex="F" class="${S.sex==="F"?"on":""}">امرأة</button></div></label></div></div>
   <div class="tv-box"><b>✈️ المسار — من الجوف AJF</b>
@@ -330,19 +381,23 @@ function paint(){if(!root)return;
     ${legs.length>1?`<label class="l">🧳 العفش ينشحن لين<button class="tv-pk ${S.bagTo==null||S.bagTo>=legs.length?"e":""} ${S.showMiss&&(S.bagTo==null||S.bagTo>=legs.length)?"tv-miss":""}" data-pk="bag"><span>${S.bagTo!=null&&S.bagTo<legs.length&&legs[S.bagTo].to?E(apLabel(legs[S.bagTo].to))+(S.bagTo===legs.length-1?" (الوجهة النهائية)":""):"اختر المطار…"}</span><i>⌕</i></button></label>`:""}
     ${legs.length>1?`<label class="l">التذكرة<div class="tv-chips ${S.showMiss&&!S.ticket?"tv-miss":""}" id="tvTk"><button data-tk="one" class="${S.ticket==="one"?"on":""}">تذكرة وحدة (حجز واحد)</button><button data-tk="sep" class="${S.ticket==="sep"?"on":""}">تذاكر منفصلة</button></div></label>`:""}</div>
   <div class="tv-box"><b>📄 الوثائق اللي معه</b>
-    ${cts.length?cts.map(c=>`<div class="tv-vq ${S.showMiss&&S.visas[c]==null?"tv-miss":""}"><span>معه تأشيرة أو إقامة سارية لـ ${E(cn(c))}؟</span><div class="tv-chips"><button data-visa="${c}" data-val="1" class="${S.visas[c]===1?"on":""}">نعم</button><button data-visa="${c}" data-val="0" class="${S.visas[c]===0?"on":""}">لا</button></div></div>`).join(""):`<div class="tv-note">اختر المسار أول عشان تطلع أسئلة التأشيرات.</div>`}
+    ${cts.length?cts.map(c=>`<div class="tv-vq ${S.showMiss&&S.visas[c]==null?"tv-miss":""}"><span>معه تأشيرة أو تصريح دخول (eVisa / ETA) أو إقامة سارية لـ ${E(cn(c))}؟</span><div class="tv-chips"><button data-visa="${c}" data-val="1" class="${S.visas[c]===1?"on":""}">نعم</button><button data-visa="${c}" data-val="0" class="${S.visas[c]===0?"on":""}">لا</button></div></div>`).join(""):`<div class="tv-note">اختر المسار أول عشان تطلع أسئلة التأشيرات.</div>`}
     <div class="tv-note">تأشيرة أو إقامة سارية من (تفيد لبعض الدول مثل تركيا والإمارات):</div>
     <div class="tv-chips" id="tvSup">${Object.entries(SUP).map(([k,v])=>`<button data-sup="${k}" class="${S.sup.includes(k)?"on":""}">${v}</button>`).join("")}</div>
-    <div class="tv-chips"><button data-ebola="1" class="${S.ebola?"on":""}">كان في الكونغو/أوغندا/جنوب السودان/كينيا آخر 21 يوم</button></div></div>
+    <div class="tv-chips"><button data-ebola="1" class="${S.ebola?"on":""}">كان في الكونغو/أوغندا/جنوب السودان/كينيا آخر 21 يوم</button><button data-yf="1" class="${S.yf?"on":""}">قادم من / كان في دولة من قائمة الحمى الصفراء (أفريقيا وأمريكا الجنوبية)</button></div></div>
   <button class="tv-go" id="tvGo">🔎 افحص الاشتراطات</button>
   <div id="tvOut">${outHTML()}</div></div>`}
-function lineH(l){return`<div class="tv-l">${mk(l.lv)}<div>${l.cond?`<em>إذا ${E(l.cond)}: </em>`:""}${E(l.t)}${l.src?`<small>المصدر: ${l.u?`<a href="${E(l.u)}" target="_blank" rel="noopener">${E(l.src)}</a>`:E(l.src)}</small>`:""}</div></div>`}
+const oldSrc=d=>d&&(new Date(K.D)-new Date(d))/86400000>365;
+function qBtns(l){return`<div class="tv-chips tv-qb"><button data-qa="${E(l.qk)}" data-v="1" class="${l.ans===1?"on":""}">نعم</button><button data-qa="${E(l.qk)}" data-v="0" class="${l.ans===0?"on no":""}">لا</button></div>`}
+function lineH(l,btn){const q=l.qk?`<div class="tv-q"><b>❓ ${E(l.q)}</b>${btn?qBtns(l):`<small>${l.ans===1?"✓ تم التأكيد":l.ans===0?"✕ الجواب: لا":"جاوب عليه في «أسئلة التأكيد» فوق"}</small>`}${l.ans===0&&l.qno?`<div class="tv-qno">${E(l.qno)}</div>`:""}</div>`:"";
+  return`<div class="tv-l">${mk(l.lv)}<div>${l.cond?`<em>إذا ${E(l.cond)}: </em>`:""}${l.qk&&btn?"":E(l.t)}${q}${l.src?`<small>المصدر: ${l.u?`<a href="${E(l.u)}" target="_blank" rel="noopener">${E(l.src)}</a>`:E(l.src)}${l.d?" · "+E(l.d):""}${oldSrc(l.d)&&!l.perm?` <b class="tv-old">⚠️ مصدر قديم — يحتاج مراجعة</b>`:""}</small>`:""}</div></div>`}
 /* ---------- عرض النتيجة ---------- */
-const VT={ok:["✓","يُقبل للسفر","القواعد والتعاميم ما فيها ما يمنع"],w:["!","يُقبل بشرط","تأكد من النقاط تحت قبل إصدار بطاقة الصعود"],x:["✕","لا يُقبل","بالوضع الحالي ما يمشي — شوف السبب تحت"]};
+const VT={ok:["✓","Ok to Board — يُقبل","القواعد والتعاميم ما فيها ما يمنع"],w:["!","Conditional — يُقبل بشرط","جاوب «أسئلة التأكيد» وتأكد من النقاط تحت: إذا كلها «نعم» يصير يُقبل"],x:["✕","Don't Board — لا يُقبل","بالوضع الحالي ما يمشي — شوف السبب تحت"]};
 function heroH(o,lv,pending){const p=P(),v=VT[lv],pts=o.pts;
   const route=pts.map((a,i)=>`<span class="tv-rp"><b>${E(a==="AJF"?"الجوف":a.startsWith("C:")?cn(a.slice(2)):apN(a))}</b><small>${E(a.startsWith("C:")?"":a)}</small></span>${i<pts.length-1?`<span class="tv-ra"><i>←</i><small>${E(p.legs[i].car||"")}</small></span>`:""}`).join("");
   const who=[cn(p.nat),p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"",p.legs.length>1?(p.ticket==="one"?"تذكرة وحدة":"تذاكر منفصلة"):"",p.legs.length>1&&S.bagTo!=null&&p.legs[S.bagTo]?"🧳 العفش لين "+apN(p.legs[S.bagTo].to):""].filter(Boolean);
-  return`<div class="tv-hero ${pending?"p":lv}"><div class="tv-hero-t"><span class="tv-big">${pending?"…":v[0]}</span><div><b>${pending?"جاري الفحص":v[1]}</b><small>${pending?"نراجع القواعد وتعاميم المحطة — لا تقرر قبل ما يخلص":v[2]}</small></div></div>
+  const ov=!pending&&S.ovr;
+  return`<div class="tv-hero ${pending?"p":ov?"ok":lv}"><div class="tv-hero-t"><span class="tv-big">${pending?"…":ov?"✓":v[0]}</span><div><b>${pending?"جاري الفحص":ov?"Ok to Board — بتجاوز المشرف":v[1]}</b><small>${pending?"نراجع القواعد وتعاميم المحطة — لا تقرر قبل ما يخلص":ov?`الحكم الأصلي: ${VT[lv][1]} · السبب: ${E(S.ovr.r)} · ${E(S.ovr.by)}`:v[2]}</small></div></div>
     <div class="tv-route">${route}</div><div class="tv-who">${who.map(w=>`<span>${E(w)}</span>`).join("")}</div></div>`}
 function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-empty">${E(o.err)}</div>`;
   const cv=S.cv||{st:"run"};
@@ -350,7 +405,16 @@ function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-e
   const hit=cv.st==="ok"&&circLines(cv).length>0;
   const lv=cv.st==="ok"?(hit?worse(o.lv,cv.lv):o.lv):worse(o.lv,"w");
   const needs=[...o.needs];if(hit&&cv.lv!=="ok"&&cv.k)needs.unshift("📢 حسب تعميم المحطة: "+cv.k);if(cv.st!=="ok")needs.unshift("ما تمت مراجعة التعاميم — أعد المراجعة تحت");
-  return heroH(o,lv)+(lv!=="ok"?`<div class="tv-sec need ${lv}"><h4>${lv==="x"?"سبب عدم القبول":"المطلوب قبل القبول"}</h4>${needs.map(n=>`<div class="tv-need">${E(n.replace(/^[^:]+:\s*/,m=>m))}</div>`).join("")}</div>`:"")+circH(cv)+bagH(o)+`<h4 class="tv-h4">تفاصيل المسار</h4>`+cardsH(o)+aiH()}
+  const fin=lv==="x"?(o.fines||[]).map(f=>`<div class="tv-need">💰 ${E(cn(f.c))}: ${E(f.t)}</div>`).join(""):"";
+  return heroH(o,lv)+qH(o)+(lv!=="ok"?`<div class="tv-sec need ${lv}"><h4>${lv==="x"?"سبب عدم القبول":"المطلوب قبل القبول"}</h4>${needs.map(n=>`<div class="tv-need">${E(n.replace(/^[^:]+:\s*/,m=>m))}</div>`).join("")}${fin}</div>`:"")+ovrH(lv)+circH(cv)+bagH(o)+arrH(o)+`<h4 class="tv-h4">تفاصيل المسار</h4>`+cardsH(o)+aiH()}
+/* أسئلة التأكيد (مثل «Can you confirm conditions are met?» في ADC) */
+function qLines(o){const seen=new Set(),out=[];o.cards.forEach(c=>{c.L.concat(c.ent&&(c.mustExit||c.k==="dst")?c.ent.L:[]).forEach(l=>{if(l.qk&&!seen.has(l.qk)){seen.add(l.qk);out.push(l)}})});return out}
+function qH(o){const qs=qLines(o);if(!qs.length)return"";const left=qs.filter(l=>l.ans==null).length;
+  return`<div class="tv-sec qs ${qs.some(l=>l.ans===0)?"x":left?"w":"ok"}"><h4>✅ أسئلة التأكيد ${left?`<small>(باقي ${left})</small>`:""}</h4><div class="tv-note">مثل ADC: إذا كل الأجوبة «نعم» يصير الحكم يُقبل، وأي «لا» يصير لا يُقبل.</div>${qs.map(l=>lineH(l,1)).join("")}</div>`}
+function arrH(o){const seen=new Set(),ls=[];o.cards.forEach(c=>c.L.concat(c.ent&&(c.mustExit||c.k==="dst")?c.ent.L:[]).forEach(l=>{if(l.arr&&!l.qk&&!seen.has(l.t)){seen.add(l.t);ls.push(l)}}));if(!ls.length)return"";
+  return`<div class="tv-sec"><h4>🪪 بطاقات الوصول الرقمية <small>(مو تأشيرة)</small></h4>${ls.map(l=>lineH(l)).join("")}</div>`}
+function ovrH(lv){if(lv==="ok"||!isSup())return"";if(S.ovr)return`<div class="tv-sec"><h4>🔓 تجاوز المشرف</h4><div class="tv-note">تم التجاوز: ${E(S.ovr.r)} — ${E(S.ovr.by)} (${E(S.ovr.at.slice(0,16).replace("T"," "))})</div><button class="tv-sm" id="tvOvrX">إلغاء التجاوز</button></div>`;
+  return`<details class="tv-sec tv-more"><summary>🔓 تجاوز المشرف (للمشرف فقط)</summary><div class="tv-note">مثل Override ADC: اكتب السبب، وينحفظ التجاوز في سجل التطبيق باسمك.</div><textarea id="tvOvrR" rows="2" placeholder="سبب التجاوز (إجباري)">${E(S.ovrR||"")}</textarea><button class="tv-sm" id="tvOvr">تجاوز الحكم</button></details>`}
 function bagH(o){const rows=[];o.cards.forEach((c,ci)=>{if(c.k!=="tr")return;c.L.filter(l=>l.bag).forEach(l=>rows.push([o.pts[ci],l]))});if(!rows.length)return"";
   const lv=rows.reduce((a,[,l])=>worse(a,l.lv==="i"?"ok":l.lv),"ok");
   return`<div class="tv-sec bag ${lv}"><h4>🧳 شحن العفش</h4>${rows.map(([ap,l])=>`<div class="tv-cl">${mk(l.lv)}<span><b>${E(apN(ap))}:</b> ${E(l.t.replace(/^🧳\s*/,""))}${l.src?`<small class="tv-src"> — ${E(l.src)}</small>`:""}</span></div>`).join("")}</div>`}
@@ -361,26 +425,28 @@ function circH(cv){if(cv.st!=="ok")return`<div class="tv-sec"><h4>📢 تعام�
     ${none?`<div class="tv-cl">${mk("ok")}<span>ما فيه تعميم يخص هالراكب أو هالمسار</span></div>`:ls.map(x=>`<div class="tv-cl">${mk(cv.lv==="ok"?"i":cv.lv)}<span>${E(x)}</span></div>`).join("")}
     <details class="tv-more"><summary>رد المراجعة كامل</summary><div class="a">${fmt(cv.a)}</div></details></div>`}
 function cardsH(o){const cv=S.cv||{};return`<div class="tv-tl">${o.cards.map((c,ci)=>{const hit=cv.st==="ok"&&circLines(cv).length>0,lv=c.circ?(cv.st==="ok"?(hit?worse(c.lv==="w"?"ok":c.lv,cv.lv):(c.lv==="w"?"ok":c.lv)):"w"):c.lv;
-  const kk=l=>l.bag||l.lv==="w"||l.lv==="x",key=c.L.filter(kk),rest=c.L.filter(l=>!kk(l));
-  const ent=c.ent?`<div class="tv-sub"><b>🛂 لو طلع من المطار — دخول ${E(cn(apC(o.pts[ci])))}: ${E(c.ent.head)}</b>${c.ent.L.filter(l=>l.lv==="w"||l.lv==="x").map(lineH).join("")}${c.ent.L.some(l=>!(l.lv==="w"||l.lv==="x"))?`<details class="tv-more"><summary>معلومات إضافية</summary>${c.ent.L.filter(l=>!(l.lv==="w"||l.lv==="x")).map(lineH).join("")}</details>`:""}</div>`:"";
+  const LL=c.L.filter(l=>!(l.arr&&!l.qk)),kk=l=>l.bag||l.qk||l.lv==="w"||l.lv==="x",key=LL.filter(kk),rest=LL.filter(l=>!kk(l));
+  const ent=c.ent?`<div class="tv-sub"><b>🛂 لو طلع من المطار — دخول ${E(cn(apC(o.pts[ci])))}: ${E(c.ent.head)}</b>${c.ent.L.filter(l=>l.lv==="w"||l.lv==="x").map(l=>lineH(l)).join("")}${c.ent.L.some(l=>!(l.lv==="w"||l.lv==="x"))?`<details class="tv-more"><summary>معلومات إضافية</summary>${c.ent.L.filter(l=>!(l.lv==="w"||l.lv==="x")).map(l=>lineH(l)).join("")}</details>`:""}</div>`:"";
   return`<div class="tv-st ${lv}"><span class="tv-dot">${MK[lv]}</span><div class="tv-st-b"><div class="tv-st-h">${c.k==="exit"?"":`<small>${c.k==="tr"?"ترانزيت":"الوجهة النهائية"}</small>`}<b>${E(c.t.replace(/^[^:]+:\s*/,""))}</b>${(()=>{const h=c.circ&&cv.st==="ok"&&cv.lv!=="ok"&&circLines(cv).length?(cv.lv==="x"?"⛔ حسب تعميم المحطة ما يمشي — شوف «تعاميم المحطة» فوق":"⚠️ حسب تعميم المحطة: بشرط — شوف «تعاميم المحطة» فوق"):c.head;return h?`<span>${E(h)}</span>`:""})()}</div>
-    ${key.map(lineH).join("")}${ent}${rest.length?`<details class="tv-more"><summary>التفاصيل والمصادر (${rest.length})</summary>${rest.map(lineH).join("")}</details>`:""}</div></div>`}).join("")}</div>`}
+    ${key.map(l=>lineH(l)).join("")}${ent}${rest.length?`<details class="tv-more"><summary>التفاصيل والمصادر (${rest.length})</summary>${rest.map(l=>lineH(l)).join("")}</details>`:""}</div></div>`}).join("")}</div>`}
 function aiH(){return`<div class="tv-ai"><h4>🤖 كمّل مع المساعد</h4>
       <div class="tv-note">إذا عندك معلومة زيادة أو تصحيح اكتبها، والمساعد يعيد الحكم مع القواعد والتعاميم.</div>
       ${S.th.slice(1).map(x=>`<div class="q">👤 ${E(x.q)}</div><div class="a">${fmt(x.a)}</div>`).join("")}
       <textarea id="tvAq" rows="2" placeholder="اكتب متابعة أو تصحيح، مثلاً «إقامته السعودية باقي عليها 4 شهور»">${E(S.aq)}</textarea>
       <button class="tv-go" id="tvAsk" ${S.busy?"disabled":""}>${S.busy?"… يحلل":"أرسل"}</button></div>
+    <div class="tv-note tv-adc">⚖️ حكم ADC في نظام القبول (Altea) هو المرجع الرسمي. هذي الأداة تجهزك قبله وتشرح لك بالعربي، والتعميم الأحدث يتقدم على قاعدة البيانات العامة.</div>
     <div class="tv-note">هذي الأداة تجمع قواعد منشورة من مواقع حكومية وشركات طيران (مو من تيماتيك نفسه). القواعد تتغير، فإذا الحكم ⚠️ أو الحالة نادرة، تأكد قبل القبول. آخر مراجعة للقواعد: ${E(K.D)}.</div>`}
 function fmt(t){return E(String(t||"")).replace(/^\s*#{1,4}\s*(.+)$/gm,"<b>$1</b>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ").replace(/\n/g,"<br>")}
 function legsB(){const n=S.legs.length,k=S.legs.length>1?(S.bagTo!=null&&S.bagTo<n?S.bagTo:null):0;return S.legs.map((l,i)=>({...l,bag:k==null?"":i<n-1?(i<k?"thru":i===k?"out":"thru"):""}))}
-function P(){return{il:S.il||{},ilPending:!!(S.cv&&S.cv.st==="run"),nat:S.nat,st:isGcc()?"cit":S.st,res:resOf(),age:S.age===""?null:+S.age,sex:S.sex,sup:S.sup,ebola:S.ebola,ticket:S.legs.length>1?S.ticket:"one",legs:legsB(),visas:S.visas}}
+function P(){return{pt:S.pt||"N",ppx:S.ppx,pur:S.pur,rt:S.rt,days:S.days===""?null:+S.days,yf:S.yf,qa:S.qa||{},il:S.il||{},ilPending:!!(S.cv&&S.cv.st==="run"),nat:S.nat,st:isGcc()?"cit":S.st,res:resOf(),age:S.age===""?null:+S.age,sex:S.sex,sup:S.sup,ebola:S.ebola,ticket:S.legs.length>1?S.ticket:"one",legs:legsB(),visas:S.visas}}
 function run(){if(!S.nat){S.out={err:"اختر جنسية الراكب أول."};paintOut();return}if(!S.legs[S.legs.length-1].to){S.out={err:"اختر الوجهة النهائية."};paintOut();return}
-  loadPI().then(()=>{S.il={};S.cv={st:"run"};S.out=analyze(P());S.th=[];paintOut();reviewCirc();try{ajfAct&&ajfAct("tv",S.nat+">"+S.legs.map(l=>l.to).join(">"))}catch(e){}
+  loadPI().then(()=>{S.il={};S.qa={};S.ovr=null;S.ovrR="";S.cv={st:"run"};S.out=analyze(P());S.th=[];paintOut();reviewCirc();try{ajfAct&&ajfAct("tv",S.nat+">"+S.legs.map(l=>l.to).join(">"))}catch(e){}
     setTimeout(()=>{const o=root.querySelector("#tvOut");if(o)o.scrollIntoView({behavior:"smooth",block:"start"})},50)}).catch(()=>{S.out={err:"تعذّر تحميل قاعدة التأشيرات، تأكد من الإنترنت."};paintOut()})}
 function paintOut(){const o=root&&root.querySelector("#tvOut");if(o)o.innerHTML=outHTML();save()}
 function ctxText(){const p=P(),o=S.out;const L=[];
   L.push("بيانات الحالة وقواعد السفر من قاعدة بيانات التطبيق (بديل نص شاشة TIMATIC — جمعت من مواقع حكومية وشركات طيران، وكل قاعدة معها مصدرها):");
   L.push(`الراكب: جنسية ${cn(p.nat)} (${p.nat})، وضعه في السعودية: ${p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"غير محدد"}${p.st==="res"?"":"، يعني مو مقيم في السعودية ولا ينطبق عليه أي شرط خاص بالمقيمين في الخليج"}، بلد إقامته: ${cn(p.res)}، العمر ${p.age??"غير محدد"}، الجنس ${p.sex==="M"?"رجل":p.sex==="F"?"امرأة":"غير محدد"}.`);
+  L.push(`الجواز: ${PT_T[p.pt]||"عادي"}، ينتهي ${p.ppx||"غير محدد"}. غرض السفر: ${PUR_T[p.pur]||"غير محدد"}. تذكرة عودة/مغادرة: ${p.rt===1?"نعم":p.rt===0?"لا":"غير محدد"}. مدة البقاء: ${p.days??"غير محدد"} يوم.${p.yf?" قادم من دولة من قائمة الحمى الصفراء.":""}`);
   L.push(`المسار: الجوف AJF ← ${p.legs.map(l=>`${apLabel(l.to)}${l.car?" على "+carN(l.car):""}${l.h?" (انتظار "+l.h+" ساعة)":""}${l.bag?(l.bag==="thru"?" [العفش يمشي لآخر محطة]":" [يستلم عفشه هنا]"):""}`).join(" ← ")}. التذكرة: ${p.ticket==="one"?"وحدة":p.ticket==="sep"?"منفصلة":"غير محدد"}.`);
   const vs=Object.keys(p.visas).filter(k=>p.visas[k]===1),vn=Object.keys(p.visas).filter(k=>p.visas[k]===0);L.push(`مطارات المسار بالإنجليزي: ${p.legs.map(l=>l.to.startsWith("C:")?enN(l.to.slice(2)):l.to+" "+enN(apC(l.to))).join(" / ")}. الناقلين: ${p.legs.map(l=>l.car?carN(l.car)+" "+l.car:"").filter(Boolean).join(" / ")}.`);
   L.push(`الوثائق: ${vs.length?"معه تأشيرة/إقامة سارية لـ "+vs.map(cn).join("، "):"ما معه تأشيرات"}${vn.length?"؛ ما معه تأشيرة لـ "+vn.map(cn).join("، "):""}${p.sup.length?"؛ معه تأشيرة/إقامة من "+p.sup.map(s=>SUP[s]).join("، "):""}${p.ebola?"؛ كان في دول الإيبولا خلال 21 يوم":""}.`);
@@ -390,7 +456,7 @@ function ctxText(){const p=P(),o=S.out;const L=[];
   L.push(`\nالحكم الآلي: ${o.lv==="ok"?"يُقبل":o.lv==="w"?"يُقبل بشروط":"لا يُقبل"}.${o.missing.length?" معلومات ناقصة: "+o.missing.join("، "):""}`);
   L.push("\nمعنى الرموز: ok مسموح · w شرط/تأكد · x مانع · i معلومة. القاعدة العامة (Passport Index) أقل دقة من القواعد المفصلة.");
   return L.join("\n")}
-const CVQ="إذا المسار فيه ترانزيت أبوظبي AUH: طبّق تعميم ترانزيت أبوظبي بشروطه بالضبط كما هي مكتوبة في نصه (أي ناقلين، أي اتفاقية مع السعودية، تذكرة وحدة أو منفصلة، أي جنسيات أو استثناءات) — لا توسّعه ولا تضيّقه، واذكر عنوانه وتاريخه. وبشكل عام: راجع تعاميم المحطة المرفقة على هالحالة بدقة: المطارات (عربي وإنجليزي ورموز)، الناقلين، الجنسية، الإقامة، نوع التذكرة. اذكر كل تعميم ينطبق وأثره بسطر 📢. إذا ما فيه تعميم يخص الحالة قل ذلك صراحة. بعدين أعطني الحكم النهائي بعد دمج القواعد مع التعاميم (التعميم الأشد يُقدَّم). مهم: إذا الموظف حدد إن الراكب ما معه تأشيرة لبلد يشترط تأشيرة مسبقة، فالحكم ⛔ لا يُسمح له بالسفر — مو ⚠️.";
+const CVQ="قواعد قراءة التعاميم: (1) أي تعميم مكتوب عليه ملغى أو Cancelled أو انتهت مدته لا تطبقه. (2) التنبيهات التشغيلية المؤقتة (إغلاق مطار، إيقاف رحلات، إغلاق أجواء، منع ترانزيت لظرف طارئ) لا تطبقها إذا مر عليها أكثر من 30 يوم إلا إذا فيه تعميم أحدث يجددها. (3) إذا تعميمين يتعارضون، الأحدث تاريخاً هو المعتمد. (4) إذا التعميم يقول إن تيماتيك أو القواعد العامة غير محدثة، التعميم يتقدم. (5) قواعد التطبيق المرفقة مبنية أصلاً على تعاميم المحطة اللي مذكور مصدرها — لا تكررها إلا إذا فيه تعميم أحدث يغيرها. "+"إذا المسار فيه ترانزيت أبوظبي AUH: طبّق تعميم ترانزيت أبوظبي بشروطه بالضبط كما هي مكتوبة في نصه (أي ناقلين، أي اتفاقية مع السعودية، تذكرة وحدة أو منفصلة، أي جنسيات أو استثناءات) — لا توسّعه ولا تضيّقه، واذكر عنوانه وتاريخه. وبشكل عام: راجع تعاميم المحطة المرفقة على هالحالة بدقة: المطارات (عربي وإنجليزي ورموز)، الناقلين، الجنسية، الإقامة، نوع التذكرة. اذكر كل تعميم ينطبق وأثره بسطر 📢. إذا ما فيه تعميم يخص الحالة قل ذلك صراحة. بعدين أعطني الحكم النهائي بعد دمج القواعد مع التعاميم (التعميم الأشد يُقدَّم). مهم: إذا الموظف حدد إن الراكب ما معه تأشيرة لبلد يشترط تأشيرة مسبقة، فالحكم ⛔ لا يُسمح له بالسفر — مو ⚠️.";
 const verdict=a=>{const t=String(a||"");const i=t.lastIndexOf("الخلاصة");const ln=i>=0?t.slice(i).split("\n")[0]:"";const z=ln||t;
   const lv=/⛔|لا يُسمح|لا يسمح/.test(z)?"x":/⚠️|إذا معه|بشرط/.test(z)?"w":/✅|يُسمح له|يسمح له/.test(z)?"ok":"w";return{lv,k:ln.replace(/\*+/g,"").replace(/^الخلاصة:?\s*/,"").trim()}};
 async function callAI(q,h){const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"tim",ctx:ctxText(),q,h})});
@@ -410,7 +476,7 @@ async function ask(){if(S.busy||!S.out||S.out.err)return;const q=(S.aq||"").trim
 function bind(el){el.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||!root.contains(b))return;
   if(b.id==="tvGo")return preCheck();if(b.id==="tvAsk"){const t=root.querySelector("#tvAq");if(t)S.aq=t.value;return ask()}
   if(b.id==="tvCv"){reviewCirc();return}
-  if(b.id==="tvParse"){loadPI().catch(()=>{}).then(()=>{const o=parse(S.txt);if(o.legs&&!o.legs.length)delete o.legs;Object.assign(S,{bagTo:null,nat:"",st:"",res:"",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{}},o,{age:o.age!=null?String(o.age):"",th:[],showMiss:false});S.out=null;save();paint();if(S.nat&&S.legs[S.legs.length-1].to)preCheck()});return}
+  if(b.id==="tvParse"){loadPI().catch(()=>{}).then(()=>{const o=parse(S.txt);if(o.legs&&!o.legs.length)delete o.legs;Object.assign(S,{pt:"N",ppx:"",pur:"",rt:null,days:"",yf:false,qa:{},ovr:null,bagTo:null,nat:"",st:"",res:"",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{}},o,{age:o.age!=null?String(o.age):"",th:[],showMiss:false});S.out=null;save();paint();if(S.nat&&S.legs[S.legs.length-1].to)preCheck()});return}
   if(b.id==="tvAdd"){S.legs.push({to:"",car:"",h:""});if(S.bagTo===S.legs.length-2)S.bagTo=null;S.out=null;save();paint();setTimeout(()=>{const x=root.querySelectorAll(".tv-leg");const l=x[x.length-1];if(l)l.scrollIntoView({behavior:"smooth",block:"center"})},40);return}
   if(b.dataset.pk){openPick(b.dataset.pk,b.dataset.i!=null?+b.dataset.i:null);return}
   if(b.dataset.del!=null){S.legs.splice(+b.dataset.del,1);S.bagTo=null;if(!S.legs.length)S.legs=[{to:"",car:"",h:""}];S.out=null;save();paint();return}
@@ -420,9 +486,17 @@ function bind(el){el.addEventListener("click",e=>{const b=e.target.closest("butt
   if(b.dataset.tk){S.ticket=S.ticket===b.dataset.tk?"":b.dataset.tk;S.out=null;save();paint();return}
   if(b.dataset.visa){const c=b.dataset.visa,v=+b.dataset.val;S.visas[c]=S.visas[c]===v?undefined:v;S.out=null;save();paint();return}
   if(b.dataset.sup){const k=b.dataset.sup;S.sup=S.sup.includes(k)?S.sup.filter(x=>x!==k):[...S.sup,k];S.out=null;save();paint();return}
-  if(b.dataset.ebola){S.ebola=!S.ebola;S.out=null;save();paint();return}});
+  if(b.dataset.ebola){S.ebola=!S.ebola;S.out=null;save();paint();return}
+  if(b.dataset.yf){S.yf=!S.yf;S.out=null;save();paint();return}
+  if(b.dataset.pt){S.pt=b.dataset.pt;S.out=null;save();paint();return}
+  if(b.dataset.pur){S.pur=S.pur===b.dataset.pur?"":b.dataset.pur;S.out=null;save();paint();return}
+  if(b.dataset.rt){const v=+b.dataset.rt;S.rt=S.rt===v?null:v;S.out=null;save();paint();return}
+  if(b.dataset.qa){const k=b.dataset.qa,v=+b.dataset.v;S.qa=S.qa||{};S.qa[k]=S.qa[k]===v?undefined:v;S.ovr=null;if(S.out&&!S.out.err)S.out=analyze(P());const y=window.scrollY;paintOut();window.scrollTo(0,y);return}
+  if(b.id==="tvOvr"){const t=root.querySelector("#tvOvrR"),r=(t&&t.value||"").trim();if(!r){if(t){t.classList.add("tv-miss");t.focus()}return}
+    let by="";try{by=AUTH.me.name||AUTH.me.emp}catch(e){}S.ovr={r,by,at:new Date().toISOString()};try{ajfAct&&ajfAct("tv_ovr",S.nat+">"+S.legs.map(l=>l.to).join(">")+" | "+r)}catch(e){}paintOut();return}
+  if(b.id==="tvOvrX"){S.ovr=null;paintOut();return}});
   el.addEventListener("change",e=>{const t=e.target;if(t.dataset.leg!=null){S.legs[+t.dataset.leg][t.dataset.f]=t.value;S.out=null;save();if(t.dataset.f==="to")paint()}});
-  el.addEventListener("input",e=>{const t=e.target;if(t.value)t.classList.remove("tv-miss");if(t.id==="tvTxt")S.txt=t.value;else if(t.id==="tvAge")S.age=t.value;else if(t.id==="tvAq")S.aq=t.value;
+  el.addEventListener("input",e=>{const t=e.target;if(t.value)t.classList.remove("tv-miss");if(t.id==="tvTxt")S.txt=t.value;else if(t.id==="tvAge")S.age=t.value;else if(t.id==="tvAq")S.aq=t.value;else if(t.id==="tvPpx")S.ppx=t.value;else if(t.id==="tvDays")S.days=t.value;else if(t.id==="tvOvrR")S.ovrR=t.value;
     else if(t.dataset.leg!=null&&t.dataset.f==="h")S.legs[+t.dataset.leg].h=t.value;save()})}
 window.TV={mount:el=>{root=el;if(!el.__tv){el.__tv=1;bind(el)}paint();loadPI().then(()=>{if(root===el&&!S.out)paint()}).catch(()=>{})},
   _t:{analyze,parse,match,entry,loadPI,S}};
