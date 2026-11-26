@@ -184,7 +184,7 @@ const CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;ali
 .tv-wait{display:flex;gap:8px;align-items:center;font-size:14px}
 .tv-pk{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;min-width:0;background:var(--raise,#141414);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:15px;text-align:start}.tv-pk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tv-pk i{font-style:normal;color:var(--muted);flex:none}.tv-pk.e span{color:var(--muted)}
 .tv-ov{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:flex-end}
-.tv-sh{width:100%;max-height:88vh;background:#0b0b0b;border-top:1px solid #262626;border-radius:20px 20px 0 0;display:flex;flex-direction:column;padding:12px 12px calc(12px + env(safe-area-inset-bottom));gap:10px;direction:rtl;color:#f2f2f2;font-family:var(--body,system-ui)}
+.tv-sh{width:100%;box-sizing:border-box;max-height:88vh;background:#0b0b0b;border-top:1px solid #262626;border-radius:20px 20px 0 0;display:flex;flex-direction:column;padding:12px 12px calc(12px + env(safe-area-inset-bottom));gap:10px;direction:rtl;color:#f2f2f2;font-family:var(--body,system-ui)}
 .tv-sh-h{display:flex;justify-content:space-between;align-items:center}.tv-sh-h b{font-size:16px}.tv-sh-h button{background:none;border:0;color:#9a9a9a;font:inherit;font-size:14px}
 .tv-sh-q{width:100%;box-sizing:border-box;background:#141414;color:#f2f2f2;border:1px solid #262626;border-radius:12px;padding:12px;font:inherit;font-size:16px}
 .tv-sh-l{overflow:auto;-webkit-overflow-scrolling:touch;display:grid;gap:2px}.tv-sh-l button{display:flex;justify-content:space-between;align-items:center;background:none;border:0;border-bottom:1px solid #1a1a1a;color:#f2f2f2;padding:12px 6px;font:inherit;font-size:15px;text-align:start}.tv-sh-l button small{color:#9a9a9a;font-size:12px}.tv-sh-l button.on{color:#d9c8a8;font-weight:700}
@@ -220,7 +220,7 @@ function openPick(kind,i){const items=kind==="car"?carItems():kind==="to"?apItem
   const close=()=>{if(vv){vv.removeEventListener("resize",fit);vv.removeEventListener("scroll",fit)}ov.remove()};
   ov.addEventListener("click",e=>{if(e.target===ov){close();return}const b=e.target.closest("button");if(!b)return;if(b.dataset.x){close();return}
     if(b.dataset.v!=null){const v=b.dataset.v;if(kind==="nat")S.nat=v;else if(kind==="res")S.res=v;else S.legs[i][kind]=v;S.out=null;close();save();paint()}})}
-const pkLabel=(kind,v)=>!v?(kind==="car"?"الناقل (اختياري)":"اختر…"):kind==="car"?`${K.CAR[v]||v} ${v}`:kind==="to"?apLabel(v):cn(v);
+const pkLabel=(kind,v)=>!v?(kind==="car"?"اختر الناقل…":"اختر…"):kind==="car"?`${K.CAR[v]||v} ${v}`:kind==="to"?apLabel(v):cn(v);
 const pkBtn=(kind,v,i)=>`<button class="tv-pk ${v?"":"e"} ${!v&&S.showMiss&&kind!=="res"||(!v&&S.showMiss&&kind==="res")?"tv-miss":""}" data-pk="${kind}"${i!=null?` data-i="${i}"`:""}><span>${E(pkLabel(kind,v))}</span><i>⌕</i></button>`;
 const routeCts=()=>[...new Set(S.legs.map(l=>apC(l.to)).filter(c=>c&&c!=="SA"&&c!==S.nat&&c!==S.res&&!(GCC.includes(S.nat)&&GCC.includes(c))))];
 /* الخانات الإجبارية قبل الفحص (نفس اللي يحتاجه تيماتيك + الناقل ونوع التذكرة للتعاميم والعفش) */
@@ -229,7 +229,13 @@ function req(){const m=[],r=[];if(!S.nat)m.push("جنسية الراكب (الج
     if(i<S.legs.length-1&&l.to&&apC(l.to)!=="SA"&&!l.h)m.push("مدة الانتظار في "+apLabel(l.to))});
   if(S.legs.length>1&&!S.ticket)m.push("نوع التذكرة: وحدة أو منفصلة");
   routeCts().forEach(c=>{if(S.visas[c]==null)m.push("هل معه تأشيرة/إقامة سارية لـ "+cn(c)+"؟ (نعم/لا)")});
-  if(S.age==="")r.push("العمر");if(!S.sex)r.push("الجنس");return{m,r}}
+  /* العمر والجنس: إجباري فقط إذا فيه قاعدة لهالجنسية على هالمسار تفرق حسبها */
+  const cs=[...new Set(S.legs.map(l=>apC(l.to)).filter(Boolean))],ag=new Set(),sx=new Set();
+  K.R.forEach(r=>{if(!cs.includes(r.c)||(r.nat&&!inL(S.nat,r.nat))||(r.natNot&&inL(S.nat,r.natNot)))return;const n=r.notIf||{};
+    if(r.age||n.age)ag.add(cn(r.c));if(r.sex||n.sex)sx.add(cn(r.c))});
+  if(S.age===""&&ag.size)m.push("عمر الراكب (قواعد "+[...ag].join("، ")+" تفرق حسب العمر لهالجنسية)");
+  if(!S.sex&&sx.size)m.push("جنس الراكب (قواعد "+[...sx].join("، ")+" تفرق حسبه لهالجنسية)");
+  S.needAge=!!ag.size;S.needSex=!!sx.size;return{m,r}}
 function preCheck(){const{m,r}=req();if(!m.length&&!r.length)return run();S.showMiss=true;paint();
   const ov=document.createElement("div");ov.className="tv-ov";
   ov.innerHTML=`<div class="tv-sh"><div class="tv-sh-h"><b>${m.length?"⚠️ قبل الفحص — أكمل الخانات الإجبارية":"تنبيه قبل الفحص"}</b><button data-x="1">إغلاق ✕</button></div>
@@ -250,12 +256,12 @@ function paint(){if(!root)return;
     <button class="tv-sm" id="tvParse">↙︎ عبّي الخانات من الكلام</button></div>
   <div class="tv-box"><b>👤 الراكب</b>
     <div class="tv-r"><label class="l">الجنسية (الجواز)${pkBtn("nat",S.nat)}</label><label class="l">مقيم في${pkBtn("res",S.res)}</label></div>
-    <div class="tv-r"><label class="l">العمر<input type="number" id="tvAge" inputmode="numeric" min="0" max="120" value="${E(S.age)}" placeholder="اختياري"></label>
-      <label class="l">الجنس<div class="tv-chips" id="tvSex"><button data-sex="M" class="${S.sex==="M"?"on":""}">رجل</button><button data-sex="F" class="${S.sex==="F"?"on":""}">امرأة</button></div></label></div></div>
+    <div class="tv-r"><label class="l">العمر<input type="number" id="tvAge" inputmode="numeric" min="0" max="120" value="${E(S.age)}" class="${S.showMiss&&S.needAge&&S.age===""?"tv-miss":""}" placeholder="${S.needAge?"مطلوب لهالحالة":"غير مطلوب عادة"}"></label>
+      <label class="l">الجنس<div class="tv-chips ${S.showMiss&&S.needSex&&!S.sex?"tv-miss":""}" id="tvSex"><button data-sex="M" class="${S.sex==="M"?"on":""}">رجل</button><button data-sex="F" class="${S.sex==="F"?"on":""}">امرأة</button></div></label></div></div>
   <div class="tv-box"><b>✈️ المسار — من الجوف AJF</b>
     ${legs.map((l,i)=>`<div class="tv-leg"><div class="n"><span>${i===legs.length-1?"🛬 الوجهة النهائية":"🔁 ترانزيت "+(i+1)}</span>${legs.length>1?`<button data-del="${i}">حذف ✕</button>`:""}</div>
       <div class="tv-r">${pkBtn("to",l.to,i)}${pkBtn("car",l.car,i)}</div>
-      ${i<legs.length-1?`<label class="l">مدة الانتظار في ${E(l.to?apLabel(l.to):"الترانزيت")} (ساعات)<input type="number" inputmode="decimal" data-leg="${i}" data-f="h" class="${S.showMiss&&!l.h&&l.to&&apC(l.to)!=="SA"?"tv-miss":""}" value="${E(l.h)}" placeholder="اختياري"></label>`:""}</div>`).join("")}
+      ${i<legs.length-1?`<label class="l">مدة الانتظار في ${E(l.to?apLabel(l.to):"الترانزيت")} (ساعات)<input type="number" inputmode="decimal" data-leg="${i}" data-f="h" class="${S.showMiss&&!l.h&&l.to&&apC(l.to)!=="SA"?"tv-miss":""}" value="${E(l.h)}" placeholder="مطلوب"></label>`:""}</div>`).join("")}
     <button class="tv-add" id="tvAdd">＋ أضف محطة بعد الوجهة</button>
     ${legs.length>1?`<label class="l">التذكرة<div class="tv-chips ${S.showMiss&&!S.ticket?"tv-miss":""}" id="tvTk"><button data-tk="one" class="${S.ticket==="one"?"on":""}">تذكرة وحدة (حجز واحد)</button><button data-tk="sep" class="${S.ticket==="sep"?"on":""}">تذاكر منفصلة</button></div></label>`:""}</div>
   <div class="tv-box"><b>📄 الوثائق اللي معه</b>
