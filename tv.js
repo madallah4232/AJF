@@ -16,7 +16,7 @@ const cn=c=>!c?"—":FIX[c]||(DN?DN.of(c):c)||c;
 const apN=a=>a&&a.startsWith("C:")?cn(a.slice(2)):K.AP[a]?K.AP[a][0]:WA[a]?(WA[a][1]||WA[a][2]||WA[a][3]):a,apC=a=>a&&a.startsWith("C:")?a.slice(2):K.AP[a]?K.AP[a][1]:WA[a]?WA[a][4]:"";
 const apLabel=a=>a&&a.startsWith("C:")?cn(a.slice(2)):`${apN(a)} ${a}`;
 const TOP_NAT=["SA","EG","SD","YE","SY","JO","PS","PK","IN","BD","PH","ID","LK","NP","ET","IQ","LB","MA","TN","DZ","TR","AF","SO","ER","NG","KE","UG","SS","LY","MR","IR","AE","KW","QA","BH","OM"];
-const SUP={US:"أمريكا",UK:"بريطانيا",SCH:"شنغن",IE:"أيرلندا",CA:"كندا"};
+const SUP={US:"أمريكا",UK:"بريطانيا",SCH:"شنغن",IE:"أيرلندا",CA:"كندا",SG:"سنغافورة",JP:"اليابان",KR:"كوريا الجنوبية",AU:"أستراليا",NZ:"نيوزيلندا"};
 /* حالة النموذج */
 const S={pt:"N",ppx:"",pur:"",rt:null,days:"",yf:false,qa:{},ovr:null,ovrR:"",nat:"",st:"",res:"",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{},txt:"",out:null,th:[],busy:false,aq:""};
 try{const o=JSON.parse(sessionStorage.getItem("ajf_tv")||"null");if(o)Object.assign(S,o,{out:null,busy:false})}catch(e){}
@@ -220,7 +220,7 @@ function parse(txt){const t=" "+AN(txt).replace(/[،,.؛]/g," ")+" ",o={};
   const ag=t.match(/(?:عمره|عمرها|العمر)\s*(\d{1,2})|(\d{1,2})\s*(?:سنه|سنين|عام)/);if(ag)o.age=+(ag[1]||ag[2]);
   /* «تذكرتين بحجز واحد» = حجز واحد (PNR واحد) → تذكرة وحدة */
   if(/تذكره وحده|تذكره واحده|نفس التذكره|حجز واحد|نفس الحجز|تذكره وحد|حجز وحد/.test(t))o.ticket="one";else if(/تذكرتين|تذاكر منفصل|منفصله|منفصلين|تذكره منفصله|حجزين/.test(t))o.ticket="sep";
-  o.sup=[];[["امريك","US"],["بريطان","UK"],["شنغن","SCH"],["شنجن","SCH"],["اوروب","SCH"],["ايرلند","IE"],["كندا","CA"]].forEach(([k,v])=>{if(new RegExp("(تاشير|فيزا|اقام|جرين)[^\\s]*\\s+(\\S+\\s+)?"+k).test(t))o.sup.push(v)});
+  o.sup=[];[["امريك","US"],["بريطان","UK"],["شنغن","SCH"],["شنجن","SCH"],["اوروب","SCH"],["ايرلند","IE"],["كندا","CA"],["سنغافور","SG"],["يابان","JP"],["كوري","KR"],["استرال","AU"],["نيوزيلند","NZ"]].forEach(([k,v])=>{if(new RegExp("(تاشير|فيزا|اقام|جرين)[^\\s]*\\s+(\\S+\\s+)?"+k).test(t))o.sup.push(v)});
   if(/ايبولا|الكونغو/.test(t))o.ebola=true;
   /* وضعه في السعودية */
   if(/(تاشير|فيزا)\S*\s+(زيار|زياره)|\sزيار(ه|ة)?\s/.test(t))o.st="visit";else if(/(تاشير|فيزا)\S*\s+عمر|\sمعتمر|\sعمره\s/.test(t))o.st="umrah";else if(/سياح/.test(t))o.st="tour";
@@ -585,7 +585,7 @@ function applyCh(a){const ch=[],cts=routeCts(),set=(lbl,old,nw,f)=>{if(String(ol
     else if(k==="sup"&&c&&SUP[c]&&b!=null){const on=S.sup.includes(c);set("تأشيرة/إقامة "+SUP[c],YN(on?1:0),YN(b),()=>S.sup=b?[...S.sup.filter(z=>z!==c),c]:S.sup.filter(z=>z!==c))}
     else if(k==="pt"&&PT_T[v])set("نوع الجواز",PT_T[S.pt||"N"],PT_T[v],()=>S.pt=v)});
   return ch}
-const FUQ=()=>"\n\n[تنسيق الرد — إلزامي] (1) إذا رسالة الموظف فيها معلومة تغيّر بيانات الحالة، ابدأ بسطر لكل تغيير بالشكل بالضبط «🔧 مفتاح: قيمة» من هالمفاتيح فقط: rt (1 معه تذكرة عودة أو مغادرة، 0 ما معه) · visa:XX حيث XX من "+(routeCts().join(",")||"-")+" (1 معه تأشيرة/إقامة سارية، 0 ما معه) · ppx (انتهاء الجواز YYYY-MM-DD) · pur (tour|work|study|home|other) · st (res|visit|umrah|tour) · days · age · sex (M|F) · ticket (one|sep) · sup:US|UK|SCH|IE|CA (1/0) · pt (N|D|O). لا تكتب 🔧 لشي ما قاله الموظف صراحة. إذا غيّر الجنسية أو المسار لا تكتب 🔧 وقل له يعدّل الخانات فوق ويعيد الفحص. (2) بعدها كل بند بسطر مستقل يبدأ بـ ✅ أو ⚠️ أو ⛔ ثم اسم البند ونقطتين وسبب بجملة قصيرة، مثل: ✅ الجواز: ساري حتى 2028-11-26. (3) آخر سطر: الخلاصة: ✅ أو ⚠️ أو ⛔ والحكم بجملة. بدون مقدمات.";
+const FUQ=()=>"\n\n[تنسيق الرد — إلزامي] (1) إذا رسالة الموظف فيها معلومة تغيّر بيانات الحالة، ابدأ بسطر لكل تغيير بالشكل بالضبط «🔧 مفتاح: قيمة» من هالمفاتيح فقط: rt (1 معه تذكرة عودة أو مغادرة، 0 ما معه) · visa:XX حيث XX من "+(routeCts().join(",")||"-")+" (1 معه تأشيرة/إقامة سارية، 0 ما معه) · ppx (انتهاء الجواز YYYY-MM-DD) · pur (tour|work|study|home|other) · st (res|visit|umrah|tour) · days · age · sex (M|F) · ticket (one|sep) · sup:US|UK|SCH|IE|CA|SG|JP|KR|AU|NZ (1/0) · pt (N|D|O). لا تكتب 🔧 لشي ما قاله الموظف صراحة. إذا غيّر الجنسية أو المسار لا تكتب 🔧 وقل له يعدّل الخانات فوق ويعيد الفحص. (2) بعدها كل بند بسطر مستقل يبدأ بـ ✅ أو ⚠️ أو ⛔ ثم اسم البند ونقطتين وسبب بجملة قصيرة، مثل: ✅ الجواز: ساري حتى 2028-11-26. (3) آخر سطر: الخلاصة: ✅ أو ⚠️ أو ⛔ والحكم بجملة. بدون مقدمات.";
 async function ask(){if(S.busy||!S.out||S.out.err)return;const q=(S.aq||"").trim().slice(0,350);if(!q)return;
   S.busy=true;S.pq=q;S.aq="";paintOut();
   try{const a=await callAI(q+FUQ(),S.th.slice(-6).map(x=>({q:x.q,a:x.a})));const ch=applyCh(a),v=verdict(a);
