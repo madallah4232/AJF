@@ -12,7 +12,8 @@ const SRC={
  dxb:{t:"مطارات دبي — Transfers",u:"https://corporate-auth.dubaiairports.ae/information/transfers"},
  fz:{t:"فلاي دبي — Connecting flights",u:"https://www.flydubai.com/en/plan/connections/"},
  fragomen:{t:"Fragomen — Airport transit and immigration",u:"https://www.fragomen.com/insights/blog/airport-transit-and-immigration-it-really-simple"},
- uae_ban:{t:"تقارير عن قرار NCEMA و ICP (إيبولا) — govr.ae / visarun",u:"https://govr.ae/uae-ebola-visa-suspension-entry-restrictions/"},
+ uae_ban:{t:"وكالة أنباء الإمارات (وام) — إجراءات NCEMA و ICP الاحترازية (إيبولا)",u:"https://www.wam.ae/en/article/c0kmbb5-ncema-icp-announce-additional-precautionary",d:"2026-06-05"},
+ qa_hia:{t:"مطار حمد الدولي (الموقع الرسمي) — Transfers",u:"https://dohahamadairport.com/airport-guide/at-the-airport/transfers",d:"2026-11-27"},
  uae_rumor:{t:"dubaivisitsvisa — قائمة الحظر المتداولة غير مؤكدة",u:"https://dubaivisitsvisa.com/article/uae-visa-ban-countries"},
  eg_sec:{t:"مصادر سياحية مصرية 2026 (قوائم الموافقة الأمنية تختلف بين المصادر)",u:"https://www.egyptkarofttours.com/egypt-visa-on-arrival-the-complete-2026-guide-plus-restricted-banned-countries-list"},
  eg_sd:{t:"وزارة الخارجية المصرية عبر رويترز/الجزيرة — تأشيرة لكل السودانيين",u:"https://www.aljazeera.com/news/2023/6/11/egypt-toughens-visa-rules-for-sudanese-nationals-fleeing-war"},
@@ -197,7 +198,7 @@ const R=[
 /* ===================== تنبيهات تشغيلية مؤقتة (تنتهي تلقائياً) ===================== */
 {c:"NP",s:"alert",ap:["KTM"],from:"2025-09-10",exp:"2025-10-10",t:"مطار كاتماندو مغلق — تأكد من حالة الرحلة قبل إرسال الراكب.",src:"ktm"},
 /* ===================== قطر: الترانزيت ===================== */
-{c:"QA",s:"twov",lv:"ok",t:"الترانزيت داخل مطار حمد بدون تأشيرة لكل الجنسيات إذا الرحلة التالية خلال 24 ساعة.",src:"qa_tr"},
+{c:"QA",s:"twov",lv:"ok",t:"الترانزيت داخل مطار حمد بدون تأشيرة إذا ما طلع من المطار. إذا الانتظار أكثر من 24 ساعة، تأكد قبل القبول.",src:"qa_hia"},
 {c:"QA",s:"tvisa",lv:"i",t:"تأشيرة ترانزيت حتى 4 أيام من مكتب Discover Qatar في المطار — بس لركاب الخطوط القطرية، والانتظار في مطار حمد 6 ساعات أو أكثر، لغير المعفيين من التأشيرة.",src:"qa_vq"},
 /* ===================== تركيا: الترانزيت ===================== */
 {c:"TR",s:"twov",lv:"ok",t:"الترانزيت داخل مطار إسطنبول بدون تأشيرة لكل الجنسيات بدون ما يمر الجوازات.",src:"tr_atv"},
