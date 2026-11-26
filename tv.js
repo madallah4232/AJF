@@ -114,7 +114,7 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
       card.ent.L=card.ent.L.concat(tv);
       if(bagsOut||tooLong)card.lv=worse(card.lv,e.lv);
       card.head=bagsOut||tooLong?`لازم يطلع من الجوازات في ${apN(ap)} — ${e.head.replace(/^✕\s*/,"")}`:`إذا اضطر يطلع من المطار: ${e.head}`}
-    else card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":forced&&freeIn?"🧳 العفش ينستلم هنا — وما يحتاج تأشيرة لدخوله":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار";
+    else card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":forced&&lg.bag==="thru"?`🧳 ما ينفع يتشحن العفش لين ${apN(pts[pts.length-1])}: ${cn(c)} تشترط استلامه في ${apN(ap)}${freeIn?" (وما يحتاج تأشيرة)":""}`:forced&&freeIn?"🧳 العفش ينستلم هنا — وما يحتاج تأشيرة لدخوله":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار";
     out.push(card)}
   /* الوجهة النهائية */
   const fc=final,e=entry(P,fc,{final,car:[legs[legs.length-1].car].filter(Boolean)});
@@ -169,7 +169,7 @@ function parse(txt){const t=" "+AN(txt).replace(/[،,.؛]/g," ")+" ",o={};
   ch.sort((a,b)=>a[0]-b[0]||b[2]-a[2]);const cs=[];ch.forEach(c=>{if(cs.length&&c[0]<cs[cs.length-1][0]+cs[cs.length-1][2])return;cs.push(c)});
   if(o.legs&&cs.length){o.legs.forEach((l,i)=>{l.car=cs.length===1?cs[0][1]:(cs[i]?cs[i][1]:"")})}
   if(o.legs&&o.legs.length>1){const thru=/عفش\S*\s+(\S+\s+)?(لاخر|لين اخر|الي اخر|علي اخر|اخر)\s*(محطه|وجهه)/.test(t),out=/(يستلم|استلام|ياخذ)\s+(\S+\s+)?عفش/.test(t);
-    if(thru||out)o.legs.slice(0,-1).forEach(l=>{l.bag=out?"out":"thru"})}
+    if(thru)o.bagTo=o.legs.length-1;else if(out){const m2=t.match(/عفش\S*\s+(في|ب)\s*(\S+)/);let k=0;if(m2){const w=m2[2].replace(/^ال/,"");const f=o.legs.findIndex(l=>AN(apLabel(l.to)).includes(w));if(f>=0)k=f}o.bagTo=k}}
   const hm=t.match(/(\d{1,2})\s*ساع/);if(hm&&o.legs&&o.legs.length>1)o.legs[0].h=hm[1];
   /* تأشيرة للوجهة */
   if(o.legs){o.legs.forEach(l=>{const c=apC(l.to);if(c&&new RegExp("معه\\s+(تاشير|فيزا|اقام)[^\\s]*\\s+(\\S+\\s+)?("+Object.entries(CITY).filter(([k,v])=>apC(v)===c).map(([k])=>AN(k)).join("|")+")").test(t)){(o.visas=o.visas||{})[c]=1}})}
@@ -251,9 +251,9 @@ function apItems(){const by={};Object.entries(K.AP).forEach(([a,[n,c]])=>{if(a!=
   (PI?PI.c:[]).filter(c=>!by[c]).sort((a,b)=>cn(a).localeCompare(cn(b),"ar")).forEach(c=>out.push({v:"C:"+c,l:cn(c),s:"أي مطار",g:"دول أخرى",k:AN(cn(c)+" "+c+" "+enN(c))}));
   return out}
 function carItems(){return[...Object.entries(K.CAR).map(([k,v])=>({v:k,l:v,s:k,g:"الناقلين",k:AN(v+" "+k+" "+(WL[k]?WL[k][1]:""))})),...Object.values(WL).filter(x=>!K.CAR[x[0]]).map(x=>({v:x[0],l:x[1],s:x[0]+" · "+x[2],g:"ناقلين العالم",w:1,k:AN(x[1]+" "+x[0]+" "+x[2])}))]}
-const PK_T={nat:"جنسية الراكب",res:"مقيم في",to:"المطار",car:"الناقل"};
-function openPick(kind,i){const items=kind==="car"?carItems():kind==="to"?apItems():natItems();
-  const cur=kind==="nat"?S.nat:kind==="res"?S.res:S.legs[i][kind];
+const PK_T={bag:"العفش ينشحن لين",nat:"جنسية الراكب",res:"مقيم في",to:"المطار",car:"الناقل"};
+function openPick(kind,i){const items=kind==="bag"?S.legs.map((l,k)=>({v:String(k),l:l.to?apLabel(l.to):"(محطة بدون مطار)",s:k===S.legs.length-1?"الوجهة النهائية":"ترانزيت "+(k+1),g:"",k:AN(l.to?apLabel(l.to):"")})).filter(o=>S.legs[+o.v].to):kind==="car"?carItems():kind==="to"?apItems():natItems();
+  const cur=kind==="bag"?String(S.bagTo):kind==="nat"?S.nat:kind==="res"?S.res:S.legs[i][kind];
   const ov=document.createElement("div");ov.className="tv-ov";
   ov.innerHTML=`<div class="tv-sh"><div class="tv-sh-h"><b>${E(PK_T[kind])}</b><button data-x="1">إغلاق ✕</button></div>
     <input type="search" class="tv-sh-q" placeholder="ابحث بالعربي أو الإنجليزي أو الرمز…" autocomplete="off"><div class="tv-sh-l"></div></div>`;
@@ -268,7 +268,7 @@ function openPick(kind,i){const items=kind==="car"?carItems():kind==="to"?apItem
   draw();q.addEventListener("input",draw);setTimeout(()=>q.focus(),60);
   const close=()=>{if(vv){vv.removeEventListener("resize",fit);vv.removeEventListener("scroll",fit)}ov.remove()};
   ov.addEventListener("click",e=>{if(e.target===ov){close();return}const b=e.target.closest("button");if(!b)return;if(b.dataset.x){close();return}
-    if(b.dataset.v!=null){const v=b.dataset.v;if(kind==="nat")S.nat=v;else if(kind==="res")S.res=v;else S.legs[i][kind]=v;S.out=null;close();save();paint()}})}
+    if(b.dataset.v!=null){const v=b.dataset.v;if(kind==="bag")S.bagTo=+v;else if(kind==="nat")S.nat=v;else if(kind==="res")S.res=v;else S.legs[i][kind]=v;S.out=null;close();save();paint()}})}
 const pkLabel=(kind,v)=>!v?(kind==="car"?"اختر الناقل…":"اختر…"):kind==="car"?`${carN(v)} ${v}`:kind==="to"?apLabel(v):cn(v);
 const pkBtn=(kind,v,i)=>`<button class="tv-pk ${v?"":"e"} ${!v&&S.showMiss&&kind!=="res"||(!v&&S.showMiss&&kind==="res")?"tv-miss":""}" data-pk="${kind}"${i!=null?` data-i="${i}"`:""}><span>${E(pkLabel(kind,v))}</span><i>⌕</i></button>`;
 const ST_T={res:"مقيم (إقامة سعودية)",visit:"تأشيرة زيارة",umrah:"تأشيرة عمرة",tour:"تأشيرة سياحة"};
@@ -279,7 +279,8 @@ const routeCts=()=>[...new Set(S.legs.map(l=>apC(l.to)).filter(c=>c&&c!=="SA"&&c
 function req(){const m=[],r=[];if(!S.nat)m.push("جنسية الراكب (الجواز)");if(S.nat&&!isGcc()&&!S.st)m.push("وضع الراكب في السعودية: مقيم أو زيارة أو عمرة أو سياحة");
   S.legs.forEach((l,i)=>{const nm=i===S.legs.length-1?"الوجهة النهائية":"الترانزيت "+(i+1);if(!l.to)m.push("مطار "+nm);if(!l.car)m.push("الناقل في "+nm);
     if(i<S.legs.length-1&&l.to&&apC(l.to)!=="SA"&&!l.h)m.push("مدة الانتظار في "+apLabel(l.to));
-    if(i<S.legs.length-1&&l.to&&!l.bag)m.push("🧳 العفش في "+apLabel(l.to)+": يمشي لآخر محطة أو يستلمه هنا")});
+  });
+  if(S.legs.length>1&&(S.bagTo==null||S.bagTo>=S.legs.length))m.push("🧳 العفش ينشحن لين أي مطار؟");
   if(S.legs.length>1&&!S.ticket)m.push("نوع التذكرة: وحدة أو منفصلة");
   routeCts().forEach(c=>{if(S.visas[c]==null)m.push("هل معه تأشيرة/إقامة سارية لـ "+cn(c)+"؟ (نعم/لا)")});
   /* العمر والجنس: إجباري فقط إذا فيه قاعدة لهالجنسية على هالمسار تفرق حسبها */
@@ -315,9 +316,9 @@ function paint(){if(!root)return;
   <div class="tv-box"><b>✈️ المسار — من الجوف AJF</b>
     ${legs.map((l,i)=>`<div class="tv-leg"><div class="n"><span>${i===legs.length-1?"🛬 الوجهة النهائية":"🔁 ترانزيت "+(i+1)}</span>${legs.length>1?`<button data-del="${i}">حذف ✕</button>`:""}</div>
       <div class="tv-r">${pkBtn("to",l.to,i)}${pkBtn("car",l.car,i)}</div>
-      ${i<legs.length-1?`<label class="l">🧳 العفش في ${E(l.to?apLabel(l.to):"هالمحطة")}<div class="tv-chips ${S.showMiss&&!l.bag?"tv-miss":""}"><button data-bag="${i}" data-val="thru" class="${l.bag==="thru"?"on":""}">يمشي لآخر محطة</button><button data-bag="${i}" data-val="out" class="${l.bag==="out"?"on":""}">يستلمه هنا</button></div></label>`:""}
       ${i<legs.length-1?`<label class="l">مدة الانتظار في ${E(l.to?apLabel(l.to):"الترانزيت")} (ساعات)<input type="number" inputmode="decimal" data-leg="${i}" data-f="h" class="${S.showMiss&&!l.h&&l.to&&apC(l.to)!=="SA"?"tv-miss":""}" value="${E(l.h)}" placeholder="مطلوب"></label>`:""}</div>`).join("")}
     <button class="tv-add" id="tvAdd">＋ أضف محطة بعد الوجهة</button>
+    ${legs.length>1?`<label class="l">🧳 العفش ينشحن لين<button class="tv-pk ${S.bagTo==null||S.bagTo>=legs.length?"e":""} ${S.showMiss&&(S.bagTo==null||S.bagTo>=legs.length)?"tv-miss":""}" data-pk="bag"><span>${S.bagTo!=null&&S.bagTo<legs.length&&legs[S.bagTo].to?E(apLabel(legs[S.bagTo].to))+(S.bagTo===legs.length-1?" (الوجهة النهائية)":""):"اختر المطار…"}</span><i>⌕</i></button></label>`:""}
     ${legs.length>1?`<label class="l">التذكرة<div class="tv-chips ${S.showMiss&&!S.ticket?"tv-miss":""}" id="tvTk"><button data-tk="one" class="${S.ticket==="one"?"on":""}">تذكرة وحدة (حجز واحد)</button><button data-tk="sep" class="${S.ticket==="sep"?"on":""}">تذاكر منفصلة</button></div></label>`:""}</div>
   <div class="tv-box"><b>📄 الوثائق اللي معه</b>
     ${cts.length?cts.map(c=>`<div class="tv-vq ${S.showMiss&&S.visas[c]==null?"tv-miss":""}"><span>معه تأشيرة أو إقامة سارية لـ ${E(cn(c))}؟</span><div class="tv-chips"><button data-visa="${c}" data-val="1" class="${S.visas[c]===1?"on":""}">نعم</button><button data-visa="${c}" data-val="0" class="${S.visas[c]===0?"on":""}">لا</button></div></div>`).join(""):`<div class="tv-note">اختر المسار أول عشان تطلع أسئلة التأشيرات.</div>`}
@@ -331,7 +332,7 @@ function lineH(l){return`<div class="tv-l">${mk(l.lv)}<div>${l.cond?`<em>إذا 
 const VT={ok:["✓","يُقبل للسفر","القواعد والتعاميم ما فيها ما يمنع"],w:["!","يُقبل بشرط","تأكد من النقاط تحت قبل إصدار بطاقة الصعود"],x:["✕","لا يُقبل","بالوضع الحالي ما يمشي — شوف السبب تحت"]};
 function heroH(o,lv,pending){const p=P(),v=VT[lv],pts=o.pts;
   const route=pts.map((a,i)=>`<span class="tv-rp"><b>${E(a==="AJF"?"الجوف":a.startsWith("C:")?cn(a.slice(2)):apN(a))}</b><small>${E(a.startsWith("C:")?"":a)}</small></span>${i<pts.length-1?`<span class="tv-ra"><i>←</i><small>${E(p.legs[i].car||"")}</small></span>`:""}`).join("");
-  const who=[cn(p.nat),p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"",p.legs.length>1?(p.ticket==="one"?"تذكرة وحدة":"تذاكر منفصلة"):""].filter(Boolean);
+  const who=[cn(p.nat),p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"",p.legs.length>1?(p.ticket==="one"?"تذكرة وحدة":"تذاكر منفصلة"):"",p.legs.length>1&&S.bagTo!=null&&p.legs[S.bagTo]?"🧳 العفش لين "+apN(p.legs[S.bagTo].to):""].filter(Boolean);
   return`<div class="tv-hero ${pending?"p":lv}"><div class="tv-hero-t"><span class="tv-big">${pending?"…":v[0]}</span><div><b>${pending?"جاري الفحص":v[1]}</b><small>${pending?"نراجع القواعد وتعاميم المحطة — لا تقرر قبل ما يخلص":v[2]}</small></div></div>
     <div class="tv-route">${route}</div><div class="tv-who">${who.map(w=>`<span>${E(w)}</span>`).join("")}</div></div>`}
 function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-empty">${E(o.err)}</div>`;
@@ -359,7 +360,8 @@ function aiH(){return`<div class="tv-ai"><h4>🤖 كمّل مع المساعد</
       <button class="tv-go" id="tvAsk" ${S.busy?"disabled":""}>${S.busy?"… يحلل":"أرسل"}</button></div>
     <div class="tv-note">هذي الأداة تجمع قواعد منشورة من مواقع حكومية وشركات طيران (مو من تيماتيك نفسه). القواعد تتغير، فإذا الحكم ⚠️ أو الحالة نادرة، تأكد قبل القبول. آخر مراجعة للقواعد: ${E(K.D)}.</div>`}
 function fmt(t){return E(String(t||"")).replace(/^\s*#{1,4}\s*(.+)$/gm,"<b>$1</b>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ").replace(/\n/g,"<br>")}
-function P(){return{nat:S.nat,st:isGcc()?"cit":S.st,res:resOf(),age:S.age===""?null:+S.age,sex:S.sex,sup:S.sup,ebola:S.ebola,ticket:S.legs.length>1?S.ticket:"one",legs:S.legs,visas:S.visas}}
+function legsB(){const n=S.legs.length,k=S.legs.length>1?(S.bagTo!=null&&S.bagTo<n?S.bagTo:null):0;return S.legs.map((l,i)=>({...l,bag:k==null?"":i<n-1?(i<k?"thru":i===k?"out":"thru"):""}))}
+function P(){return{nat:S.nat,st:isGcc()?"cit":S.st,res:resOf(),age:S.age===""?null:+S.age,sex:S.sex,sup:S.sup,ebola:S.ebola,ticket:S.legs.length>1?S.ticket:"one",legs:legsB(),visas:S.visas}}
 function run(){if(!S.nat){S.out={err:"اختر جنسية الراكب أول."};paintOut();return}if(!S.legs[S.legs.length-1].to){S.out={err:"اختر الوجهة النهائية."};paintOut();return}
   loadPI().then(()=>{S.out=analyze(P());S.th=[];S.cv={st:"run"};paintOut();reviewCirc();try{ajfAct&&ajfAct("tv",S.nat+">"+S.legs.map(l=>l.to).join(">"))}catch(e){}
     setTimeout(()=>{const o=root.querySelector("#tvOut");if(o)o.scrollIntoView({behavior:"smooth",block:"start"})},50)}).catch(()=>{S.out={err:"تعذّر تحميل قاعدة التأشيرات، تأكد من الإنترنت."};paintOut()})}
@@ -393,10 +395,10 @@ async function ask(){if(S.busy||!S.out||S.out.err)return;const q=(S.aq||"").trim
 function bind(el){el.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||!root.contains(b))return;
   if(b.id==="tvGo")return preCheck();if(b.id==="tvAsk"){const t=root.querySelector("#tvAq");if(t)S.aq=t.value;return ask()}
   if(b.id==="tvCv"){reviewCirc();return}
-  if(b.id==="tvParse"){loadPI().catch(()=>{}).then(()=>{const o=parse(S.txt);if(o.legs&&!o.legs.length)delete o.legs;Object.assign(S,{nat:"",st:"",res:"",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{}},o,{age:o.age!=null?String(o.age):"",th:[],showMiss:false});S.out=null;save();paint();if(S.nat&&S.legs[S.legs.length-1].to)preCheck()});return}
-  if(b.id==="tvAdd"){S.legs.push({to:"",car:"",h:""});S.out=null;save();paint();setTimeout(()=>{const x=root.querySelectorAll(".tv-leg");const l=x[x.length-1];if(l)l.scrollIntoView({behavior:"smooth",block:"center"})},40);return}
+  if(b.id==="tvParse"){loadPI().catch(()=>{}).then(()=>{const o=parse(S.txt);if(o.legs&&!o.legs.length)delete o.legs;Object.assign(S,{bagTo:null,nat:"",st:"",res:"",age:"",sex:"",sup:[],ebola:false,ticket:"",legs:[{to:"",car:"",h:""}],visas:{}},o,{age:o.age!=null?String(o.age):"",th:[],showMiss:false});S.out=null;save();paint();if(S.nat&&S.legs[S.legs.length-1].to)preCheck()});return}
+  if(b.id==="tvAdd"){S.legs.push({to:"",car:"",h:""});if(S.bagTo===S.legs.length-2)S.bagTo=null;S.out=null;save();paint();setTimeout(()=>{const x=root.querySelectorAll(".tv-leg");const l=x[x.length-1];if(l)l.scrollIntoView({behavior:"smooth",block:"center"})},40);return}
   if(b.dataset.pk){openPick(b.dataset.pk,b.dataset.i!=null?+b.dataset.i:null);return}
-  if(b.dataset.del!=null){S.legs.splice(+b.dataset.del,1);if(!S.legs.length)S.legs=[{to:"",car:"",h:""}];S.out=null;save();paint();return}
+  if(b.dataset.del!=null){S.legs.splice(+b.dataset.del,1);S.bagTo=null;if(!S.legs.length)S.legs=[{to:"",car:"",h:""}];S.out=null;save();paint();return}
   if(b.dataset.bag!=null){const lg=S.legs[+b.dataset.bag];lg.bag=lg.bag===b.dataset.val?"":b.dataset.val;S.out=null;save();paint();return}
   if(b.dataset.st){S.st=S.st===b.dataset.st?"":b.dataset.st;if(S.st==="res")S.res="";S.out=null;save();paint();return}
   if(b.dataset.sex){S.sex=S.sex===b.dataset.sex?"":b.dataset.sex;S.out=null;save();paint();return}
@@ -405,7 +407,7 @@ function bind(el){el.addEventListener("click",e=>{const b=e.target.closest("butt
   if(b.dataset.sup){const k=b.dataset.sup;S.sup=S.sup.includes(k)?S.sup.filter(x=>x!==k):[...S.sup,k];S.out=null;save();paint();return}
   if(b.dataset.ebola){S.ebola=!S.ebola;S.out=null;save();paint();return}});
   el.addEventListener("change",e=>{const t=e.target;if(t.dataset.leg!=null){S.legs[+t.dataset.leg][t.dataset.f]=t.value;S.out=null;save();if(t.dataset.f==="to")paint()}});
-  el.addEventListener("input",e=>{const t=e.target;if(t.id==="tvTxt")S.txt=t.value;else if(t.id==="tvAge")S.age=t.value;else if(t.id==="tvAq")S.aq=t.value;
+  el.addEventListener("input",e=>{const t=e.target;if(t.value)t.classList.remove("tv-miss");if(t.id==="tvTxt")S.txt=t.value;else if(t.id==="tvAge")S.age=t.value;else if(t.id==="tvAq")S.aq=t.value;
     else if(t.dataset.leg!=null&&t.dataset.f==="h")S.legs[+t.dataset.leg].h=t.value;save()})}
 window.TV={mount:el=>{root=el;if(!el.__tv){el.__tv=1;bind(el)}paint();loadPI().then(()=>{if(root===el&&!S.out)paint()}).catch(()=>{})},
   _t:{analyze,parse,match,entry,loadPI,S}};
