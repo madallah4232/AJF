@@ -24,6 +24,10 @@ const C=[
  ["مصري إلى نيروبي بدون التأمين الكيني",P({nat:"EG",legs:[leg("NBO","SV")],visas:{KE:1},qa:{ke_ins:0}}),"x"],
  ["الجواز منتهي",P({nat:"EG",ppx:"2020-01-01",legs:[leg("CAI","SV")]}),"x"],
  ["مصري ترانزيت القاهرة 10 ساعات بدون تأشيرة يمني",P({nat:"YE",legs:[leg("CAI","MS","10","thru"),leg("IST","MS")],visas:{EG:0,TR:1}}),"x"],
+ ["هندي مقيم: القصيم ثم دبي على السعودية ثم كوتشي على إنديغو (ما لها اتفاقية) بدون تأشيرة إمارات",P({nat:"IN",st:"res",res:"SA",pur:"home",legs:[leg("ELQ","SV","2","thru"),leg("DXB","SV","6","thru"),leg("COK","6E")],visas:{AE:0}}),"x"],
+ ["نفس الحالة ومعه تأشيرة إمارات وأكد الجواز",P({nat:"IN",st:"res",res:"SA",pur:"home",legs:[leg("ELQ","SV","2","thru"),leg("DXB","SV","6","thru"),leg("COK","6E")],visas:{AE:1},qa:{ae_ext:1}}),"ok"],
+ ["باكستاني ترانزيت أبوظبي ثم Air Sial (بدون اتفاقية) بدون تأشيرة",P({nat:"PK",st:"res",res:"SA",pur:"home",legs:[leg("AUH","SV","5","out"),leg("ISB","PF")],visas:{AE:0}}),"x"],
+ ["سعودي: الرياض ثم دبي على السعودية ثم القاهرة على السعودية (نفس الناقل)",P({nat:"SA",st:"cit",legs:[leg("DXB","SV","3","thru"),leg("CAI","SV")],qa:{ae_ext:1}}),"ok"],
  ["كاتماندو (التنبيه المؤقت انتهى) — ما يمنع",P({nat:"NP",legs:[leg("KTM","SV")]}),"ok"],
 ];
 T.loadPI().then(()=>{let f=0;C.forEach(([n,p,exp])=>{const o=T.analyze(p);const ok=o.lv===exp;if(!ok)f++;
