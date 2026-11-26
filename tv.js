@@ -83,7 +83,12 @@ function entry(P,c,x){const L=[];let lv="ok",head,detailed=K.R.some(r=>r.c===c&&
   const X={...x,hasVisa,base};let over=null,cur=hasVisa?"":(base||"");
   for(const r of rules(c,"entry")){if(hasVisa&&!r.ev&&r.lv!=="i")continue;const[m,cond]=match(r,P,X);if(!m)continue;
     if(r.lv==="ok"){if(m===1&&!hasVisa){over=r;cur=r.st||cur;const t=stTxt(r.st);if(t){lv=t[0];head=t[1]}L.push(line(r,"ok"))}else if(m===2)L.push(line(r,"i",cond));continue}
-    if(hasVisa&&r.vok&&r.lv==="x"){const l=line(r,"w",m===2?cond:undefined);l.t="معه تأشيرة: تأكد إنها صادرة مع الموافقة المطلوبة — "+l.t;if(m===1)lv=worse(lv,"w");L.push(l);continue}
+    if(hasVisa&&r.vok&&r.lv==="x"){const l=line(r,"w",m===2?cond:undefined);
+      /* معه تأشيرة: إذا القاعدة تشترط موافقة (أمنية) مع التأشيرة → سؤال تأكيد (نعم = يُقبل، لا = لا يُقبل)؛ وإذا تشترط التأشيرة بس → التأشيرة تكفي */
+      if(m===1&&/موافقة/.test(r.t)){const k="vok:"+c+":"+(r.nat||[]).join(","),a=QA[k];Object.assign(l,{qk:k,ans:a,q:`التأشيرة لـ ${cn(c)} صادرة مع الموافقة الأمنية المطلوبة (أو معه إقامة سارية لـ ${cn(c)})؟`,qno:"بدون الموافقة الأمنية لا يُقبل — "+r.t,lv:a===1?"ok":a===0?"x":"w"});if(L.some(z=>z.qk===k))continue;lv=worse(lv,l.lv);if(l.lv==="x")head="✕ التأشيرة بدون الموافقة الأمنية المطلوبة لـ "+cn(c)}
+      else if(m===1){l.lv="ok";l.t="معه تأشيرة — "+l.t}
+      else l.t="معه تأشيرة: تأكد إنها صادرة مع الموافقة المطلوبة — "+l.t;
+      L.push(l);continue}
     if(m===1){const l=line(r,r.lv);if(l.qk&&L.some(z=>z.qk===l.qk))continue;if(l.lv==="x"&&lv!=="x")head=(l.qno||l.t).split(/[.،(—]/)[0];lv=worse(lv,l.lv);L.push(l)}else L.push(line(r,r.lv==="x"?"w":r.lv,cond))}
   const noV=P.visas[c]===0,needV=/^[RET]/.test(cur)||L.some(l=>l.lv==="w"&&/تأشيرة/.test(l.t)&&!l.cond);
   if(!hasVisa&&b&&!over&&lv!=="ok")L.unshift({lv:noV?"x":"w",t:`${bsrc===K.SRC.pi?"حسب القاعدة العامة":"حسب التعميم"}: ${b[1]} لحامل جواز ${cn(P.nat)} إلى ${cn(c)}.${noV?"":" إذا معه تأشيرة أو تصريح دخول أو إقامة سارية اختر «نعم» في «الوثائق»."}`,src:bsrc.t,u:bsrc.u,d:bsrc.d});
