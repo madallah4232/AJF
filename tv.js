@@ -125,7 +125,7 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
   out.push({k:"exit",ic:"🇸🇦",t:"المغادرة من السعودية",lv:exitL.reduce((a,l)=>worse(a,l.lv),"ok"),head:exitL.length?"":"ما فيه شرط خاص للمغادرة",L:exitL});
   for(let i=1;i<pts.length-1;i++){const ap=pts[i],c=apC(ap),inCar=legs[i-1].car,outCar=legs[i].car,h=+legs[i-1].h||null,car=[inCar,outCar].filter(Boolean),x={final,car,ap,out:outCar};
     const card={k:"tr",ic:"🔁",t:`ترانزيت: ${apLabel(ap)}`,L:alertsL(c,ap,P,final),lv:"ok"};
-    if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";{const bg=legs[i-1].bag;card.L.push(bg==="out"?{lv:"i",bag:1,t:"🧳 يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط."}:bg==="thru"?(P.ticket==="sep"||noAg(legs[i-1].car,legs[i].car)?ilLine(legs[i-1].car,legs[i].car,ap):{lv:"ok",bag:1,t:"🧳 تذكرة وحدة: العفش يمشي لآخر محطة.",s:"العفش يمشي لآخر محطة (تذكرة وحدة)"}):{lv:"w",bag:1,t:"🧳 حدد وين ينشحن العفش في هالمحطة."})}out.push(card);continue}
+    if(c==="SA"&&pts.slice(0,i).every(p=>apC(p)==="SA")){card.head="ترانزيت داخل السعودية قبل الرحلة الدولية — ما يحتاج تأشيرة";{const bg=legs[i-1].bag;card.L.push(bg==="none"?{lv:"ok",bag:1,t:"🧳 بدون عفش — ما فيه شحن ولا استلام.",s:"بدون عفش — ما فيه شحن"}:bg==="out"?{lv:"i",bag:1,t:"🧳 يستلم عفشه في "+apN(ap)+" ويخلص إجراءات الرحلة الدولية من جديد — انتبه لوقت الربط."}:bg==="thru"?(P.ticket==="sep"||noAg(legs[i-1].car,legs[i].car)?ilLine(legs[i-1].car,legs[i].car,ap):{lv:"ok",bag:1,t:"🧳 تذكرة وحدة: العفش يمشي لآخر محطة.",s:"العفش يمشي لآخر محطة (تذكرة وحدة)"}):{lv:"w",bag:1,t:"🧳 حدد وين ينشحن العفش في هالمحطة."})}out.push(card);continue}
     /* هل يقدر يبقى داخل المطار؟ */
     const tw=rules(c,"twov").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
     let twBlock=false;const circ=tw.some(([r,m])=>r.vis&&m[0]===1);if(tw.some(([r,m])=>r.circ&&m[0]===1))card.circ=1;
@@ -139,7 +139,7 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
     const lg=legs[i-1],prevC=apC(pts[i-1]),nextC=apC(pts[i+1]);
     const b1=rules(c,"bag1").filter(r=>r.carOut?(r.carOut.includes(legs[i].car)&&(!r.ap||r.ap.includes(ap))):(r.all||(prevC!==c&&nextC===c))),forced=b1.length>0,long=h&&h>24;
     const bagR=rules(c,"bag").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]);
-    let bagsOut=lg.bag==="out"||forced,ilNo=false;
+    let bagsOut=lg.bag==="out"||(forced&&(lg.bag!=="none"||b1.some(r=>r.all))),ilNo=false;
     if(lg.bag==="thru"){
       if(forced){b1.forEach(r=>{const l=line(r,"w");l.bag=1;card.L.push(l)});card.L.push({lv:"w",bag:1,t:`🧳 لا تشحن العفش لآخر محطة: اشحنه لين ${apN(ap)} بس — الراكب يستلمه هناك ويطلع من الجوازات${freeIn?"":" (ويحتاج إذن دخول لـ "+cn(c)+")"}، وبعدين يشحنه من جديد.`})}
       else{const na=noAg(lg.car,legs[i].car),il=P.ticket==="sep"||na?ilLine(lg.car,legs[i].car,ap):null;
@@ -148,6 +148,11 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
         card.L.push(il||{lv:"ok",bag:1,t:"🧳 تذكرة وحدة: العفش يمشي لآخر محطة.",s:"العفش يمشي لآخر محطة (تذكرة وحدة)"});
         if(long){const sm=K.SRC.msc;card.L.push({lv:"w",bag:1,t:`🧳 الانتظار ${h} ساعة (أكثر من 24): يعتبر توقف (Stopover)، وعادة العفش ينشحن لين هالمحطة بس — تأكد مع الناقل قبل ما تشحنه لآخر محطة.`,src:sm.t,u:sm.u})}
         if(il&&il.lv!=="ok")bagR.forEach(([r,m])=>card.L.push(line(r,"i",m[1])))}}
+    else if(lg.bag==="none"){const sep=P.ticket==="sep"||noAg(lg.car,legs[i].car);
+      if(sep){const k="bp_"+ap,an=QA[k];card.L.push({lv:"i",bag:1,t:`🧳 بدون عفش — ما يحتاج يستلم عفش في ${apN(ap)}.`,s:"بدون عفش — ما فيه شحن"});
+        card.L.push({lv:an===1?"ok":an===0?"i":"w",qk:k,ans:an,q:`معه بطاقة صعود للرحلة التالية من ${apN(ap)} (تشييك أونلاين أو من كاونتر التحويل داخل المطار)؟`,qno:`بدون بطاقة صعود لازم يطلع من الجوازات في ${apN(ap)} ويسوي قبول من جديد — فيحتاج إذن دخول.`,t:"التذاكر منفصلة: الرحلة التالية تحتاج بطاقة صعود."});
+        if(an===0)bagsOut=true}
+      else card.L.push({lv:"ok",bag:1,t:"🧳 بدون عفش — ما فيه شحن ولا استلام.",s:"بدون عفش — ما فيه شحن"})}
     else if(lg.bag==="out"){card.L.push({lv:"i",bag:1,t:`🧳 يستلم عفشه في ${apN(ap)} ويطلع من الجوازات — لازم يحق له دخول ${cn(c)}.`});b1.forEach(r=>card.L.push(line(r,"i")))}
     else card.L.push({lv:"w",bag:1,t:"🧳 حدد وين ينشحن العفش في هالمحطة (يمشي لآخر محطة أو يستلمه هنا)."});
     if(bagsOut)card.L=card.L.filter(l=>!(l.tw&&l.lv==="ok"));
@@ -317,7 +322,7 @@ function apItems(){const by={};Object.entries(K.AP).forEach(([a,[n,c]])=>{if(a!=
   return out}
 function carItems(){return[...Object.entries(K.CAR).map(([k,v])=>({v:k,l:v,s:k,g:"الناقلين",k:AN(v+" "+k+" "+(WL[k]?WL[k][1]:""))})),...Object.values(WL).filter(x=>!K.CAR[x[0]]).map(x=>({v:x[0],l:x[1],s:x[0]+" · "+x[2],g:"ناقلين العالم",w:1,k:AN(x[1]+" "+x[0]+" "+x[2])}))]}
 const PK_T={bag:"العفش ينشحن لين",nat:"جنسية الراكب",res:"مقيم في",to:"المطار",car:"الناقل"};
-function openPick(kind,i){const items=kind==="bag"?S.legs.map((l,k)=>({v:String(k),l:l.to?apLabel(l.to):"(محطة بدون مطار)",s:k===S.legs.length-1?"الوجهة النهائية":"ترانزيت "+(k+1),g:"",k:AN(l.to?apLabel(l.to):"")})).filter(o=>S.legs[+o.v].to):kind==="car"?carItems():kind==="to"?apItems():natItems();
+function openPick(kind,i){const items=kind==="bag"?[{v:"-1",l:"بدون عفش 🚫🧳",s:"شنطة يد فقط",g:"",k:AN("بدون عفش لا يوجد عفش شنطه يد no bag")}].concat(S.legs.map((l,k)=>({v:String(k),l:l.to?apLabel(l.to):"(محطة بدون مطار)",s:k===S.legs.length-1?"الوجهة النهائية":"ترانزيت "+(k+1),g:"",k:AN(l.to?apLabel(l.to):"")})).filter(o=>S.legs[+o.v].to)):kind==="car"?carItems():kind==="to"?apItems():natItems();
   const cur=kind==="bag"?String(S.bagTo):kind==="nat"?S.nat:kind==="res"?S.res:S.legs[i][kind];
   const ov=document.createElement("div");ov.className="tv-ov";
   ov.innerHTML=`<div class="tv-sh"><div class="tv-sh-h"><b>${E(PK_T[kind])}</b><button data-x="1">إغلاق ✕</button></div>
@@ -395,7 +400,7 @@ function paint(){if(!root)return;
       <div class="tv-r">${pkBtn("to",l.to,i)}${pkBtn("car",l.car,i)}</div>
       ${i<legs.length-1?`<label class="l">مدة الانتظار في ${E(l.to?apLabel(l.to):"الترانزيت")} (ساعات)<input type="number" inputmode="decimal" data-leg="${i}" data-f="h" class="${S.showMiss&&!l.h&&l.to&&apC(l.to)!=="SA"?"tv-miss":""}" value="${E(l.h)}" placeholder="مطلوب"></label>`:""}</div>`).join("")}
     <button class="tv-add" id="tvAdd">＋ أضف محطة بعد الوجهة</button>
-    ${legs.length>1?`<label class="l">🧳 العفش ينشحن لين<button class="tv-pk ${S.bagTo==null||S.bagTo>=legs.length?"e":""} ${S.showMiss&&(S.bagTo==null||S.bagTo>=legs.length)?"tv-miss":""}" data-pk="bag"><span>${S.bagTo!=null&&S.bagTo<legs.length&&legs[S.bagTo].to?E(apLabel(legs[S.bagTo].to))+(S.bagTo===legs.length-1?" (الوجهة النهائية)":""):"اختر المطار…"}</span><i>⌕</i></button></label>`:""}
+    ${legs.length>1?`<label class="l">🧳 العفش ينشحن لين<button class="tv-pk ${S.bagTo==null||S.bagTo>=legs.length?"e":""} ${S.showMiss&&(S.bagTo==null||S.bagTo>=legs.length)?"tv-miss":""}" data-pk="bag"><span>${S.bagTo===-1?"بدون عفش (شنطة يد فقط)":S.bagTo!=null&&S.bagTo<legs.length&&legs[S.bagTo].to?E(apLabel(legs[S.bagTo].to))+(S.bagTo===legs.length-1?" (الوجهة النهائية)":""):"اختر المطار…"}</span><i>⌕</i></button></label>`:""}
     ${legs.length>1?`<label class="l">التذكرة<div class="tv-chips ${S.showMiss&&!S.ticket?"tv-miss":""}" id="tvTk"><button data-tk="one" class="${S.ticket==="one"?"on":""}">تذكرة وحدة (حجز واحد)</button><button data-tk="sep" class="${S.ticket==="sep"?"on":""}">تذاكر منفصلة</button></div></label>`:""}</div>
   <div class="tv-box"><b>📄 الوثائق اللي معه</b>
     ${cts.length?cts.map(c=>`<div class="tv-vq ${S.showMiss&&S.visas[c]==null?"tv-miss":""}"><span>معه تأشيرة أو تصريح دخول (eVisa / ETA) أو إقامة سارية لـ ${E(cn(c))}؟</span><div class="tv-chips"><button data-visa="${c}" data-val="1" class="${S.visas[c]===1?"on":""}">نعم</button><button data-visa="${c}" data-val="0" class="${S.visas[c]===0?"on":""}">لا</button></div></div>`).join(""):`<div class="tv-note">اختر المسار أول عشان تطلع أسئلة التأشيرات.</div>`}
@@ -412,7 +417,7 @@ function lineH(l,btn){const q=l.qk?`<div class="tv-q"><b>❓ ${E(l.q)}</b>${btn?
 const VT={ok:["✓","Ok to Board — يُقبل","القواعد والتعاميم ما فيها ما يمنع"],w:["!","Conditional — يُقبل بشرط","جاوب «أسئلة التأكيد» وتأكد من النقاط تحت: إذا كلها «نعم» يصير يُقبل"],x:["✕","Don't Board — لا يُقبل","بالوضع الحالي ما يمشي — شوف السبب تحت"]};
 function heroH(o,lv,pending){const p=P(),v=VT[lv],pts=o.pts;
   const route=pts.map((a,i)=>`<span class="tv-rp"><b>${E(a==="AJF"?"الجوف":a.startsWith("C:")?cn(a.slice(2)):apN(a))}</b><small>${E(a.startsWith("C:")?"":a)}</small></span>${i<pts.length-1?`<span class="tv-ra"><i>←</i><small>${E(p.legs[i].car||"")}</small></span>`:""}`).join("");
-  const who=[cn(p.nat),p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"",p.legs.length>1?(p.ticket==="one"?"تذكرة وحدة":"تذاكر منفصلة"):"",p.legs.length>1&&S.bagTo!=null&&p.legs[S.bagTo]?(()=>{const k=o.cards.findIndex(c=>c.k==="tr"&&c.L.some(l=>l.bag&&l.no));return k>0?"🧳 العفش لين "+apN(o.pts[k])+" بس (ما ينشحن أبعد)":"🧳 العفش لين "+apN(p.legs[S.bagTo].to)})():""].filter(Boolean);
+  const who=[cn(p.nat),p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"",p.legs.length>1?(p.ticket==="one"?"تذكرة وحدة":"تذاكر منفصلة"):"",p.legs.length>1&&S.bagTo===-1?"🚫 بدون عفش":p.legs.length>1&&S.bagTo!=null&&p.legs[S.bagTo]?(()=>{const k=o.cards.findIndex(c=>c.k==="tr"&&c.L.some(l=>l.bag&&l.no));return k>0?"🧳 العفش لين "+apN(o.pts[k])+" بس (ما ينشحن أبعد)":"🧳 العفش لين "+apN(p.legs[S.bagTo].to)})():""].filter(Boolean);
   const ov=!pending&&S.ovr;
   return`<div class="tv-hero ${pending?"p":ov?"ok":lv}"><div class="tv-hero-t"><span class="tv-big">${pending?"…":ov?"✓":v[0]}</span><div><b>${pending?"جاري الفحص":ov?"Ok to Board — بتجاوز المشرف":v[1]}</b><small>${pending?"نراجع القواعد وتعاميم المحطة — لا تقرر قبل ما يخلص":ov?`الحكم الأصلي: ${VT[lv][1]} · السبب: ${E(S.ovr.r)} · ${E(S.ovr.by)}`:v[2]}</small></div></div>
     <div class="tv-route">${route}</div><div class="tv-who">${who.map(w=>`<span>${E(w)}</span>`).join("")}</div></div>`}
@@ -451,7 +456,7 @@ function whyL(c,lv,o,ci){const W=[],seen=new Set(),add=(lv,t,ic)=>{t=short(t);if
     add(c.ent.lv,`لازم يطلع من الجوازات في ${apN(o.pts[ci])}${c.ent.lv==="x"?" — "+short(c.ent.head):c.ent.lv==="ok"?" — "+short(c.ent.head):": "+short(c.ent.head)}`)}
   else{const xs=all.filter(l=>l.lv==="x"&&!l.bag);
     if(lv==="x"&&xs.length)add("x",xs[0].ans===0&&xs[0].qno?xs[0].qno:(c.head&&!/^(مسموح|يبقى)/.test(c.head)?c.head:xs[0].t));
-    else add(lv==="w"?"w":"ok",c.head||(lv==="ok"?"مسموح":""));
+    else{const onlyQ=lv==="w"&&!all.some(l=>l.lv==="w"&&!l.qk);add(lv==="w"&&!onlyQ?"w":"ok",c.head||"مسموح")}
     bgAdd()}
   if(lv!=="x"&&all.some(l=>l.qk&&l.ans==null))add("w","بانتظار جوابك على سؤال التأكيد فوق");
   if(c.k==="dst"&&all.some(l=>l.arr))add("i","يعبّي بطاقة الوصول الرقمية قبل الوصول (مو تأشيرة)","🪪");
@@ -471,7 +476,7 @@ function aiH(){return`<div class="tv-ai"><h4>🤖 كمّل مع المساعد</
     <div class="tv-note tv-adc">⚖️ حكم ADC في نظام القبول (Altea) هو المرجع الرسمي. هذي الأداة تجهزك قبله وتشرح لك بالعربي، والتعميم الأحدث يتقدم على قاعدة البيانات العامة.</div>
     <div class="tv-note">هذي الأداة تجمع قواعد منشورة من مواقع حكومية وشركات طيران (مو من تيماتيك نفسه). القواعد تتغير، فإذا الحكم ⚠️ أو الحالة نادرة، تأكد قبل القبول. آخر مراجعة للقواعد: ${E(K.D)}.</div>`}
 function fmt(t){return E(String(t||"")).replace(/^\s*#{1,4}\s*(.+)$/gm,"<b>$1</b>").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[*-]\s+/gm,"• ").replace(/\n/g,"<br>")}
-function legsB(){const n=S.legs.length,k=S.legs.length>1?(S.bagTo!=null&&S.bagTo<n?S.bagTo:null):0;return S.legs.map((l,i)=>({...l,bag:k==null?"":i<n-1?(i<k?"thru":i===k?"out":"thru"):""}))}
+function legsB(){const n=S.legs.length,k=S.legs.length>1?(S.bagTo!=null&&S.bagTo<n?S.bagTo:null):0;return S.legs.map((l,i)=>({...l,bag:k===-1?(i<n-1?"none":""):k==null?"":i<n-1?(i<k?"thru":i===k?"out":"thru"):""}))}
 function P(){return{pt:S.pt||"N",ppx:S.ppx,pur:S.pur,rt:S.rt,days:S.days===""?null:+S.days,yf:S.yf,qa:S.qa||{},il:S.il||{},ilPending:!!(S.cv&&S.cv.st==="run"),nat:S.nat,st:isGcc()?"cit":S.st,res:resOf(),age:S.age===""?null:+S.age,sex:S.sex,sup:S.sup,ebola:S.ebola,ticket:S.legs.length>1?S.ticket:"one",legs:legsB(),visas:S.visas}}
 function run(){if(!S.nat){S.out={err:"اختر جنسية الراكب أول."};paintOut();return}if(!S.legs[S.legs.length-1].to){S.out={err:"اختر الوجهة النهائية."};paintOut();return}
   loadPI().then(()=>{S.il={};S.qa={};S.ovr=null;S.ovrR="";S.cv={st:"run"};S.out=analyze(P());S.th=[];paintOut();reviewCirc();try{ajfAct&&ajfAct("tv",S.nat+">"+S.legs.map(l=>l.to).join(">"))}catch(e){}
@@ -481,7 +486,7 @@ function ctxText(){const p=P(),o=S.out;const L=[];
   L.push("بيانات الحالة وقواعد السفر من قاعدة بيانات التطبيق (بديل نص شاشة TIMATIC — جمعت من مواقع حكومية وشركات طيران، وكل قاعدة معها مصدرها):");
   L.push(`الراكب: جنسية ${cn(p.nat)} (${p.nat})، وضعه في السعودية: ${p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"غير محدد"}${p.st==="res"?"":"، يعني مو مقيم في السعودية ولا ينطبق عليه أي شرط خاص بالمقيمين في الخليج"}، بلد إقامته: ${cn(p.res)}، العمر ${p.age??"غير محدد"}، الجنس ${p.sex==="M"?"رجل":p.sex==="F"?"امرأة":"غير محدد"}.`);
   L.push(`الجواز: ${PT_T[p.pt]||"عادي"}، ينتهي ${p.ppx||"غير محدد"}. غرض السفر: ${PUR_T[p.pur]||"غير محدد"}. تذكرة عودة/مغادرة: ${p.rt===1?"نعم":p.rt===0?"لا":"غير محدد"}. مدة البقاء: ${p.days??"غير محدد"} يوم.${p.yf?" قادم من دولة من قائمة الحمى الصفراء.":""}`);
-  L.push(`المسار: الجوف AJF ← ${p.legs.map(l=>`${apLabel(l.to)}${l.car?" على "+carN(l.car):""}${l.h?" (انتظار "+l.h+" ساعة)":""}${l.bag?(l.bag==="thru"?" [العفش يمشي لآخر محطة]":" [يستلم عفشه هنا]"):""}`).join(" ← ")}. التذكرة: ${p.ticket==="one"?"وحدة":p.ticket==="sep"?"منفصلة":"غير محدد"}.`);
+  L.push(`المسار: الجوف AJF ← ${p.legs.map(l=>`${apLabel(l.to)}${l.car?" على "+carN(l.car):""}${l.h?" (انتظار "+l.h+" ساعة)":""}${l.bag?(l.bag==="none"?" [بدون عفش]":l.bag==="thru"?" [العفش يمشي لآخر محطة]":" [يستلم عفشه هنا]"):""}`).join(" ← ")}. التذكرة: ${p.ticket==="one"?"وحدة":p.ticket==="sep"?"منفصلة":"غير محدد"}.`);
   const vs=Object.keys(p.visas).filter(k=>p.visas[k]===1),vn=Object.keys(p.visas).filter(k=>p.visas[k]===0);L.push(`مطارات المسار بالإنجليزي: ${p.legs.map(l=>l.to.startsWith("C:")?enN(l.to.slice(2)):l.to+" "+enN(apC(l.to))).join(" / ")}. الناقلين: ${p.legs.map(l=>l.car?carN(l.car)+" "+l.car:"").filter(Boolean).join(" / ")}.`);
   L.push(`الوثائق: ${vs.length?"معه تأشيرة/إقامة سارية لـ "+vs.map(cn).join("، "):"ما معه تأشيرات"}${vn.length?"؛ ما معه تأشيرة لـ "+vn.map(cn).join("، "):""}${p.sup.length?"؛ معه تأشيرة/إقامة من "+p.sup.map(s=>SUP[s]).join("، "):""}${p.ebola?"؛ كان في دول الإيبولا خلال 21 يوم":""}.`);
   L.push("\nنتيجة المحرك الآلي:");

@@ -28,6 +28,10 @@ const C=[
  ["نفس الحالة ومعه تأشيرة إمارات وأكد الجواز",P({nat:"IN",st:"res",res:"SA",pur:"home",legs:[leg("ELQ","SV","2","thru"),leg("DXB","SV","6","thru"),leg("COK","6E")],visas:{AE:1},qa:{ae_ext:1}}),"ok"],
  ["باكستاني ترانزيت أبوظبي ثم Air Sial (بدون اتفاقية) بدون تأشيرة",P({nat:"PK",st:"res",res:"SA",pur:"home",legs:[leg("AUH","SV","5","out"),leg("ISB","PF")],visas:{AE:0}}),"x"],
  ["سعودي: الرياض ثم دبي على السعودية ثم القاهرة على السعودية (نفس الناقل)",P({nat:"SA",st:"cit",legs:[leg("DXB","SV","3","thru"),leg("CAI","SV")],qa:{ae_ext:1}}),"ok"],
+ ["هندي بدون عفش (دبي ثم إنديغو) — قبل سؤال بطاقة الصعود",P({nat:"IN",st:"res",res:"SA",pur:"home",legs:[leg("DXB","SV","6","none"),leg("COK","6E")],visas:{AE:0},qa:{ae_ext:1}}),"w"],
+ ["هندي بدون عفش — معه بطاقة صعود",P({nat:"IN",st:"res",res:"SA",pur:"home",legs:[leg("DXB","SV","6","none"),leg("COK","6E")],visas:{AE:0},qa:{ae_ext:1,bp_DXB:1}}),"ok"],
+ ["هندي بدون عفش — ما معه بطاقة صعود ولا تأشيرة إمارات",P({nat:"IN",st:"res",res:"SA",pur:"home",legs:[leg("DXB","SV","6","none"),leg("COK","6E")],visas:{AE:0},qa:{ae_ext:1,bp_DXB:0}}),"x"],
+ ["باكستاني بدون عفش ترانزيت أبوظبي ثم Air Sial — التعميم يشترط تأشيرة",P({nat:"PK",st:"res",res:"SA",pur:"home",legs:[leg("AUH","SV","5","none"),leg("ISB","PF")],visas:{AE:0}}),"x"],
  ["كاتماندو (التنبيه المؤقت انتهى) — ما يمنع",P({nat:"NP",legs:[leg("KTM","SV")]}),"ok"],
 ];
 T.loadPI().then(()=>{let f=0;C.forEach(([n,p,exp])=>{const o=T.analyze(p);const ok=o.lv===exp;if(!ok)f++;
