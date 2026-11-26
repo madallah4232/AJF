@@ -32,6 +32,7 @@ function match(r,P,x){const need=[];
   if(r.res&&!inL(P.res,r.res))return[0];
   if(r.resNot&&inL(P.res,r.resNot))return[0];
   if(r.ap&&!r.ap.includes(x.ap))return[0];
+  {const mo=new Date().getMonth()+1;if(r.mon&&!(mo>=r.mon[0]&&mo<=r.mon[1]))return[0];if(r.monNot&&mo>=r.monNot[0]&&mo<=r.monNot[1])return[0]}
   if(r.dest&&!inL(x.final,r.dest))return[0];
   if(r.ebola&&!P.ebola)return[0];
   if(r.visaOnly&&!x.hasVisa)return[0];
