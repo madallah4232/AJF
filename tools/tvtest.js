@@ -6,7 +6,7 @@ const ctx={window:{},sessionStorage:{getItem:()=>null,setItem:()=>{}},console,In
 ctx.window=ctx;vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(D,"tvkb.js"),"utf8"),ctx);vm.runInContext(fs.readFileSync(path.join(D,"tv.js"),"utf8"),ctx);
 const T=ctx.TV._t;const far="2030-01-01";
-const P=o=>({pt:"N",ppx:far,pur:"tour",rt:1,days:null,yf:false,qa:{},il:{},nat:"",st:"visit",res:"",age:null,sex:"",sup:[],ebola:false,ticket:"one",legs:[],visas:{},...o,res:o.res||o.nat});
+const P=o=>({pt:"N",ppx:far,pur:"tour",rt:1,days:null,yf:false,qa:{},il:{},nat:"",st:"visit",res:"",age:null,sex:"",sup:[],ebola:false,ticket:"one",legs:[],visas:{},...o,res:o.res||o.nat,qa:{sa_exit:1,...(o.qa||{})}});
 const leg=(to,car,h,bag)=>({to,car,h:h||"",bag:bag||""});
 const C=[
  ["خليجي (كويتي) إلى الكويت",P({nat:"KW",st:"cit",legs:[leg("KWI","SV")]}),"ok"],
@@ -36,6 +36,18 @@ const C=[
  ["نفس الحالة لكن الانتظار 5 ساعات",P({nat:"PK",st:"res",res:"SA",pur:"home",legs:[leg("ELQ","SV","","none"),leg("AUH","SV","5","none"),leg("ISB","SV")],visas:{AE:0},qa:{ae_ext:1}}),"ok"],
  ["سعودي ينتظر في دبي 30 ساعة (ما يحتاج تأشيرة) — يُقبل",P({nat:"SA",st:"cit",legs:[leg("DXB","SV","30","thru"),leg("CAI","SV")],qa:{ae_ext:1}}),"ok"],
  ["يمني ينتظر في إسطنبول 30 ساعة بدون تأشيرة تركية",P({nat:"YE",st:"res",res:"SA",pur:"tour",legs:[leg("IST","TK","30","thru"),leg("CAI","TK")],visas:{TR:0,EG:1}}),"x"],
+ ["مقيم ما معه خروج وعودة",P({nat:"EG",st:"res",res:"SA",pur:"home",legs:[leg("CAI","SV")],qa:{sa_exit:0}}),"x"],
+ ["سعودي إلى بانكوك سياحة 45 يوم (الإعفاء 30)",P({nat:"SA",st:"cit",days:45,legs:[leg("BKK","SV")],qa:{th_tdac:1}}),"x"],
+ ["سعودي إلى بانكوك بدون تذكرة عودة",P({nat:"SA",st:"cit",rt:0,legs:[leg("BKK","SV")],qa:{th_tdac:1}}),"x"],
+ ["سعودي إلى بانكوك للعمل بدون تأشيرة",P({nat:"SA",st:"cit",pur:"work",legs:[leg("BKK","SV")],visas:{TH:0},qa:{th_tdac:1}}),"x"],
+ ["سعودي جوازه ينتهي قبل نهاية الإقامة",P({nat:"SA",st:"cit",days:20,ppx:new Date(Date.now()+10*864e5).toISOString().slice(0,10),legs:[leg("IST","TK")]}),"x"],
+ ["باكستاني ترانزيت فرانكفورت بدون ATV",P({nat:"PK",st:"res",res:"SA",legs:[leg("FRA","LH","3","thru"),leg("JFK","LH")],visas:{DE:0,US:1},qa:{atv_DE:0}}),"x"],
+ ["باكستاني ترانزيت فرانكفورت ومعه تأشيرة أمريكية (معفى من ATV)",P({nat:"PK",st:"res",res:"SA",sup:["US"],legs:[leg("FRA","LH","3","thru"),leg("JFK","LH")],visas:{DE:0,US:1}}),"ok"],
+ ["هندي ترانزيت إسطنبول للمكسيك بدون e-ATV",P({nat:"IN",st:"res",res:"SA",legs:[leg("IST","TK","4","thru"),leg("MEX","TK")],visas:{TR:0,MX:1},qa:{tr_atv:0}}),"x"],
+ ["مصري ترانزيت الكويت (الترانزيت موقوف) بدون تأشيرة كويتية",P({nat:"EG",st:"res",res:"SA",legs:[leg("KWI","KU","3","thru"),leg("CAI","KU")],visas:{KW:0}}),"x"],
+ ["يمني ترانزيت القاهرة 7 ساعات (أكثر من 6) بدون تأشيرة مصرية",P({nat:"YE",st:"res",res:"SA",legs:[leg("CAI","MS","7","thru"),leg("KUL","MS")],visas:{EG:0,MY:1}}),"x"],
+ ["سوداني ترانزيت الدوحة 5 ساعات على القطرية",P({nat:"SD",st:"res",res:"SA",legs:[leg("DOH","QR","5","thru"),leg("KRT","QR")],visas:{QA:0}}),"ok"],
+ ["مصري ترانزيت فرانكفورت ثم باريس (دخول شنغن) بدون تأشيرة شنغن",P({nat:"EG",st:"res",res:"SA",legs:[leg("FRA","LH","3","thru"),leg("CDG","LH")],visas:{DE:0,FR:0}}),"x"],
  ["كاتماندو (التنبيه المؤقت انتهى) — ما يمنع",P({nat:"NP",legs:[leg("KTM","SV")]}),"ok"],
 ];
 T.loadPI().then(()=>{let f=0;C.forEach(([n,p,exp])=>{const o=T.analyze(p);/* بدون تعميم مطابق في مراجعة الذكاء الاصطناعي: بطاقة «حسب التعميم» تصير حسب باقي القواعد */o.cards.forEach(c=>{if(c.circ&&c.lv==="w"&&!c.L.some(l=>l.lv==="w"&&!/📢/.test(l.t)))c.lv="ok"});o.lv=o.cards.reduce((a,c)=>({ok:0,w:1,x:2}[c.lv]>{ok:0,w:1,x:2}[a]?c.lv:a),"ok");const ok=o.lv===exp;if(!ok)f++;

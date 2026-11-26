@@ -35,6 +35,7 @@ function match(r,P,x){const need=[];
   if(r.ptNot&&r.ptNot.includes(P.pt||"N"))return[0];
   if(r.apNot&&r.apNot.includes(x.ap))return[0];
   if(r.carOut&&!(x.out&&r.carOut.includes(x.out)))return[0];
+  if(r.supNot&&r.supNot.some(v=>P.sup.includes(v)))return[0];
   if(r.yf&&!P.yf)return[0];
   if(r.resOnly&&P.res!==r.c)return[0];
   if(r.purNot&&P.pur&&r.purNot.includes(P.pur))return[0];
@@ -90,8 +91,12 @@ function entry(P,c,x){const L=[];let lv="ok",head,detailed=K.R.some(r=>r.c===c&&
   /* الموظف حدد إنه ما معه تأشيرة، والبلد يشترط تأشيرة مسبقة → مانع ✕ */
   if(noV&&needV&&lv!=="ok"){lv="x";head="✕ ما معه تأشيرة لـ "+cn(c)+" — "+(stTxt(cur)?stTxt(cur)[1]:"يحتاج تأشيرة مسبقة");L.forEach(l=>{if(l.lv==="w"&&/تأشيرة/.test(l.t)&&!l.cond&&!l.qk)l.lv="x"})}
   if(!detailed)L.push({lv:"i",t:"ما عندنا قواعد مفصلة لهالبلد — الحكم من القاعدة العامة فقط، والحالات الخاصة (إقامة، عمر، موافقات) ممكن تختلف.",src:K.SRC.pi.t,u:K.SRC.pi.u});
-  /* تذكرة العودة: الزائر بدون تذكرة عودة أو مغادرة */
-  if(P.rt===0&&!hasVisa&&P.pur!=="home"&&x.final===c)L.push({lv:"w",t:"ما معه تذكرة عودة أو مغادرة — أغلب الدول تشترطها للزائر (ADC يعطي Don't Board إذا كانت مطلوبة). تأكد قبل القبول."});
+  /* شروط الإعفاء أو التأشيرة عند الوصول (مثل ADC): الغرض، المدة، تذكرة العودة */
+  if(!hasVisa&&x.final===c&&/^[FVET]/.test(cur||"")){const n=+(String(cur).match(/\d+/)||[0])[0],k=stTxt(cur)[1];
+    if(P.pur==="work"||P.pur==="study"){lv="x";head="✕ "+(P.pur==="work"?"العمل":"الدراسة")+" يحتاج تأشيرة مخصصة";L.unshift({lv:"x",t:`${k} للسياحة والزيارة فقط — ${P.pur==="work"?"العمل":"الدراسة"} يحتاج تأشيرة مخصصة قبل السفر.`})}
+    if(n&&P.days!=null&&P.days>n){lv="x";head=`✕ مدة البقاء ${P.days} يوم أكثر من المسموح (${n} يوم)`;L.unshift({lv:"x",t:`مدة البقاء ${P.days} يوم أكثر من مدة ${k} (${n} يوم) — يحتاج تأشيرة.`})}
+    if(P.rt===0&&P.pur!=="home"){lv="x";head="✕ ما معه تذكرة عودة أو مغادرة";L.unshift({lv:"x",t:`ما معه تذكرة عودة أو مغادرة — شرط أساسي لـ${k} (ADC يعطي Don't Board).`})}}
+  else if(P.rt===0&&!hasVisa&&P.pur!=="home"&&x.final===c)L.push({lv:"w",t:"ما معه تذكرة عودة أو مغادرة — أغلب الدول تشترطها للزائر. تأكد قبل القبول."});
   const pp=ppL(P,c,x);const ppx=pp.find(l=>l.lv==="x");if(ppx){lv="x";head="✕ "+ppx.t.split(/[.—]/)[0]}else pp.forEach(l=>{lv=worse(lv,l.lv)});
   return{lv,head,L:L.concat(pp),detailed}}
 const mLeft=d=>{const t=new Date(TODAY()),e=new Date(d);if(isNaN(e))return null;return(e-t)/86400000/30.44};
@@ -99,13 +104,14 @@ function ppL(P,c,x,res){const rs=rules(c,"pp").map(r=>[r,match(r,P,x)]).filter((
   if(!P.ppx)return L;const left=mLeft(P.ppx);if(left==null)return L;
   const need=Math.max(0,...rs.filter(([r,m])=>m[0]===1&&r.ppMin).map(([r])=>r.ppMin));
   if(left<=0)L.unshift({lv:"x",t:"الجواز منتهي — الجواز يعتبر صالح لين اليوم اللي قبل تاريخ انتهائه.",src:K.SRC.adc.t,d:K.SRC.adc.d});
+  else if(P.days!=null&&x.final===c&&!res&&left*30.44<P.days)L.unshift({lv:"x",t:`الجواز ينتهي قبل نهاية مدة البقاء (${P.days} يوم).`});
   else if(need&&left<need)L.unshift({lv:"x",t:`الجواز باقي عليه تقريباً ${Math.floor(left)} شهر — و${cn(c)} تشترط ${need} شهور على الأقل.`});
   else if(!need&&!res&&left<6&&x.final===c)L.unshift({lv:"w",t:`الجواز باقي عليه أقل من 6 شهور — كثير من الدول تشترط 6 شهور، تأكد في ADC.`});
   return L}
 /* تنبيهات تشغيلية مؤقتة (إغلاق مطار، منع ترانزيت…) — فعالة فقط داخل مدتها */
 function alertsL(c,ap,P,final){return rules(c,"alert").filter(r=>active(r)&&(!r.ap||r.ap.includes(ap))&&(!r.destC||r.destC.includes(final))).map(r=>({...line(r,"x"),t:"⛔ تنبيه مؤقت: "+r.t}))}
 /* أقصى مدة للبقاء في منطقة الترانزيت بدون تأشيرة — الافتراضي 24 ساعة (بعدها يعتبر توقف ويحتاج تأشيرة) */
-const TWOVH={SA:12,EG:8,LB:12,AE:24},TWOVAP={HBE:6};
+const TWOVH={SA:12,EG:6,LB:12,AE:24},TWOVAP={};
 /* تحليل المسار كامل */
 function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
   /* اتفاقيات شحن العفش بين الناقلين (من مراجعة التعاميم) */
@@ -134,8 +140,11 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
       if(r.lv==="x"&&m[0]===1)twBlock=true;card.L.push(line(r,m[0]===1?r.lv:(r.lv==="x"?"w":r.lv),m[1]))});
     const eAny=entry(P,c,x),freeIn=eAny.lv==="ok";
     if(!tw.length)card.L.push(freeIn?{lv:"ok",t:`حتى لو طلع من المطار ما يحتاج تأشيرة لـ ${cn(c)} (${eAny.head}).`,src:K.SRC.pi.t,u:K.SRC.pi.u}:{lv:"w",t:`ما عندنا قاعدة ترانزيت مفصلة لـ ${cn(c)}، وجنسيته لو طلع من المطار: ${eAny.head.replace(/^✕\s*/,"")}. بعض الدول تشترط تأشيرة ترانزيت حتى داخل المطار لجنسيات معينة — تأكد.`,src:K.SRC.pi.t,u:K.SRC.pi.u});
-    const mx=TWOVAP[ap]||TWOVH[c]||24;const tooLong=h&&h>mx&&!freeIn;
-    if(tooLong)card.L.push({lv:"w",t:`الانتظار ${h} ساعة أكثر من ${mx} ساعة — ما يقدر يبقى في منطقة الترانزيت بدون تأشيرة: لازم تأشيرة ترانزيت أو دخول لـ ${cn(c)}.`,s:`الانتظار ${h} ساعة أكثر من الحد (${mx} ساعة) — ما يقدر يبقى داخل المطار`});
+    const mx=TWOVAP[ap]||TWOVH[c]||24,isLong=h&&h>mx&&!freeIn;
+    /* شنغن: إذا الرحلة التالية داخل شنغن، يمر الجوازات في أول مطار شنغن (دخول) */
+    const schIn=!freeIn&&(K.SCH||[]).includes(c)&&(K.SCH||[]).includes(apC(pts[i+1])),tooLong=isLong||schIn;
+    if(schIn)card.L.push({lv:"w",t:`الرحلة التالية داخل منطقة شنغن — يمر الجوازات هنا في ${apN(ap)} (دخول شنغن)، فيحتاج تأشيرة شنغن أو إعفاء.`,s:"الرحلة التالية داخل شنغن — يمر الجوازات هنا",src:K.SRC.sch_atv.t});
+    if(isLong)card.L.push({lv:"w",t:`الانتظار ${h} ساعة أكثر من ${mx} ساعة — ما يقدر يبقى في منطقة الترانزيت بدون تأشيرة: لازم تأشيرة ترانزيت أو دخول لـ ${cn(c)}.`,s:`الانتظار ${h} ساعة أكثر من الحد (${mx} ساعة) — ما يقدر يبقى داخل المطار`});
     /* العفش: اختيار الموظف + قواعد استلام العفش في أول مطار دخول + نوع التذكرة */
     const lg=legs[i-1],prevC=apC(pts[i-1]),nextC=apC(pts[i+1]);
     const b1=rules(c,"bag1").filter(r=>r.carOut?(r.carOut.includes(legs[i].car)&&(!r.ap||r.ap.includes(ap))):(r.all||(prevC!==c&&nextC===c))),forced=b1.length>0,long=h&&h>24;
@@ -453,7 +462,7 @@ const short=t=>{t=String(t||"").replace(/^🧳\s*/,"").replace(/^✕\s*/,"");con
 function whyL(c,lv,o,ci){const W=[],seen=new Set(),add=(lv,t,ic)=>{t=short(t);if(!t||seen.has(t))return;seen.add(t);W.push({lv,t,ic})};
   const ent=c.ent&&(c.mustExit||c.k==="dst")?c.ent.L:[],all=c.L.concat(ent),bg=c.L.find(l=>l.bag),bgAdd=()=>{if(bg)add(bg.lv==="i"?(bg.no?"i":"ok"):bg.lv,bg.s||bg.t,"🧳")};
   if(c.k==="exit"&&!c.L.some(l=>l.lv!=="i"&&l.lv!=="ok")){add("ok","ما فيه شرط يمنع المغادرة");return W}
-  if(c.k==="tr"&&c.mustExit&&c.ent){const tl=c.L.find(l=>/ما يقدر يبقى في منطقة الترانزيت/.test(l.t));if(tl)add("w",tl.s,"⏱️");bgAdd();c.L.filter(l=>l.lv==="x"&&!l.bag).slice(0,1).forEach(l=>add("x",l.ans===0&&l.qno?l.qno:l.t));
+  if(c.k==="tr"&&c.mustExit&&c.ent){const tl=c.L.find(l=>/ما يقدر يبقى في منطقة الترانزيت|داخل منطقة شنغن/.test(l.t));if(tl)add("w",tl.s,"⏱️");bgAdd();c.L.filter(l=>l.lv==="x"&&!l.bag).slice(0,1).forEach(l=>add("x",l.ans===0&&l.qno?l.qno:l.t));
     add(c.ent.lv,`لازم يطلع من الجوازات في ${apN(o.pts[ci])}${c.ent.lv==="x"?" — "+short(c.ent.head):c.ent.lv==="ok"?" — "+short(c.ent.head):": "+short(c.ent.head)}`)}
   else{const xs=all.filter(l=>l.lv==="x"&&!l.bag);
     if(lv==="x"&&xs.length)add("x",xs[0].ans===0&&xs[0].qno?xs[0].qno:(c.head&&!/^(مسموح|يبقى)/.test(c.head)?c.head:xs[0].t));
