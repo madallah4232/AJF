@@ -58,12 +58,15 @@ function entry(P,c,x){const L=[];let lv="ok",head,detailed=K.R.some(r=>r.c===c&&
   const base=PI&&PI.m[P.nat]?PI.m[P.nat].split(",")[PI.ix[c]]:null;const b=stTxt(base);
   if(hasVisa){lv="ok";head="معه تأشيرة/إذن دخول سارٍ لـ "+cn(c)}
   else if(b){lv=b[0];head=b[1]}else{lv="w";head="ما عندنا بيانات عامة لهالجنسية — تأكد"}
-  const X={...x,hasVisa,base};let over=null;
+  const X={...x,hasVisa,base};let over=null,cur=hasVisa?"":(base||"");
   for(const r of rules(c,"entry")){if(hasVisa&&!r.ev&&r.lv!=="i")continue;const[m,cond]=match(r,P,X);if(!m)continue;
-    if(r.lv==="ok"){if(m===1&&!hasVisa){over=r;const t=stTxt(r.st);if(t){lv=t[0];head=t[1]}L.push(line(r,"ok"))}else if(m===2)L.push(line(r,"i",cond));continue}
+    if(r.lv==="ok"){if(m===1&&!hasVisa){over=r;cur=r.st||cur;const t=stTxt(r.st);if(t){lv=t[0];head=t[1]}L.push(line(r,"ok"))}else if(m===2)L.push(line(r,"i",cond));continue}
     if(hasVisa&&r.vok&&r.lv==="x"){const l=line(r,"w",m===2?cond:undefined);l.t="معه تأشيرة: تأكد إنها صادرة مع الموافقة المطلوبة — "+l.t;if(m===1)lv=worse(lv,"w");L.push(l);continue}
     if(m===1){if(r.lv==="x"&&lv!=="x")head=r.t.split(/[.،(]/)[0];lv=worse(lv,r.lv);L.push(line(r,r.lv))}else L.push(line(r,r.lv==="x"?"w":r.lv,cond))}
-  if(!hasVisa&&b&&!over&&lv==="w")L.unshift({lv:"w",t:`حسب القاعدة العامة: ${b[1]} لحامل جواز ${cn(P.nat)} إلى ${cn(c)}. إذا معه تأشيرة أو إقامة سارية حط علامة في «الوثائق» تحت.`,src:K.SRC.pi.t,u:K.SRC.pi.u});
+  const noV=P.visas[c]===0,needV=/^[RET]/.test(cur)||L.some(l=>l.lv==="w"&&/تأشيرة/.test(l.t)&&!l.cond);
+  if(!hasVisa&&b&&!over&&lv!=="ok")L.unshift({lv:noV?"x":"w",t:`حسب القاعدة العامة: ${b[1]} لحامل جواز ${cn(P.nat)} إلى ${cn(c)}.${noV?"":" إذا معه تأشيرة أو إقامة سارية اختر «نعم» في «الوثائق»."}`,src:K.SRC.pi.t,u:K.SRC.pi.u});
+  /* الموظف حدد إنه ما معه تأشيرة، والبلد يشترط تأشيرة مسبقة → مانع ✕ */
+  if(noV&&needV&&lv!=="ok"){lv="x";head="✕ ما معه تأشيرة لـ "+cn(c)+" — "+(stTxt(cur)?stTxt(cur)[1]:"يحتاج تأشيرة مسبقة");L.forEach(l=>{if(l.lv==="w"&&/تأشيرة/.test(l.t)&&!l.cond)l.lv="x"})}
   if(!detailed)L.push({lv:"i",t:"ما عندنا قواعد مفصلة لهالبلد — الحكم من القاعدة العامة فقط، والحالات الخاصة (إقامة، عمر، موافقات) ممكن تختلف.",src:K.SRC.pi.t,u:K.SRC.pi.u});
   return{lv,head,L:L.concat(ppL(P,c,x)),detailed}}
 function ppL(P,c,x){return rules(c,"pp").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]).map(([r,m])=>line(r,"i",m[1]))}
@@ -361,7 +364,7 @@ function ctxText(){const p=P(),o=S.out;const L=[];
   L.push(`\nالحكم الآلي: ${o.lv==="ok"?"يُقبل":o.lv==="w"?"يُقبل بشروط":"لا يُقبل"}.${o.missing.length?" معلومات ناقصة: "+o.missing.join("، "):""}`);
   L.push("\nمعنى الرموز: ok مسموح · w شرط/تأكد · x مانع · i معلومة. القاعدة العامة (Passport Index) أقل دقة من القواعد المفصلة.");
   return L.join("\n")}
-const CVQ="إذا المسار فيه ترانزيت أبوظبي AUH: طبّق تعميم ترانزيت أبوظبي بشروطه بالضبط كما هي مكتوبة في نصه (أي ناقلين، أي اتفاقية مع السعودية، تذكرة وحدة أو منفصلة، أي جنسيات أو استثناءات) — لا توسّعه ولا تضيّقه، واذكر عنوانه وتاريخه. وبشكل عام: راجع تعاميم المحطة المرفقة على هالحالة بدقة: المطارات (عربي وإنجليزي ورموز)، الناقلين، الجنسية، الإقامة، نوع التذكرة. اذكر كل تعميم ينطبق وأثره بسطر 📢. إذا ما فيه تعميم يخص الحالة قل ذلك صراحة. بعدين أعطني الحكم النهائي بعد دمج القواعد مع التعاميم (التعميم الأشد يُقدَّم).";
+const CVQ="إذا المسار فيه ترانزيت أبوظبي AUH: طبّق تعميم ترانزيت أبوظبي بشروطه بالضبط كما هي مكتوبة في نصه (أي ناقلين، أي اتفاقية مع السعودية، تذكرة وحدة أو منفصلة، أي جنسيات أو استثناءات) — لا توسّعه ولا تضيّقه، واذكر عنوانه وتاريخه. وبشكل عام: راجع تعاميم المحطة المرفقة على هالحالة بدقة: المطارات (عربي وإنجليزي ورموز)، الناقلين، الجنسية، الإقامة، نوع التذكرة. اذكر كل تعميم ينطبق وأثره بسطر 📢. إذا ما فيه تعميم يخص الحالة قل ذلك صراحة. بعدين أعطني الحكم النهائي بعد دمج القواعد مع التعاميم (التعميم الأشد يُقدَّم). مهم: إذا الموظف حدد إن الراكب ما معه تأشيرة لبلد يشترط تأشيرة مسبقة، فالحكم ⛔ لا يُسمح له بالسفر — مو ⚠️.";
 const verdict=a=>{const t=String(a||"");const i=t.lastIndexOf("الخلاصة");const ln=i>=0?t.slice(i).split("\n")[0]:"";const z=ln||t;
   const lv=/⛔|لا يُسمح|لا يسمح/.test(z)?"x":/⚠️|إذا معه|بشرط/.test(z)?"w":/✅|يُسمح له|يسمح له/.test(z)?"ok":"w";return{lv,k:ln.replace(/\*+/g,"").replace(/^الخلاصة:?\s*/,"").trim()}};
 async function callAI(q,h){const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"tim",ctx:ctxText(),q,h})});
