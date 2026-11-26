@@ -449,7 +449,7 @@ function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-e
   const lv=cv.st==="ok"?(hit?worse(o.lv,cv.lv):o.lv):worse(o.lv,"w");
   const needs=[...o.needs];if(hit&&cv.lv!=="ok"&&cv.k)needs.unshift("📢 حسب تعميم المحطة: "+cv.k);if(cv.st!=="ok")needs.unshift("ما تمت مراجعة التعاميم — أعد المراجعة تحت");
   const fin=lv==="x"?(o.fines||[]).map(f=>`<div class="tv-need">💰 ${E(cn(f.c))}: ${E(f.t)}</div>`).join(""):"";
-  return heroH(o,lv)+(fin?`<div class="tv-sec need x">${fin}</div>`:"")+(lv!=="x"||qLines(o).some(l=>l.ans===0)?qH(o):"")+cardsH(o)+circH(cv)+ovrH(lv)+aiH()}
+  return heroH(o,lv)+(fin?`<div class="tv-sec need x">${fin}</div>`:"")+qH(o)+cardsH(o)+circH(cv)+ovrH(lv)+aiH()}
 /* أسئلة التأكيد (مثل «Can you confirm conditions are met?» في ADC) */
 function qLines(o){const seen=new Set(),out=[];o.cards.forEach(c=>{c.L.concat(c.ent&&(c.mustExit||c.k==="dst")?c.ent.L:[]).forEach(l=>{if(l.qk&&!seen.has(l.qk)){seen.add(l.qk);out.push(l)}})});return out}
 function qH(o){const qs=qLines(o);if(!qs.length)return"";const left=qs.filter(l=>l.ans==null).length;
