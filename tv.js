@@ -187,6 +187,8 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
       card.head=bagsOut||tooLong?`لازم يطلع من الجوازات في ${apN(ap)} — ${e.head.replace(/^✕\s*/,"")}`:`إذا اضطر يطلع من المطار: ${e.head}`}
     else{if(freeIn&&bagsOut){card.ent=eAny;card.mustExit=1;card.lv=worse(card.lv,eAny.lv)}card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":forced&&lg.bag==="thru"?`🧳 ما ينفع يتشحن العفش لين ${apN(pts[pts.length-1])}: ${cn(c)} تشترط استلامه في ${apN(ap)}${freeIn?" (وما يحتاج تأشيرة)":""}`:ilNo?`🧳 العفش ينشحن لين ${apN(ap)} بس (ما فيه اتفاقية شحن بين الناقلين) — يستلمه هنا وما يحتاج تأشيرة`:forced&&freeIn?"🧳 العفش ينستلم هنا — وما يحتاج تأشيرة لدخوله":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار"}
     if(bagsOut||tooLong)card.mustExit=1;
+    /* حكم البطاقة بدون سطر «للمحطة تعميم…» — يُستخدم بعد ما تخلص مراجعة التعاميم بدون شي يخص الراكب */
+    if(card.circ){const nc=card.L.filter(l=>!/^📢 للمحطة تعميم/.test(l.t)).reduce((a,l)=>worse(a,l.lv),"ok");card.lvNC=card.lv==="x"?"x":worse(nc,card.mustExit&&card.ent?card.ent.lv:"ok")}
     out.push(card)}
   /* الوجهة النهائية */
   const fc=final,e=entry(P,fc,{final,car:[legs[legs.length-1].car].filter(Boolean)});
@@ -446,7 +448,9 @@ function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-e
   const cv=S.cv||{st:"run"};
   if(cv.st==="run")return heroH(o,"w",true)+`<div class="tv-sec"><div class="tv-skel"></div><div class="tv-skel s"></div></div>`+cardsH(o);
   const hit=cv.st==="ok"&&circLines(cv).length>0;
-  const lv=cv.st==="ok"?(hit?worse(o.lv,cv.lv):o.lv):worse(o.lv,"w");
+  /* الحكم العام = أسوأ حكم بطاقة بعد مراجعة التعاميم (بطاقة فيها تعميم وتمت المراجعة بدون شي يخصه → تصير ✓ مثل ما تظهر في البطاقة) */
+  const oLv=o.cards.reduce((a,c)=>worse(a,cardLv(c,cv)),"ok");
+  const lv=cv.st==="ok"?(hit?worse(oLv,cv.lv):oLv):worse(oLv,"w");
   const needs=[...o.needs];if(hit&&cv.lv!=="ok"&&cv.k)needs.unshift("📢 حسب تعميم المحطة: "+cv.k);if(cv.st!=="ok")needs.unshift("ما تمت مراجعة التعاميم — أعد المراجعة تحت");
   const fin=lv==="x"?(o.fines||[]).map(f=>`<div class="tv-need">💰 ${E(cn(f.c))}: ${E(f.t)}</div>`).join(""):"";
   return heroH(o,lv)+(fin?`<div class="tv-sec need x">${fin}</div>`:"")+qH(o)+cardsH(o)+circH(cv)+ovrH(lv)+aiH()}
@@ -482,7 +486,8 @@ function whyL(c,lv,o,ci){const W=[],seen=new Set(),add=(lv,t,ic)=>{t=short(t);if
   if(lv!=="x"&&all.some(l=>l.qk&&l.ans==null))add("w","بانتظار جوابك على سؤال التأكيد فوق");
   if(c.k==="dst"&&all.some(l=>l.arr))add("i","يعبّي بطاقة الوصول الرقمية قبل الوصول (مو تأشيرة)","🪪");
   return W}
-function cardsH(o){const cv=S.cv||{};return`<div class="tv-tl">${o.cards.map((c,ci)=>{const hit=cv.st==="ok"&&circLines(cv).length>0,lv=c.circ?(cv.st==="ok"?(hit?worse(c.lv==="w"?"ok":c.lv,cv.lv):(c.lv==="w"?"ok":c.lv)):"w"):c.lv;
+function cardLv(c,cv){const hit=cv.st==="ok"&&circLines(cv).length>0;const nc=c.lvNC||c.lv;return c.circ?(cv.st==="ok"?(hit?worse(nc,cv.lv):nc):"w"):c.lv}
+function cardsH(o){const cv=S.cv||{};return`<div class="tv-tl">${o.cards.map((c,ci)=>{const hit=cv.st==="ok"&&circLines(cv).length>0,lv=cardLv(c,cv);
   const W=whyL(c,lv,o,ci);if(c.circ&&hit&&cv.lv!=="ok")W.unshift({lv:cv.lv,t:cv.lv==="x"?"حسب تعميم المحطة ما يمشي — شوف «تعاميم المحطة»":"حسب تعميم المحطة: بشرط — شوف «تعاميم المحطة»"});
   const ent=c.ent?`<div class="tv-sub"><b>🛂 دخول ${E(cn(apC(o.pts[ci])))}: ${E(c.ent.head)}</b>${c.ent.L.map(l=>lineH(l)).join("")}</div>`:"";
   const det=c.L.filter(l=>!(l.arr&&!l.qk));
