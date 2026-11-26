@@ -112,6 +112,12 @@ function ppL(P,c,x,res){const rs=rules(c,"pp").map(r=>[r,match(r,P,x)]).filter((
 function alertsL(c,ap,P,final){return rules(c,"alert").filter(r=>active(r)&&(!r.ap||r.ap.includes(ap))&&(!r.destC||r.destC.includes(final))).map(r=>({...line(r,"x"),t:"⛔ تنبيه مؤقت: "+r.t}))}
 /* أقصى مدة للبقاء في منطقة الترانزيت بدون تأشيرة — الافتراضي 24 ساعة (بعدها يعتبر توقف ويحتاج تأشيرة) */
 const TWOVH={SA:12,EG:6,LB:12,AE:24},TWOVAP={};
+/* أول محطة يوقف فيها العفش غصب (حسب تعميم الشركات اللي ما لها اتفاقية مع السعودية، أو حسب نتيجة التحليل) */
+function bagCap(){const L=S.legs,NO=K.NOIL||[];if(S.out&&S.out.cards){const k=S.out.cards.findIndex(c=>c.k==="tr"&&c.L.some(l=>l.bag&&l.no));if(k>0)return k-1}
+  for(let i=0;i<L.length-1;i++){const a=L[i].car,b=L[i+1].car;if(a&&b&&a!==b&&((a==="SV"&&NO.includes(b))||(b==="SV"&&NO.includes(a))))return i}return null}
+function bagCapNote(){const L=S.legs;if(L.length<2||S.bagTo==null||S.bagTo<0)return"";const k=bagCap();if(k==null||S.bagTo<=k||!L[k].to)return"";
+  const NO=K.NOIL||[],a=L[k].car,b=L[k+1].car,bad=NO.includes(b)?b:a;
+  return`<div class="tv-note" style="color:#f0614a">⛔ اخترت ${E(apLabel(L[S.bagTo].to))}، لكن ${E(carN(bad))} ما لها اتفاقية شحن مع الخطوط السعودية حسب تعميم المحطة — العفش ينشحن لين ${E(apLabel(L[k].to))} بس، والتحليل مبني على هذا.</div>`}
 /* تحليل المسار كامل */
 function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
   /* اتفاقيات شحن العفش بين الناقلين (من مراجعة التعاميم) */
@@ -154,7 +160,7 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
       if(forced){b1.forEach(r=>{const l=line(r,"w");l.bag=1;card.L.push(l)});card.L.push({lv:"w",bag:1,t:`🧳 لا تشحن العفش لآخر محطة: اشحنه لين ${apN(ap)} بس — الراكب يستلمه هناك ويطلع من الجوازات${freeIn?"":" (ويحتاج إذن دخول لـ "+cn(c)+")"}، وبعدين يشحنه من جديد.`})}
       else{const na=noAg(lg.car,legs[i].car),il=P.ticket==="sep"||na?ilLine(lg.car,legs[i].car,ap):null;
         if(na&&P.ticket!=="sep")card.L.push({lv:"i",t:`مسجلة تذكرة وحدة، لكن ${carN(NO.includes(legs[i].car)?legs[i].car:lg.car)} ما لها اتفاقية مع الخطوط السعودية — فعلياً تذاكر منفصلة.`,s:"ما فيه اتفاقية بين الناقلين — تُعامل تذاكر منفصلة",src:K.SRC.noil.t});
-        if(il&&il.no){bagsOut=true;ilNo=true}
+        if(il&&il.no){bagsOut=true;ilNo=true;card.L.push({lv:"x",bag:1,t:`⛔ اخترت شحن العفش لين ${apN(pts[pts.length-1])} — ما ينفع حسب تعاميم المحطة، فالتحليل مبني على إن العفش ينشحن لين ${apN(ap)} بس.`,s:`اختيار شحن العفش لين ${apN(pts[pts.length-1])} ما ينفع — لين ${apN(ap)} بس`})}
         card.L.push(il||{lv:"ok",bag:1,t:"🧳 تذكرة وحدة: العفش يمشي لآخر محطة.",s:"العفش يمشي لآخر محطة (تذكرة وحدة)"});
         if(long&&!(il&&il.no)){const sm=K.SRC.msc;bagsOut=true;ilNo=true;card.L=card.L.filter(l=>!(l.bag&&l.lv==="ok"));card.L.push({lv:"i",bag:1,no:1,t:`🧳 الانتظار ${h} ساعة (أكثر من 24) يعتبر توقف (Stopover): العفش ما ينشحن لآخر محطة — ينشحن لين ${apN(ap)} بس، والراكب يستلمه ويطلع من الجوازات.`,s:`العفش لين ${apN(ap)} بس — توقف أكثر من 24 ساعة`,src:sm.t,u:sm.u})}
         if(il&&il.lv!=="ok")bagR.forEach(([r,m])=>card.L.push(line(r,"i",m[1])))}}
@@ -410,7 +416,7 @@ function paint(){if(!root)return;
       <div class="tv-r">${pkBtn("to",l.to,i)}${pkBtn("car",l.car,i)}</div>
       ${i<legs.length-1?`<label class="l">مدة الانتظار في ${E(l.to?apLabel(l.to):"الترانزيت")} (ساعات)<input type="number" inputmode="decimal" data-leg="${i}" data-f="h" class="${S.showMiss&&!l.h&&l.to&&apC(l.to)!=="SA"?"tv-miss":""}" value="${E(l.h)}" placeholder="مطلوب"></label>`:""}</div>`).join("")}
     <button class="tv-add" id="tvAdd">＋ أضف محطة بعد الوجهة</button>
-    ${legs.length>1?`<label class="l">🧳 العفش ينشحن لين<button class="tv-pk ${S.bagTo==null||S.bagTo>=legs.length?"e":""} ${S.showMiss&&(S.bagTo==null||S.bagTo>=legs.length)?"tv-miss":""}" data-pk="bag"><span>${S.bagTo===-1?"بدون عفش (شنطة يد فقط)":S.bagTo!=null&&S.bagTo<legs.length&&legs[S.bagTo].to?E(apLabel(legs[S.bagTo].to))+(S.bagTo===legs.length-1?" (الوجهة النهائية)":""):"اختر المطار…"}</span><i>⌕</i></button></label>`:""}
+    ${legs.length>1?`<label class="l">🧳 العفش ينشحن لين<button class="tv-pk ${S.bagTo==null||S.bagTo>=legs.length?"e":""} ${S.showMiss&&(S.bagTo==null||S.bagTo>=legs.length)?"tv-miss":""}" data-pk="bag"><span>${S.bagTo===-1?"بدون عفش (شنطة يد فقط)":S.bagTo!=null&&S.bagTo<legs.length&&legs[S.bagTo].to?E(apLabel(legs[S.bagTo].to))+(S.bagTo===legs.length-1?" (الوجهة النهائية)":""):"اختر المطار…"}</span><i>⌕</i></button></label>${bagCapNote()}`:""}
     ${legs.length>1?`<label class="l">التذكرة<div class="tv-chips ${S.showMiss&&!S.ticket?"tv-miss":""}" id="tvTk"><button data-tk="one" class="${S.ticket==="one"?"on":""}">تذكرة وحدة (حجز واحد)</button><button data-tk="sep" class="${S.ticket==="sep"?"on":""}">تذاكر منفصلة</button></div></label>`:""}</div>
   <div class="tv-box"><b>📄 الوثائق اللي معه</b>
     ${cts.length?cts.map(c=>`<div class="tv-vq ${S.showMiss&&S.visas[c]==null?"tv-miss":""}"><span>معه تأشيرة أو تصريح دخول (eVisa / ETA) أو إقامة سارية لـ ${E(cn(c))}؟</span><div class="tv-chips"><button data-visa="${c}" data-val="1" class="${S.visas[c]===1?"on":""}">نعم</button><button data-visa="${c}" data-val="0" class="${S.visas[c]===0?"on":""}">لا</button></div></div>`).join(""):`<div class="tv-note">اختر المسار أول عشان تطلع أسئلة التأشيرات.</div>`}
