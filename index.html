@@ -3384,7 +3384,7 @@ async function dcaiAsk(){const a=dcAir,q=($("dcaiQ").value||"").trim();if(q.leng
   try{const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,air:DC_NAME[a],q,guide:dcGuideTxt(),h:dcaiLoad(a).slice(-6).map(t=>({q:t.q,a:t.a}))})});
     if(r.status===404)throw new Error("nofn");const j=await r.json();if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s||"err");
     DCAI[a]=dcaiLoad(a).concat([{q,a:j.answer||""}]);dcaiSave(a)}
-  catch(e){const m=e.message;DCAI_ERR[a]=m==="nofn"?"المساعد ما تفعّل للحين — المشرف يرفع دالة ajf-dc في Supabase.":m==="nokey"?"مفتاح Gemini ناقص في Supabase.":m==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":m==="out"?"سجّل دخولك أول.":"تعذّر الاتصال، جرّب مرة ثانية.";if(m!=="out")setTimeout(()=>{const t=$("dcaiQ");if(t&&!t.value)t.value=q},0)}
+  catch(e){const m=e.message;DCAI_ERR[a]=m==="nofn"?"المساعد ما تفعّل للحين — المشرف يرفع دالة ajf-dc في Supabase.":m==="nokey"?"مفتاح Gemini ناقص في Supabase.":m==="aierr"?"المساعد غير متاح لحظياً لكثرة الطلبات — يُرجى إعادة المحاولة بعد دقيقة.":m==="out"?"سجّل دخولك أول.":"تعذّر الاتصال، جرّب مرة ثانية.";if(m!=="out")setTimeout(()=>{const t=$("dcaiQ");if(t&&!t.value)t.value=q},0)}
   DCAI_BUSY[a]="";if(dcAi&&dcAir===a)renderDCAI()}
 function renderDC(){
   if(dcAi)return renderDCAI();
@@ -3921,14 +3921,14 @@ async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e
 const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 let TIMTAB="tv";
 const timTabs=()=>!hOK()?`<div class="bd-days tabs"><button class="on" disabled>📢 التعاميم${CIRCN?" · "+CIRCN:""}</button><button disabled style="opacity:.45">🔒 اشتراطات السفر (تحت المراجعة)</button></div>`:`<div class="bd-days tabs"><button data-ttab="tv" class="${TIMTAB==="tv"?"on":""}">🛂 اشتراطات السفر</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
-let tvP=null;const tvLoad=()=>window.TV?Promise.resolve():tvP||(tvP=(window.TVKB?Promise.resolve():ldJs("tvkb.js?v=12")).then(()=>window.TV||ldJs("tv.js?v=24")).catch(e=>{tvP=null;throw e}));
+let tvP=null;const tvLoad=()=>window.TV?Promise.resolve():tvP||(tvP=(window.TVKB?Promise.resolve():ldJs("tvkb.js?v=12")).then(()=>window.TV||ldJs("tv.js?v=25")).catch(e=>{tvP=null;throw e}));
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 let drP=null;const drLoad=()=>window.DR?Promise.resolve():drP||(drP=ldJs("dr.js?v=16").catch(e=>{drP=null;throw e}));
 /* رحلات اليوم لعمود «الرحلات» في توزيع العمل (بدون الملغاة، وبدون شركات اللوحة فقط مثل G9) */
 window.wdFlights=k=>{try{const d=new Date(k+"T00:00:00Z");return flightsOn(d).filter(f=>!f.off&&formOk(f)&&((LV(d).flights||{})[f.n]||{}).s!=="canceled").map(f=>({n:f.n,t:f.t,d:f.dest||""}))}catch(e){return[]}};
 let wdP=null;const wdLoad=()=>window.WD?Promise.resolve():wdP||(wdP=ldJs("wd.js?v=10").catch(e=>{wdP=null;throw e}));
 let qzP=null;const qzLoad=()=>window.QZ?Promise.resolve():qzP||(qzP=ldJs("quiz.js?v=17").catch(e=>{qzP=null;throw e}));
-let timP=null;const timLoad=()=>window.CIRCM?Promise.resolve():timP||(timP=ldJs("circ.js?v=30").catch(e=>{timP=null;throw e}));
+let timP=null;const timLoad=()=>window.CIRCM?Promise.resolve():timP||(timP=ldJs("circ.js?v=31").catch(e=>{timP=null;throw e}));
 function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&AUTH.me.admin),seen=circSeen();
   const card=(c,terms,open)=>`<details class="ci ${c.id===CIRC[0].id&&c.id!==seen?"new":""}" ${open?"open":""}><summary><div class="h"><div><b>${hiLite(c.t,terms)}</b><small>${escT(c.d||"")}${c.by?" · "+escT(c.by):""}</small></div><span class="ch">⌄</span></div>${terms?`<p class="sn">${hiLite(snip(c.b||"",terms),terms)}</p>`:""}</summary><p>${hiLite(c.b||"",terms)}</p>${adm?`<div class="cact"><button class="ed" data-ced="${escT(c.id)}">تعديل</button><button class="x" data-cdel="${escT(c.id)}">حذف</button></div>`:""}</details>`;
   if(!CIRC.length){L.innerHTML=`<div class="bd-empty">ما فيه تعاميم حالياً</div>`;return}

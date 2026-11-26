@@ -288,7 +288,7 @@ async function askStream(q,h){const r=await fetch(FN,{method:"POST",headers:{"Co
 async function ask(){const q=(S.aq||"").trim();if(q.length<2||S.abusy)return;S.abusy=true;S.aerr="";S.pending=q;S.aq="";try{localStorage.removeItem("ajf_ax_q")}catch(x){}paint();
   try{const h=(S.th||[]).slice(-6).map(t=>({q:t.q,a:t.a}));S.partial="";const j=await askStream(q,h);S.partial="";
     S.th=(S.th||[]).concat([{q,a:j.answer||"",src:j.src||[],tm:j.tm||null}]);thSave()}
-  catch(e){S.partial="";S.aq=q;S.aerr=e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي."+(AUTH.me&&AUTH.me.admin&&e.d?`<br><small dir="ltr" style="opacity:.7;word-break:break-all">${E(e.d)}</small>`:""):E(errTxt(e))}
+  catch(e){S.partial="";S.aq=q;S.aerr=e.message==="nokey"?"المساعد غير مفعّل بعد (مفتاح Gemini ناقص).":e.message==="aierr"?"المساعد غير متاح لحظياً لكثرة الطلبات — يُرجى إعادة المحاولة بعد دقيقة."+(AUTH.me&&AUTH.me.admin&&e.d?`<br><small dir="ltr" style="opacity:.7;word-break:break-all">${E(e.d)}</small>`:""):E(errTxt(e))}
   S.abusy=false;paint()}
 async function sumAll(btn){btn.disabled=true;try{let all=[],off=0;for(;;){const j=await R("ajf_circ_list",{p_offset:off,p_limit:100});all=all.concat(j.rows);off+=100;if(off>=j.n)break}
     const todo=all.filter(r=>!AI(r));let i=0,bad=0;for(const r of todo){i++;btn.textContent=`🤖 ${i}/${todo.length}: ${r.title.slice(0,30)}`;

@@ -521,7 +521,7 @@ const verdict=a=>{const t=String(a||"");const i=t.lastIndexOf("الخلاصة");
   const lv=/⛔|لا يُسمح|لا يسمح/.test(z)?"x":/⚠️|إذا معه|بشرط/.test(z)?"w":/✅|يُسمح له|يسمح له/.test(z)?"ok":"w";return{lv,k:ln.replace(/\*+/g,"").replace(/^الخلاصة:?\s*/,"").trim()}};
 async function callAI(q,h){const r=await fetch(SB_URL+"/functions/v1/ajf-dc",{method:"POST",headers:{"Content-Type":"application/json",apikey:SB_KEY},body:JSON.stringify({token:AUTH.tok||"",device:AUTH.dev,kind:"tim",ctx:ctxText(),q,h})});
   if(r.status===404)throw new Error("nofn");const j=await r.json();if(j.s==="out")throw new Error("out");if(j.s==="nokey")throw new Error("nokey");if(j.s!=="ok")throw new Error(j.s||"aierr");return j.answer||""}
-const aiErr=m=>m==="out"?"سجّل دخولك أول.":m==="nokey"?"مفتاح Gemini ناقص في Supabase.":m==="aierr"?"المساعد مشغول أو وصل الحد المجاني بالدقيقة — جرّب بعد شوي.":"تعذّر الاتصال، جرّب مرة ثانية.";
+const aiErr=m=>m==="out"?"سجّل دخولك أول.":m==="nokey"?"مفتاح Gemini ناقص في Supabase.":m==="aierr"?"تتعذّر مراجعة التعاميم حالياً لكثرة الطلبات — يُرجى إعادة المحاولة بعد دقيقة.":"تعذّر الاتصال، جرّب مرة ثانية.";
 function ilPairs(){const L=S.legs,ps=[];if(L.length<2||S.ticket!=="sep")return ps;for(let i=0;i<L.length-1;i++){const a=L[i].car,b=L[i+1].car;if(a&&b&&a!==b&&!ps.includes(a+">"+b))ps.push(a+">"+b)}return ps}
 function parseIl(a){const il={};String(a||"").split("\n").forEach(x=>{const m=x.replace(/\*+/g,"").match(/🧳\s*([A-Z0-9]{2})\s*[>←→\-–]+\s*([A-Z0-9]{2})\s*:\s*(نعم|لا|غير مذكور)\s*[—–\-:]?\s*(.*)/);if(m)il[m[1]+">"+m[2]]={v:m[3]==="نعم"?"yes":m[3]==="لا"?"no":"unk",src:m[4]&&m[4].trim()?"تعميم: "+m[4].trim():"تعاميم المحطة"}});return il}
 async function reviewCirc(){let tok=S.out;S.cv={st:"run"};S.out=analyze(P());tok=S.out;paintOut();
