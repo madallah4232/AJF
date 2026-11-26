@@ -110,7 +110,7 @@ function analyze(P){TK=P.ticket||"";const legs=P.legs.filter(l=>l.to),pts=["AJF"
   const fc=final,e=entry(P,fc,{final,car:[legs[legs.length-1].car].filter(Boolean)});
   out.push({k:"dst",ic:"🛬",t:`الوجهة: ${apLabel(pts[pts.length-1])}`,lv:e.lv,head:e.head,L:e.L});
   out.forEach(c=>{lvAll=worse(lvAll,c.lv)});
-  const needs=[];out.forEach(c=>{if(c.lv==="w"||c.lv==="x"){const h=c.head||(c.L.find(l=>l.lv===c.lv)||{}).t||"";needs.push(c.t+": "+h)}});
+  const needs=[];out.forEach(c=>{if(!c.circ&&(c.lv==="w"||c.lv==="x")){const h=c.head||(c.L.find(l=>l.lv===c.lv)||{}).t||"";needs.push(c.t+": "+h)}});
   const missing=[];if(!P.ticket&&legs.length>1)missing.push("نوع التذكرة");
   const allL=out.flatMap(c=>c.L.concat(c.ent?c.ent.L:[]));if(P.age==null&&allL.some(l=>l.cond&&/عمر/.test(l.cond)))missing.push("العمر");if(!P.sex&&allL.some(l=>l.cond&&/رجل|امرأة/.test(l.cond)))missing.push("الجنس");
   return{cards:out,lv:lvAll,needs,missing,final,pts}}
@@ -188,6 +188,35 @@ const CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;ali
 .tv-req{font-size:14px;line-height:1.7}.tv-req ul{margin:4px 0 0;padding-inline-start:20px}.tv-req b{color:#f0614a}.tv-req.o b{color:#f0b429}
 .tv-cv{border-radius:16px;padding:12px;border:1px solid var(--line);background:var(--panel);display:grid;gap:8px}.tv-cv .a{font-size:14px;line-height:1.75}
 .tv-wait{display:flex;gap:8px;align-items:center;font-size:14px}
+.tv-hero{border-radius:20px;padding:16px;display:grid;gap:12px;border:1px solid var(--line);background:var(--panel)}
+.tv-hero.ok{background:linear-gradient(160deg,rgba(60,196,124,.22),rgba(60,196,124,.05));border-color:rgba(60,196,124,.45)}
+.tv-hero.w{background:linear-gradient(160deg,rgba(240,180,41,.22),rgba(240,180,41,.05));border-color:rgba(240,180,41,.45)}
+.tv-hero.x{background:linear-gradient(160deg,rgba(240,97,74,.25),rgba(240,97,74,.06));border-color:rgba(240,97,74,.5)}
+.tv-hero.p{background:var(--panel)}
+.tv-hero-t{display:flex;gap:12px;align-items:center}.tv-hero-t b{display:block;font-size:22px;line-height:1.2}.tv-hero-t small{color:var(--muted);font-size:13px;line-height:1.5}
+.tv-big{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-weight:900;color:#111;background:#8a9bb0}
+.tv-hero.ok .tv-big{background:#3cc47c}.tv-hero.w .tv-big{background:#f0b429}.tv-hero.x .tv-big{background:#f0614a}.tv-hero.p .tv-big{background:#333;color:#ddd;animation:tvp 1.2s ease-in-out infinite}
+@keyframes tvp{50%{opacity:.4}}
+.tv-route{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:10px;border-radius:14px;background:rgba(0,0,0,.35)}
+.tv-rp{display:grid;text-align:center}.tv-rp b{font-size:14px}.tv-rp small,.tv-ra small{font-size:11px;color:var(--muted);letter-spacing:.5px}
+.tv-ra{display:grid;text-align:center;padding:0 4px}.tv-ra i{font-style:normal;color:var(--muted);font-size:16px;line-height:1}
+.tv-who{display:flex;flex-wrap:wrap;gap:6px}.tv-who span{font-size:12px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--ink)}
+.tv-sec{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px}
+.tv-sec h4,.tv-h4,.tv-ai h4{margin:0;font-size:14px;font-weight:700;color:var(--muted)}.tv-h4{margin:6px 4px -2px}
+.tv-sec.need{border-color:rgba(240,180,41,.4)}.tv-sec.need.x{border-color:rgba(240,97,74,.45)}.tv-sec.need.x .tv-need{background:rgba(240,97,74,.1);border-inline-start-color:#f0614a}.tv-need{font-size:15px;line-height:1.6;padding:10px 12px;border-radius:12px;background:rgba(240,180,41,.1);border-inline-start:3px solid #f0b429}
+.tv-sec.circ.hit.x{border-color:rgba(240,97,74,.5)}.tv-sec.circ.hit.w{border-color:rgba(240,180,41,.45)}
+.tv-cl{display:flex;gap:10px;align-items:flex-start;font-size:15px;line-height:1.6}.tv-cl .tv-mk{margin-top:3px}
+.tv-more summary{cursor:pointer;font-size:12.5px;color:var(--muted);list-style:none;padding:4px 0}.tv-more summary::-webkit-details-marker{display:none}.tv-more summary::before{content:"▸ ";}.tv-more[open] summary::before{content:"▾ "}
+.tv-more .a{font-size:13.5px;line-height:1.75;padding-top:6px;color:var(--ink)}.tv-more{display:grid;gap:8px}
+.tv-tl{display:grid;gap:0;position:relative}
+.tv-st{position:relative;display:flex;gap:12px;padding-bottom:14px}.tv-st:not(:last-child)::after{content:"";position:absolute;inset-inline-start:15px;top:34px;bottom:2px;width:2px;background:var(--line)}
+.tv-dot{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:15px;color:#111;z-index:1}
+.tv-st.ok .tv-dot{background:#3cc47c}.tv-st.w .tv-dot{background:#f0b429}.tv-st.x .tv-dot{background:#f0614a}.tv-st.i .tv-dot{background:#8a9bb0}
+.tv-st-b{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:8px}
+.tv-st.x .tv-st-b{border-color:rgba(240,97,74,.45)}.tv-st.w .tv-st-b{border-color:rgba(240,180,41,.35)}
+.tv-st-h small{display:block;font-size:11.5px;color:var(--muted)}.tv-st-h b{display:block;font-size:16px}.tv-st-h span{display:block;font-size:14px;line-height:1.6;margin-top:2px}
+.tv-skel{height:16px;border-radius:8px;background:linear-gradient(90deg,#161616,#222,#161616);background-size:200% 100%;animation:tvs 1.2s linear infinite}.tv-skel.s{width:60%}
+@keyframes tvs{to{background-position:-200% 0}}
 .tv-pk{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;min-width:0;background:var(--raise,#141414);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:15px;text-align:start}.tv-pk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tv-pk i{font-style:normal;color:var(--muted);flex:none}.tv-pk.e span{color:var(--muted)}
 .tv-ov{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:flex-end}
 .tv-sh{width:100%;box-sizing:border-box;max-height:88vh;background:#0b0b0b;border-top:1px solid #262626;border-radius:20px 20px 0 0;display:flex;flex-direction:column;padding:12px 12px calc(12px + env(safe-area-inset-bottom));gap:10px;direction:rtl;color:#f2f2f2;font-family:var(--body,system-ui)}
@@ -284,18 +313,31 @@ function paint(){if(!root)return;
   <button class="tv-go" id="tvGo">🔎 افحص الاشتراطات</button>
   <div id="tvOut">${outHTML()}</div></div>`}
 function lineH(l){return`<div class="tv-l">${mk(l.lv)}<div>${l.cond?`<em>إذا ${E(l.cond)}: </em>`:""}${E(l.t)}${l.src?`<small>المصدر: ${l.u?`<a href="${E(l.u)}" target="_blank" rel="noopener">${E(l.src)}</a>`:E(l.src)}</small>`:""}</div></div>`}
+/* ---------- عرض النتيجة ---------- */
+const VT={ok:["✓","يُقبل للسفر","القواعد والتعاميم ما فيها ما يمنع"],w:["!","يُقبل بشرط","تأكد من النقاط تحت قبل إصدار بطاقة الصعود"],x:["✕","لا يُقبل","بالوضع الحالي ما يمشي — شوف السبب تحت"]};
+function heroH(o,lv,pending){const p=P(),v=VT[lv],pts=o.pts;
+  const route=pts.map((a,i)=>`<span class="tv-rp"><b>${E(a==="AJF"?"الجوف":apN(a))}</b><small>${E(a.startsWith("C:")?"":a)}</small></span>${i<pts.length-1?`<span class="tv-ra"><i>←</i><small>${E(p.legs[i].car||"")}</small></span>`:""}`).join("");
+  const who=[cn(p.nat),p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"",p.legs.length>1?(p.ticket==="one"?"تذكرة وحدة":"تذاكر منفصلة"):""].filter(Boolean);
+  return`<div class="tv-hero ${pending?"p":lv}"><div class="tv-hero-t"><span class="tv-big">${pending?"…":v[0]}</span><div><b>${pending?"جاري الفحص":v[1]}</b><small>${pending?"نراجع القواعد وتعاميم المحطة — لا تقرر قبل ما يخلص":v[2]}</small></div></div>
+    <div class="tv-route">${route}</div><div class="tv-who">${who.map(w=>`<span>${E(w)}</span>`).join("")}</div></div>`}
 function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-empty">${E(o.err)}</div>`;
   const cv=S.cv||{st:"run"};
-  if(cv.st==="run")return`<div class="tv-v w"><div class="tv-wait"><b>⏳ جاري مراجعة تعاميم المحطة…</b></div><small>الحكم يطلع بعد ما يخلص فحص القواعد والتعاميم مع بعض — لا تقرر قبلها.</small></div>`+cardsH(o);
+  if(cv.st==="run")return heroH(o,"w",true)+`<div class="tv-sec"><div class="tv-skel"></div><div class="tv-skel s"></div></div>`+cardsH(o);
   const lv=cv.st==="ok"?worse(o.lv,cv.lv):worse(o.lv,"w");
-  const needs=[...o.needs];if(cv.st==="ok"&&cv.lv!=="ok"&&cv.k)needs.unshift("📢 التعاميم: "+cv.k);if(cv.st!=="ok")needs.unshift("ما تمت مراجعة التعاميم — اضغط «أعد مراجعة التعاميم»");
-  const V={ok:["✅ يُقبل للسفر (القواعد + التعاميم)","ok"],w:["⚠️ يُقبل بشرط — تأكد من التالي","w"],x:["⛔ لا يُقبل بالوضع الحالي","x"]}[lv];
-  return`<div class="tv-v ${V[1]}"><b>${V[0]}</b>${lv!=="ok"?`<ul>${needs.map(n=>`<li>${E(n)}</li>`).join("")}</ul>`:""}</div>
-    <div class="tv-cv"><b>📢 مراجعة تعاميم المحطة</b>${cv.st==="ok"?`<div class="a">${fmt(cv.a)}</div>`:`<div class="tv-note">${E(cv.err||"تعذّرت المراجعة")}</div><button class="tv-sm" id="tvCv">↻ أعد مراجعة التعاميم</button>`}</div>`+cardsH(o)+aiH()}
-function cardsH(o){const cv=S.cv||{};return o.cards.map(c=>`<div class="tv-c"><div class="h">${mk(c.circ?(cv.st==="ok"?worse(c.lv==="w"?"ok":c.lv,cv.lv):"w"):c.lv)}<div><b>${c.ic} ${E(c.t)}</b>${c.head?`<span>${E(c.head)}</span>`:""}</div></div>
-      ${c.L.map(lineH).join("")}
-      ${c.ent?`<div class="tv-sub"><b>🛂 إذن الدخول لـ ${E(cn(apC(o.pts[o.cards.indexOf(c)])))} (لو طلع من المطار): ${E(c.ent.head)}</b>${c.ent.L.map(lineH).join("")}</div>`:""}</div>`).join("")}
-function aiH(){return`<div class="tv-ai"><b>🤖 كمّل مع المساعد</b>
+  const needs=[...o.needs];if(cv.st==="ok"&&cv.lv!=="ok"&&cv.k)needs.unshift("📢 التعاميم: "+cv.k);if(cv.st!=="ok")needs.unshift("ما تمت مراجعة التعاميم — أعد المراجعة تحت");
+  return heroH(o,lv)+(lv!=="ok"?`<div class="tv-sec need ${lv}"><h4>${lv==="x"?"سبب عدم القبول":"المطلوب قبل القبول"}</h4>${needs.map(n=>`<div class="tv-need">${E(n.replace(/^[^:]+:\s*/,m=>m))}</div>`).join("")}</div>`:"")+circH(cv)+`<h4 class="tv-h4">تفاصيل المسار</h4>`+cardsH(o)+aiH()}
+function circH(cv){if(cv.st!=="ok")return`<div class="tv-sec"><h4>📢 تعاميم المحطة</h4><div class="tv-note">${E(cv.err||"تعذّرت المراجعة")}</div><button class="tv-sm" id="tvCv">↻ أعد مراجعة التعاميم</button></div>`;
+  const ls=String(cv.a||"").split("\n").map(x=>x.replace(/\*+/g,"").trim()).filter(x=>/^📢/.test(x)).map(x=>x.replace(/^📢\s*(التعاميم|التعميم)?\s*:?\s*/,""));
+  const none=!ls.length||ls.every(x=>/لا يوجد تعميم|ما فيه تعميم|لا توجد تعاميم/.test(x));
+  return`<div class="tv-sec circ ${none?"":"hit "+cv.lv}"><h4>📢 تعاميم المحطة</h4>
+    ${none?`<div class="tv-cl">${mk("ok")}<span>ما فيه تعميم يخص هالراكب أو هالمسار</span></div>`:ls.map(x=>`<div class="tv-cl">${mk(cv.lv==="ok"?"i":cv.lv)}<span>${E(x)}</span></div>`).join("")}
+    <details class="tv-more"><summary>رد المراجعة كامل</summary><div class="a">${fmt(cv.a)}</div></details></div>`}
+function cardsH(o){const cv=S.cv||{};return`<div class="tv-tl">${o.cards.map((c,ci)=>{const lv=c.circ?(cv.st==="ok"?worse(c.lv==="w"?"ok":c.lv,cv.lv):"w"):c.lv;
+  const key=c.L.filter(l=>l.lv==="w"||l.lv==="x"),rest=c.L.filter(l=>!(l.lv==="w"||l.lv==="x"));
+  const ent=c.ent?`<div class="tv-sub"><b>🛂 لو طلع من المطار — دخول ${E(cn(apC(o.pts[ci])))}: ${E(c.ent.head)}</b>${c.ent.L.filter(l=>l.lv==="w"||l.lv==="x").map(lineH).join("")}${c.ent.L.some(l=>!(l.lv==="w"||l.lv==="x"))?`<details class="tv-more"><summary>معلومات إضافية</summary>${c.ent.L.filter(l=>!(l.lv==="w"||l.lv==="x")).map(lineH).join("")}</details>`:""}</div>`:"";
+  return`<div class="tv-st ${lv}"><span class="tv-dot">${MK[lv]}</span><div class="tv-st-b"><div class="tv-st-h">${c.k==="exit"?"":`<small>${c.k==="tr"?"ترانزيت":"الوجهة النهائية"}</small>`}<b>${E(c.t.replace(/^[^:]+:\s*/,""))}</b>${(()=>{const h=c.circ&&cv.st==="ok"&&cv.lv!=="ok"?(cv.lv==="x"?"⛔ حسب تعميم المحطة ما يمشي — شوف «تعاميم المحطة» فوق":"⚠️ حسب تعميم المحطة: بشرط — شوف «تعاميم المحطة» فوق"):c.head;return h?`<span>${E(h)}</span>`:""})()}</div>
+    ${key.map(lineH).join("")}${ent}${rest.length?`<details class="tv-more"><summary>التفاصيل والمصادر (${rest.length})</summary>${rest.map(lineH).join("")}</details>`:""}</div></div>`}).join("")}</div>`}
+function aiH(){return`<div class="tv-ai"><h4>🤖 كمّل مع المساعد</h4>
       <div class="tv-note">إذا عندك معلومة زيادة أو تصحيح اكتبها، والمساعد يعيد الحكم مع القواعد والتعاميم.</div>
       ${S.th.slice(1).map(x=>`<div class="q">👤 ${E(x.q)}</div><div class="a">${fmt(x.a)}</div>`).join("")}
       <textarea id="tvAq" rows="2" placeholder="اكتب متابعة أو تصحيح، مثلاً «إقامته السعودية باقي عليها 4 شهور»">${E(S.aq)}</textarea>
