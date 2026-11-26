@@ -1,5 +1,5 @@
-/* offline support: pages/js network-first with 0.8s cache fallback, json always network-first, audio and icons cache-first */
-const C="ajf-v171";
+/* offline support: pages/js cache-first with background update, json always network-first, audio and icons cache-first */
+const C="ajf-v172";
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(["./","index.html","manifest.json","icon-192.png"]).catch(()=>{})))});
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",e=>{
@@ -9,16 +9,14 @@ self.addEventListener("fetch",e=>{
     ?caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const cp=res.clone();caches.open(C).then(c=>c.put(e.request,cp));return res}))
     :fresh(e,/\.json$/.test(u.pathname)));
 });
-/* الصفحة والسكربتات: الشبكة أولاً، لكن إذا تأخرت أكثر من 0.8 ثانية تفتح النسخة المحفوظة فوراً (والجديدة تتحفظ للفتحة الجاية).
-   بيانات الرحلات (.json) تبقى من الشبكة دائماً بدون مهلة */
+/* الصفحة والسكربتات: تفتح فوراً من النسخة المحفوظة في الجوال، والنسخة الجديدة تنزل بالخلفية للفتحة الجاية.
+   بيانات الرحلات (.json) تبقى من الشبكة دائماً */
 function fresh(e,data){
   const net=fetch(e.request,{cache:"no-cache"}).then(res=>{if(res.ok){const cp=res.clone();caches.open(C).then(c=>c.put(e.request,cp))}return res});
   const cached=()=>caches.match(e.request,{ignoreSearch:true});
   if(data)return net.catch(cached);
   e.waitUntil(net.catch(()=>{}));
-  return new Promise(ok=>{let done=false;const go=r=>{if(!done&&r){done=true;ok(r)}};
-    net.then(go,()=>cached().then(r=>r?go(r):go(Response.error())));
-    setTimeout(()=>cached().then(go),800)});
+  return cached().then(r=>r||net);
 }
 /* تنبيهات وصول الرحلات (Web Push): نفس tag يستبدل التنبيه السابق مثل لوحة المطار */
 self.addEventListener("push",e=>{let d={};try{d=e.data?e.data.json():{}}catch(x){d={body:e.data&&e.data.text()}}

@@ -23,16 +23,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Patrick+Hand&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<style>/* شاشة فتح ثابتة: لا يظهر شيء ناقص — الرئيسية تنكشف مرة وحدة وهي جاهزة */
-html.ld,html.ld body{background:#000}
-html.ld body>*:not(#pre){visibility:hidden!important}
-#pre{position:fixed;inset:0;z-index:99;background:#000;display:grid;place-items:center}
-#pre img{height:34px;background:#fff;border-radius:9px;padding:4px 8px}
-html:not(.ld) #pre{display:none}
-</style>
-<script>document.documentElement.classList.add("ld");
-window.ajfReady=function(){if(ajfReady.d)return;ajfReady.d=1;document.documentElement.classList.remove("ld");var p=document.getElementById("pre");if(p)p.remove()};
-setTimeout(ajfReady,3000);/* أمان: ما تعلق الشاشة أبداً */</script>
 <style>
 /* Layout idea: a night-shift departures board — live "next departure" up top, a week strip that reads as a pressure chart, a day timeline, then the board itself. */
 :root{
@@ -1064,7 +1054,6 @@ html.eco .fm-v.fm-w.on{background:#000}
 <script>/* الشكل الأسود الصافي معتمد للجميع (2026-11-23) */document.documentElement.classList.add("eco");try{localStorage.removeItem("ajf_eco")}catch(e){}</script>
 </head>
 <body>
-<div id="pre" aria-hidden="true"><img src="media/sgs-logo.png" alt=""></div>
 <div class="gate" id="gate" hidden><div class="gate-c" id="gateC"></div></div>
 <div class="dlyc" id="adm" role="dialog" aria-modal="true" aria-labelledby="admT" hidden style="grid-template-rows:auto 1fr">
   <div class="trk-top">
@@ -1099,6 +1088,9 @@ html.eco .fm-v.fm-w.on{background:#000}
   <div class="hub-g" id="hubG"></div>
   <div class="hub-f">SGS · Saudi Ground Services · AJF Station</div>
 </div></div>
+<script>/* دخول فوري: الرئيسية تظهر كاملة من آخر نسخة محفوظة، والتحديث يكمل بصمت */
+try{if(localStorage.getItem("ajf_tok")){const h=JSON.parse(localStorage.getItem("ajf_hub")||"null");if(h&&h.g){document.getElementById("hubHi").innerHTML=h.h||"";document.getElementById("hubG").innerHTML=h.g;
+document.getElementById("hubClk").textContent=new Date(Date.now()+3*36e5).toISOString().slice(11,16)}}}catch(e){}</script>
 <div class="bd" id="bd" role="dialog" aria-modal="true" aria-labelledby="bdT" hidden>
   <div class="trk-top">
     <button class="trk-back" id="bdBack" aria-label="رجوع للرئيسية"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -1293,7 +1285,7 @@ async function getDoc(name){if(DOCC[name])return DOCC[name];
   const bin=atob(j.content),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return DOCC[name]=u}
 function devLabel(){const u=navigator.userAgent;const m=/iPhone|iPad|Android|Windows|Macintosh/.exec(u);const b=/CriOS|Chrome/.test(u)?"Chrome":/FxiOS|Firefox/.test(u)?"Firefox":/Safari/.test(u)?"Safari":"متصفح";
   const pwa=(navigator.standalone||matchMedia("(display-mode: standalone)").matches)?" · من الشاشة الرئيسية":"";return (m?m[0]:"جهاز")+" · "+b+pwa}
-function authSave(){try{AUTH.tok?localStorage.setItem("ajf_tok",AUTH.tok):localStorage.removeItem("ajf_tok");localStorage.setItem("ajf_me",JSON.stringify(AUTH.me))}catch(e){}}
+function authSave(){try{AUTH.tok?localStorage.setItem("ajf_tok",AUTH.tok):(localStorage.removeItem("ajf_tok"),localStorage.removeItem("ajf_hub"));localStorage.setItem("ajf_me",JSON.stringify(AUTH.me))}catch(e){}}
 function authOut(msg){pushOff();const pb=$("puBan");if(pb)pb.remove();AUTH.tok=null;AUTH.me=null;authSave();for(const k in DOCC)delete DOCC[k];try{KB=null}catch(e){}
   $("acctBtn").hidden=true;$("adm").hidden=true;gateShow(msg||"")}
 /* تنبيه على الشاشة للمشرف: أول ما يزيد عدد طلبات الدخول المعلّقة */
@@ -3863,6 +3855,7 @@ function hubPaint(){
   info.dr=["",""];info.wd=["",""];const BL=BOARDS.filter(B=>B.own?drOwn():B.sup?wdOK():true);/* التقرير اليومي: يظهر في الرئيسية للمالك فقط (15024232) */
   const g=$("hubG");if(g.children.length!==BL.length)g.innerHTML=BL.map(B=>`<button class="hub-c" data-b="${B.id}" style="--c:${B.c}"><div class="ic">${svgI(B.ic,24)}</div><div><b>${B.t}</b><span>${B.s}</span><span class="nf" style="color:${B.c}"></span></div><em></em></button>`).join("");
   BL.forEach(B=>{const c=g.querySelector(`[data-b="${B.id}"]`);c.querySelector(".nf").textContent=info[B.id][0];c.querySelector("em").textContent=info[B.id][1]});
+  try{localStorage.setItem("ajf_hub",JSON.stringify({h:$("hubHi").innerHTML,g:g.innerHTML}))}catch(e){}
 }
 function hubClock(){const e=$("hubClk");if(e)e.textContent=fmt(NOW.mins)}
 function hubShow(anim){BOARD=null;const h=$("hub");h.hidden=false;h.classList.remove("away");hubPaint();hubClock();circLoad();
@@ -3994,8 +3987,6 @@ function bootShow(){const b=$("boot");if(!b||!AUTH.tok)return;if(!$("cs").hidden
   b.onclick=fin;clearTimeout(bootShow.t);bootShow.t=setTimeout(fin,1700)}
 window.bootShow=bootShow;
 try{if(AUTH.tok&&!DEMO&&csResume()){}else if(AUTH.tok&&!DEMO)bootShow();else hubShow(true)}catch(e){console.error(e);try{hubShow(true)}catch(x){}}
-/* نكشف الشاشة بعد ما تكتمل الرئيسية والخطوط (بحد أقصى 0.7 ثانية للخطوط) */
-requestAnimationFrame(()=>{const f=document.fonts&&document.fonts.ready;Promise.race([f||Promise.resolve(),new Promise(r=>setTimeout(r,700))]).then(()=>requestAnimationFrame(ajfReady))});
 </script>
 
 </body>
