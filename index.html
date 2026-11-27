@@ -3940,7 +3940,7 @@ function bdRender(){const B=$("bdB");
   /* لوحة اشتراطات السفر والتعاميم: مفتوحة للمشرف ومن يعطيه صلاحية (القائمة في ajf_cfg: dcp) */
   if(BOARD==="tim"&&!dcOK()){B.innerHTML=`<div class="dc-lock"><i>🔒</i><b>غير مصرّح لك</b><p>لوحة اشتراطات السفر والتعاميم تحت الصيانة حالياً، ومتاحة فقط لمن يمنحه المشرف الصلاحية.</p><small>بنبلغكم أول ما ترجع.</small></div>`;return}
   /* اشتراطات السفر مقفلة مؤقتاً لمدالله فقط لين تنتهي المراجعة */
-  if(BOARD==="tim"&&!hOK())TIMTAB="circ";
+  if(BOARD==="tim"&&!tvOK())TIMTAB="circ";
   if(BOARD==="tim"&&TIMTAB==="tv"){B.innerHTML=timTabs()+`<div id="tvRoot"><div class="bd-empty">جاري التحميل…</div></div>`;
     tvLoad().then(()=>{const r=$("tvRoot");if(r&&window.TV)TV.mount(r)}).catch(()=>{const r=$("tvRoot");if(r)r.innerHTML=`<div class="bd-empty">تعذّر التحميل، تأكد من الإنترنت</div>`});return}
   if(BOARD==="tim"){B.innerHTML=timTabs()+`<div id="cxRoot" class="cx-root"><div class="bd-empty">جاري التحميل…</div></div>`;
@@ -3951,9 +3951,11 @@ function bdRender(){const B=$("bdB");
 var DCP=(()=>{try{return JSON.parse(localStorage.getItem("ajf_dcp")||"[]")}catch(e){return[]}})(),dcpAt=0;
 async function dcpLoad(force){if(DEMO||!AUTH.tok||(!force&&Date.now()-dcpAt<120e3))return;dcpAt=Date.now();
   try{const j=await rpc("ajf_cfg_get",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:"dcp"});if(j.s==="ok"){DCP=(j.v&&Array.isArray(j.v.l))?j.v.l:[];try{localStorage.setItem("ajf_dcp",JSON.stringify(DCP))}catch(e){}}}catch(e){}}
+/* اشتراطات السفر: مدالله + من يسمح لهم بالاسم */
+const TV_OK=["11023088","15026196"],tvOK=()=>hOK()||!!(AUTH.me&&TV_OK.includes(AUTH.me.emp));
 const dcOK=()=>!!(AUTH.me&&(AUTH.me.admin||DCP.includes(AUTH.me.emp)));
 let TIMTAB="tv";
-const timTabs=()=>!hOK()?`<div class="bd-days tabs"><button class="on" disabled>📢 التعاميم${CIRCN?" · "+CIRCN:""}</button><button disabled style="opacity:.45">🔒 اشتراطات السفر (تحت المراجعة)</button></div>`:`<div class="bd-days tabs"><button data-ttab="tv" class="${TIMTAB==="tv"?"on":""}">🛂 اشتراطات السفر</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
+const timTabs=()=>!tvOK()?`<div class="bd-days tabs"><button class="on" disabled>📢 التعاميم${CIRCN?" · "+CIRCN:""}</button><button disabled style="opacity:.45">🔒 اشتراطات السفر (تحت المراجعة)</button></div>`:`<div class="bd-days tabs"><button data-ttab="tv" class="${TIMTAB==="tv"?"on":""}">🛂 اشتراطات السفر</button><button data-ttab="circ" class="${TIMTAB==="circ"?"on":""}">📢 التعاميم${CIRCN?" · "+CIRCN:""}</button></div>`;
 let tvP=null;const tvLoad=()=>window.TV?Promise.resolve():tvP||(tvP=(window.TVKB?Promise.resolve():ldJs("tvkb.js?v=21")).then(()=>window.TV||ldJs("tv.js?v=33")).catch(e=>{tvP=null;throw e}));
 const ldJs=src=>new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
 let drP=null;const drLoad=()=>window.DR?Promise.resolve():drP||(drP=ldJs("dr.js?v=16").catch(e=>{drP=null;throw e}));
@@ -3972,7 +3974,7 @@ function timPaintList(){const L=$("cqList");if(!L)return;const adm=!!(AUTH.me&&A
 async function cfgSet(k,v){const j=await rpc("ajf_cfg_set",{p_token:AUTH.tok,p_device:AUTH.dev,p_k:k,p_v:v});if(j.s==="out"){authOut();throw new Error("out")}if(j.s!=="ok")throw new Error(j.s)}
 $("bdB").addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const{d,list}=bdFlights();const fOf=n=>list.find(f=>f.n===n);
   if(t.dataset.day!=null){bdDay=+t.dataset.day;bdRender();return}
-  if(t.dataset.ttab){if(t.dataset.ttab==="tv"&&!hOK())return;TIMTAB=t.dataset.ttab;ajfAct("ttab",TIMTAB);bdRender();return}
+  if(t.dataset.ttab){if(t.dataset.ttab==="tv"&&!tvOK())return;TIMTAB=t.dataset.ttab;ajfAct("ttab",TIMTAB);bdRender();return}
   if(t.dataset.dcair){openDC(null,t.dataset.dcair);return}
   if(t.dataset.trc){const f=fOf(t.dataset.trc);if(f)openCS(f,d);return}
   if(t.dataset.ls){const f=fOf(t.dataset.ls);if(f){csCur={f,date:d};openLC()}return}
