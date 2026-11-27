@@ -338,12 +338,14 @@ const mk=l=>`<span class="tv-mk ${l}">${MK[l]}</span>`;
 CSS+=`.tv-hero.p .tv-big{background:none;animation:none;position:relative}.tv-hero.p .tv-big::before{content:"";position:absolute;inset:0;border-radius:50%;border:4px solid #2a2a2a;border-top-color:#f0b429;animation:tvrot .9s linear infinite}
 @keyframes tvrot{to{transform:rotate(360deg)}}
 .tv-scan{background:var(--panel);border:1px solid rgba(240,180,41,.35);border-radius:16px;padding:14px;display:grid;gap:10px}
-.tv-bar{position:relative;height:28px;overflow:hidden;border-radius:14px;background:#151515}.tv-bar::before{content:"";position:absolute;inset:13px 14px auto;border-top:2px dashed #3a3a3a}
-.tv-bar i{position:absolute;top:2px;right:0;font-style:normal;font-size:20px;line-height:24px;animation:tvfly 1.8s linear infinite;will-change:transform}
-@keyframes tvfly{from{transform:translateX(40px)}to{transform:translateX(calc(-100vw))}}
-.tv-stp{display:flex;gap:9px;align-items:center;font-size:14.5px;opacity:0;animation:tvin .35s ease forwards}.tv-stp:nth-of-type(2){animation-delay:.25s}.tv-stp:nth-of-type(3){animation-delay:.55s}.tv-stp:nth-of-type(4){animation-delay:.85s}
+.tv-bar{position:relative;height:46px;overflow:hidden;border-radius:14px;background:#151515}.tv-bar::before{content:"";position:absolute;inset:auto 14px 10px;border-top:2px dashed #3a3a3a}
+.tv-bar b{position:absolute;inset:0;animation:tvmove 2.6s linear infinite;will-change:transform}
+.tv-bar i{position:absolute;right:6px;bottom:4px;font-style:normal;font-size:24px;line-height:28px;color:#f0d9a0;transform-origin:center;animation:tvnear 2.6s ease-in infinite}
+@keyframes tvmove{from{transform:translateX(0)}to{transform:translateX(-82%)}}
+@keyframes tvnear{0%{transform:translateY(-14px) scale(-.35,.35);opacity:0}15%{opacity:.9}80%{opacity:1}100%{transform:translateY(0) scale(-1.25,1.25);opacity:0}}
+.tv-stp{display:flex;gap:9px;align-items:center;font-size:14.5px;animation:tvin .35s ease both}.tv-stp:nth-of-type(2){animation-delay:.25s}.tv-stp:nth-of-type(3){animation-delay:.55s}.tv-stp:nth-of-type(4){animation-delay:.85s}
 .tv-stp.r{color:#f0d9a0;font-weight:600}.tv-stp small{color:var(--muted);font-weight:400}
-@keyframes tvin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes tvin{from{transform:translateY(5px)}to{transform:none}}
 .tv-spin{flex:0 0 20px;width:20px;height:20px;border-radius:50%;border:3px solid #2a2a2a;border-top-color:#f0b429;animation:tvrot .9s linear infinite;box-sizing:border-box}
 .tv-wait{opacity:.4;pointer-events:none;filter:saturate(.5)}
 .tv-fu{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:8px}
@@ -352,7 +354,7 @@ CSS+=`.tv-hero.p .tv-big{background:none;animation:none;position:relative}.tv-he
 .tv-fv{display:flex;gap:10px;align-items:center;border-radius:12px;padding:10px 12px;border:1px solid var(--line);font-size:15px}.tv-fv .tv-mk{width:26px;height:26px;font-size:14px;margin:0}.tv-fv small{display:block;color:var(--muted);font-size:12px;font-weight:400}
 .tv-fv.ok{background:rgba(60,196,124,.12);border-color:rgba(60,196,124,.45)}.tv-fv.w{background:rgba(240,180,41,.12);border-color:rgba(240,180,41,.45)}.tv-fv.x{background:rgba(240,97,74,.14);border-color:rgba(240,97,74,.5)}
 .tv-up{background:none;border:0;color:#b9cbff;font:inherit;font-size:13px;padding:0;text-decoration:underline;justify-self:start}
-@media (prefers-reduced-motion:reduce){.tv-bar i,.tv-spin,.tv-hero.p .tv-big::before{animation-duration:3s}.tv-stp{animation:none;opacity:1}}`;
+@media (prefers-reduced-motion:reduce){.tv-bar b,.tv-bar i,.tv-spin,.tv-hero.p .tv-big::before{animation-duration:3s}.tv-stp{animation:none;opacity:1}}`;
 /* ---------- قائمة اختيار مع بحث (بدل القوائم العادية) ---------- */
 let EN=null;try{EN=new Intl.DisplayNames(["en"],{type:"region"})}catch(e){}
 const enN=c=>{try{return EN?EN.of(c):""}catch(e){return""}};
@@ -483,7 +485,7 @@ function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-e
 /* الحكم العام = أسوأ حكم بطاقة بعد مراجعة التعاميم (بطاقة فيها تعميم وتمت المراجعة بدون شي يخصه → تصير ✓ مثل ما تظهر في البطاقة) */
 function ovLv(o,cv){const hit=cv.st==="ok"&&circLines(cv).length>0,oLv=o.cards.reduce((a,c)=>worse(a,cardLv(c,cv)),"ok");const L=cv.st==="ok"?(hit?worse(oLv,cv.lv):oLv):worse(oLv,"w");return cv.fu?worse(L,cv.fu):L}
 /* شاشة «جاري الفحص»: طيارة تمشي + خطوات تتعلّم وحدة وحدة */
-function scanH(o){const n=o.cards.length;return`<div class="tv-scan" role="status" aria-live="polite"><div class="tv-bar"><i>✈︎</i></div>
+function scanH(o){const n=o.cards.length;return`<div class="tv-scan" role="status" aria-live="polite"><div class="tv-bar"><b><i>✈︎</i></b></div>
   <div class="tv-stp d">${mk("ok")}<span>قراءة بيانات الراكب والمسار</span></div>
   <div class="tv-stp d">${mk("ok")}<span>قواعد المغادرة والترانزيت والدخول <small>(${n} محطة)</small></span></div>
   <div class="tv-stp r"><span class="tv-spin"></span><span>مراجعة تعاميم المحطة… <small>عادة 10–30 ثانية</small></span></div>
@@ -530,7 +532,7 @@ function cardsH(o){const cv=S.cv||{};return`<div class="tv-tl">${o.cards.map((c,
     ${det.length||ent?`<details class="tv-more"><summary>التفاصيل والمصادر</summary>${det.map(l=>lineH(l)).join("")}${ent}</details>`:""}</div></div>`}).join("")}</div>`}
 function aiH(){return`<div class="tv-ai"><h4>🤖 كمّل مع المساعد</h4>
       <div class="tv-note">إذا عندك معلومة زيادة أو تصحيح اكتبها، والمساعد يحدّث الفحص فوق ويعيد الحكم مع القواعد والتعاميم.</div>
-      ${S.th.slice(1).map(fuH).join("")}${S.busy?`<div class="tv-fu"><div class="q">👤 ${E(S.pq||"")}</div><div class="tv-scan"><div class="tv-bar"><i>✈︎</i></div><div class="tv-stp r"><span class="tv-spin"></span><span>يراجع معلومتك مع القواعد والتعاميم…</span></div></div></div>`:""}
+      ${S.th.slice(1).map(fuH).join("")}${S.busy?`<div class="tv-fu"><div class="q">👤 ${E(S.pq||"")}</div><div class="tv-scan"><div class="tv-bar"><b><i>✈︎</i></b></div><div class="tv-stp r"><span class="tv-spin"></span><span>يراجع معلومتك مع القواعد والتعاميم…</span></div></div></div>`:""}
       <textarea id="tvAq" rows="2" placeholder="اكتب متابعة أو تصحيح، مثلاً «إقامته السعودية باقي عليها 4 شهور»">${E(S.aq)}</textarea>
       <button class="tv-go" id="tvAsk" ${S.busy?"disabled":""}>${S.busy?"… جاري التحليل":"أرسل"}</button></div>
     <div class="tv-note tv-adc">⚖️ حكم ADC في نظام القبول (Altea) هو المرجع الرسمي. هذي الأداة تجهزك قبله وتشرح لك بالعربي، والتعميم الأحدث يتقدم على قاعدة البيانات العامة.</div>
