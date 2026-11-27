@@ -184,6 +184,8 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
       const tv=rules(c,"tvisa").map(r=>[r,match(r,P,x)]).filter(([r,m])=>m[0]).map(([r,m])=>line(r,"i",m[1]));
       card.ent.L=card.ent.L.concat(tv);
       if(bagsOut||tooLong)card.lv=worse(card.lv,e.lv);
+      /* ما يحق له الدخول وهو مضطر يطلع: اتجاه العفش ما يغيّر الحكم — لا نقترح «العفش لين محطة الترانزيت بس» */
+      if(bagsOut&&e.lv==="x"&&lg.bag==="thru"){card.L=card.L.filter(l=>!l.bag);card.L.push({lv:"x",bag:1,t:`🧳 اتجاه العفش ما يغيّر الحكم — سواء انشحن لين ${apN(pts[pts.length-1])} أو لين ${apN(ap)}، لازم يطلع من الجوازات في ${apN(ap)} وما يحق له دخول ${cn(c)}.`,s:`اتجاه العفش ما يغيّر الحكم — ما يحق له دخول ${cn(c)}`})}
       card.head=bagsOut||tooLong?`لازم يطلع من الجوازات في ${apN(ap)} — ${e.head.replace(/^✕\s*/,"")}`:`إذا اضطر يطلع من المطار: ${e.head}`}
     else{if(freeIn&&bagsOut){card.ent=eAny;card.mustExit=1;card.lv=worse(card.lv,eAny.lv)}card.head=twBlock?"⛔ ما يمشي الترانزيت هنا بالوضع الحالي — شوف السبب تحت":forced&&lg.bag==="thru"?`🧳 ما ينفع يتشحن العفش لين ${apN(pts[pts.length-1])}: ${cn(c)} تشترط استلامه في ${apN(ap)}${freeIn?" (وما يحتاج تأشيرة)":""}`:ilNo?`🧳 العفش ينشحن لين ${apN(ap)} بس (ما فيه اتفاقية شحن بين الناقلين) — يستلمه هنا وما يحتاج تأشيرة`:forced&&freeIn?"🧳 العفش ينستلم هنا — وما يحتاج تأشيرة لدخوله":freeIn?"ما يحتاج تأشيرة هنا حتى لو طلع من المطار":"يبقى داخل المطار"}
     if(bagsOut||tooLong)card.mustExit=1;
