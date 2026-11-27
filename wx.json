@@ -1,6 +1,28 @@
 {
-  "fetched": "2026-11-27T22:50:18Z",
+  "fetched": "2026-11-27T23:45:53Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-27T23:00:22.925Z",
+      "obsTime": 1795820400,
+      "reportTime": "2026-11-27T23:00:00.000Z",
+      "temp": 15,
+      "dewp": 2,
+      "wdir": 130,
+      "wspd": 11,
+      "visib": "6+",
+      "altim": 1022,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 272300Z 13011KT CAVOK 15/02 Q1022 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "CAVOK",
+      "clouds": [],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-27T22:00:29.674Z",
@@ -44,39 +66,17 @@
       "cover": "CAVOK",
       "clouds": [],
       "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-27T20:00:18.787Z",
-      "obsTime": 1795809600,
-      "reportTime": "2026-11-27T20:00:00.000Z",
-      "temp": 16,
-      "dewp": 1,
-      "wdir": 120,
-      "wspd": 11,
-      "visib": "6+",
-      "altim": 1023,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 272000Z 12011KT CAVOK 16/01 Q1023 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "CAVOK",
-      "clouds": [],
-      "fltCat": "VFR"
     }
   ],
   "taf": [
     {
       "icaoId": "OESK",
-      "dbPopTime": "2026-11-27T11:12:45.999Z",
-      "bulletinTime": "2026-11-27T11:00:00.000Z",
-      "issueTime": "2026-11-27T11:00:00.000Z",
-      "validTimeFrom": 1795780800,
-      "validTimeTo": 1795888800,
-      "rawTAF": "TAF OESK 271100Z 2712/2818 16012KT CAVOK BECMG 2720/2722 18006KT BECMG 2806/2808 16014KT",
+      "dbPopTime": "2026-11-27T23:06:23.188Z",
+      "bulletinTime": "2026-11-27T23:00:00.000Z",
+      "issueTime": "2026-11-27T23:00:00.000Z",
+      "validTimeFrom": 1795824000,
+      "validTimeTo": 1795932000,
+      "rawTAF": "TAF OESK 272300Z 2800/2906 17010KT CAVOK BECMG 2806/2808 16010KT 9999 FEW040",
       "mostRecent": 1,
       "remarks": "",
       "lat": 29.785,
@@ -86,40 +86,13 @@
       "name": "Al-Jouf Arpt",
       "fcsts": [
         {
-          "timeFrom": 1795780800,
-          "timeTo": 1795809600,
+          "timeFrom": 1795824000,
+          "timeTo": 1795845600,
           "timeBec": null,
           "fcstChange": null,
           "probability": null,
-          "wdir": 160,
-          "wspd": 12,
-          "wgst": null,
-          "wshearHgt": null,
-          "wshearDir": null,
-          "wshearSpd": null,
-          "visib": "6+",
-          "altim": null,
-          "vertVis": null,
-          "wxString": "NSW",
-          "notDecoded": null,
-          "clouds": [
-            {
-              "cover": "NSC",
-              "base": null,
-              "type": null
-            }
-          ],
-          "icgTurb": [],
-          "temp": []
-        },
-        {
-          "timeFrom": 1795809600,
-          "timeTo": 1795845600,
-          "timeBec": 1795816800,
-          "fcstChange": "BECMG",
-          "probability": null,
-          "wdir": 180,
-          "wspd": 6,
+          "wdir": 170,
+          "wspd": 10,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
@@ -141,12 +114,12 @@
         },
         {
           "timeFrom": 1795845600,
-          "timeTo": 1795888800,
+          "timeTo": 1795932000,
           "timeBec": 1795852800,
           "fcstChange": "BECMG",
           "probability": null,
           "wdir": 160,
-          "wspd": 14,
+          "wspd": 10,
           "wgst": null,
           "wshearHgt": null,
           "wshearDir": null,
@@ -158,8 +131,8 @@
           "notDecoded": null,
           "clouds": [
             {
-              "cover": "NSC",
-              "base": null,
+              "cover": "FEW",
+              "base": 4000,
               "type": null
             }
           ],
