@@ -277,6 +277,7 @@ let CSS=`.tv{display:grid;gap:12px;min-width:0}.tv-h{display:flex;gap:10px;align
 .tv-c{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:8px}.tv-c .h{display:flex;gap:8px;align-items:flex-start}.tv-c .h i{font-style:normal;font-size:18px}.tv-c .h b{display:block;font-size:15px}.tv-c .h span{font-size:13px}
 .tv-mk{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:#111}.tv-mk.ok{background:#3cc47c}.tv-mk.w{background:#f0b429}.tv-mk.x{background:#f0614a}.tv-mk.i{background:#8a9bb0}
 .tv-l{display:flex;gap:8px;font-size:13.5px;line-height:1.6}.tv-l .tv-mk{width:20px;height:20px;font-size:11px;margin-top:2px}.tv-l small{display:block;color:var(--muted);font-size:11.5px}.tv-l small a{color:inherit}.tv-l em{font-style:normal;color:#f0b429}
+.tv-why{display:grid;gap:5px;margin-top:6px}.tv-why span{color:#ff5a47;font-weight:800;font-size:15px;line-height:1.45}
 .tv-sub{border-top:1px dashed var(--line);padding-top:8px;display:grid;gap:8px}.tv-sub>b{font-size:13px}
 .tv-ai{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:10px}.tv-ai .a{font-size:14px;line-height:1.75;white-space:normal}.tv-ai .q{font-size:13px;color:var(--muted)}
 .tv-note{font-size:12px;color:var(--muted);line-height:1.6}
@@ -456,11 +457,19 @@ function lineH(l,btn){const q=l.qk?`<div class="tv-q"><b>❓ ${E(l.q)}</b>${btn?
   return`<div class="tv-l">${mk(l.lv)}<div>${l.cond?`<em>إذا ${E(l.cond)}: </em>`:""}${l.qk&&btn?"":E(l.t)}${q}${l.src?`<small>المصدر: ${l.u?`<a href="${E(l.u)}" target="_blank" rel="noopener">${E(l.src)}</a>`:E(l.src)}${l.d?" · "+E(l.d):""}${oldSrc(l.d)&&!l.perm?` <b class="tv-old">⚠️ مصدر قديم — يحتاج مراجعة</b>`:""}</small>`:""}</div></div>`}
 /* ---------- عرض النتيجة ---------- */
 const VT={ok:["✓","Ok to Board — يُقبل","القواعد والتعاميم ما فيها ما يمنع"],w:["!","Conditional — يُقبل بشرط","جاوب «أسئلة التأكيد» وتأكد من النقاط تحت: إذا كلها «نعم» يصير يُقبل"],x:["✕","Don't Board — لا يُقبل","بالوضع الحالي ما يمشي — شوف السبب تحت"]};
+/* أسباب «لا يُقبل» مختصرة تحت الحكم مباشرة */
+function whyX(o,cv){const R=[],pi=(K.SRC.pi||{}).t,
+  cut=(t,soft)=>{t=String(t||"").replace(/[✕⛔❌🚫✖]/g,"").replace(/^\s*(لا يُسمح|لا يسمح)\s*[—:-]?\s*/,"").replace(/\s*—\s*شوف السبب تحت/,"").trim();const i=t.search(soft?/[.؛]\s/:/\s—\s|[.؛،]\s/);t=i>=12?t.slice(0,i):t;return t.length>140?t.slice(0,138)+"…":t};
+  if(cv&&cv.fu==="x"&&cv.fk)R.push(cut(cv.fk,1));
+  if(cv&&cv.st==="ok"&&cv.lv==="x"&&cv.k&&circLines(cv).length)R.push("تعميم المحطة: "+cut(cv.k,1));
+  o.cards.forEach(c=>{if(cardLv(c,cv||{})!=="x")return;const L=c.L.concat(c.ent?c.ent.L:[]),xs=L.filter(l=>l.lv==="x"&&l.src!==pi&&!/^حسب القاعدة العامة/.test(l.t||"")),w=c.t?String(c.t).replace(/^[^:]*:\s*/,"")+": ":"";
+    if(xs.length)xs.forEach(l=>R.push(w+cut(l.qk&&l.ans===0&&l.qno?l.qno:l.t)));else if(c.lv==="x"&&c.head)R.push(w+cut(c.head))});
+  const seen=new Set();return R.filter(t=>t&&!seen.has(t)&&seen.add(t)).slice(0,3)}
 function heroH(o,lv,pending){const p=P(),v=VT[lv],pts=o.pts;
   const route=pts.map((a,i)=>`<span class="tv-rp"><b>${E(a==="AJF"?"الجوف":a.startsWith("C:")?cn(a.slice(2)):apN(a))}</b><small>${E(a.startsWith("C:")?"":a)}</small></span>${i<pts.length-1?`<span class="tv-ra"><i>←</i><small>${E(p.legs[i].car||"")}</small></span>`:""}`).join("");
   const who=[cn(p.nat),p.st==="cit"?"مواطن خليجي":ST_T[p.st]||"",p.legs.length>1?(p.ticket==="one"?"تذكرة وحدة":"تذاكر منفصلة"):"",p.legs.length>1&&S.bagTo===-1?"🚫 بدون عفش":p.legs.length>1&&S.bagTo!=null&&p.legs[S.bagTo]?(()=>{const k=o.cards.findIndex(c=>c.k==="tr"&&c.L.some(l=>l.bag&&l.no));return k>0?"🧳 العفش لين "+apN(o.pts[k])+" بس (ما ينشحن أبعد)":"🧳 العفش لين "+apN(p.legs[S.bagTo].to)})():""].filter(Boolean);
-  const ov=!pending&&S.ovr;
-  return`<div class="tv-hero ${pending?"p":ov?"ok":lv}"><div class="tv-hero-t"><span class="tv-big">${pending?"":ov?"✓":v[0]}</span><div><b>${pending?"جاري الفحص":ov?"Ok to Board — بتجاوز المشرف":v[1]}</b><small>${pending?"نراجع القواعد وتعاميم المحطة — لا تقرر قبل ما يخلص":ov?`الحكم الأصلي: ${VT[lv][1]} · السبب: ${E(S.ovr.r)} · ${E(S.ovr.by)}`:v[2]}</small></div></div>
+  const ov=!pending&&S.ovr,why=pending||lv!=="x"?[]:whyX(o,S.cv);
+  return`<div class="tv-hero ${pending?"p":ov?"ok":lv}"><div class="tv-hero-t"><span class="tv-big">${pending?"":ov?"✓":v[0]}</span><div><b>${pending?"جاري الفحص":ov?"Ok to Board — بتجاوز المشرف":v[1]}</b><small>${pending?"نراجع القواعد وتعاميم المحطة — لا تقرر قبل ما يخلص":ov?`الحكم الأصلي: ${VT[lv][1]} · السبب: ${E(S.ovr.r)} · ${E(S.ovr.by)}`:lv==="x"&&why.length?"السبب:":v[2]}</small>${!pending&&!ov&&lv==="x"&&why.length?`<div class="tv-why">${why.map(t=>`<span>✕ ${E(t)}</span>`).join("")}</div>`:""}</div></div>
     <div class="tv-route">${route}</div><div class="tv-who">${who.map(w=>`<span>${E(w)}</span>`).join("")}</div></div>`}
 function outHTML(){const o=S.out;if(!o)return"";if(o.err)return`<div class="bd-empty">${E(o.err)}</div>`;
   const cv=S.cv||{st:"run"};
