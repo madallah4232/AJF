@@ -133,7 +133,7 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
     if(r.v==="yes")return{lv:"ok",bag:1,t:r.same?`🧳 نفس الناقل (${carN(a)}) — العفش يمشي لآخر محطة.`:`🧳 فيه اتفاقية شحن بين ${nm} حسب تعاميم المحطة — العفش يمشي لآخر محطة.`,s:r.same?"العفش يمشي لآخر محطة (نفس الناقل)":`العفش يمشي لآخر محطة — فيه اتفاقية بين ${nm}`,src:r.src};
     if(r.v==="pend")return{lv:"w",bag:1,t:`🧳 جاري البحث في التعاميم عن اتفاقية شحن بين ${nm}…`,s:"جاري البحث في التعاميم عن اتفاقية الشحن…"};
     if(r.v==="no")return{lv:"i",bag:1,no:1,t:`🧳 ما فيه اتفاقية بين ${nm}${r.circ?" — "+carN(bad)+" من الشركات اللي ما لها اتفاقية مع الخطوط السعودية حسب تعميم المحطة":" حسب تعاميم المحطة"}. العفش ما ينشحن لآخر محطة: ينشحن لين ${apN(ap)} بس، والراكب يستلمه ويسوي قبول من جديد.`,s:`العفش لين ${apN(ap)} بس — ما فيه اتفاقية بين ${nm}`,src:r.src};
-    return{lv:"i",bag:1,no:1,t:`🧳 ما فيه اتفاقية شحن مذكورة في تعاميم المحطة بين ${nm} — الأصل مع التذاكر المنفصلة: العفش ينشحن لين ${apN(ap)} بس، والراكب يستلمه ويسوي قبول من جديد.`,s:`العفش لين ${apN(ap)} بس — ما فيه اتفاقية مذكورة بين ${nm}`}};
+    return{lv:"w",bag:1,no:1,unk:1,t:`🧳 لا يوجد تعميم يؤكد اتفاقية شحن عفش بين ${nm} — تأكد من المشرف. لين ما يتأكد: العفش ينشحن لين ${apN(ap)} بس، والراكب يستلمه ويسوي قبول من جديد.`,s:`العفش لين ${apN(ap)} بس — ما فيه اتفاقية مذكورة بين ${nm}`}};
   const legs=P.legs.filter(l=>l.to),pts=["AJF",...legs.map(l=>l.to)],out=[];
   if(legs.length<1)return null;
   const final=apC(pts[pts.length-1]),x0={final};
@@ -165,7 +165,7 @@ function analyze(P){TK=P.ticket||"";QA=P.qa||{};CP=P;
       if(forced){b1.forEach(r=>{const l=line(r,"w");l.bag=1;card.L.push(l)});card.L.push({lv:"w",bag:1,t:`🧳 لا تشحن العفش لآخر محطة: اشحنه لين ${apN(ap)} بس — الراكب يستلمه هناك ويطلع من الجوازات${freeIn?"":" (ويحتاج إذن دخول لـ "+cn(c)+")"}، وبعدين يشحنه من جديد.`})}
       else{const na=noAg(lg.car,legs[i].car),il=P.ticket==="sep"||na?ilLine(lg.car,legs[i].car,ap):null;
         if(na&&P.ticket!=="sep")card.L.push({lv:"i",t:`مسجلة تذكرة وحدة، لكن ${carN(NO.includes(legs[i].car)?legs[i].car:lg.car)} ما لها اتفاقية مع الخطوط السعودية — فعلياً تذاكر منفصلة.`,s:"ما فيه اتفاقية بين الناقلين — تُعامل تذاكر منفصلة",src:K.SRC.noil.t});
-        if(il&&il.no){bagsOut=true;ilNo=true;card.L.push({lv:"x",bag:1,t:`⛔ اخترت شحن العفش لين ${apN(pts[pts.length-1])} — ما ينفع حسب تعاميم المحطة، فالتحليل مبني على إن العفش ينشحن لين ${apN(ap)} بس.`,s:`اختيار شحن العفش لين ${apN(pts[pts.length-1])} ما ينفع — لين ${apN(ap)} بس`})}
+        if(il&&il.no){bagsOut=true;ilNo=true;card.L.push(il.unk?{lv:"w",bag:1,t:`⚠️ اخترت شحن العفش لين ${apN(pts[pts.length-1])} — لا يوجد تعميم يؤكد الاتفاقية، فالتحليل مبني على إن العفش ينشحن لين ${apN(ap)} بس.`,s:`لا يوجد تعميم يؤكد شحن العفش لين ${apN(pts[pts.length-1])} — تأكد من المشرف`}:{lv:"x",bag:1,t:`⛔ اخترت شحن العفش لين ${apN(pts[pts.length-1])} — ما ينفع حسب تعاميم المحطة، فالتحليل مبني على إن العفش ينشحن لين ${apN(ap)} بس.`,s:`اختيار شحن العفش لين ${apN(pts[pts.length-1])} ما ينفع — لين ${apN(ap)} بس`})}
         card.L.push(il||{lv:"ok",bag:1,t:"🧳 تذكرة وحدة: العفش يمشي لآخر محطة.",s:"العفش يمشي لآخر محطة (تذكرة وحدة)"});
         if(long&&!(il&&il.no)){const sm=K.SRC.msc;bagsOut=true;ilNo=true;card.L=card.L.filter(l=>!(l.bag&&l.lv==="ok"));card.L.push({lv:"i",bag:1,no:1,t:`🧳 الانتظار ${h} ساعة (أكثر من 24) يعتبر توقف (Stopover): العفش ما ينشحن لآخر محطة — ينشحن لين ${apN(ap)} بس، والراكب يستلمه ويطلع من الجوازات.`,s:`العفش لين ${apN(ap)} بس — توقف أكثر من 24 ساعة`,src:sm.t,u:sm.u})}
         if(il&&il.lv!=="ok")bagR.forEach(([r,m])=>card.L.push(line(r,"i",m[1])))}}
