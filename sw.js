@@ -1,5 +1,5 @@
 /* offline support: pages/js cache-first with background update, json always network-first, audio and icons cache-first */
-const C="ajf-v175";
+const C="ajf-v176";
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(["./","index.html","manifest.json","icon-192.png","fonts/ibm-plex-mono-latin-500-normal.woff2","fonts/ibm-plex-mono-latin-600-normal.woff2","fonts/ibm-plex-mono-latin-ext-500-normal.woff2","fonts/ibm-plex-mono-latin-ext-600-normal.woff2","fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2","fonts/ibm-plex-sans-arabic-arabic-500-normal.woff2","fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2","fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2","fonts/ibm-plex-sans-arabic-latin-400-normal.woff2","fonts/ibm-plex-sans-arabic-latin-500-normal.woff2","fonts/ibm-plex-sans-arabic-latin-600-normal.woff2","fonts/ibm-plex-sans-arabic-latin-700-normal.woff2","fonts/ibm-plex-sans-arabic-latin-ext-400-normal.woff2","fonts/ibm-plex-sans-arabic-latin-ext-500-normal.woff2","fonts/ibm-plex-sans-arabic-latin-ext-600-normal.woff2","fonts/ibm-plex-sans-arabic-latin-ext-700-normal.woff2","fonts/readex-pro-arabic-500-normal.woff2","fonts/readex-pro-arabic-600-normal.woff2","fonts/readex-pro-arabic-700-normal.woff2","fonts/readex-pro-latin-500-normal.woff2","fonts/readex-pro-latin-600-normal.woff2","fonts/readex-pro-latin-700-normal.woff2","fonts/readex-pro-latin-ext-500-normal.woff2","fonts/readex-pro-latin-ext-600-normal.woff2","fonts/readex-pro-latin-ext-700-normal.woff2"]).catch(()=>{})))});
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",e=>{
@@ -13,7 +13,7 @@ self.addEventListener("fetch",e=>{
    بيانات الرحلات (.json) تبقى من الشبكة دائماً */
 function fresh(e,data){
   const net=fetch(e.request,{cache:"no-cache"}).then(res=>{if(res.ok){const cp=res.clone();caches.open(C).then(c=>c.put(e.request,cp))}return res});
-  const cached=()=>caches.match(e.request,{ignoreSearch:true});
+  const cached=()=>caches.match(e.request,{ignoreSearch:e.request.mode==="navigate"});
   if(data)return net.catch(cached);
   e.waitUntil(net.catch(()=>{}));
   return cached().then(r=>r||net);
