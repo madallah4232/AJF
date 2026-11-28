@@ -245,5 +245,5 @@ SCH.forEach(c=>R.push({c,s:"twov",lv:"ok",t:"الترانزيت داخل الم�
 SCH.forEach(c=>{const nat=ATV4.concat(Object.keys(ATVN).filter(n=>ATVN[n].includes(c)));
   R.push({c,s:"twov",lv:"w",nat,supNot:["SCH","US","CA"],resNot:SCH.concat(["US","CA","JP","GB"]),qk:"atv_"+c,q:"معه تأشيرة عبور المطار (ATV) لشنغن، أو تأشيرة/إقامة سارية من شنغن أو أمريكا أو كندا أو اليابان؟",qno:"هالجنسية تحتاج تأشيرة عبور المطار (ATV) حتى لو ما طلع من المطار في دول شنغن.",t:"شنغن: تأشيرة عبور المطار مطلوبة لهالجنسية حتى داخل منطقة الترانزيت.",src:"sch_atv"})});
 const FINE={IN:{t:"غرامة على الناقل من 200 ألف إلى 500 ألف روبية لكل راكب أجنبي بدون جواز أو تأشيرة سارية.",src:"in_act"}};
-window.TVKB={R,SRC,D,GCC,AP,CAR,BO,FINE,NOIL,SCH};
+window.TVKB={R,SRC,D,GCC,AP,CAR,BO,FINE,NOIL,SCH,VER:"28-11-2026 · 25"};
 })();
