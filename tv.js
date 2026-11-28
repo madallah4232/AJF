@@ -453,7 +453,7 @@ function paint(){if(!root)return;
     <div class="tv-note">تأشيرة أو إقامة سارية من (تفيد لبعض الدول مثل تركيا والإمارات):</div>
     <div class="tv-chips" id="tvSup">${Object.entries(SUP).map(([k,v])=>`<button data-sup="${k}" class="${S.sup.includes(k)?"on":""}">${v}</button>`).join("")}</div>
     <div class="tv-chips"><button data-ebola="1" class="${S.ebola?"on":""}">كان في الكونغو/أوغندا/جنوب السودان/كينيا آخر 21 يوم</button><button data-yf="1" class="${S.yf?"on":""}">قادم من / كان في دولة من قائمة الحمى الصفراء (أفريقيا وأمريكا الجنوبية)</button></div></div>
-  <button class="tv-go" id="tvGo">🔎 افحص الاشتراطات</button>
+  <button class="tv-go" id="tvGo">🔎 افحص الاشتراطات</button><div style="text-align:center;font-size:11px;color:var(--muted);margin-top:4px">نسخة القواعد: ${K.VER||"قديمة"}</div>
   <div id="tvOut">${outHTML()}</div></div>`}
 const oldSrc=d=>d&&(new Date(K.D)-new Date(d))/86400000>365;
 function qBtns(l){return`<div class="tv-chips tv-qb"><button data-qa="${E(l.qk)}" data-v="1" class="${l.ans===1?"on":""}">نعم</button><button data-qa="${E(l.qk)}" data-v="0" class="${l.ans===0?"on no":""}">لا</button></div>`}
