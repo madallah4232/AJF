@@ -1,6 +1,33 @@
 {
-  "fetched": "2026-11-28T04:20:32Z",
+  "fetched": "2026-11-28T05:35:16Z",
   "metar": [
+    {
+      "icaoId": "OESK",
+      "receiptTime": "2026-11-28T05:00:22.420Z",
+      "obsTime": 1795842000,
+      "reportTime": "2026-11-28T05:00:00.000Z",
+      "temp": 15,
+      "dewp": 4,
+      "wdir": 120,
+      "wspd": 11,
+      "visib": "6+",
+      "altim": 1023,
+      "qcField": 16,
+      "metarType": "METAR",
+      "rawOb": "METAR OESK 280500Z 12011KT 9999 SCT040 15/04 Q1023 NOSIG",
+      "lat": 29.785,
+      "lon": 40.1,
+      "elev": 671,
+      "name": "Al-Jouf Arpt, AJ, SA",
+      "cover": "SCT",
+      "clouds": [
+        {
+          "cover": "SCT",
+          "base": 4000
+        }
+      ],
+      "fltCat": "VFR"
+    },
     {
       "icaoId": "OESK",
       "receiptTime": "2026-11-28T04:00:20.553Z",
@@ -42,28 +69,6 @@
       "qcField": 16,
       "metarType": "METAR",
       "rawOb": "METAR OESK 280300Z 12010KT CAVOK 14/04 Q1022 NOSIG",
-      "lat": 29.785,
-      "lon": 40.1,
-      "elev": 671,
-      "name": "Al-Jouf Arpt, AJ, SA",
-      "cover": "CAVOK",
-      "clouds": [],
-      "fltCat": "VFR"
-    },
-    {
-      "icaoId": "OESK",
-      "receiptTime": "2026-11-28T02:00:25.958Z",
-      "obsTime": 1795831200,
-      "reportTime": "2026-11-28T02:00:00.000Z",
-      "temp": 15,
-      "dewp": 4,
-      "wdir": 130,
-      "wspd": 14,
-      "visib": "6+",
-      "altim": 1022,
-      "qcField": 16,
-      "metarType": "METAR",
-      "rawOb": "METAR OESK 280200Z 13014KT CAVOK 15/04 Q1022 NOSIG",
       "lat": 29.785,
       "lon": 40.1,
       "elev": 671,
